@@ -1,0 +1,5 @@
+data MouseButtons{
+	const int BUTTON_LEFT	= 1
+	const int BUTTON_RIGHT	= 2
+	const int BUTTON_MIDDLE	= 3
+	}

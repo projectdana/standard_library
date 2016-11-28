@@ -1,0 +1,22 @@
+component provides App requires io.Output out, os.SystemInfo info{
+	
+	int App:main(AppParam params[])
+		{
+		out.println("Platform: $(info.getPlatformName())")
+		out.println(" - version: $(info.getPlatformVersion())")
+		out.println("Processor: $(info.getChipName())")
+		out.println("Host name: $(info.getHostName())")
+		
+		char dh[] = info.getVariable("DANA_HOME")
+		out.println("dana_home: $dh")
+		
+		char defaultFont[] = info.getSystemFont(false)
+		out.println("system font: $defaultFont")
+		
+		char defaultMonoFont[] = info.getSystemFont(true)
+		out.println("system mono font: $defaultMonoFont")
+		
+		return 0
+		}
+	
+	}

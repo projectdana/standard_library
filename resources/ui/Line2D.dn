@@ -1,0 +1,14 @@
+/*
+* Line2D type
+* This data type describes the start and end coordinates of a straight line, with a color.
+*/
+
+uses Color
+
+data Line2D{
+	int sx
+	int sy
+	int ex
+	int ey
+	Color color
+	}

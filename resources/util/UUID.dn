@@ -1,0 +1,11 @@
+/*
+ {"description" : "Generate strings that can be used as UUIDs."}
+*/
+
+interface UUID {
+
+	/*
+	{"@description" : "Generates a 36 character UUID, divided into chunks, using dashes as a delimeter. Chunks have the lengths 8-4-4-4-12."}
+	*/
+	char[] generate()
+}

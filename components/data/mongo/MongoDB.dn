@@ -1,0 +1,593 @@
+uses data.String
+uses data.bson.BSON
+
+const int32 OP_REPLY = 1             //returned by the database
+const int32 OP_MSG = 1000            // generic msg command
+const int32 OP_UPDATE = 2001         // update document
+const int32 OP_INSERT = 2002         // insert new document
+const int32 OP_QUERY = 2004          // query a collection
+const int32 OP_GET_MORE = 2005       // get more data from a query
+const int32 OP_DELETE = 2006         // delete documents
+const int32 OP_KILL_CURSORS = 2007   // tell db we are finished with a cursor.
+
+const int32 MONGO_HEADER_SIZE = 16   //16 bytes
+
+const int32 MONGO_MAX_RAND = 65535
+
+const int32 MONGO_TIMEOUT_VALUE = 1000
+
+data MongoHeader{
+  int32   messageLength // total message size, including this
+  int32   requestID     // identifier for this message
+  int32   responseTo    // requestID from the original request (used in reponses from db)
+  int32   opCode        // request type - see table below
+}
+
+/*
+  fullCollectionName
+  The full collection name. The full collection name is the concatenation of the database name with the collection name, using a . for the concatenation. For example, for the database foo and the collection bar, the full collection name is foo.bar.
+
+  Flags
+  bit num	name	description
+  0	Upsert	If set, the database will insert the supplied object into the collection if no matching document is found.
+  1	MultiUpdate	If set, the database will update all matching objects in the collection. Otherwise only updates first matching doc.
+  2-31	Reserved	Must be set to 0.
+
+  selector
+  BSON document that specifies the query for selection of the document to update.
+
+  update
+  BSON document that specifies the update to be performed. For information on specifying updates see the Update Operations documentation from the MongoDB Manual.
+
+  There is no response to an OP_UPDATE message.
+*/
+data MongoUpdate{
+    const int STATIC_INT_SIZE = 8
+    int32     ZERO               // 0 - reserved for future use
+    char   fullCollectionName[] // "dbname.collectionname"
+    int32     flags              // bit vector. see below
+    BSONDocument  selector           // the query to select the document
+    BSONDocument  update             // specification of the update to perform
+}
+
+/*
+  fullCollectionName
+  The full collection name. The full collection name is the concatenation of the database name with the collection name, using a . for the concatenation. For example, for the database foo and the collection bar, the full collection name is foo.bar.
+
+  documents
+  One or more documents to insert into the collection. If there are more than one, they are written to the socket in sequence, one after another.
+
+  Flags
+  bit num	name	description
+  0	ContinueOnError	If set, the database will not stop processing a bulk insert if one fails (eg due to duplicate IDs). This makes bulk insert behave similarly to a series of single inserts, except lastError will be set if any insert fails, not just the last one. If multiple errors occur, only the most recent will be reported by getLastError. (new in 1.9.1)
+  1-31	Reserved	Must be set to 0.
+
+  There is no response to an OP_INSERT message.
+*/
+data MongoInsert{
+    const int STATIC_INT_SIZE = 4
+    int32     flags              // bit vector - see below
+    char   fullCollectionName[] // "dbname.collectionname"
+    BSONDocument document          // one or more documents to insert into the collection
+}
+
+/*
+  bit num	name	description
+  0	Reserved	Must be set to 0.
+  1	TailableCursor	Tailable means cursor is not closed when the last data is retrieved. Rather, the cursor marks the final object’s position. You can resume using the cursor later, from where it was located, if more data were received. Like any “latent cursor”, the cursor may become invalid at some point (CursorNotFound) – for example if the final object it references were deleted.
+  2	SlaveOk	Allow query of replica slave. Normally these return an error except for namespace “local”.
+  3	OplogReplay	Internal replication use only - driver should not set
+  4	NoCursorTimeout	The server normally times out idle cursors after an inactivity period (10 minutes) to prevent excess memory use. Set this option to prevent that.
+  5	AwaitData	Use with TailableCursor. If we are at the end of the data, block for a while rather than returning no data. After a timeout period, we do return as normal.
+  6	Exhaust	Stream the data down full blast in multiple “more” packages, on the assumption that the client will fully read all data queried. Faster when you are pulling a lot of data and know you want to pull it all down. Note: the client is not allowed to not read all the data unless it closes the connection.
+  7	Partial	Get partial results from a mongos if some shards are down (instead of throwing an error)
+  8-31	Reserved	Must be set to 0.
+
+  fullCollectionName
+  The full collection name. The full collection name is the concatenation of the database name with the collection name, using a . for the concatenation. For example, for the database foo and the collection bar, the full collection name is foo.bar.
+
+  numberToSkip
+  Sets the number of documents to omit - starting from the first document in the resulting dataset - when returning the result of the query.
+
+  numberToReturn
+  Limits the number of documents in the first OP_REPLY message to the query. However, the database will still establish a cursor and return the cursorID to the client if there are more results than numberToReturn. If the client driver offers ‘limit’ functionality (like the SQL LIMIT keyword), then it is up to the client driver to ensure that no more than the specified number of document are returned to the calling application. If numberToReturn is 0, the db will use the default return size. If the number is negative, then the database will return that number and close the cursor. No futher results for that query can be fetched. If numberToReturn is 1 the server will treat it as -1 (closing the cursor automatically).
+
+  query
+  BSON document that represents the query. The query will contain one or more elements, all of which must match for a document to be included in the result set. Possible elements include $query, $orderby, $hint, $explain, and $snapshot.
+
+  returnFieldsSelector
+  Optional. BSON document that limits the fields in the returned documents. The returnFieldsSelector contains one or more elements, each of which is the name of a field that should be returned, and and the integer value 1. In JSON notation, a returnFieldsSelector to limit to the fields a, b and c would be:
+
+  { a : 1, b : 1, c : 1}
+
+  The database will respond to an OP_QUERY message with an OP_REPLY message.
+*/
+data MongoQuery{
+  const int STATIC_INT_SIZE = 12
+  int32     flags                  // bit vector of query options.  See below for details.
+  char  fullCollectionName[]    // "dbname.collectionname"
+  int32     numberToSkip           // number of documents to skip
+  int32     numberToReturn         // number of documents to return
+                                    //  in the first OP_REPLY batch
+  BSONDocument  document                  // query object.  See below for details.
+}
+
+data MongoQueryRF{
+  const int STATIC_INT_SIZE = 12
+  int32     flags                  // bit vector of query options.  See below for details.
+  char  fullCollectionName[]    // "dbname.collectionname"
+  int32     numberToSkip           // number of documents to skip
+  int32     numberToReturn         // number of documents to return
+                                    // in the first OP_REPLY batch
+  BSONDocument  document                  // query object.  See below for details.
+  BSONDocument  returnFieldsSelector   // Selector indicating the field
+}
+
+/*
+  fullCollectionName
+  The full collection name. The full collection name is the concatenation of the database name with the collection name, using a . for the concatenation. For example, for the database foo and the collection bar, the full collection name is foo.bar.
+
+  numberToReturn
+  Limits the number of documents in the first OP_REPLY message to the query. However, the database will still establish a cursor and return the cursorID to the client if there are more results than numberToReturn. If the client driver offers ‘limit’ functionality (like the SQL LIMIT keyword), then it is up to the client driver to ensure that no more than the specified number of document are returned to the calling application. If numberToReturn is 0, the db will used the default return size.
+
+  cursorID
+  Cursor identifier that came in the OP_REPLY. This must be the value that came from the database.
+
+  The database will respond to an OP_GET_MORE message with an OP_REPLY message.
+*/
+data MongoGetMore{
+  int32     ZERO               // 0 - reserved for future use
+  char   fullCollectionName[] // "dbname.collectionname"
+  int32     numberToReturn     // number of documents to return
+  int64     cursorID           // cursorID from the OP_REPLY
+}
+
+/*
+  fullCollectionName
+  The full collection name. The full collection name is the concatenation of the database name with the collection name, using a . for the concatenation. For example, for the database foo and the collection bar, the full collection name is foo.bar.
+
+  Flags
+  bit num	name	description
+  0	SingleRemove	If set, the database will remove only the first matching document in the collection. Otherwise all matching documents will be removed.
+  1-31	Reserved	Must be set to 0.
+
+  selector
+  BSON document that represent the query used to select the documents to be removed. The selector will contain one or more elements, all of which must match for a document to be removed from the collection.
+
+  There is no response to an OP_DELETE message.
+*/
+data MongoDelete{
+  const int STATIC_INT_SIZE = 8
+  int32     ZERO               // 0 - reserved for future use
+  char   fullCollectionName[] // "dbname.collectionname"
+  int32     flags              // bit vector - see below for details.
+  BSONDocument  document           // query object.  See below for details.
+}
+
+/*
+numberOfCursorIDs
+The number of cursors that are in the message.
+
+cursorIDs
+“Array” of cursor IDs to be closed. If there are more than one, they are written to the socket in sequence, one after another.
+
+If a cursor is read until exhausted (read until OP_QUERY or OP_GET_MORE returns zero for the cursor id), there is no need to kill the cursor.
+*/
+data MongoKillCursors {
+    int32     ZERO              // 0 - reserved for future use
+    int32     numberOfCursorIDs // number of cursorIDs in message
+    int64    cursorIDs[]         // sequence of cursorIDs to close
+}
+
+/*
+  Could be useful for feedback?
+*/
+data MongoDiagnosticMessage{
+  MongoHeader header  // standard message header
+  char   message[] // message for the database
+}
+
+/*
+  bit num	name	description
+  0	CursorNotFound	Set when getMore is called but the cursor id is not valid at the server. Returned with zero results.
+  1	QueryFailure	Set when query failed. Results consist of one document containing an “$err” field describing the failure.
+  2	ShardConfigStale	Drivers should ignore this. Only mongos will ever see this set, in which case, it needs to update config from the server.
+  3	AwaitCapable	Set when the server supports the AwaitData Query option. If it doesn’t, a client should sleep a little between getMore’s of a Tailable cursor. Mongod version 1.6 supports AwaitData and thus always sets AwaitCapable.
+  4-31	Reserved	Ignore
+
+  cursorID
+  The cursorID that this OP_REPLY is a part of. In the event that the result set of the query fits into one OP_REPLY message, cursorID will be 0. This cursorID must be used in any OP_GET_MORE messages used to get more data, and also must be closed by the client when no longer needed via a OP_KILL_CURSORS message.
+*/
+data MongoReply{
+  MongoHeader header
+  int32     responseFlags  // bit vector - see details below
+  int64     cursorID       // cursor id if client needs to do get more's
+  int32     startingFrom   // where in the cursor this reply is starting
+  int32     numberReturned // number of documents in the reply
+  BSONDocument documents[]     // documents
+}
+
+
+component provides MongoDB requires io.Output out, data.json.JSONParser parser, data.bson.BSON bson, net.TCPSocket, data.IntUtil iu, data.StringUtil su, util.RandomInt, data.ByteUtil bu, time.Calendar cal, time.DateUtil du{
+
+  RandomInt ri = new RandomInt()
+
+  TCPSocket client = new TCPSocket()
+
+  char HOSTIP[] = ""
+	int HOSTPORT = 0
+
+  /**
+    MongoDB:MongoDB (constructor)
+
+    @param ip a char array containing the address of the mongod instance you would
+           like to connect to.
+
+    @param port the integer value of the database instances' port.
+  **/
+  MongoDB:MongoDB(char ip[], int port){
+    //set our hostip and port for this instance.
+    HOSTIP = ip
+    HOSTPORT = port
+
+    int rand_seed = du.toMilliseconds(cal.getTime())
+
+    ri.setSeed(rand_seed)
+
+    //validate connection
+    if(!connect()){ throw new Exception("Unable to connect to the database.") }
+    disconnect()
+  }
+
+  bool connect(){
+    if (client.connect(HOSTIP, HOSTPORT))
+      return true
+    else
+      throw new Exception("No database instance is running at: $(HOSTIP):$(iu.intToString(HOSTPORT)).")
+  }
+
+  void disconnect(){
+    client.disconnect()
+  }
+
+  /**
+    MongoDB:insert
+
+    @param collection the name of the collection you are specifically trying to target in MongoDB
+           e.g. danasds.testing
+
+    @param jsonDocuments the documents you would like to insert
+
+    @note if you insert into a collection that doesn't exist, mongo will create the collection.
+  **/
+  bool MongoDB:insert(char collection[], JSONElement jsonDocuments[]){
+
+    if(jsonDocuments.arrayLength == 0)
+      throw new Exception("An empty array is not a valid query.")
+
+    BSONDocument documents[]
+
+    collection = new char[](collection,0)
+
+    for(int i = 0; i < jsonDocuments.arrayLength; i++){
+
+      JSONElement temp = jsonDocuments[i]
+
+      BSONDocument doc = bson.serialise(temp)
+
+      byte bytes[] = doc.value
+
+      documents = new BSONDocument[](documents, doc)
+    }
+
+    //iterate queries, we write to the socket one at a time as per the spec!
+    for(int i = 0; i < documents.arrayLength; i++){
+
+      MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + documents[i].value.arrayLength + MongoInsert.STATIC_INT_SIZE + collection.arrayLength, ri.get(MONGO_MAX_RAND), 0, OP_INSERT)
+
+      MongoInsert ins = new MongoInsert(0, collection, documents[i])
+
+      if(!connect()){ throw new Exception("Unable to connect to the database.") }
+      send(serialiseMongoHeader(mh), serialiseMongoInsert(ins))
+      disconnect()
+    }
+
+    return true
+  }
+
+  /**
+    MongoDB:find
+
+    @param collection the name of the collection you are specifically trying to target in MongoDB
+           e.g. danasds.testing
+
+    @param jsonQuery the query to execute on the database
+
+    @param numberToReturn the number of documents to return, if you would like Mongo's default,
+           set to 0.
+  **/
+  JSONElement[] MongoDB:find(char collection[], JSONElement jsonQuery, int32 numberToReturn){
+
+    collection = new char[](collection,0)
+
+    BSONDocument bsonQuery = bson.serialise(jsonQuery)
+
+    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + bsonQuery.value.arrayLength + MongoQuery.STATIC_INT_SIZE + collection.arrayLength, ri.get(MONGO_MAX_RAND), 0, OP_QUERY)
+
+    MongoQuery query = new MongoQuery(0, collection, 0, numberToReturn, bsonQuery)
+
+    if(!connect()){ throw new Exception("Unable to connect to the database.") }
+
+    send(serialiseMongoHeader(mh), serialiseMongoQuery(query))
+
+    byte received[] = receive()
+
+    disconnect()
+
+    MongoReply responses = toMongoReply(received)
+
+    JSONElement jsonResponses[]
+
+    for(int i = 0; i < responses.documents.arrayLength; i++)
+      jsonResponses = new JSONElement[](jsonResponses, bson.deserialise(responses.documents[i]))
+
+    return jsonResponses
+  }
+
+  /**
+    MongoDB:findWithModifier
+
+    @param collection the name of the collection you are specifically trying to target in MongoDB
+           e.g. danasds.testing
+
+    @param jsonQuery the query to execute on the database
+
+    @param modifier an object containing various modifiers that specify things like ordering.
+           For a full list visit: http://docs.mongodb.org/manual/reference/operator/query-modifier/
+
+    @param numberToReturn the number of documents to return, if you would like Mongo's default,
+           set to 0.
+  **/
+  JSONElement[] MongoDB:findWithModifier(char collection[], JSONElement jsonQuery, JSONElement modifier, int32 numberToReturn){
+
+    collection = new char[](collection,0)
+
+    BSONDocument bsonQuery = bson.serialise(jsonQuery)
+    BSONDocument bsonModifier = bson.serialise(modifier)
+
+    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + bsonQuery.value.arrayLength + bsonModifier.value.arrayLength + MongoQueryRF.STATIC_INT_SIZE + collection.arrayLength, ri.get(MONGO_MAX_RAND), 0, OP_QUERY)
+
+    MongoQueryRF queryRF = new MongoQueryRF(0, collection, 0, numberToReturn, bsonQuery, bsonModifier)
+
+    if(!connect()){ throw new Exception("Unable to connect to the database.") }
+
+    send(serialiseMongoHeader(mh), serialiseMongoQueryRF(queryRF))
+
+    byte received[] = receive()
+
+    disconnect()
+
+    MongoReply responses = toMongoReply(received)
+
+    JSONElement jsonResponses[]
+
+    for(int i = 0; i < responses.documents.arrayLength; i++)
+      jsonResponses = new JSONElement[](jsonResponses, bson.deserialise(responses.documents[i]))
+
+    return jsonResponses
+  }
+
+  /**
+    MongoDB:findWithModifier
+
+    @param collection the name of the collection you are specifically trying to target in MongoDB
+           e.g. danasds.testing
+
+    @param jsonQuery the query to execute on the database
+
+    @param updateObject an object containing search criteria. It is common to use the _id field
+           returned by the database, or adding your own UUID to objects.
+
+  **/
+  bool MongoDB:update(char collection[], JSONElement jsonQuery, JSONElement updateObject){
+
+    collection = new char[](collection,0)
+
+    BSONDocument selector = bson.serialise(jsonQuery)
+    BSONDocument bsonUpdate = bson.serialise(updateObject)
+
+    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + selector.value.arrayLength + bsonUpdate.value.arrayLength + MongoUpdate.STATIC_INT_SIZE + collection.arrayLength, ri.get(MONGO_MAX_RAND), 0, OP_UPDATE)
+
+    MongoUpdate update = new MongoUpdate(0, collection, 0, selector, bsonUpdate)
+
+    if(!connect()){ throw new Exception("Unable to connect to the database.") }
+
+    send(serialiseMongoHeader(mh),serialiseMongoUpdate(update))
+
+    disconnect()
+
+    return true
+  }
+
+  /**
+    MongoDB:delete
+
+    @param collection the name of the collection you are specifically trying to target in MongoDB
+           e.g. danasds.testing
+
+    @param jsonQuery the query to execute on the database
+  **/
+  bool MongoDB:delete(char collection[], JSONElement jsonQuery){
+
+    collection = new char[](collection,0)
+
+    BSONDocument selector = bson.serialise(jsonQuery)
+
+    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + selector.value.arrayLength + MongoDelete.STATIC_INT_SIZE + collection.arrayLength, ri.get(MONGO_MAX_RAND), 0, OP_DELETE)
+
+    MongoDelete delete = new MongoDelete(0, collection, 0, selector)
+
+    if(!connect()){ throw new Exception("Unable to connect to the database.") }
+
+    send(serialiseMongoHeader(mh), serialiseMongoDelete(delete))
+
+    disconnect()
+
+    return true
+  }
+
+  byte[] toLittleEndian(int32 value){
+    return bu.reverse(dana.getByteArrayOf(value))
+  }
+
+  byte[] serialiseMongoHeader(MongoHeader mh){
+
+    byte serialised[] = toLittleEndian(mh.messageLength)
+
+    serialised = new byte[](serialised, toLittleEndian(mh.requestID))
+    serialised = new byte[](serialised, toLittleEndian(mh.responseTo))
+    serialised = new byte[](serialised, toLittleEndian(mh.opCode))
+
+    return serialised
+  }
+
+  byte[] serialiseMongoInsert(MongoInsert ins){
+
+    byte serialised[] = toLittleEndian(ins.flags)
+
+    serialised = new byte[](serialised, new byte[](ins.fullCollectionName))
+    serialised = new byte[](serialised, new byte[](ins.document.value))
+
+    return serialised
+  }
+
+  byte[] serialiseMongoQuery(MongoQuery query){
+
+    byte serialised[] = toLittleEndian(query.flags)
+
+    serialised = new byte[](serialised, new byte[](query.fullCollectionName))
+    serialised = new byte[](serialised, toLittleEndian(query.numberToSkip))
+    serialised = new byte[](serialised, toLittleEndian(query.numberToReturn))
+    serialised = new byte[](serialised, new byte[](query.document.value))
+
+    return serialised
+  }
+
+  byte[] serialiseMongoQueryRF(MongoQueryRF queryRF){
+
+    byte serialised[] = toLittleEndian(queryRF.flags)
+
+    serialised = new byte[](serialised, new byte[](queryRF.fullCollectionName))
+    serialised = new byte[](serialised, toLittleEndian(queryRF.numberToSkip))
+    serialised = new byte[](serialised, toLittleEndian(queryRF.numberToReturn))
+    serialised = new byte[](serialised, new byte[](queryRF.document.value))
+    serialised = new byte[](serialised, new byte[](queryRF.returnFieldsSelector.value))
+
+    return serialised
+  }
+
+  byte[] serialiseMongoDelete(MongoDelete delete){
+
+    byte serialised[] = toLittleEndian(delete.ZERO)
+    serialised = new byte[](serialised, new byte[](delete.fullCollectionName))
+    serialised = new byte[](serialised, toLittleEndian(delete.flags))
+    serialised = new byte[](serialised, new byte[](delete.document.value))
+
+    return serialised
+  }
+
+  byte[] serialiseMongoUpdate(MongoUpdate update){
+
+    byte serialised[] = toLittleEndian(update.ZERO)
+    serialised = new byte[](serialised, new byte[](update.fullCollectionName))
+    serialised = new byte[](serialised, toLittleEndian(update.flags))
+    serialised = new byte[](serialised, new byte[](update.selector.value))
+    serialised = new byte[](serialised, new byte[](update.update.value))
+
+    return serialised
+  }
+
+  void send(byte header[], byte content[]){
+    client.send(header)
+    client.send(content)
+  }
+
+  byte[] receive(){
+
+    byte received[]
+
+    //the first four bytes contain message length
+    received = client.recv(4)
+
+    int32 messageLength
+    dana.getByteArrayOf(messageLength) =[] bu.reverse(received)
+
+    //receive our data...
+    while ((received = new byte[](received,client.recv(1))).arrayLength < messageLength){}
+
+    return received
+  }
+
+  MongoReply toMongoReply(byte content[]){
+    /*
+      I acknowledge this could be done in a few lines...
+      However this would be bad for readability, and understanding.
+
+      This structure will always be the same - no matter the response.
+
+      Mongo also communicates in little endian, dana does not, hence the conversions...
+    */
+
+    int32 messageLength
+    int32 requestID
+    int32 responseTo
+    int32 opCode
+
+    int offset = 0
+
+    dana.getByteArrayOf(messageLength) =[] bu.reverse(su.subString(content,offset,4))
+
+    offset += 4
+
+    dana.getByteArrayOf(requestID) =[] bu.reverse(su.subString(content,offset,4))
+
+    offset += 4
+
+    dana.getByteArrayOf(responseTo) =[] bu.reverse(su.subString(content,offset,4))
+
+    offset += 4
+
+    dana.getByteArrayOf(opCode) =[] bu.reverse(su.subString(content,offset,4))
+
+    offset += 4
+
+    MongoHeader mh = new MongoHeader(messageLength,requestID,responseTo,opCode)
+
+    int32 responseFlags
+    int64 cursorID
+    int32 startingFrom
+    int32 numberReturned
+
+    dana.getByteArrayOf(responseFlags) =[] bu.reverse(su.subString(content,offset,4))
+
+    offset += 4
+
+    dana.getByteArrayOf(cursorID) =[] bu.reverse(su.subString(content,offset,8))
+
+    offset += 8
+
+    dana.getByteArrayOf(startingFrom) =[] bu.reverse(su.subString(content,offset,4))
+
+    offset += 4
+
+    dana.getByteArrayOf(numberReturned) =[] bu.reverse(su.subString(content,offset,4))
+
+    offset += 4
+
+    BSONDocument bsonDocs[] = bson.parse(su.subString(content,offset, content.arrayLength - offset))
+
+    MongoReply reply = new MongoReply(mh, responseFlags, cursorID, startingFrom, numberReturned, bsonDocs)
+
+    return reply
+  }
+}

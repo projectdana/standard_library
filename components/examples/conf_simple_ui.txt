@@ -1,0 +1,6 @@
+conf/app.txt
+conf/window.txt
+conf/title.txt
+conf/sys_info.txt
+conf/button.txt
+conf/colorbutton.txt

@@ -1,0 +1,803 @@
+//every JSON token has a name field; after that its value field OR children field may be populated (but not both)
+// - the value field is populated for simple values, the children field is populated for OBJECT or ARRAY values
+// - JSON tokens that are array members (i.e. on the children list of an array) have no name field, just a value
+// - so "value" is like "simple value", and "children" is like "complex value"
+
+const byte TOKEN_TYPE_UNKNOWN	= 0
+const byte TOKEN_TYPE_TOKEN		= 1
+const byte TOKEN_TYPE_STRING	= 2
+const byte TOKEN_TYPE_NUMBER	= 3
+const byte TOKEN_TYPE_BOOLEAN	= 4
+const byte TOKEN_TYPE_NULL		= 5
+
+// state machine to evaluate numbers
+const byte NUMBER_STARTING_STATE 			= 0
+const byte NUMBER_NEGATIVE_STATE 			= 1
+const byte NUMBER_DIGIT_STATE 				= 2
+const byte NUMBER_DECIMAL_STATE 			= 3
+const byte NUMBER_DECIMAL_DIGIT_STATE 		= 4
+const byte NUMBER_SCIENTIFIC_STATE 			= 5
+const byte NUMBER_SCIENTIFIC_DIGIT_STATE 	= 6
+const byte NUMBER_UNKNOWN_STATE 			= 7
+
+data Token {
+	byte type
+	char token[]
+	int tokenSourceLength
+}
+
+component provides JSONParser requires io.Output out, data.adt.List, data.StringUtil stringUtil, data.IntUtil intUtil {
+	
+	JSONElement JSONParser:parseDocument(char document[])
+		{
+		JSONElement doc = parseJSON(tokenise(document))
+		return doc
+		}
+	
+	JSONElement getValueByDotRecursive(String tokens[], JSONElement tree)
+		{
+		char currentToken[] = tokens[0].string
+		
+		String newTokens[]
+
+		if (tokens.arrayLength > 1)
+			{
+			newTokens = new String[tokens.arrayLength-1]
+			for (int i = 1; i < tokens.arrayLength; i++)
+				{
+				newTokens[i-1] = tokens[i]
+				}
+			}
+
+		JSONElement result
+
+		int open
+		int close
+		int index
+
+		//we always want to determine if we are attempting to index an array.
+		//close is used as a boolean value as it must always be greater than 0.
+		if ((open = stringUtil.find(currentToken,"[")) != StringUtil.NOT_FOUND && ((close = stringUtil.find(currentToken,"]")) != StringUtil.NOT_FOUND))
+			{
+			//we extract the index for the array
+			index = intUtil.intFromString(stringUtil.subString(currentToken, open + 1, close - open - 1))
+			currentToken = stringUtil.subString(currentToken,0,open)
+			}
+
+		if (tree.type == JSON_ELEMENT_OBJECT)
+			{
+			for (int i = 0; i < tree.children.arrayLength; i++)
+				{
+				if (tree.children[i].name == currentToken)
+					{
+					//if we are looking at an item Index and have no more tokens e.g. test
+					if (newTokens == null && close == 0)
+						result = tree.children[i]
+
+					//if we are looking at an array Index and have no more tokens e.g. someArray[2]
+					else if (newTokens == null && close > 0)
+						result = tree.children[i].children[index]
+
+					//if we are looking at an item Index e.g. test
+					else if (close == 0)
+						result = getValueByDotRecursive(newTokens, tree.children[i])
+
+					//if we are looking at an array Index e.g. someArray[2]
+					else if (close > 0)
+						result = getValueByDotRecursive(newTokens, tree.children[i].children[index])
+					}
+				}
+			}
+			else if (tree.type == JSON_ELEMENT_ARRAY && close != StringUtil.NOT_FOUND)
+			{
+			//if we have no more tokens, we presume we can return the desired item
+			if(newTokens == null)
+				result = tree.children[index]
+				else
+				result = getValueByDotRecursive(newTokens, tree.children[index])
+
+			}
+			else
+			throw new Exception("Item not found.\n\n $(tree.name) != $(tokens[0].string)")
+		
+		return result
+		}
+
+	JSONElement JSONParser:getValueByDot(char dotNotation[], JSONElement tree)
+		{
+		return getValueByDotRecursive(stringUtil.explode(dotNotation,"."), tree)
+		}
+	
+	JSONElement JSONParser:getValue(JSONElement object, char name[])
+		{
+		//search object for a field matching "name" and return it
+		if (object.type == JSON_ELEMENT_OBJECT)
+			{
+			JSONElement jt = object
+			if (jt.children != null)
+				{
+				for (int i = 0; i < jt.children.arrayLength; i++)
+					{
+					if (jt.children[i].name == name)
+						{
+						return jt.children[i]
+						}
+					}
+				}
+			}
+		
+		return null
+		}
+	
+	bool isHex(char c)
+		{
+		if (stringUtil.isNumeric(c))
+			return true
+			else
+			{
+			if (c == "a" || c == "A")
+				return true
+
+			if (c == "b" || c == "B")
+				return true
+
+			if (c == "c" || c == "C")
+				return true
+
+			if (c == "d" || c == "D")
+				return true
+
+			if (c == "e" || c == "E")
+				return true
+
+			if (c == "f" || c == "F")
+				return true
+			}
+
+		return false
+		}
+	
+	bool isValidEscapeCharacterUnicode(char c[]) 
+		{
+		for (int i = 0; i < c.arrayLength; i++)
+			{
+			if (!isHex(c[i]))
+				return false
+			}
+		
+		return true
+		}
+
+	bool isValidEscapeCharacter(char c)
+		{
+		if (c == "\"" ||
+			c == "\\" ||
+			c == "/" ||
+			c == "b" ||
+			c == "f" ||
+			c == "n" ||
+			c == "r" ||
+			c == "t")
+			return true
+		
+		return false
+		}
+	
+	void copyArray(char toArray[], char fromArray[], int fromStart, int fromLen)
+		{
+		for (int i = 0; i < fromLen; i++)
+			{
+			toArray[i] = fromArray[fromStart+i]
+			}
+		}
+	
+	Token consumeString(char string[], int start)
+		{
+		Token t = new Token(TOKEN_TYPE_STRING)
+		bool stringClosed = false
+		int len = 0
+		
+		for (int i = start+1; i < string.arrayLength; i++)
+			{
+			if (string[i] == "\\")
+				{
+				//escape character; read the next character
+				len ++
+				
+				i ++
+				
+				if (isValidEscapeCharacter(string[i]))
+					{
+					len ++
+					}
+					// unicode validation
+					else if (string[i] == "u")
+					{
+					if ((i+5 < string.arrayLength) && isValidEscapeCharacterUnicode(stringUtil.subString(string, i+1, 4)))
+						{
+						i += 4
+						len += 5
+						}
+						else
+						{
+						throw new Exception("Invalid escape character")
+						}
+					}
+					else
+					{
+					throw new Exception("Invalid escape character")
+					}
+				}
+				else if (string[i] == "\"")
+				{
+				stringClosed = true
+				break
+				}
+				else
+				{
+				len ++
+				}
+			}
+		
+		t.token = new char[len]
+		copyArray(t.token, string, start+1, len)
+		
+		if (!stringClosed) throw new Exception("Unterminated string")
+		
+		t.tokenSourceLength = t.token.arrayLength + 2
+		
+		return t
+		}
+	
+	byte execStartingState(char c) {
+		if (c == "-")
+			return NUMBER_NEGATIVE_STATE
+		else if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_DIGIT_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execNegativeState(char c)
+	{
+		if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_DIGIT_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execNumberDigitState(char c)
+	{
+		if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_DIGIT_STATE
+		else if (c == ".")
+			return NUMBER_DECIMAL_STATE
+		else if (c == "E" || c == "e")
+			return NUMBER_SCIENTIFIC_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execNumberDecimalState(char c) {
+		if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_DECIMAL_DIGIT_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execDecimalDigitState(char c) {
+		if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_DECIMAL_DIGIT_STATE
+		else if (c == "E" || c == "e")
+			return NUMBER_SCIENTIFIC_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execNumberScientificState(char c) {
+		if (c == "-" || c == "+" 
+			|| stringUtil.isNumeric(new char[](c)))
+			return NUMBER_SCIENTIFIC_DIGIT_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execNumberScientificDigitState(char c) {
+		if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_SCIENTIFIC_DIGIT_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	bool isFinalStateValid(byte state) {
+		if ((state == NUMBER_SCIENTIFIC_DIGIT_STATE) ||
+			(state == NUMBER_DECIMAL_DIGIT_STATE) ||
+			(state == NUMBER_DIGIT_STATE))
+			return true
+		else
+			return false
+	}
+
+	Token consumeNumber(char string[], int start)
+		{
+		Token t = new Token(TOKEN_TYPE_NUMBER)
+
+		byte state = NUMBER_STARTING_STATE
+
+		for (int i = start; i < string.arrayLength; i++)
+			{
+			if (!isWhitespace(string[i]))
+				{
+				if (isTokenStart(string[i]))
+					break
+				
+				if (state == NUMBER_STARTING_STATE) { state = execStartingState(string[i]) }
+				else if (state == NUMBER_NEGATIVE_STATE) { state = execNegativeState(string[i]) }
+				else if (state == NUMBER_DIGIT_STATE) { state = execNumberDigitState(string[i]) }
+				else if (state == NUMBER_DECIMAL_STATE) { state = execNumberDecimalState(string[i]) }
+				else if (state == NUMBER_DECIMAL_DIGIT_STATE) { state = execDecimalDigitState(string[i]) }		
+				else if (state == NUMBER_SCIENTIFIC_STATE) { state = execNumberScientificState(string[i])	}
+				else if (state == NUMBER_SCIENTIFIC_DIGIT_STATE) { state = execNumberScientificDigitState(string[i]) }
+				
+				if (state != NUMBER_UNKNOWN_STATE) t.token = new char[](t.token, string[i])
+				}
+
+			if (state == NUMBER_UNKNOWN_STATE)
+				{
+				throw new Exception("Unknown number format")
+				}
+			}
+		
+		if (isFinalStateValid(state))
+			t.tokenSourceLength = t.token.arrayLength
+			else
+			throw new Exception("Unknown number format")
+
+		return t
+		}
+	
+	bool isValidToken(char string[])
+		{
+		if (string == ":"
+			|| string == "{"
+			|| string == "}"
+			|| string == ","
+			|| string == "["
+			|| string == "]")
+			return true
+		
+		return false
+		}
+	
+	bool isValidLiteral(char string[])
+		{
+		if (string == "true"
+			|| string == "false"
+			|| string == "null")
+			return true
+		
+		return false
+		}
+	
+	bool isTokenStart(char string[])
+		{
+		if (string == ":"
+			|| string == "{"
+			|| string == "}"
+			|| string == ","
+			|| string == "\""
+			|| string == "["
+			|| string == "]")
+			return true
+		
+		return false
+		}
+	
+	void resolveTokenType(Token t)
+		{
+		if (t.token == "true" || t.token == "false")
+			{
+			t.type = TOKEN_TYPE_BOOLEAN
+			}
+			else if (t.token == "null")
+			{
+			t.type = TOKEN_TYPE_NULL
+			}
+		}
+	
+	Token consumeToken(char string[], int start)
+		{
+		Token t = new Token(TOKEN_TYPE_TOKEN, string[start])
+		
+		for (int i = start+1; i < string.arrayLength; i++)
+			{
+			if (!isWhitespace(string[i]) && !isTokenStart(string[i]) && !isValidToken(t.token) && !isValidLiteral(t.token))
+				{
+				t.token = new char[](t.token, string[i])
+				}
+				else
+				{
+				break
+				}
+			}
+		
+		if (!isValidToken(t.token) && !isValidLiteral(t.token))
+			{
+			throw new Exception("Invalid token '$(t.token)'")
+			}
+		
+		//sort out what kind of token it is (boolean etc.)
+		resolveTokenType(t)
+		
+		t.tokenSourceLength = t.token.arrayLength
+		
+		return t
+		}
+	
+	bool isWhitespace(char c)
+		{
+		return c == " " || c == "\n" || c == "\r" || c == "\t"
+		}
+	
+	List tokenise(char string[])
+		{
+		List l = new List()
+		
+		int i = 0
+		while (i < string.arrayLength)
+			{
+			if (! isWhitespace(string[i]))
+				{
+				//a new token to consume
+				Token next = null
+				
+				if (string[i] == "\"")
+					{
+					next = consumeString(string, i)
+					}
+					else if ( stringUtil.isNumeric(new char[](string[i])) || string[i] == "-")
+					{
+					next = consumeNumber(string, i)
+					}
+					else
+					{
+					next = consumeToken(string, i)
+					}
+				
+				if (next == null) return null
+				
+				i += next.tokenSourceLength
+				l.add(next)
+				}
+				else
+				{
+				i ++
+				}
+			}
+		
+		return l
+		}
+	
+	JSONElement extractNextPair(List l)
+		{
+		//"l" is a list of Tokens that should be of the form STRING : value [,] ...
+		
+		JSONElement nt = new JSONElement()
+		Token t = l.getFirst()
+		
+		if (t == null) return null
+		
+		if (t.type != TOKEN_TYPE_STRING)
+			{
+			throw new Exception("Parse exception: expected string, got '$(t.token)'")
+			}
+		
+		nt.name = t.token
+		
+		l.remove(t)
+		
+		t = l.getNext()
+		
+		if (t.type != TOKEN_TYPE_TOKEN || t.token != ":")
+			{
+			throw new Exception("Parse exception: expected ':'")
+			}
+		
+		l.remove(t)
+		
+		t = l.getNext()
+		
+		//now we detect the kind of value that we have (either a simple one or a complex one)
+		if (t.type == TOKEN_TYPE_STRING)
+			{
+			nt.type = JSON_ELEMENT_STRING
+			nt.value = t.token
+			
+			l.remove(t)
+			}
+			else if (t.type == TOKEN_TYPE_NUMBER)
+			{
+			nt.type = JSON_ELEMENT_NUMBER
+			nt.value = t.token
+			
+			l.remove(t)
+			}
+			else if (t.type == TOKEN_TYPE_BOOLEAN)
+			{
+			nt.type = JSON_ELEMENT_BOOLEAN
+			nt.value = t.token
+			
+			l.remove(t)
+			}
+			else if (t.type == TOKEN_TYPE_TOKEN && t.token == "[")
+			{
+			nt.type = JSON_ELEMENT_ARRAY
+			
+			List subList = extractArray(l)
+			
+			JSONElement jt = parseArray(subList, nt.name)
+			jt.name = nt.name
+			nt = jt
+			}
+			else if (t.type == TOKEN_TYPE_TOKEN && t.token == "{")
+			{
+			nt.type = JSON_ELEMENT_OBJECT
+			
+			List subList = extractObject(l)
+			
+			JSONElement jt = parseObject(subList)
+			jt.name = nt.name
+			nt = jt
+			}
+		
+		t = l.getNext()
+		
+		if (t != null && t.type == TOKEN_TYPE_TOKEN && t.token == ",")
+			{
+			l.remove(t)
+			}
+		
+		return nt
+		}
+	
+	JSONElement extractNextValue(List l)
+		{
+		JSONElement nt = new JSONElement()
+		Token t = l.getFirst()
+		
+		if (t == null) return null
+		
+		//now we detect the kind of value that we have (either a simple one or a complex one)
+		if (t.type == TOKEN_TYPE_STRING)
+			{
+			nt.type = JSON_ELEMENT_STRING
+			nt.value = t.token
+			
+			l.remove(t)
+			}
+			else if (t.type == TOKEN_TYPE_NUMBER)
+			{
+			nt.type = JSON_ELEMENT_NUMBER
+			nt.value = t.token
+			
+			l.remove(t)
+			}
+			else if (t.type == TOKEN_TYPE_BOOLEAN)
+			{
+			nt.type = JSON_ELEMENT_BOOLEAN
+			nt.value = t.token
+			
+			l.remove(t)
+			}
+			else if (t.type == TOKEN_TYPE_TOKEN && t.token == "[")
+			{
+			nt.type = JSON_ELEMENT_ARRAY
+			
+			List subList = extractArray(l)
+			
+			JSONElement jt = parseArray(subList, "")
+			jt.name = nt.name
+			nt = jt
+			}
+			else if (t.type == TOKEN_TYPE_TOKEN && t.token == "{")
+			{
+			nt.type = JSON_ELEMENT_OBJECT
+			
+			List subList = extractObject(l)
+			
+			JSONElement jt = parseObject(subList)
+			jt.name = nt.name
+			nt = jt
+			}
+			else
+			{
+			return null
+			}
+		
+		t = l.getNext()
+		
+		if (t != null && t.type == TOKEN_TYPE_TOKEN && t.token == ",")
+			{
+			l.remove(t)
+			}
+		
+		return nt
+		}
+	
+	JSONElement parseObject(List l)
+		{
+		JSONElement object = new JSONElement(JSON_ELEMENT_OBJECT)
+		
+		JSONElement nt
+		while ((nt = extractNextPair(l)) != null)
+			{
+			object.children = new JSONElement[](object.children, nt)
+			}
+		
+		return object
+		}
+	
+	JSONElement parseArray(List l, char vname[])
+		{
+		JSONElement array = new JSONElement(JSON_ELEMENT_ARRAY)
+		JSONElement nt
+		while ((nt = extractNextValue(l)) != null)
+			{
+			array.children = new JSONElement[](array.children, nt)
+			}
+		
+		return array
+		}
+	
+	List extractArray(List tokens)
+		{
+		Token t = tokens.getFirst()
+		
+		int braceDepth = 0
+		int sqBracketDepth = 0
+		
+		if (t.type == TOKEN_TYPE_TOKEN && t.token == "[")
+			{
+			tokens.remove(t)
+			
+			List result = new List()
+			
+			for (t = tokens.getNext(); t != null; t = tokens.getNext())
+				{
+				if (t.type == TOKEN_TYPE_TOKEN && t.token == "[")
+					{
+					braceDepth ++
+					}
+					else if (t.type == TOKEN_TYPE_TOKEN && t.token == "]")
+					{
+					if (braceDepth == 0)
+						{
+						tokens.remove(t)
+						return result
+						}
+						else
+						{
+						braceDepth --
+						}
+					}
+				
+				result.add(t)
+				tokens.remove(t)
+				}
+			}
+		
+		return null
+		}
+	
+	List extractObject(List tokens)
+		{
+		Token t = tokens.getFirst()
+		
+		int braceDepth = 0
+		int sqBracketDepth = 0
+		
+		if (t.type == TOKEN_TYPE_TOKEN && t.token == "{")
+			{
+			tokens.remove(t)
+			
+			List result = new List()
+			
+			for (t = tokens.getNext(); t != null; t = tokens.getNext())
+				{
+				if (t.type == TOKEN_TYPE_TOKEN && t.token == "{")
+					{
+					braceDepth ++
+					}
+					else if (t.type == TOKEN_TYPE_TOKEN && t.token == "}")
+					{
+					if (braceDepth == 0)
+						{
+						tokens.remove(t)
+						return result
+						}
+						else
+						{
+						braceDepth --
+						}
+					}
+				
+				result.add(t)
+				tokens.remove(t)
+				}
+			}
+		
+		return null
+		}
+	
+	JSONElement parseJSON(List tokens)
+		{
+		while (tokens.getLength() > 0)
+			{
+			List l = extractObject(tokens)
+			JSONElement t = parseObject(l)
+			return t
+			}
+		
+		return null
+		}
+	
+
+	char[] JSONParser:documentToString(JSONElement element)
+		{
+		char content[] = ""
+		
+		if (element.type == JSON_ELEMENT_OBJECT)
+			{
+			if(element.name.arrayLength > 0)
+				content = new char[](content, "\"", element.name, "\"", ":", "{ ")
+				else
+				content = new char[](content, "{ ")
+
+			for (int i = 0; i < element.children.arrayLength; i++)
+				{
+				if (i != element.children.arrayLength-1)
+					content = new char[](content, documentToString(element.children[i]), ", ")
+					else
+					content = new char[](content, documentToString(element.children[i]))
+				}
+
+			content = new char[](content," }")
+			}
+		
+		if (element.type == JSON_ELEMENT_STRING)
+			{
+			if(element.name.arrayLength > 0)
+				content = new char[](content,"\"", element.name,"\"", ":", "\"", element.value,"\"")
+				else
+				content = new char[](content,"\"", element.value, "\"")
+			}
+		
+		if (element.type == JSON_ELEMENT_NUMBER || element.type == JSON_ELEMENT_BOOLEAN)
+			{
+			if(element.name.arrayLength > 0)
+				content = new char[](content, "\"", element.name,"\"", " : ", element.value)
+				else
+				content = new char[](content, element.value)
+			}
+		
+		if (element.type == JSON_ELEMENT_ARRAY)
+			{
+			if (element.name.arrayLength > 0)
+				content = new char[](content, "\"", element.name, "\"", " : ", "[ ")
+				else
+				content = new char[](content, "[ ")
+			
+			for (int i = 0; i < element.children.arrayLength; i++)
+				{
+				if( i != element.children.arrayLength-1)
+					content = new char[](content, documentToString(element.children[i]), ", ")
+					else
+					content = new char[](content, documentToString(element.children[i]))
+				}
+			
+			content = new char[](content, " ]")
+			}
+
+		return content
+		}
+	}

@@ -1,0 +1,58 @@
+uses data.String
+
+data ObjectInfo{
+	int textSize
+	int infoSectionCount
+	int relocationCount
+	}
+
+data InfoSection{
+	char sectionType[]
+	char contentType[]
+	byte content[]
+	}
+
+/*
+ {"description" : "Utility to inspect compiled Dana components. This is primarily used to examine and modify 'info sections' in these components such as the list of interfaces that a component has."}
+*/
+
+interface ObjectWriter{
+	/*
+		{"@description" : "The file path of the object file being operated on."}
+	*/
+	transfer char objectPath[]
+	
+	/*
+		{"@description" : "Create an ObjectWriter for a given compiled component file."}
+	*/
+	ObjectWriter(char path[])
+	
+	/*
+		{"@description" : "Get general information about the object file."}
+	*/
+	ObjectInfo getInfo()
+	
+	/*
+		{"@description" : "Get the list of info section names contained in the object file (excluding their content)."}
+	*/
+	InfoSection[] getInfoSections()
+	
+	/*
+		{"@description" : "Get the details (including contents) of a specific info section from the object file.",
+			"type": "The section type to search for.",
+			"cType" : "The content type to search for (if null, the first matching section type is returned)."}
+	*/
+	InfoSection getInfoSection(char type[], char cType[])
+	
+	/*
+		{"@description" : "Add a new info section to the object file."}
+	*/
+	void addInfoSection(InfoSection newSection)
+	
+	/*
+		{"@description" : "Delete the first occurence of an info section from the object file.",
+			"type": "The section type to search for.",
+			"cType" : "The content type to search for (if null, the first matching section type is deleted)."}
+	*/
+	void deleteInfoSection(char type[], char cType[])
+	}

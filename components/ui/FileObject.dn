@@ -1,0 +1,161 @@
+component provides FileObject(AdaptEvents) requires io.FileSystem fileSystem, Font, os.SystemInfo sysInfo, data.StringUtil stringUtil, io.Output out {
+	
+	Font labelFont
+	char label[]
+	
+	FileObject:FileObject(char f[])
+		{
+		labelFont = new Font(sysInfo.getSystemFont(false), 15)
+		
+		setFile(f)
+		}
+	
+	FileObject:Adapt()
+		{
+		labelFont = new Font(sysInfo.getSystemFont(false), 15)
+		setFile(filePath)
+		myPanel.addClickTarget(this)
+		}
+	
+	char[] getForWidth(char a[], int width)
+		{
+		char res[] = a
+		int subLet = a.arrayLength - 1
+		
+		while (labelFont.getTextWidth(res) > width)
+			{
+			subLet --
+			res = new char[](subString(a, 0, subLet), "...")
+			}
+		
+		return res
+		}
+	
+	char[] subString(char array[], int start, int length)
+		{
+		char result[]
+		
+		for (int i = 0; i < length; i++)
+			result = new char[](result, array[start+i])
+		
+		return result
+		}
+	
+	char[] normalisePath(char path[])
+		{
+		int nxt = 0
+		while ((nxt = stringUtil.find(path, "\\")) != StringUtil.NOT_FOUND)
+			{
+			path = new char[](subString(path, 0, nxt), "/", subString(path, nxt+1, path.arrayLength - (nxt+1)))
+			}
+		return path
+		}
+	
+	void FileObject:setFile(char f[])
+		{
+		filePath = normalisePath(f)
+		
+		String parts[] = stringUtil.explode(filePath, "/")
+		
+		label = getForWidth(parts[parts.arrayLength-1].string, 46)
+		}
+	
+	char[] FileObject:getFile()
+		{
+		return filePath
+		}
+	
+	void FileObject:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+	
+	void FileObject:paint(Canvas c)
+		{
+		FileInfo fi = fileSystem.getInfo(filePath)
+		
+		if (fi.type == FileInfo.TYPE_DIR)
+			c.drawRect(new Rect2D(xPosition, yPosition, 40, 44, new Color(157, 188, 220, 255)))
+			else
+			c.drawRect(new Rect2D(xPosition, yPosition, 40, 44, new Color(250, 245, 255, 255)))
+		
+		c.drawText(new Point2D(xPosition, yPosition + 47, new Color(100, 100, 100, 255)), labelFont, label)
+		}
+	
+	void FileObject:setPanel(Panel p)
+		{
+		myPanel = p
+		myPanel.addClickTarget(this)
+		}
+	
+	Panel FileObject:getPanel()
+		{
+		return myPanel
+		}
+	
+	void FileObject:addClickListener(ClickListener cl)
+		{
+		listeners = new ClickListener[](listeners, cl)
+		}
+	
+	void FileObject:remClickListener(ClickListener cl)
+		{
+		ClickListener nl[] = new ClickListener[listeners.arrayLength - 1]
+		int j = 0
+		for (int i = 0; i < listeners.arrayLength; i++)
+			{
+			ClickListener q = listeners[i]
+			
+			if (q !== cl)
+				{
+				nl[j] = listeners[i]
+				j ++
+				}
+			}
+		listeners = nl
+		}
+	
+	ClickListenerItem[] FileObject:getClickListeners()
+		{
+		ClickListenerItem lst[] = new ClickListenerItem[listeners.arrayLength]
+		for (int i = 0; i < lst.arrayLength; i++)
+			{
+			lst[i] = new ClickListenerItem(listeners[i])
+			}
+		
+		return lst
+		}
+	
+	Rect FileObject:getBounds()
+		{
+		return new Rect(xPosition, yPosition, 40, 60)
+		}
+	
+	Point FileObject:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+	
+	void FileObject:click(int x, int y, int button)
+		{
+		if (button == MouseButtons.BUTTON_LEFT)
+			{
+			for (int i = 0; i < listeners.arrayLength; i++)
+				{
+				listeners[i].click(this)
+				}
+			}
+		}
+	
+	WH FileObject:getPreferredSize()
+		{
+		return new WH(40, 60)
+		}
+	
+	void AdaptEvents:destroy()
+		{
+		myPanel.repaint()
+		}
+	
+	}

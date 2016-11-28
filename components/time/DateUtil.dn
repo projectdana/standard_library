@@ -1,0 +1,244 @@
+// DateComparator.dn
+// Roberto Rodrigues Filho
+// September, 2015
+
+component provides time.DateUtil requires io.Output out, data.IntUtil iu {
+	byte	MAX_DAY_LEAP[] 	= new byte[](31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+	byte	MAX_DAY[]	= new byte[](31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
+	bool DateUtil:before(DateTime first, DateTime second) {
+		if (equal(first, second)) {
+			return false
+		}
+
+		if (first.year < second.year) {
+			return true
+		} else if (first.year > second.year) {
+			return false
+		}
+
+		if (first.month < second.month) {
+			return true
+		} else if (first.month > second.month) {
+			return false
+		}
+
+		if (first.day < second.day) {
+			return true
+		} else if (first.day > second.day) {
+			return false
+		}
+
+		if (first.hour < second.hour) {
+			return true
+		} else if (first.hour > second.hour) {
+			return false
+		}
+
+		if (first.minute < second.minute) {
+			return true
+		} else if (first.minute > second.minute) {
+			return false
+		}
+
+		if (first.second < second.second) {
+			return true
+		} else if (first.second > second.second) {
+			return false
+		}
+
+		if (first.millisecond < second.millisecond) {
+			return true
+		}
+
+		return false
+	}
+
+	bool DateUtil:equal(DateTime first, DateTime second) {
+		if (first.millisecond != second.millisecond) {
+			return false
+		}
+
+		if (first.second != second.second) {
+			return false
+		}
+
+		if (first.minute != second.minute) {
+			return false
+		}
+
+		if (first.hour != second.hour) {
+			return false
+		}
+
+		if (first.day != second.day) {
+			return false
+		}
+
+ 		if (first.month != second.month) {
+ 			return false
+ 		}
+
+ 		if (first.year != second.year) {
+ 			return false
+ 		}
+
+		return true
+	}
+
+	bool DateUtil:after(DateTime first, DateTime second) {
+		if (!equal(first, second)) {
+			if (!before(first, second)) {
+				return true
+			}
+		}
+		
+		return false
+	}
+
+	bool isLeap(int16 year) {
+		if ((year % 4) == 0) {
+			if ((year % 100) == 0) {
+				if ((year % 400) == 0) {
+					return true
+				}
+			} else {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	DateTime normaliseMSEC(DateTime second) {
+		if (second.second == 0) {
+			second = normaliseSEC(second)
+		}
+
+		second.second 		= second.second      - 1
+		second.millisecond 	= second.millisecond + DateUtil.MAX_MSEC
+
+		return second
+	}
+
+	DateTime normaliseSEC(DateTime second) {
+		if (second.minute == 0) {
+			second = normaliseMIN(second)
+		}
+
+		second.minute = second.minute - 1
+		second.second = second.second + DateUtil.MAX_SEC
+
+		return second
+	}
+
+	DateTime normaliseMIN(DateTime second) {
+		if (second.hour == 0 ) {
+			second = normaliseDAY(second)
+		}
+
+		second.hour   = second.hour    - 1
+		second.minute = second.minute  + DateUtil.MAX_MIN
+
+		return second
+	}
+
+	DateTime normaliseHOUR(DateTime second) {
+		second.day = second.day - 1
+		
+		if (second.day == 0) {
+			second = normaliseDAY(second)
+		}
+
+		second.hour = second.hour + DateUtil.MAX_HOUR
+
+		return second
+	}
+
+	DateTime normaliseDAY(DateTime second) {
+		second.month = second.month - 1
+		
+		if (second.month == 0) {
+			second = normaliseMONTH(second)
+		}
+
+		if (isLeap(second.year)) {
+			second.day = second.day + MAX_DAY_LEAP[second.month]
+		} else {
+			second.day = second.day + MAX_DAY[second.month]
+		}
+
+		return second
+	}
+
+	DateTime normaliseMONTH(DateTime second) {
+		second.year  = second.year  - 1
+		second.month = second.month + DateUtil.MAX_MONTH
+
+		return second
+	}
+
+	DateTime calcDiff(DateTime first, DateTime second) {
+		DateTime diff = new DateTime()
+
+		if (second.millisecond < first.millisecond) {
+			second = normaliseMSEC(second)
+		}
+
+		if (second.second < first.second) {
+			second = normaliseSEC(second)
+		}
+
+		if (second.minute < first.minute) {
+			second = normaliseMIN(second)
+		}
+
+		if (second.hour < first.hour) {
+			second = normaliseHOUR(second)
+		}
+
+		if (second.day < first.day) {
+			second = normaliseDAY(second)
+		}
+
+		if (second.month < first.month) {
+			second = normaliseMONTH(second)
+		}
+
+		diff.year 		 = second.year        - first.year
+		diff.month 		 = second.month       - first.month
+		diff.day 		 = second.day         - first.day
+		diff.hour		 = second.hour        - first.hour
+		diff.minute  	 = second.minute      - first.minute
+		diff.second		 = second.second      - first.second
+		diff.millisecond  = second.millisecond - first.millisecond
+
+		return diff
+	}
+
+	DateTime DateUtil:diff(DateTime f, DateTime s) {
+		DateTime first  = clone f
+		DateTime second = clone s
+
+		if (equal(first, second)) {
+			return new DateTime()
+		}
+
+		if (after(first, second)) {
+			return calcDiff(second, first)
+		}
+
+		return calcDiff(first, second)
+	}
+
+	int DateUtil:toMilliseconds(DateTime date) {
+		int result = 0
+
+		result = date.millisecond
+		result = result + (date.second  * 1000	 )
+		result = result + (date.minute  * 60000  )
+		result = result + (date.hour	* 3600000)
+
+		return result
+	}
+}

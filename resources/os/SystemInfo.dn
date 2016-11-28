@@ -1,0 +1,35 @@
+/*
+{"description" : "Get basic information about the host operating system and physical machine."}
+*/
+
+interface SystemInfo{
+	/*
+	{"@description" : "Get the operating system name."}
+	*/
+	char[] getPlatformName()
+	
+	/*
+	{"@description" : "Get the operating system version."}
+	*/
+	char[] getPlatformVersion()
+	
+	/*
+	{"@description" : "Get the 'chip' name, i.e. x86 or x64."}
+	*/
+	char[] getChipName()
+	
+	/*
+	{"@description" : "Get the OS 'host name' (the computer's name)."}
+	*/
+	char[] getHostName()
+	
+	/*
+	{"@description" : "Get the value of an environment variable."}
+	*/
+	char[] getVariable(char name[])
+	
+	/*
+	{"@description" : "Get the default Dana font (regular or monospaced) for graphical user interfaces."}
+	*/
+	char[] getSystemFont(bool monospaced)
+	}

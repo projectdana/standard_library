@@ -1,0 +1,2 @@
+UIPlane=ui.Window
+TitleBar->BSTitle

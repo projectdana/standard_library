@@ -1,0 +1,66 @@
+uses time.DateTime
+
+data FileEntry{
+	char name[]
+	}
+
+data FileInfo{
+	const byte TYPE_FILE = 1
+	const byte TYPE_DIR = 2
+	
+	byte type
+	int size
+	DateTime modified
+	}
+
+/*
+ {"description" : "Examine the contents of a file system and read information about individual files."}
+*/
+interface FileSystem{
+	/*
+	 {"@description" : "Get a list of files and folders in a given directory.",
+			"@return" : "A list of file and directory names that appear in the given directory."}
+	*/
+	FileEntry[] getDirectoryContents(char path[])
+	
+	/*
+	 {"@description" : "Get information about a specific file or directory."}
+	*/
+	FileInfo getInfo(char path[])
+	
+	/*
+	 {"@description" : "Check if a given file or folder exists.",
+			"@return" : "True if the file or folder exists, false otherwise."}
+	*/
+	bool exists(char path[])
+	
+	/*
+	 {"@description" : "Delete a file.",
+			"@return" : "True if successful, false otherwise (for example if the file did not exist)."}
+	*/
+	bool delete(char path[])
+	
+	/*
+	 {"@description" : "Move a file or directory to a new location.",
+			"@return" : "True if successful, false otherwise."}
+	*/
+	bool move(char path[], char newPath[])
+	
+	/*
+	 {"@description" : "Copy a file or directory to a new location.",
+			"@return" : "True if successful, false otherwise."}
+	*/
+	bool copy(char path[], char newPath[], bool recursive)
+	
+	/*
+	 {"@description" : "Create a new directory.",
+			"@return" : "True if successful, false otherwise."}
+	*/
+	bool createDirectory(char path[])
+	
+	/*
+	 {"@description" : "Permanently delete a given directory, and all of its contents.",
+			"@return" : "True if successful, false otherwise."}
+	*/
+	bool deleteDirectory(char path[])
+	}

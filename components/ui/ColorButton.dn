@@ -1,0 +1,122 @@
+const int WIDTH = 20
+const int HEIGHT = 20
+
+component provides ColorButton(AdaptEvents) requires io.Output out, data.IntUtil iu{
+	
+	bool visible = true
+	
+	ColorButton:Adapt()
+		{
+		myPanel.addClickTarget(this)
+		}
+	
+	void ColorButton:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+
+	void ColorButton:setPanel(Panel p)
+		{
+		myPanel = p
+		myPanel.addClickTarget(this)
+		}
+	
+	void ColorButton:paint(Canvas c)
+		{
+		if (visible)
+			{
+			c.drawRect(new Rect2D(xPosition, yPosition, size.width, size.height, color))
+			}
+		}
+	
+	void ColorButton:click(int x, int y, int button)
+		{
+		if (button == MouseButtons.BUTTON_LEFT)
+			{
+			for (int i = 0; i < listeners.arrayLength; i++)
+				{
+				listeners[i].click(this)
+				}
+			}
+		}
+	
+	void ColorButton:addClickListener(ClickListener cl)
+		{
+		listeners = new ClickListener[](listeners, cl)
+		}
+	
+	void ColorButton:remClickListener(ClickListener cl)
+		{
+		ClickListener nl[] = new ClickListener[listeners.arrayLength - 1]
+		int j = 0
+		for (int i = 0; i < listeners.arrayLength; i++)
+			{
+			ClickListener q = listeners[i]
+			
+			if (q !== cl)
+				{
+				nl[j] = listeners[i]
+				j ++
+				}
+			}
+		listeners = nl
+		}
+	
+	void ColorButton:setColor(Color newColor)
+		{
+		color = newColor
+		}
+	
+	Color ColorButton:getColor()
+		{
+		return color
+		}
+	
+	void ColorButton:setSize(WH sz)
+		{
+		size = clone sz
+		}
+	
+	WH ColorButton:getSize()
+		{
+		return size
+		}
+	
+	Rect ColorButton:getBounds()
+		{
+		return new Rect(xPosition, yPosition, size.width, size.height)
+		}
+	
+	WH ColorButton:getPreferredSize()
+		{
+		return new WH(size.width, size.height)
+		}
+	
+	Point ColorButton:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+	
+	ClickListenerItem[] ColorButton:getClickListeners()
+		{
+		ClickListenerItem lst[] = new ClickListenerItem[listeners.arrayLength]
+		for (int i = 0; i < lst.arrayLength; i++)
+			{
+			lst[i] = new ClickListenerItem(listeners[i])
+			}
+		
+		return lst
+		}
+	
+	Panel ColorButton:getPanel()
+		{
+		return myPanel
+		}
+	
+	void AdaptEvents:destroy()
+		{
+		visible = false
+		myPanel.repaint()
+		}
+	}

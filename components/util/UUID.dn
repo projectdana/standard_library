@@ -1,0 +1,64 @@
+component provides UUID requires io.Output out, data.IntUtil iu, util.RandomInt, time.Calendar cal, time.DateUtil du{
+
+  RandomInt ri = new RandomInt()
+
+  int ASCII_VALID_RANGE0[] = new int[](48, 57)
+  int ASCII_VALID_RANGE1[] = new int[](97, 102)
+
+  /*
+    a uuid contains 36 characters, 4 of which are dashes
+    chunks are divided using dashes, and the chunks
+    as of the 6/10/2015 have the following lengths:
+  */
+  int UUID_CHUNK_LENGTHS[] = new int[](8, 4, 4, 4, 12)
+
+  /*
+    UUID:generate
+
+    Generates a 36 character UUID, divided into chunks, using dashes as a
+    delimeter.
+
+    Chunks have the following lengths:
+
+    8-4-4-4-12
+
+  */
+  char[] UUID:generate(){
+
+    char uuid[] = ""
+
+    int randomNumber = 0
+    int rand_seed = 0
+
+    //iterate through our chunks and construct our uuid
+    for(int j = 0; j < UUID_CHUNK_LENGTHS.arrayLength; j++){
+
+      for(int i = 0; i < UUID_CHUNK_LENGTHS[j]; i++){
+
+        //set our seed each time
+        rand_seed = du.toMilliseconds(cal.getTime())
+
+        ri.setSeed(rand_seed)
+
+        //check if we are between a range...
+        while(!between(randomNumber = ri.get(ASCII_VALID_RANGE1[1] + 1),ASCII_VALID_RANGE1[0],ASCII_VALID_RANGE1[1]) && !between(randomNumber, ASCII_VALID_RANGE0[0], ASCII_VALID_RANGE0[1])){}
+
+        //concatenate!
+        uuid = new char[](uuid,randomNumber)
+      }
+
+      //append a dash to all chunks except the last.
+      if(j != UUID_CHUNK_LENGTHS.arrayLength - 1)
+        uuid = new char[](uuid,"-")
+    }
+
+    return uuid
+  }
+
+  bool between(int value, int lower, int upper){
+    if(value <= upper && value >=lower)
+      return true
+
+    return false
+  }
+}

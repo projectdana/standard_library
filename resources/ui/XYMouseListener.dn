@@ -1,0 +1,12 @@
+/*
+* XYMouseListener interface
+* A callback interface for objects that want to be notified of detailed mouse events with x/y coordinates and a button type (see MouseButtons).
+*/
+
+uses MouseButtons
+
+interface XYMouseListener{
+	void mouseDown(int x, int y, int button)
+	void mouseUp(int x, int y, int button)
+	void mouseMove(int x, int y)
+	}

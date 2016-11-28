@@ -1,0 +1,525 @@
+uses Service
+
+data Dependency{
+	char interfaceType[]
+	char toRole[]
+	bool connected
+	
+	Dependency next
+	}
+
+data Role{
+	char fragment[]
+	char name[]
+	char source[]
+	IDC class
+	Dependency dependencies
+	App app
+	bool appComplete
+	Service svc
+	
+	Role next
+	}
+
+component provides App requires io.Output out, io.Input stdin, io.TextFile, composition.Loader loader, data.StringUtil stringUtil, data.IntUtil iu, os.SystemInfo systemInfo, io.FileSystem fileSystem, composition.Adapter adapter {
+	
+	char manifest[]
+	Role roles
+	Role lastRole
+	
+	char[] removeWhitespace(char str[])
+		{
+		char res[]
+		
+		for (int i = 0; i < str.arrayLength; i ++)
+			{
+			if (str[i] != " " && str[i] != "\t")
+				res = new char[](res, str[i])
+			}
+		
+		return res
+		}
+	
+	Role readRole(char path[])
+		{
+		TextFile fd = new TextFile(path, File.FILE_ACCESS_READ)
+		
+		if (fd != null)
+			{
+			Role result = new Role()
+			
+			if (roles == null)
+				roles = result
+				else
+				lastRole.next = result
+			
+			lastRole = result
+			
+			//line 1 is the role instance name/class source path, of the form name=source
+			char ln[] = removeWhitespace(fd.readLine())
+			
+			int eqi = stringUtil.find(ln, "=")
+			result.name = stringUtil.subString(ln, 0, eqi)
+			result.fragment = path
+			result.source = stringUtil.subString(ln, eqi+1, ln.arrayLength - (eqi+1))
+			
+			Dependency lastDP
+			
+			//remaining lines are dependencies, of the form IReq->Role, or optionally IReq->Role:variant
+			while (!fd.eof())
+				{
+				ln = fd.readLine()
+				ln = removeWhitespace(ln)
+				
+				Dependency newDP = new Dependency()
+				
+				int mi = stringUtil.find(ln, "-")
+				int gti = stringUtil.find(ln, ">")
+				newDP.interfaceType = stringUtil.subString(ln, 0, mi)
+				newDP.toRole = stringUtil.subString(ln, gti+1, ln.arrayLength - (gti+1))
+				
+				if (result.dependencies == null)
+					result.dependencies = newDP
+					else
+					lastDP.next = newDP
+				
+				lastDP = newDP
+				}
+			fd.close()
+			
+			return result
+			}
+		
+		return null
+		}
+	
+	void loadConfig(char path[])
+		{
+		manifest = path
+		
+		TextFile fd = new TextFile(path, File.FILE_ACCESS_READ)
+		
+		//read list of roles & dependencies
+		
+		if (fd != null)
+			{
+			while (!fd.eof())
+				{
+				char ln[] = fd.readLine()
+				addRole(ln)
+				}
+			fd.close()
+			}
+		}
+	
+	void listOpenDependencies()
+		{
+		for (Role r = roles; r != null; r = r.next)
+			{
+			bool firstOpen = true
+			
+			for (Dependency d = r.dependencies; d != null; d = d.next)
+				{
+				if (!d.connected)
+					{
+					if (firstOpen) out.println("$(r.name)")
+					firstOpen = false
+					
+					out.println(" $(d.interfaceType) -> $(d.toRole)")
+					}
+				}
+			}
+		}
+	
+	void listArchitecture()
+		{
+		int i = 0
+		for (Role r = roles; r != null; r = r.next)
+			{
+			out.print("[$(iu.intToString(i))]: $(r.name) ($(r.source))")
+			
+			if (r.app != null && r.appComplete) out.print(" [finished]")
+			
+			out.println("")
+			
+			for (Dependency d = r.dependencies; d != null; d = d.next)
+				{
+				out.print("       $(d.interfaceType) -> $(d.toRole)")
+				if (!d.connected) out.print(" [x]")
+				out.println("")
+				}
+			
+			i ++
+			}
+		}
+	
+	void connectServers(Role rx)
+		{
+		//try to satisfy any of rx's unsatisfied dependencies
+		
+		for (Dependency d = rx.dependencies; d != null; d = d.next)
+			{
+			if (!d.connected)
+				{
+				for (Role r = roles; r != null; r = r.next)
+					{
+					if (d.toRole == r.name)
+						{
+						rx.class :> d.interfaceType = r.class :< d.interfaceType
+						d.connected = true
+						break
+						}
+					}
+				}
+			}
+		}
+	
+	void connectClients(Role rx)
+		{
+		//connect any unsatisfied dependencies from other roles to rx
+		
+		for (Role r = roles; r != null; r = r.next)
+			{
+			for (Dependency d = r.dependencies; d != null; d = d.next)
+				{
+				if (d.toRole == rx.name && !d.connected)
+					{
+					r.class :> d.interfaceType = rx.class :< d.interfaceType
+					d.connected = true
+					}
+				}
+			}
+		}
+	
+	Role getRole(char name[])
+		{
+		for (Role r = roles; r != null; r = r.next)
+			{
+			if (r.name == name)
+				{
+				return r
+				}
+			}
+		
+		return null
+		}
+	
+	Role getRolePath(char path[])
+		{
+		for (Role r = roles; r != null; r = r.next)
+			{
+			if (r.fragment == path)
+				{
+				return r
+				}
+			}
+		
+		return null
+		}
+	
+	void runApp(Role r, App a)
+		{
+		a.main(null)
+		r.appComplete = true
+		}
+	
+	char[] findObjectFile(char source[])
+		{
+		char test[]
+		
+		//local?
+		test = source
+		if (fileSystem.exists(test))
+			return test
+		
+		//local with .o?
+		test = new char[](source, ".o")
+		if (fileSystem.exists(test))
+			return test
+		
+		//all dots (except final one) converted to slashes
+		String parts[] = stringUtil.explode(source, ".")
+		if (parts.arrayLength > 0)
+			test = parts[0].string
+			else
+			test = null
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			if (i + 1 != parts.arrayLength)
+				test = new char[](test, "/", parts[i].string)
+				else
+				test = new char[](test, ".", parts[i].string)
+			}
+		
+		if (fileSystem.exists(test))
+			return test
+		
+		//all dots (including final one) converted to slashes, with ".o" appended
+		if (parts.arrayLength > 0)
+			test = parts[0].string
+			else
+			test = null
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			test = new char[](test, "/", parts[i].string)
+			}
+		
+		test = new char[](test, ".o")
+		
+		if (fileSystem.exists(test))
+			return test
+		
+		//central?
+		char danaHome[] = systemInfo.getVariable("DANA_HOME")
+		
+		test = new char[](danaHome, "/components/", source)
+		if (fileSystem.exists(test))
+			return test
+		
+		//central with .o?
+		test = new char[](danaHome, "/components/", source, ".o")
+		if (fileSystem.exists(test))
+			return test
+		
+		//central with dot conversion?
+		if (parts.arrayLength > 0)
+			test = new char[](danaHome, "/components/", parts[0].string)
+			else
+			test = null
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			if (i + 1 != parts.arrayLength)
+				test = new char[](test, "/", parts[i].string)
+				else
+				test = new char[](test, ".", parts[i].string)
+			}
+		
+		if (fileSystem.exists(test))
+			return test
+		
+		//central with dot conversion + .o?
+		if (parts.arrayLength > 0)
+			test = new char[](danaHome, "/components/", parts[0].string)
+			else
+			test = null
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			test = new char[](test, "/", parts[i].string)
+			}
+		
+		test = new char[](test, ".o")
+		
+		if (fileSystem.exists(test))
+			return test
+		
+		return source
+		}
+	
+	void addRole(char path[])
+		{
+		Role rx
+		
+		if ((rx = readRole(path)) != null)
+			{
+			char objectFilePath[] = findObjectFile(rx.source)
+			
+			rx.class = loader.load(objectFilePath)
+			
+			if (rx.class :< Service != null)
+				{
+				rx.svc = new Service() from rx.class :< Service
+				rx.svc.start()
+				}
+			
+			connectServers(rx) //things needed by rx
+			connectClients(rx) //things that use rx
+			
+			if (rx.class :< App != null)
+				{
+				rx.app = new App() from rx.class :< App
+				asynch::runApp(rx, rx.app)
+				}
+			}
+		}
+	
+	void removeRole(Role role)
+		{
+		IDC class = role.class
+		
+		Role rw = roles
+		Role rf = null
+		while (rw != null)
+			{
+			if (rw == role)
+				{
+				if (rf == null)
+					roles = rw.next
+					else
+					rf.next = rw.next
+				
+				if (lastRole == rw)
+					lastRole = rf
+				
+				//we must destroy the objects here, otherwise they'll be destroyed after component unloading
+				rw.app = null
+				rw.svc = null
+				
+				break
+				}
+			
+			rf = rw
+			rw = rw.next
+			}
+		
+		loader.unload(class)
+		}
+	
+	void rewire(Role lhs, char bp[], Role rhs)
+		{
+		adapter.adaptRequiredInterface(lhs.class, bp, rhs.class)
+		}
+	
+	Role resolveRoleMultikey(char string[])
+		{
+		Role lhs
+		
+		if (stringUtil.isNumeric(string))
+			{
+			int index = iu.intFromString(string)
+			
+			Role rw = roles
+			while (rw != null)
+				{
+				if (index == 0) return rw
+				
+				index --
+				rw = rw.next
+				}
+			}
+			else
+			{
+			if (string.arrayLength >= "rsrc:".arrayLength && stringUtil.subString(string, 0, 5) == "rsrc:")
+				lhs = getRolePath(stringUtil.subString(string, 5, string.arrayLength - 5))
+				else
+				lhs = getRole(string)
+			}
+		
+		return lhs
+		}
+	
+	bool processCommand(char cmd[])
+		{
+		//split into "command" and "params" array (just explode by whitespace)
+		
+		String parts[] = stringUtil.explode(cmd, " ")
+		
+		if (parts.arrayLength > 0)
+			{
+			cmd = parts[0].string
+			
+			if (cmd == "quit" || cmd == "q")
+				{
+				return true
+				}
+				else if (cmd == "ds")
+				{
+				listOpenDependencies()
+				}
+				else if (cmd == "pa")
+				{
+				listArchitecture()
+				}
+				else if (cmd == "add")
+				{
+				if (parts.arrayLength < 2)
+					{
+					out.println("Please specify a configuration fragment to add to the system manifest")
+					}
+					else
+					{
+					addRole(parts[1].string)
+					}
+				}
+				else if (cmd == "rem")
+				{
+				if (parts.arrayLength < 2)
+					{
+					out.println("Please specify a role name / index to remove from the system manifest")
+					}
+					else
+					{
+					Role lhs
+					
+					lhs = resolveRoleMultikey(parts[1].string)
+					
+					if (lhs != null)
+						removeRole(lhs)
+					}
+				}
+				else if (cmd == "tra")
+				{
+				if (parts.arrayLength < 4)
+					{
+					out.println("Please specify a role name / index, its bindport and new role name / index")
+					}
+					else
+					{
+					Role lhs
+					Role rhs
+					
+					lhs = resolveRoleMultikey(parts[1].string)
+					rhs = resolveRoleMultikey(parts[3].string)
+					
+					if (lhs != null && rhs != null)
+						rewire(lhs, parts[2].string, rhs)
+						else
+						out.println("One of the specified roles could not be found")
+					}
+				}
+				else if (cmd == "help")
+				{
+				out.println("")
+				out.println("command         info")
+				out.println("-------         ----")
+				out.println("pa              print current architecture")
+				out.println("ds              list missing dependencies")
+				out.println("add             add role")
+				out.println("rem             remove role")
+				out.println("tra             transfer a dependency")
+				out.println("quit            exit this program")
+				out.println("")
+				}
+				else
+				out.println("unknown command, try 'help'")
+			}
+		
+		return false
+		}
+	
+	int App:main(AppParam params[])
+		{
+		out.println("Dana Evolution Shell Runtime")
+		
+		if (params.arrayLength >= 1)
+			{
+			loadConfig(params[0].string)
+			}
+		
+		out.print("> ")
+		
+		char input[] = stdin.readln()
+		
+		while (! processCommand(input))
+			{
+			out.print("> ")
+			input = stdin.readln()
+			}
+		
+		return 0
+		}
+	
+	}

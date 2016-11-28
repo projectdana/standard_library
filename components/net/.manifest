@@ -1,0 +1,8 @@
+{
+"defaultLinks":	[
+				{"interface": "TCPSocket", "component": "TCP"},
+				{"interface": "TCPServerSocket", "component": "TCP"},
+				{"interface": "UDPServer", "component": "UDP"},
+				{"interface": "UDPClient", "component": "UDP"}
+				]
+}

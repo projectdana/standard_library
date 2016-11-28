@@ -1,0 +1,119 @@
+uses Service
+
+data ReqIntf {
+	char package[]
+	char alias[]
+	}
+
+component provides composition.RecursiveLoader requires composition.Search search, composition.Loader loader, data.json.JSONParser parser, composition.ObjectWriter, System system, data.IntUtil iu {
+	
+	ReqIntf[] getRequiredInterfaces(char com[])
+		{
+		ReqIntf result[]
+		
+		ObjectWriter reader = new ObjectWriter(com)
+		InfoSection section = reader.getInfoSection("DNIL", "json")
+		
+		JSONElement document = parser.parseDocument(section.content)
+		
+		JSONElement requiredInterfaces = parser.getValue(document, "requiredInterfaces")
+		
+		if (requiredInterfaces != null)
+			{
+			for (int i = 0; i < requiredInterfaces.children.arrayLength; i++)
+				{
+				JSONElement ri = requiredInterfaces.children[i]
+				char package[] = parser.getValue(ri, "package").value
+				char alias[] = parser.getValue(ri, "alias").value
+				
+				result = new ReqIntf[](result, new ReqIntf(package, alias))
+				}
+			}
+		
+		return result
+		}
+	
+	bool isAutoBinding(char package[])
+		{
+		String interfaces[] = system.getAutoBindings()
+		
+		for (int i = 0; i < interfaces.arrayLength; i++)
+			{
+			if (interfaces[i].string == package) return true
+			}
+		
+		return false
+		}
+	
+	int loadSupportComponent(char path[], LoadedComponents lc)
+		{
+		for (int i = 0; i < lc.loadedComponents.arrayLength; i++)
+			{
+			if (lc.loadedComponents[i].path == path)
+				return i
+			}
+		
+		IDC res = loader.load(path)
+		
+		lc.loadedComponents = new LoadedComponent[](lc.loadedComponents, new LoadedComponent(res, path))
+		
+		return lc.loadedComponents.arrayLength - 1
+		}
+	
+	bool loadComponents(int comIndex, char path[], LoadedComponents lc)
+		{
+		//get the required interfaces of path, and load each one (if not already in lc), then wire up the interfaces
+		IDC com = lc.loadedComponents[comIndex].class
+		ReqIntf ri[] = getRequiredInterfaces(path)
+		
+		for (int i = 0; i < ri.arrayLength; i++)
+			{
+			if (!isAutoBinding(ri[i].package))
+				{
+				char np[] = search.getDefaultComponent(ri[i].package)
+				
+				int index = loadSupportComponent(np, lc)
+				IDC ncom = lc.loadedComponents[index].class
+				
+				com :> ri[i].alias = ncom :< ri[i].alias
+				
+				if (lc.graph.arrayLength != 0)
+					lc.graph = new char[](lc.graph, ",")
+				lc.graph = new char[](lc.graph, "$(ri[i].alias):$(iu.intToString(comIndex)):$(iu.intToString(index))")
+				
+				loadComponents(index, np, lc)
+				}
+			}
+		
+		//service start
+		if (com :< Service != null)
+			{
+			Service svc = new Service() from com :< Service
+			svc.start()
+			}
+		
+		return true
+		}
+	
+	LoadedComponents RecursiveLoader:load(char path[])
+		{
+		IDC main = loader.load(path)
+		LoadedComponents lc = new LoadedComponents(main, "", new LoadedComponent(main, path))
+		
+		loadComponents(0, path, lc)
+		
+		//add components to graph
+		char cgraph[]
+		for (int i = 0; i < lc.loadedComponents.arrayLength; i++)
+			{
+			if (cgraph.arrayLength != 0)
+				cgraph = new char[](cgraph, ",")
+			cgraph = new char[](cgraph, lc.loadedComponents[i].path)
+			}
+		
+		lc.graph = new char[](cgraph, "|", lc.graph)
+		
+		return lc
+		}
+	
+	}

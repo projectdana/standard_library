@@ -1,0 +1,34 @@
+/*
+ {"description" : "A stack of data items."}
+*/
+
+interface Stack{
+	/*
+	 {"@description" : "The current contents of the stack, as an array."}
+	*/
+	transfer Data content[]
+	
+	/*
+	 {"@description" : "Add an element to the stack."}
+	*/
+	void add(Data item)
+	
+	/*
+	 {"@description" : "Remove an element from the stack."}
+	*/
+	void remove(Data item)
+	
+	/*
+	 {"@description" : "Update an element in the stack."}
+	*/
+	void update(Data item, Data newVersion)
+	
+	/*
+	 {"@description" : "Read and remove an element from the stack, according to the stack policy."}
+	*/
+	Data service()
+	
+	//information
+	int getLength()
+	Data[] getContents()
+	}

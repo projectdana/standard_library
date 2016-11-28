@@ -1,0 +1,9 @@
+/*
+* Point type
+* This data type describes an x/y coordinate.
+*/
+
+data Point{
+	int x
+	int y
+	}

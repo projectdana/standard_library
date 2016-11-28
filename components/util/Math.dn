@@ -1,0 +1,34 @@
+library interface MathLib {
+	int sqrt(int val)
+	dec sqrtDec(dec val)
+	}
+
+component provides Service, util.Math requires NativeLoader inl, io.Output out {
+	
+	static library MathLib lib
+	
+	implementation Math {
+		
+		int Math:sqrt(int n)
+			{
+			return lib.sqrt(n)
+			}
+		
+		dec Math:sqrtDec(dec n)
+			{
+			return lib.sqrtDec(n)
+			}
+		}
+	
+	implementation Service {
+		void Service:start()
+			{
+			lib = new MathLib() from inl.load("math") :< MathLib
+			}
+		
+		void Service:stop()
+			{
+			}
+		}
+	
+	}

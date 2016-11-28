@@ -1,0 +1,42 @@
+/*
+* TitleBar interface
+* A title bar decorates a window with a textual title and a collection of other elements that can control the window's status.
+*/
+
+uses Window
+uses Rect
+
+interface CloseEventListener{
+	void closeEvent()
+	}
+
+interface TitleBarEventListener{
+	void maximiseEvent()
+	void minimiseEvent()
+	}
+
+interface TitleBar{
+	
+	transfer char title[]
+	transfer Window window
+	transfer CloseEventListener closeListeners[]
+	transfer TitleBarEventListener eventListeners[]
+	
+	TitleBar(char title[])
+	
+	Rect getRect()
+	
+	void setTitle(char title[])
+	char[] getTitle()
+	
+	void setWindow(Window w)
+	Window getWindow()
+	
+	void addCloseListener(CloseEventListener l)
+	void remCloseListener(CloseEventListener l)
+	
+	void addEventListener(TitleBarEventListener l)
+	void remEventListener(TitleBarEventListener l)
+	
+	void paint(Canvas c)
+	}

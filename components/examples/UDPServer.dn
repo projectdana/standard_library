@@ -1,0 +1,18 @@
+component provides App requires io.Output out, data.IntUtil iu, net.UDPServer udp {
+	
+	int App:main(AppParam params[])
+		{
+		UDPServer host = new UDPServer()
+		host.bind(UDPServer.ANY_ADDRESS, 2012)
+		
+		while (true)
+			{
+			Datagram dg = host.recv()
+			
+			out.print("data: $(dg.content)")
+			out.println("from: $(dg.address):$(iu.intToString(dg.port))")
+			}
+		
+		return 0
+		}
+	}

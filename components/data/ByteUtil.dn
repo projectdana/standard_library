@@ -1,0 +1,87 @@
+component provides ByteUtil requires io.Output out, data.IntUtil iu{
+
+  /**
+    ByteUtil:reverse
+
+    @param bytes an array of bytes to reverse
+
+  **/
+  byte[] ByteUtil:reverse(byte bytes[]){
+
+    byte reversed[] = new byte[bytes.arrayLength]
+
+    for(int i = 0; i < bytes.arrayLength; i++)
+        reversed[i] = bytes[(bytes.arrayLength - 1) - i]
+
+    return reversed
+  }
+
+  /**
+    ByteUtil:toHexString
+
+    @param bytes an array of bytes to transform into a hexidecimal string
+
+  **/
+  char[] ByteUtil:toHexString(byte bytes[]){
+    char hexString[] = ""
+
+    for(int i = 0; i < bytes.arrayLength; i++){
+      char upperChar = (bytes[i] & 0xF0) >> 4
+      char lowerChar = bytes[i] & 0x0F
+
+      //ascii offsets
+      if(upperChar < 10)
+        upperChar += 48
+      else
+        upperChar += 87
+
+      //ascii offsets
+      if(lowerChar < 10)
+        lowerChar += 48
+      else
+        lowerChar += 87
+
+
+      hexString = new char[](hexString,upperChar,lowerChar)
+    }
+
+    return hexString
+  }
+
+  /**
+    ByteUtil:fromHexString
+
+    @param hexString an array of ascii hex characters to transpose back into a byte array
+
+  **/
+	byte[] ByteUtil:fromHexString(char hexString[]){
+		byte byteArray[]
+
+    if(hexString.arrayLength % 2 != 0)
+      throw new Exception("A hex string must be of an even length.")
+
+		for(int i = 0; i < hexString.arrayLength; i += 2){
+			char upperByte = hexString[i]
+			char lowerByte = hexString[i+1]
+
+      //ascii offsets
+			if(upperByte < 58)
+        upperByte -= 48
+      else
+        upperByte -= 87
+
+      //ascii offsets
+      if(lowerByte < 58)
+        lowerByte -= 48
+      else
+        lowerByte -= 87
+
+			byte combined = (upperByte << 4) | lowerByte
+
+			byteArray = new char[](byteArray,combined)
+		}
+
+    return byteArray
+  }
+
+}

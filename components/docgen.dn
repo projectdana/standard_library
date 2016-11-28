@@ -1,0 +1,632 @@
+data PrimaryType{
+	char type[]
+	char htmlFile[]
+	}
+
+component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo {
+	
+	char[] getHTMLFileFor(char sourceFile[], char type[])
+		{
+		char path[] = stringUtil.subString(sourceFile, 0, stringUtil.rfind(sourceFile, "."))
+		
+		path = stringUtil.implode(stringUtil.explode(path, "/\\"), "/")
+		
+		//replace the start of the path (i.e. "resources") with "doc"
+		String tokens[] = clone stringUtil.explode(path, "/")
+		tokens[0] = new String("")
+		path = clone stringUtil.implode(tokens, ".")
+		path[0] = " "
+		path = stringUtil.ltrim(path)
+		
+		char tpath[] = new char[](path, "_$type.html")
+		
+		return tpath
+		}
+	
+	char[] getTypeSource(SourceFile sf, char type[])
+		{
+		//check types from sf
+		type = stringUtil.implode(stringUtil.explode(type, "[]"), "")
+		for (int i = 0; i < sf.types.arrayLength; i++)
+			{
+			if (sf.types[i].name == type)
+				{
+				return getHTMLFileFor(sf.path, type)
+				}
+			}
+		
+		//now check all secondary files used by sf
+		for (int i = 0; i < sf.supportFiles.arrayLength; i++)
+			{
+			char ts[]
+			
+			if ((ts = getTypeSource(sf.supportFiles[i], type)) != null)
+				return ts
+			}
+		
+		return null
+		}
+	
+	char[] formatType(SourceFile sf, char type[])
+		{
+		//check if the type is declared anywhere in sf or any secondary file; if so create a hyperlink to its doc file
+		char sfn[] = getTypeSource(sf, type)
+		
+		if (sfn != null)
+			{
+			type = new char[]("<a href = \"$sfn\" class = \"doc_type_link\">$type</a>")
+			}
+		
+		return type
+		}
+	
+	char[] formatFunctionHeader(SourceFile sf, FunctionDef f)
+		{
+		char result[]
+		
+		result = new char[](result, formatType(sf, f.returnType), " ", f.name)
+		
+		result = new char[](result, "(")
+		
+		for (int q = 0; q < f.params.arrayLength; q++)
+			{
+			result = new char[](result, formatType(sf, f.params[q].type), " ", f.params[q].displayName)
+			
+			if (q + 1 < f.params.arrayLength) result = new char[](result, ", ")
+			}
+		result = new char[](result, ")")
+		
+		return result
+		}
+	
+	void writeFile(SourceFile sf)
+		{
+		//put "html" on the end
+		char path[] = stringUtil.subString(sf.path, 0, stringUtil.rfind(sf.path, "."))
+		
+		path = stringUtil.implode(stringUtil.explode(path, "/\\"), "/")
+		
+		//replace the start of the path (i.e. "resources") with "doc"
+		String tokens[] = clone stringUtil.explode(path, "/")
+		tokens[0] = new String("doc")
+		path = stringUtil.implode(tokens, "/")
+		
+		//get the "include" package
+		tokens[0] = new String("")
+		char includePackage[] = clone stringUtil.implode(tokens, ".")
+		includePackage[0] = " "
+		
+		//we write each type separately, and at the top of each HTML file indicate which resource file must be used
+		
+		for (int i = 0; i < sf.types.arrayLength; i++)
+			{
+			if (sf.types[i].class == TypeDef.OBJECT)
+				{
+				InterfaceDef id = sf.types[i]
+				
+				char tpath[] = new char[]("doc/files/", getHTMLFileFor(sf.path, id.name))
+				
+				if (fileSystem.exists(tpath))
+					fileSystem.delete(tpath)
+				
+				File fd = new File(tpath, File.FILE_ACCESS_WRITE)
+				
+				if (fd != null)
+					{
+					fd.write("<html>")
+					fd.write("<link href=\"doc.css\" rel=\"stylesheet\" type=\"text/css\">")
+					fd.write("<body>")
+					
+					fd.write("<div class = \"doc_heading_line\">")
+					fd.write("<span class = \"doc_heading_text\">Interface</span> <span class = \"doc_heading_type\">$(id.name)</span>")
+					fd.write("</div>")
+					
+					//what to include to use this type
+					fd.write("<div class = \"doc_include_line\">")
+					fd.write("<span class = \"doc_include_text\">access this type via:</span> <span class = \"doc_include_path\">$includePackage</span> (provides, requires or uses)")
+					fd.write("</div>")
+					
+					//extends?
+					if (id.extendsType != null)
+						{
+						fd.write("<div class = \"doc_include_line\">")
+						fd.write("<span class = \"doc_include_text\"> --- extends:</span>")
+						fd.write(formatType(sf, id.extendsType.name))
+						fd.write("</div>")
+						}
+					
+					//the overall interface description
+					if (id.doc_description != null)
+						{
+						JSONElement doc = parser.parseDocument(id.doc_description)
+						
+						fd.write("<div class = \"doc_description\">")
+						fd.write(parser.getValue(doc, "description").value)
+						fd.write("</div>")
+						}
+					
+					//summary of the interface
+					// - constants
+					
+					if (id.constants.arrayLength > 0)
+						{
+						fd.write("<div class = \"doc_const_list\">")
+						
+						fd.write("<div class = \"doc_const_list_hdr\">")
+						fd.write("Constants")
+						fd.write("</div>")
+						
+						for (int j = 0; j < id.constants.arrayLength; j++)
+							{
+							fd.write("<div class = \"doc_const_list_item\">")
+							fd.write(formatType(sf, id.constants[j].type))
+							fd.write(" ")
+							fd.write(id.constants[j].displayName)
+							fd.write("</div>")
+							}
+						fd.write("</div>")
+						}
+					
+					// - transfer fields
+					
+					if (id.transferFields.arrayLength > 0)
+						{
+						fd.write("<div class = \"doc_transfer_list\">")
+						
+						fd.write("<div class = \"doc_transfer_list_hdr\">")
+						fd.write("Transfer fields")
+						fd.write("</div>")
+						
+						for (int j = 0; j < id.transferFields.arrayLength; j++)
+							{
+							fd.write("<div class = \"doc_transfer_list_item\">")
+							fd.write(formatType(sf, id.transferFields[j].type))
+							fd.write(" ")
+							fd.write(id.transferFields[j].displayName)
+							fd.write("</div>")
+							}
+						fd.write("</div>")
+						}
+					
+					// - the list of functions as a summary (with hyperlinks to their descriptions)
+					
+					fd.write("<div class = \"doc_function_list\">")
+					
+					fd.write("<div class = \"doc_function_list_hdr\">")
+					fd.write("Functions")
+					fd.write("</div>")
+					
+					for (int j = 0; j < id.functions.arrayLength; j++)
+						{
+						fd.write("<div class = \"doc_function_list_item\">")
+						fd.write(formatFunctionHeader(sf, id.functions[j]))
+						fd.write("</div>")
+						}
+					fd.write("</div>")
+					
+					//the list of constants in detail
+					if (id.constants.arrayLength > 0)
+						{
+						fd.write("<div class = \"doc_function_description\">")
+						
+						fd.write("<div class = \"doc_constant_fields_heading\">")
+						
+						fd.write("Constants")
+						
+						fd.write("</div>")
+						
+						fd.write("<div class = \"doc_function_description_parameters\">")
+						for (int j = 0; j < id.constants.arrayLength; j++)
+							{
+							char desc[] = null
+							
+							if (id.constants[j].doc_description != null)
+								{
+								JSONElement doc = parser.parseDocument(id.constants[j].doc_description)
+								if (parser.getValue(doc, "@description") != null)
+									desc = parser.getValue(doc, "@description").value
+								}
+							
+							fd.write("<div class = \"doc_transfer_field\">")
+							fd.write("<span class = \"doc_function_description_param_name\">$(id.constants[j].name)</span> ")
+							fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
+							fd.write("</div>")
+							}
+						fd.write("</div>")
+						
+						fd.write("</div>")
+						}
+					
+					//the list of transfer fields in detail
+					if (id.transferFields.arrayLength > 0)
+						{
+						fd.write("<div class = \"doc_function_description\">")
+						
+						fd.write("<div class = \"doc_transfer_fields_heading\">")
+						
+						fd.write("Transfer fields")
+						
+						fd.write("</div>")
+						
+						fd.write("<div class = \"doc_function_description_parameters\">")
+						for (int j = 0; j < id.transferFields.arrayLength; j++)
+							{
+							char desc[] = null
+							
+							if (id.transferFields[j].doc_description != null)
+								{
+								JSONElement doc = parser.parseDocument(id.transferFields[j].doc_description)
+								if (parser.getValue(doc, "@description") != null)
+									desc = parser.getValue(doc, "@description").value
+								}
+							
+							fd.write("<div class = \"doc_transfer_field\">")
+							fd.write("<span class = \"doc_function_description_param_name\">$(id.transferFields[j].name)</span> ")
+							fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
+							fd.write("</div>")
+							}
+						fd.write("</div>")
+						
+						fd.write("</div>")
+						}
+					
+					//the list of functions in detail, with parameter descriptions etc.
+					for (int j = 0; j < id.functions.arrayLength; j++)
+						{
+						fd.write("<div class = \"doc_function_description\">")
+							fd.write("<div class = \"doc_function_description_heading\">")
+							fd.write(formatFunctionHeader(sf, id.functions[j]))
+							fd.write("</div>")
+							
+							if (id.functions[j].doc_description != null)
+								{
+								JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
+								
+								if (parser.getValue(doc, "@description") != null)
+									{
+									fd.write("<div>")
+									fd.write(parser.getValue(doc, "@description").value)
+									fd.write("</div>")
+									}
+								}
+							
+							//description of each parameter
+							fd.write("<div class = \"doc_function_description_parameters\">")
+							for (int q = 0; q < id.functions[j].params.arrayLength; q++)
+								{
+								char desc[] = null
+								
+								if (id.functions[j].doc_description != null)
+									{
+									JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
+									if (parser.getValue(doc, id.functions[j].params[q].name) != null)
+										desc = parser.getValue(doc, id.functions[j].params[q].name).value
+									}
+								
+								if (desc != null)
+									{
+									fd.write("<div class = \"doc_function_description_param\">")
+									
+									fd.write("<span class = \"doc_function_description_param_name\">$(id.functions[j].params[q].name)</span> ")
+									
+									fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
+									
+									fd.write("</div>")
+									}
+								}
+							fd.write("</div>")
+							
+							//description of return value
+							fd.write("<div class = \"doc_function_description_return\">")
+							char desc[] = null
+							
+							if (id.functions[j].doc_description != null)
+								{
+								JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
+								if (parser.getValue(doc, "@return") != null)
+									desc = parser.getValue(doc, "@return").value
+								}
+							
+							if (desc != null)
+								{
+								fd.write("<div class = \"doc_function_description_param\">")
+								
+								fd.write("<span class = \"doc_function_description_param_name\">returns:</span> ")
+								
+								fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
+								
+								fd.write("</div>")
+								}
+							
+							fd.write("</div>")
+							
+						fd.write("</div>")
+						}
+					
+					//TODO: a list of known implementations, with any documentation that those specific implementations have
+					// ...
+					
+					fd.write("</body>")
+					fd.write("</html>")
+					
+					fd.close()
+					}
+				}
+			}
+		
+		for (int i = 0; i < sf.types.arrayLength; i++)
+			{
+			if (sf.types[i].class == TypeDef.DATA)
+				{
+				DataDef td = sf.types[i]
+				
+				char tpath[] = new char[]("doc/files/", getHTMLFileFor(sf.path, td.name))
+				
+				if (fileSystem.exists(tpath))
+					fileSystem.delete(tpath)
+				
+				File fd = new File(tpath, File.FILE_ACCESS_WRITE)
+				
+				if (fd != null)
+					{
+					fd.write("<html>")
+					fd.write("<link href=\"doc.css\" rel=\"stylesheet\" type=\"text/css\">")
+					fd.write("<body>")
+					
+					fd.write("<div class = \"doc_heading_line\">")
+					fd.write("<span class = \"doc_heading_text\">Data type</span> <span class = \"doc_heading_type\">$(td.name)</span>")
+					fd.write("</div>")
+					
+					//what to include to use this type
+					fd.write("<div class = \"doc_include_line\">")
+					fd.write("<span class = \"doc_include_text\">access this type via:</span> <span class = \"doc_include_path\">$includePackage</span> (uses)")
+					fd.write("</div>")
+					
+					//extends?
+					if (td.extendsType != null)
+						{
+						fd.write("<div class = \"doc_include_line\">")
+						fd.write("<span class = \"doc_include_text\"> --- extends:</span>")
+						fd.write(formatType(sf, td.extendsType.name))
+						fd.write("</div>")
+						}
+					
+					//the overall type description
+					if (td.doc_description != null)
+						{
+						JSONElement doc = parser.parseDocument(td.doc_description)
+						
+						fd.write("<div class = \"doc_description\">")
+						fd.write(parser.getValue(doc, "description").value)
+						fd.write("</div>")
+						}
+					
+					//the list of fields as a summary (with hyperlinks to their descriptions)
+					if (td.constants.arrayLength > 0)
+						{
+						fd.write("<div class = \"doc_const_list\">")
+						
+						fd.write("<div class = \"doc_const_list_hdr\">")
+						fd.write("Constants")
+						fd.write("</div>")
+						
+						for (int j = 0; j < td.constants.arrayLength; j++)
+							{
+							fd.write("<div class = \"doc_const_list_item\">")
+							fd.write(formatType(sf, td.constants[j].type))
+							fd.write(" ")
+							fd.write(td.constants[j].displayName)
+							fd.write("</div>")
+							}
+						fd.write("</div>")
+						}
+					
+					if (td.fields.arrayLength > 0)
+						{
+						fd.write("<div class = \"doc_function_list\">")
+						
+						fd.write("<div class = \"doc_function_list_hdr\">")
+						fd.write("Fields")
+						fd.write("</div>")
+						
+						for (int j = 0; j < td.fields.arrayLength; j++)
+							{
+							fd.write("<div class = \"doc_function_list_item\">")
+							fd.write(formatType(sf, td.fields[j].type))
+							fd.write(" ")
+							fd.write(td.fields[j].displayName)
+							fd.write("</div>")
+							}
+						fd.write("</div>")
+						}
+					
+					fd.write("</body>")
+					fd.write("</html>")
+					
+					fd.close()
+					}
+				}
+			}
+		}
+	
+	char[] getPrimaryType(SourceFile sf)
+		{
+		String tokens[] = stringUtil.explode(sf.path, "./\\")
+		char name[] = tokens[tokens.arrayLength-2].string
+		
+		for (int i = 0; i < sf.types.arrayLength; i++)
+			{
+			if (sf.types[i].name == name)
+				return name
+			}
+		
+		return null
+		}
+	
+	bool alphaGreater(char a[], char b[])
+		{
+		a = stringUtil.lowercase(a)
+		b = stringUtil.lowercase(b)
+		
+		for (int i = 0; i < a.arrayLength && i < b.arrayLength; i++)
+			{
+			if (a[i] > b[i])
+				return true
+				else if (a[i] < b[i])
+				return false
+			}
+		
+		if (a.arrayLength > b.arrayLength)
+			return true
+		
+		return false
+		}
+	
+	void sortTypes(PrimaryType types[])
+		{
+		bool sorted = false
+		
+		while (!sorted)
+			{
+			sorted = true
+			
+			for (int i = 0; i < types.arrayLength - 1; i++)
+				{
+				if (alphaGreater(types[i].type, types[i+1].type))
+					{
+					PrimaryType tmp = types[i]
+					types[i] = types[i+1]
+					types[i+1] = tmp
+					
+					sorted = false
+					break
+					}
+				}
+			}
+		}
+	
+	void writeDocs(ParsedFiles p, bool writeIndex)
+		{
+		if (!fileSystem.exists("doc"))
+			fileSystem.createDirectory("doc")
+		
+		if (!fileSystem.exists("doc/files"))
+			fileSystem.createDirectory("doc/files")
+		
+		//generate a set of HTML files for p.primaryFiles
+		for (int i = 0; i < p.primaryFiles.arrayLength; i++)
+			{
+			writeFile(p.primaryFiles[i])
+			}
+		
+		if (writeIndex)
+			{
+			out.println("Generating index page")
+			
+			if (fileSystem.exists("doc/index.html"))
+				fileSystem.delete("doc/index.html")
+			
+			//generate the index HTML file
+			File fd = new File("doc/index.html", File.FILE_ACCESS_WRITE)
+			
+			if (fd != null)
+				{
+				//build an alphabetically sorted list of primary types first, then write them
+				PrimaryType types[]
+				
+				for (int i = 0; i < p.primaryFiles.arrayLength; i++)
+					{
+					char type[] = getPrimaryType(p.primaryFiles[i])
+					
+					if (type != null)
+						{
+						char xf[] = getHTMLFileFor(p.primaryFiles[i].path, type)
+						
+						types = new PrimaryType[](types, new PrimaryType(type, xf))
+						}
+					}
+				
+				//sort alphabetically
+				sortTypes(types)
+				
+				char dana_home[] = systemInfo.getVariable("DANA_HOME")
+				
+				File ref = new File("$dana_home/resources-ext/doc/index_a.html", File.FILE_ACCESS_READ)
+				fd.write(ref.read(ref.getSize()))
+				ref.close()
+				
+				for (int i = 0; i < types.arrayLength; i++)
+					{
+					fd.write("<div>")
+					fd.write("<span class = \"jslink\" onclick=\"javascript:loadContent('files/$(types[i].htmlFile)');\">$(types[i].type)</span>")
+					fd.write("</div>")
+					}
+				
+				ref = new File("$dana_home/resources-ext/doc/index_b.html", File.FILE_ACCESS_READ)
+				fd.write(ref.read(ref.getSize()))
+				ref.close()
+				
+				fd.close()
+				
+				//copy in the CSS file
+				fd = new File("doc/doc.css", File.FILE_ACCESS_WRITE)
+				ref = new File("$dana_home/resources-ext/doc/doc.css", File.FILE_ACCESS_READ)
+				fd.write(ref.read(ref.getSize()))
+				ref.close()
+				fd.close()
+				
+				fd = new File("doc/files/doc.css", File.FILE_ACCESS_WRITE)
+				ref = new File("$dana_home/resources-ext/doc/doc.css", File.FILE_ACCESS_READ)
+				fd.write(ref.read(ref.getSize()))
+				ref.close()
+				fd.close()
+				}
+			}
+		}
+	
+	void scanDirectory(DocBuilder docBuilder, char path[])
+		{
+		FileEntry files[] = fileSystem.getDirectoryContents(path)
+		
+		for (int i = 0; i < files.arrayLength; i++)
+			{
+			char filePath[] = new char[](path, "/", files[i].name)
+			
+			if (fileSystem.getInfo(filePath).type == FileInfo.TYPE_FILE)
+				{
+				docBuilder.parseFile(filePath)
+				}
+				else
+				{
+				scanDirectory(docBuilder, filePath)
+				}
+			}
+		}
+	
+	int App:main(AppParam params[])
+		{
+		DocBuilder docBuilder = new DocBuilder()
+		
+		bool writeIndex = false
+		
+		if (params.arrayLength > 0)
+			{
+			docBuilder.parseFile(params[0].string)
+			}
+			else
+			{
+			if (fileSystem.exists("resources") && fileSystem.getInfo("resources").type == FileInfo.TYPE_DIR)
+				{
+				scanDirectory(docBuilder, "resources")
+				writeIndex = true
+				}
+			}
+		
+		ParsedFiles p = docBuilder.getParsedFiles()
+		
+		writeDocs(p, writeIndex)
+		
+		return 0
+		}
+	
+	}

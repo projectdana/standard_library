@@ -1,0 +1,16 @@
+/*
+{ "description" : "Controls a target program (starting at its 'main' component, which must implement the App interface) by discovering the possible ways in which it can be assembled and adapting it to one of those assemblies." }
+*/
+
+uses data.String
+
+interface Assembly {
+	
+	Assembly(char main[], IDC perceptionModule)
+	
+	String[] getConfigs()
+	bool setConfig(char conf[])
+	
+	bool appFinished()
+	
+	}

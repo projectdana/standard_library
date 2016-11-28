@@ -1,0 +1,15 @@
+/*
+ {"description" : "Mathematical utilities."}
+*/
+
+interface Math {
+	/*
+	 {"@description" : "Return the square root of an integer value. If the result would be a decimal number it is truncated."}
+	*/
+	int sqrt(int val)
+	
+	/*
+	 {"@description" : "Return the square root of a decimal value."}
+	*/
+	dec sqrtDec(dec val)
+	}

@@ -1,0 +1,95 @@
+/*
+ {"description" : "Inspect and transform strings."}
+*/
+
+
+uses data.String
+
+interface StringUtil{
+	
+	/*
+	 {"@description" : "This is returned by search functions when the search term is not found in the string."}
+	*/
+	const int NOT_FOUND = INT_MAX
+	
+	/*
+	 {"@description" : "Return a sub-string of the given string."
+			"string" : "The string from which to return a sub-string.",
+			"start" : "The index into string from which to begin retrieving a sub-string.",
+			"length" : "The length of the sub-string to return."}
+	*/
+	char[] subString(char string[], int start, int length)
+	
+	/*
+	 {"@description" : "Return the given string with all white space removed from the start."}
+	*/
+	char[] ltrim(char string[])
+	
+	/*
+	 {"@description" : "Return the given string with all white space removed from the end."}
+	*/
+	char[] rtrim(char string[])
+	
+	/*
+	 {"@description" : "Return the given string with all white space removed from the start and end."}
+	*/
+	char[] trim(char string[])
+	
+	/*
+	 {"@description" : "Return the given string with all alphabetical characters converted to upper case."}
+	*/
+	char[] uppercase(char string[])
+	
+	/*
+	 {"@description" : "Return the given string with all alphabetical characters converted to lower case."}
+	*/
+	char[] lowercase(char string[])
+	
+	/*
+	 {"@description" : "Compare two strings ignoring their case."}
+	*/
+	bool iequal(char a[], char b[])
+	
+	/*
+	 {"@description" : "Search for one string in another string."
+			"@return" : "The index of the string being searched for, or NOT_FOUND if the string does not exist."}
+	*/
+	int find(char in[], char search[])
+	
+	/*
+	 {"@description" : "Search for one string in another string, ignoring case differences."
+			"@return" : "The index of the string being searched for, or NOT_FOUND if the string does not exist."}
+	*/
+	int ifind(char in[], char search[])
+	
+	/*
+	 {"@description" : "Search for one string in another string, starting from the end of the other string."
+			"@return" : "The index of the string being searched for, or NOT_FOUND if the string does not exist."}
+	*/
+	int rfind(char in[], char search[])
+	
+	/*
+	 {"@description" : "Search for one string in another string, starting from the end of the other string, ignoring case differences."
+			"@return" : "The index of the string being searched for, or NOT_FOUND if the string does not exist."}
+	*/
+	int irfind(char in[], char search[])
+	
+	/*
+	 {"@description" : "Tokenise a string using the given list of tokens."
+			"@return" : "An array of tokens."}
+	*/
+	String[] explode(char str[], char tokens[])
+	
+	//glue a tokenised string back together, each token separated by the given glue
+	/*
+	 {"@description" : "Glue an array of strings together into a single string, using a glue string between each string in the original array. Null array cells are ignored, such that a single instance of the glue string is added between each non-null pair of cells."
+			"@return" : "A string."}
+	*/
+	char[] implode(String parts[], char glue[])
+	
+	/*
+	 {"@description" : "Check if a string is comprised only of numbers."
+			"@return" : "True if the string is comprised only of numerical characters, false otherwise."}
+	*/
+	bool isNumeric(char str[])
+	}

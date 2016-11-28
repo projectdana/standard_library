@@ -1,0 +1,28 @@
+/*
+ {"description" : "A labelled, clickable GUI button."}
+*/
+
+uses ClickableObject
+
+interface Button extends ClickableObject{
+
+	/*
+	 {"@description" : "The button's current label text."}
+	*/
+	transfer char text[]
+	
+	/*
+	 {"@description" : "Create a new Button with the specified text as its label."}
+	*/
+	Button(char text[])
+	
+	/*
+	 {"@description" : "Set the button's label to the specified text value."}
+	*/
+	void setText(char text[])
+	
+	/*
+	 {"@description" : "Get the current text of the button's label."}
+	*/
+	char[] getText()
+	}

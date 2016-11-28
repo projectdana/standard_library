@@ -1,0 +1,9 @@
+/*
+{"title" : "Service interface",
+	"description" : "This is a utility interface for components that need to be started or stopped once they have been loaded / are about to be unloaded. By default, whenever a component is loaded into memory, the presence of this interface is checked and, if it exists, the start() function is called automatically."}
+*/
+
+interface Service{
+	void start()
+	void stop()
+	}

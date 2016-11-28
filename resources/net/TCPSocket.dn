@@ -1,0 +1,47 @@
+uses TCPServerSocket
+
+data NetworkEndpoint{
+	char address[]
+	int port
+	}
+
+/*
+{"description" : "Communicate over the TCP network protocol. New connections can be established either using 'connect' (for a client) or by using 'accept' (for a server, in conjunction with a TCPServerSocket instance)."}
+*/
+
+interface TCPSocket{
+	/*
+	{"@description" : "Connect to the given TCP server."}
+	*/
+	bool connect(char address[], int port)
+	
+	/*
+	{"@description" : "Establish a TCP connection by accepting a new client via a TCP server socket."}
+	*/
+	bool accept(TCPServerSocket server)
+	
+	/*
+	{"@description" : "Send data over an open TCP connection."}
+	*/
+	int send(byte data[])
+	
+	/*
+	{"@description" : "Wait for data to arrive over an open TCP connection. This function will block until the requested amount of data has been received, or the TCP connection has been terminated."}
+	*/
+	byte[] recv(int length)
+	
+	/*
+	{"@description" : "Disconnect (terminate) this TCP connection."}
+	*/
+	void disconnect()
+	
+	/*
+	{"@description" : "Get the endpoint details of the remote end of this TCP connection."}
+	*/
+	NetworkEndpoint getRemoteEndpoint()
+	
+	/*
+	{"@description" : "Get the endpoint details of the local end of this TCP connection."}
+	*/
+	NetworkEndpoint getLocalEndpoint()
+	}

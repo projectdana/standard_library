@@ -1,0 +1,11 @@
+/*
+* Rect type
+* This data type describes a rectangle; x/y typically represents the coordinates of the top left corner and width/height represent its size.
+*/
+
+data Rect{
+	int x
+	int y
+	int width
+	int height
+	}

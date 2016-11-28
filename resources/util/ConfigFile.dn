@@ -1,0 +1,16 @@
+/*
+{ "description" : "Reads values from a text file in property:value format. Each property must be on a separate line in the file."}
+*/
+
+interface ConfigFile {
+	
+	/*
+	{ "@description" : "Create a config file instance pointing to the given config file."}
+	*/
+	ConfigFile(char configFile[])
+	
+	/*
+	{ "@description" : "Read the value of the given property from the config file."}
+	*/
+	char[] getValue(char property[])
+}

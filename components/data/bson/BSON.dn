@@ -1,0 +1,462 @@
+uses data.json.JSONParser
+
+const char BSON_DOUBLE = 0x01            //|  e_name double	64-bit binary floating point
+const char BSON_UTF8 = 0x02              //|  e_name string	UTF-8 string
+const char BSON_EMBEDDED_DOCUMENT = 0x03 //|  e_name document	Embedded document
+const char BSON_ARRAY = 0x04             //|	 e_name document	Array
+const char BSON_BINARY = 0x05            //|	 e_name binary	Binary data
+const char BSON_UNDEFINED = 0x06         //|	 e_name	Undefined (value) — Deprecated
+const char BSON_OBJECT_ID = 0x07         //|	 e_name (byte*12)	ObjectId
+const char BSON_BOOL = 0x08              //|	 e_name "\x00"	Boolean "false //|	"\x08" e_name "\x01"	Boolean "true"
+const char BSON_DATE_TIME = 0x09         //|	 e_name int64	UTC datetime
+const char BSON_NULL = 0x0A              //|	 e_name	Null value
+const char BSON_REGEX = 0x0B             //|	 e_name cstring cstring	Regular expression - The first cstring is the regex pattern, the second is the regex options string. Options are identified by characters, which must be stored in alphabetical order. Valid options are 'i' for case insensitive matching, 'm' for multiline matching, 'x' for verbose mode, 'l' to make \w, \W, etc. locale dependent, 's' for dotall mode ('.' matches everything), and 'u' to make \w, \W, etc. match unicode.
+const char BSON_STRING = 0x0C            //|	 e_name string (byte*12)	DBPointer — Deprecated
+const char BSON_INT_32 = 0x10            //|	 e_name int32	32-bit integer
+const char BSON_INT_64_TIMESTAMP = 0x11  //|  e_name int64	Timestamp
+const char BSON_INT_64 = 0x12            //|	 e_name int64	64-bit integer
+
+const char BSON_BOOL_FALSE = 0x00
+const char BSON_BOOL_TRUE = 0x01
+const char BSON_NULL_TERMINATOR = 0x00
+
+component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil su, data.ByteUtil bu{
+
+  /**
+    BSON:serialise
+
+    @param json the json document to serialise into BSON format.
+
+  **/
+
+  BSONDocument BSON:serialise(JSONElement json){
+
+    BSONDocument bsonFromJson = digestJSONElement(json)
+
+    //prepend document size including the size of the number, and the byte for the null terminator
+    bsonFromJson.value = new byte[](toLittleEndian(bsonFromJson.value.arrayLength + 5),bsonFromJson.value)
+
+    //append document terminator
+    bsonFromJson.value = new byte[](bsonFromJson.value, BSON_NULL_TERMINATOR)
+
+    return bsonFromJson
+  }
+
+  /**
+    BSON:deserialise
+
+    @param bson the bson document to serialise into JSON format.
+
+  **/
+  JSONElement BSON:deserialise(BSONDocument bson){
+    return new JSONElement(JSON_ELEMENT_OBJECT, "", "", digestBSONDocument(bson,false))
+  }
+
+  /**
+    BSON:parse
+
+    @param bsonDocuments a byte array of documents to parse into separate BSONDocuments
+
+  **/
+  BSONDocument[] BSON:parse(byte bsonDocuments[]){
+
+    BSONDocument docs[]
+
+    int byteCount = 0
+
+    while(byteCount < bsonDocuments.arrayLength){
+      int32 size
+
+      dana.getByteArrayOf(size) =[] bu.reverse(su.subString(bsonDocuments,byteCount,4))
+
+      docs = new BSONDocument[](docs, new BSONDocument(su.subString(bsonDocuments,byteCount,size)))
+
+      byteCount += size
+    }
+
+    return docs
+  }
+
+  byte[] toLittleEndian(int32 value){
+    return bu.reverse(dana.getByteArrayOf(value))
+  }
+
+  void serialiseName(char value[], BSONDocument bson){
+    bson.value = new byte[](bson.value, value, BSON_NULL_TERMINATOR)
+  }
+
+  void serialiseString(char value[], BSONDocument bson){
+    bson.value = new byte[](bson.value, value, BSON_NULL_TERMINATOR)
+  }
+
+  void serialiseNumber(char value[], BSONDocument bson){
+    bson.value = new byte[](bson.value, toLittleEndian(iu.intFromString(value)))
+  }
+
+  void serialiseBoolean(char value[], BSONDocument bson){
+    if(su.iequal(value,"true"))
+      bson.value = new byte[](bson.value, BSON_BOOL_TRUE)
+    else
+      bson.value = new byte[](bson.value, BSON_BOOL_FALSE)
+  }
+
+  char[] toHexString(byte bytes[]){
+    char hexString[] = ""
+
+    for(int i = 0; i < bytes.arrayLength; i++){
+      char upperChar = (bytes[i] & 0xF0) >> 4
+      char lowerChar = bytes[i] & 0x0F
+
+      if(upperChar < 10)
+        upperChar += 48
+      else
+        upperChar += 55
+
+      if(lowerChar < 10)
+        lowerChar += 48
+      else
+        lowerChar += 55
+
+
+      hexString = new char[](hexString,upperChar,lowerChar)
+    }
+
+    return hexString
+  }
+
+	byte[] fromHexString(char hexString[]){
+		byte byteArray[]
+
+		for(int i = 0; i < hexString.arrayLength; i += 2){
+			char upperByte = hexString[i]
+			char lowerByte = hexString[i+1]
+
+			if(upperByte < 58)
+        upperByte -= 48
+      else
+        upperByte -= 55
+
+      if(lowerByte < 58)
+        lowerByte -= 48
+      else
+        lowerByte -= 55
+
+			byte combined = (upperByte << 4) | lowerByte
+
+			byteArray = new char[](byteArray,combined)
+		}
+
+    return byteArray
+  }
+
+  BSONDocument digestJSONElement(JSONElement element){
+
+    BSONDocument bson = new BSONDocument("")
+
+    if(element.name == "_id"){
+
+      //add our type
+      bson.value = new byte[](bson.value, BSON_OBJECT_ID)
+
+      if(element.name.arrayLength  == 0)
+        throw new Exception("Strings must have an associated name, unless they are in an array")
+
+      //add our name
+      serialiseName(element.name, bson)
+
+      bson.value = new byte[](bson.value,bu.fromHexString(element.value))
+
+      //resolve
+      return bson
+    }
+
+    if(element.type == JSON_ELEMENT_OBJECT){
+      /*
+        if this element doesn't have a name - we can presume we are digesting
+        for the first time.
+
+        TODO:
+        It may make more sense to pass a bool on first iteration, and throw
+        an error on parsing an object without a name, in subsequent iterations
+      */
+
+      if(element.name.arrayLength > 0){
+        //add our type
+        bson.value = new byte[](bson.value, BSON_EMBEDDED_DOCUMENT)
+
+        //add our name
+        serialiseName(element.name, bson)
+      }
+
+      /*
+        For this, we need to know the size of our children, thereby their structures.
+
+        We then recursively descend into each child element, and resolve by combining
+        the child with the children bson document
+      */
+      BSONDocument children = new BSONDocument("")
+
+      for(int i = 0; i < element.children.arrayLength; i++){
+
+        BSONDocument newChild = digestJSONElement(element.children[i])
+
+        children.value = new byte[](children.value, newChild.value)
+      }
+
+      //after we have returned, combine the children, the childrens length
+      //with our bson document.
+      //it's inclusive so add 4 for an int32
+      if(element.name.arrayLength > 0)
+        bson.value = new byte[](bson.value,toLittleEndian(children.value.arrayLength + 5), children.value, BSON_NULL_TERMINATOR)
+      else
+        bson.value = new byte[](bson.value,children.value)
+
+      //resolve
+      return bson
+    }
+
+    if(element.type == JSON_ELEMENT_STRING){
+      //add our type
+      bson.value = new byte[](bson.value, BSON_UTF8)
+
+      if(element.name.arrayLength  == 0)
+        throw new Exception("Strings must have an associated name, unless they are in an array")
+
+      //add our name
+      serialiseName(element.name, bson)
+
+      //get the length of the data (Plus one for null terminator)
+      bson.value = new byte[](bson.value, toLittleEndian(element.value.arrayLength + 1))
+
+      //add the string
+      serialiseString(element.value, bson)
+
+      return bson
+    }
+
+    if(element.type == JSON_ELEMENT_NUMBER){
+
+      bson.value = new byte[](bson.value, BSON_INT_32)
+
+      serialiseName(element.name, bson)
+
+      serialiseNumber(element.value, bson)
+
+      return bson
+    }
+
+    if(element.type == JSON_ELEMENT_BOOLEAN){
+
+      bson.value = new byte[](bson.value, BSON_BOOL)
+
+      serialiseName(element.name, bson)
+
+      serialiseBoolean(element.value, bson)
+
+      return bson
+    }
+
+    if(element.type == JSON_ELEMENT_ARRAY){
+
+      bson.value = new byte[](bson.value, BSON_ARRAY)
+
+      if(element.name.arrayLength == 0){
+        throw new Exception("Invalid BSON structure: an array must have an associated name")
+        return bson
+      }
+
+      serialiseName(element.name, bson)
+
+      /*
+        For this, we need to know the size of our children, and thereby their structures.
+
+        We then recursively descend into each child element, and resolve by combining
+        the child with the children bson document
+      */
+      BSONDocument children = new BSONDocument("")
+
+      for(int i = 0; i < element.children.arrayLength; i++){
+
+        JSONElement newParent = new JSONElement(element.children[i].type, iu.intToString(i), element.children[i].value, element.children[i].children)
+
+        BSONDocument newChild = digestJSONElement(newParent)
+
+        children.value = new byte[](children.value, newChild.value)
+      }
+
+      //after we have returned, combine the children, the childrens length
+      //with our bson document.
+      //it's inclusive so add 4 for an int32
+      byte lengthOfChildren[] = toLittleEndian(children.value.arrayLength + 5)
+      bson.value = new byte[](bson.value,lengthOfChildren,children.value, BSON_NULL_TERMINATOR)
+
+      //resolve
+      return bson
+    }
+
+    return bson
+  }
+
+
+  char[] bsonReadName(char content[], int count){
+
+    char name[] = ""
+
+    while(content[count] != 0){
+      name = new char[](name, content[count])
+      count++
+    }
+
+    return name
+  }
+
+  /*
+    Each time this is called, the algorithm is as follows:
+
+      * determine the size
+      * get the type
+      * process based on type
+
+        IF we are processing an array or object, rip off the bson representation
+        of these types and call the function again with the array of bytes,
+        described by the bson.
+
+        Otherwise, process the type, and continue reading in a while loop, until
+        the end of the document is reached.
+  */
+
+  JSONElement[] digestBSONDocument(BSONDocument document, bool isInArray){
+
+    JSONElement elements[]
+
+    byte content[] = document.value
+
+    int count = 0
+
+    int32 size
+
+    dana.getByteArrayOf(size) =[] bu.reverse(su.subString(content,count,4))
+
+    count += 4
+
+    //minus one for end of object
+    while(count < size - 1){
+
+      int type = content[count]
+
+      count++
+
+      char name[] = bsonReadName(content,count)
+
+      count += name.arrayLength + 1
+
+      if(type == BSON_EMBEDDED_DOCUMENT){
+
+        int32 objectSize
+
+        dana.getByteArrayOf(objectSize) =[]  bu.reverse(su.subString(content,count,4))
+
+        if(isInArray)
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_OBJECT, "", "", digestBSONDocument(new BSONDocument(su.subString(content,count,objectSize)),false)))
+        else
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_OBJECT, name, "", digestBSONDocument(new BSONDocument(su.subString(content,count,objectSize)),false)))
+
+        count += objectSize
+      }
+
+      if(type == BSON_UTF8){
+
+        char value[] = ""
+
+        int32 valueSize
+        dana.getByteArrayOf(valueSize) =[] bu.reverse(su.subString(content,count,4))
+
+        //we've digested the size integer
+        count += 4
+
+        int limit = count + valueSize - 1
+
+        while(count < limit){
+          value = new char[](value, content[count])
+          count++
+        }
+
+        if(isInArray)
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_STRING, "", value, new JSONElement()))
+        else
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_STRING, name, value, new JSONElement()))
+      }
+
+      if(type == BSON_OBJECT_ID){
+
+        char value[] = ""
+
+        int limit = count + 12
+
+        while(count < limit){
+
+          value = new char[](value, content[count])
+
+          count++
+        }
+
+        if(isInArray)
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_STRING, "", bu.toHexString(value), new JSONElement()))
+        else
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_STRING, name, bu.toHexString(value), new JSONElement()))
+      }
+
+      if(type == BSON_INT_32){
+
+        int32 value
+
+        dana.getByteArrayOf(value) =[] bu.reverse(su.subString(content,count,4))
+
+        //we've digested the integer
+        count += 4
+
+        if(isInArray)
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_NUMBER, "", iu.intToString(value), new JSONElement()))
+        else
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_NUMBER, name, iu.intToString(value), new JSONElement()))
+      }
+
+      if(type == BSON_BOOL){
+
+        char value[] = ""
+
+        int boolData = content[count]
+
+        count++
+
+        if(boolData == BSON_BOOL_TRUE)
+          value = "true"
+        else
+          value = "false"
+          
+        if(isInArray)
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_BOOLEAN, "", value, new JSONElement()))
+        else
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_BOOLEAN, name, value, new JSONElement()))
+      }
+
+      if(type == BSON_ARRAY){
+
+        int32 arraySize
+
+        dana.getByteArrayOf(arraySize) =[] bu.reverse(su.subString(content,count,4))
+
+        JSONElement children[] = digestBSONDocument(new BSONDocument(su.subString(content,count,arraySize)),true)
+
+        if(isInArray)
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_ARRAY, "", "", children))
+        else
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_ARRAY, name, "", children))
+
+        count += arraySize
+      }
+    }
+
+    return elements
+  }
+}

@@ -1,0 +1,306 @@
+/*
+This is a REST API for the PAL service. You can visit localhost:HOST_POST/meta/ to view a list of available REST API commands for this service.
+*/
+
+uses pal.Perception
+
+const int HOST_POST = 8008
+
+component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du, pal.Assembly, time.Timer timer, composition.RecursiveLoader loader, data.StringUtil stringUtil, net.TCPServerSocket, net.TCPSocket, data.json.JSONParser parser, composition.Search search {
+	
+	bool running = true
+	char currentConfig[]
+	String configs[]
+	
+	Assembly assembly
+	Perception perc
+	
+	String[] readHeaders(TCPSocket socket)
+		{
+		String headers[]
+		
+		char buf[]
+		char last4[] = new char[4]
+		
+		while (last4 != "\r\n\r\n")
+			{
+			char b[] = socket.recv(1)
+			buf = new char[](buf, b)
+			last4[0] = last4[1]
+			last4[1] = last4[2]
+			last4[2] = last4[3]
+			last4[3] = b[0]
+			}
+		
+		headers = stringUtil.explode(buf, "\r\n")
+		
+		return headers
+		}
+	
+	char[] getHeaderValue(String headers[], char field[])
+		{
+		for (int i = 0; i < headers.arrayLength; i++)
+			{
+			String tokens[] = stringUtil.explode(headers[i].string, ":")
+			
+			if (tokens.arrayLength >= 1 && stringUtil.lowercase(tokens[0].string) == field)
+				{
+				int ndx = stringUtil.find(headers[i].string, ":") + 1
+				return stringUtil.trim(stringUtil.subString(headers[i].string, ndx, headers[i].string.arrayLength - ndx))
+				}
+			}
+		
+		return null
+		}
+	
+	void sendOK(TCPSocket socket, char contentType[], char content[])
+		{
+		int len = content.arrayLength
+		
+		socket.send("HTTP/1.0 200 OK\r\n")
+		socket.send("Server: PAL\r\n")
+		socket.send("Content-length: $(iu.intToString(len))\r\n")
+		socket.send("Content-type: $contentType\r\n")
+		socket.send("Connection: close\r\n")
+		socket.send("\r\n")
+		
+		socket.send(content)
+		}
+	
+	void sendError(TCPSocket socket, char contentType[], char content[])
+		{
+		int len = content.arrayLength
+		
+		socket.send("HTTP/1.0 500 Internal server error\r\n")
+		socket.send("Server: PAL\r\n")
+		socket.send("Content-length: $(iu.intToString(len))\r\n")
+		socket.send("Content-type: $contentType\r\n")
+		socket.send("Connection: close\r\n")
+		socket.send("\r\n")
+		
+		socket.send(content)
+		}
+	
+	char[] dateToString(DateTime dt)
+		{
+		char year[] = iu.intToString(dt.year)
+		while (year.arrayLength < 4) year = new char[]("0", year)
+		char month[] = iu.intToString(dt.month)
+		if (month.arrayLength < 2) month = new char[]("0", month)
+		char day[] = iu.intToString(dt.day)
+		if (day.arrayLength < 2) day = new char[]("0", day)
+		
+		char hour[] = iu.intToString(dt.hour)
+		if (hour.arrayLength < 2) hour = new char[]("0", hour)
+		char minute[] = iu.intToString(dt.minute)
+		if (minute.arrayLength < 2) minute = new char[]("0", minute)
+		char second[] = iu.intToString(dt.second)
+		if (second.arrayLength < 2) second = new char[]("0", second)
+		
+		return "$year-$month-$day $hour:$minute:$second"
+		}
+	
+	char[] perceptionToJSON(PerceptionData pd)
+		{
+		char content[] = new char[](content, "{")
+		
+		if (pd != null)
+			{
+			content = new char[](content, "\"metrics\" : [ ")
+			for (int i = 0; i < pd.metrics.arrayLength; i++)
+				{
+				char preferHigh[] = "false"
+				
+				if (pd.metrics[i].preferHigh) preferHigh = "true"
+				
+				content = new char[](content, "{\"name\" : \"$(pd.metrics[i].name)\", \"source\" : \"$(pd.metrics[i].sourceComponent)\", \"value\" : $(iu.intToString(pd.metrics[i].totalValue)), \"count\" : $(iu.intToString(pd.metrics[i].totalCount)), \"preferHigh\" : $preferHigh, \"startTime\" : \"$(dateToString(pd.metrics[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.metrics[i].timeLast))\"}")
+				if (i + 1 < pd.metrics.arrayLength) content = new char[](content, ",")
+				}
+			content = new char[](content, "], ")
+			
+			content = new char[](content, "\"events\" : [")
+			for (int i = 0; i < pd.events.arrayLength; i++)
+				{
+				content = new char[](content, "{\"name\" : \"$(pd.events[i].name)\", \"source\" : \"$(pd.events[i].sourceComponent)\", \"value\" : $(iu.intToString(pd.events[i].totalValue)), \"count\" : $(iu.intToString(pd.events[i].totalCount)), \"startTime\" : \"$(dateToString(pd.events[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.events[i].timeLast))\"}")
+				if (i + 1 < pd.events.arrayLength) content = new char[](content, ",")
+				}
+			content = new char[](content, "]")
+			}
+		
+		content = new char[](content, "}")
+		
+		return content
+		}
+	
+	void handleRequest(TCPSocket socket)
+		{
+		String headers[] = readHeaders(socket)
+		
+		String tokens[] = stringUtil.explode(headers[0].string, " ")
+		
+		char cmd[] = tokens[0].string
+		char rsc[] = tokens[1].string
+		
+		if (cmd == "GET")
+			{
+			if (rsc == "/meta/get_all_configs")
+				{
+				//construct JSON object of all available configurations
+				char content[]
+				
+				content = new char[](content, "{")
+				content = new char[](content, "\"configs\" : [")
+				for (int i = 0; i < configs.arrayLength; i++)
+					{
+					content = new char[](content, "\"$(configs[i].string)\"")
+					if (i + 1 < configs.arrayLength) content = new char[](content, ", ")
+					}
+				content = new char[](content, "]")
+				content = new char[](content, "}")
+				
+				//send response
+				sendOK(socket, "text/json", content)
+				}
+				else if (rsc == "/meta/get_config")
+				{
+				//return currently in-use configuration
+				sendOK(socket, "text/json", new char[]("{\"config\" : \"", currentConfig, "\"}"))
+				}
+				else if (rsc == "/meta/get_perception")
+				{
+				//construct JSON object of perception data
+				PerceptionData pd = perc.getPerception()
+				
+				char content[] = perceptionToJSON(pd)
+				
+				//send response
+				sendOK(socket, "text/json", content)
+				}
+				else if (rsc == "/meta/")
+				{
+				char divStyle[] = "margin-top:10pt;font-family: monospace;"
+				char content[] = new char[]("<html>",
+											"<body>",
+											"<div>",
+											"This is a REST API for the PAL service. The following commands are available:",
+											"</div>",
+											"<div style=\"$divStyle\">",
+											"GET /meta/get_all_configs HTTP/1.0"
+											"</div>",
+											"<div style=\"$divStyle\">",
+											"GET /meta/get_config HTTP/1.0"
+											"</div>",
+											"<div style=\"$divStyle\">",
+											"GET /meta/get_perception HTTP/1.0"
+											"</div>",
+											"<div style=\"$divStyle\">",
+											"POST /meta/set_config HTTP/1.0<br/>",
+											"Content-Type: text<br/>",
+											"</div>",
+											"</body>",
+											"</html>")
+				
+				//send response
+				sendOK(socket, "text/html", content)
+				}
+				else
+				{
+				sendError(socket, "text", "Operation not known")
+				}
+			}
+			else if (cmd == "POST")
+			{
+			if (rsc == "/meta/set_config")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text/json")
+					{
+					char config[] = socket.recv(iu.intFromString(payloadSize))
+					
+					//parse the JSON data
+					JSONElement doc = parser.parseDocument(config)
+					config = parser.getValue(doc, "config").value
+					
+					if (assembly.setConfig(config))
+						{
+						currentConfig = config
+						
+						//flush perception data
+						perc.getPerception()
+						
+						//respond with HTTP OK
+						sendOK(socket, "text/html", null)
+						}
+						else
+						{
+						sendError(socket, "text", "Requested configuration '$config' is not known (you must use one of the configurations returned by get_configs)")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text/json")
+					}
+				}
+				else
+				{
+				sendError(socket, "text", "Operation not known")
+				}
+			}
+			else
+			{
+			sendError(socket, "text", "Operation type not supported")
+			}
+		
+		socket.disconnect()
+		}
+	
+	int App:main(AppParam params[])
+		{
+		if (params.arrayLength == 0)
+			{
+			out.println("usage: pal.rest main_component.o")
+			return 0
+			}
+		
+		char perceptionPath[] = search.getDefaultComponent("pal.Perception")
+		LoadedComponents lc = loader.load(perceptionPath)
+		IDC perception = lc.mainComponent
+		
+		out.println("[scanning system for components, please be patient...]")
+		
+		perc = new Perception() from perception
+		assembly = new Assembly(params[0].string, perception)
+		
+		configs = assembly.getConfigs()
+		
+		out.println("[located $(iu.intToString(configs.arrayLength)) possible configurations for target software system]")
+		
+		assembly.setConfig(configs[0].string)
+		currentConfig = configs[0].string
+		
+		TCPServerSocket server = new TCPServerSocket()
+		
+		if (server.bind(TCPServerSocket.ANY_ADDRESS, HOST_POST))
+			{
+			out.println("[REST service started, visit http://localhost:$(iu.intToString(HOST_POST))/meta/ for API details]")
+			
+			while (running)
+				{
+				TCPSocket s = new TCPSocket()
+				
+				if (s.accept(server))
+					handleRequest(s)
+				}
+			}
+			else
+			{
+			out.println("Failed to bind to server port")
+			return 1
+			}
+		
+		return 0
+		}
+	
+	}

@@ -1,0 +1,34 @@
+/*
+ {"description" : "A queue of data items."}
+*/
+
+interface Queue{
+	/*
+	 {"@description" : "Current contents of the queue, as an array."}
+	*/
+	transfer Data content[]
+	
+	/*
+	 {"@description" : "Add an element to the queue."}
+	*/
+	void add(Data item)
+	
+	/*
+	 {"@description" : "Remove an element from the queue."}
+	*/
+	void remove(Data item)
+	
+	/*
+	 {"@description" : "Update an existing element in the queue."}
+	*/
+	void update(Data item, Data newVersion)
+	
+	/*
+	 {"@description" : "Read and remove temove an element from the queue according to the queue policy."}
+	*/
+	Data service()
+	
+	//information
+	int getLength()
+	Data[] getContents()
+	}

@@ -1,0 +1,21 @@
+data ObjectInfo{
+	int textSize
+	int infoSectionCount
+	int relocationCount
+	}
+
+data InfoSection{
+	char sectionType[]
+	char contentType[]
+	byte content[]
+	}
+
+interface ObjectReader{
+	ObjectReader(char path[])
+	ObjectInfo getInfo()
+	InfoSection getNextSection()
+	InfoSection getInfoSection(char type[])
+	
+	char[] getPath()
+	int getCurrentInfoSectionIndex()
+	}

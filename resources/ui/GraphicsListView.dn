@@ -1,0 +1,10 @@
+/*
+* GraphicsListView interface
+* This is an API that represents a list of graphical objects, arranged in a way that the implementation defines.
+*/
+
+uses GraphicsObject
+
+interface GraphicsListView extends Panel{
+	void clear()
+	}

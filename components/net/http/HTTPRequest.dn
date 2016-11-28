@@ -1,0 +1,249 @@
+/*
+Basic HTTP/1.1 client request handler
+*/
+
+const int DEFAULT_SERVER_PORT = 80
+const char DEFAULT_RESOURCE[] = "/"
+const char DEFAULT_PROTOCOL[] = "http"
+
+data ResourceParts{
+	char protocol[]
+	char hostName[]
+	int  hostPort
+	char resource[]
+	}
+
+component provides HTTPRequest requires io.Output out, net.TCPSocket, net.dns.DNS dns, data.StringUtil stringUtil, data.IntUtil intUtil {
+	
+	String[] splitString(char string[], char with[])
+		{
+		int ndx
+		
+		if ((ndx = stringUtil.find(string, with)) != StringUtil.NOT_FOUND)
+			{
+			return new String[](new String(stringUtil.subString(string, 0, ndx)), new String(stringUtil.subString(string, ndx+1, string.arrayLength - (ndx+1))))
+			}
+		
+		return new String[](new String(string))
+		}
+	
+	char[] readHeaderLine(TCPSocket socket)
+		{
+		char buf[]
+		char last2[] = new char[2]
+		
+		while (last2 != "\r\n")
+			{
+			char b[] = socket.recv(1)
+			buf = new char[](buf, b)
+			last2[0] = last2[1]
+			last2[1] = b[0]
+			}
+		
+		return buf
+		}
+	
+	Header[] readHeaders(TCPSocket socket)
+		{
+		Header headers[]
+		
+		char buf[]
+		char last4[] = new char[4]
+		
+		while (last4 != "\r\n\r\n")
+			{
+			char b[] = socket.recv(1)
+			buf = new char[](buf, b)
+			last4[0] = last4[1]
+			last4[1] = last4[2]
+			last4[2] = last4[3]
+			last4[3] = b[0]
+			}
+		
+		String lines[] = stringUtil.explode(buf, "\r\n")
+		
+		headers = new Header[](new Header("response", lines[0].string))
+		
+		for (int i = 1; i < lines.arrayLength; i++)
+			{
+			int ndx = stringUtil.find(lines[i].string, ":") + 1
+			char key[] = stringUtil.subString(lines[i].string, 0, ndx - 1)
+			char value[] = stringUtil.trim(stringUtil.subString(lines[i].string, ndx, lines[i].string.arrayLength - ndx))
+			
+			headers = new Header[](headers, new Header(stringUtil.lowercase(key), value))
+			}
+		
+		return headers
+		}
+	
+	char[] getHeaderValue(Header headers[], char key[])
+		{
+		for (int i = 0; i < headers.arrayLength; i++)
+			{
+			if (headers[i].key == key)
+				return headers[i].value
+			}
+		
+		return null
+		}
+	
+	int hexToInt(char hex[])
+		{
+		int result = 0
+		hex = stringUtil.lowercase(hex)
+		
+		for (int i = 0; i < hex.arrayLength; i++)
+			{
+			result = result << 4
+			
+			if (hex[i] == "0") result += 0
+			else if (hex[i] == "1") result += 1
+			else if (hex[i] == "2") result += 2
+			else if (hex[i] == "3") result += 3
+			else if (hex[i] == "4") result += 4
+			else if (hex[i] == "5") result += 5
+			else if (hex[i] == "6") result += 6
+			else if (hex[i] == "7") result += 7
+			else if (hex[i] == "8") result += 8
+			else if (hex[i] == "9") result += 9
+			else if (hex[i] == "a") result += 10
+			else if (hex[i] == "c") result += 12
+			else if (hex[i] == "b") result += 11
+			else if (hex[i] == "d") result += 13
+			else if (hex[i] == "e") result += 14
+			else if (hex[i] == "f") result += 15
+			}
+		
+		return result
+		}
+	
+	char[] readContent(TCPSocket s, Header headers[])
+		{
+		char content[]
+		
+		if (getHeaderValue(headers, "content-length") != null)
+			{
+			int size = intUtil.intFromString(getHeaderValue(headers, "content-length"))
+			
+			content = s.recv(size)
+			}
+			else if (getHeaderValue(headers, "transfer-encoding") == "chunked")
+			{
+			//format: <hex-value-H>[;fields]\r\n<data-of-size-H>\r\n
+			
+			bool done = false
+			while (!done)
+				{
+				char hdr[] = stringUtil.trim(readHeaderLine(s))
+				
+				String tokens[] = stringUtil.explode(hdr, ";")
+				
+				int chunkSize = hexToInt(stringUtil.trim(tokens[0].string))
+				
+				if (chunkSize == 0)
+					{
+					s.recv(2)
+					done = true
+					}
+					else
+					{
+					char chunk[] = s.recv(chunkSize)
+					content = new char[](content, chunk)
+					s.recv(2)
+					}
+				}
+			
+			}
+		
+		return content
+		}
+	
+	ResourceParts parseResource(char url[])
+		{
+		//parse a URL in the format [protocol://]hostname[:port][/path/to/resource]
+		ResourceParts result = new ResourceParts(DEFAULT_PROTOCOL, "", DEFAULT_SERVER_PORT, DEFAULT_RESOURCE)
+		
+		int ndx = 0
+		if ((ndx = stringUtil.find(url, "://")) != StringUtil.NOT_FOUND)
+			{
+			result.protocol = stringUtil.subString(url, 0, ndx)
+			url = stringUtil.subString(url, ndx + 3, url.arrayLength - (ndx+3))
+			}
+		
+		if ((ndx = stringUtil.find(url, "/")) != StringUtil.NOT_FOUND)
+			{
+			result.hostName = stringUtil.subString(url, 0, ndx)
+			url = stringUtil.subString(url, ndx, url.arrayLength - ndx)
+			
+			result.resource = url
+			}
+			else
+			{
+			result.hostName = url
+			}
+		
+		if ((ndx = stringUtil.find(result.hostName, ":")) != StringUtil.NOT_FOUND)
+			{
+			char tmp[] = result.hostName
+			result.hostName = stringUtil.subString(tmp, 0, ndx)
+			result.hostPort = intUtil.intFromString(stringUtil.subString(tmp, ndx+1, tmp.arrayLength - (ndx+1)))
+			}
+		
+		return result
+		}
+	
+	HTTPResponse HTTPRequest:get(char url[], Header headers[])
+		{
+		//look up host address of URL and extract the resource path being requested
+		ResourceParts parts = parseResource(url)
+		
+		char resource[] = parts.resource
+		
+		char serverIP[] = dns.getHostIP(parts.hostName)
+		
+		//construct the request message, including a "host" field if none is provided
+		
+		char request[] = "GET $resource HTTP/1.1\r\n"
+		bool hostIncluded = false
+		for (int i = 0; i < headers.arrayLength; i++)
+			{
+			if (stringUtil.lowercase(headers[i].key) == "host") hostIncluded = true
+			request = new char[](request, headers[i].key, ":", headers[i].value, "\r\n")
+			}
+		if (!hostIncluded) request = new char[](request, "host:$(parts.hostName)\r\n")
+		request = new char[](request, "\r\n")
+		
+		//connect to server and send request
+		
+		TCPSocket s = new TCPSocket()
+		
+		if (s.connect(serverIP, parts.hostPort))
+			{
+			s.send(request)
+			
+			headers = readHeaders(s)
+			
+			char content[] = readContent(s, headers)
+			
+			s.disconnect()
+			
+			//for convenience here we parse the response line into code/message, and we also extract the content type
+			char responseCode[] = ""
+			char responseMessage[] = ""
+			String split[]
+			
+			if ((split = splitString(getHeaderValue(headers, "response"), " ")).arrayLength == 2
+				&& (split = splitString(split[1].string, " ")).arrayLength == 2)
+				{
+				responseCode = split[0].string
+				responseMessage = split[1].string
+				}
+			
+			return new HTTPResponse(url, responseCode, responseMessage, content, getHeaderValue(headers, "content-type"), headers)
+			}
+			else
+			{
+			throw new Exception("Could not connect to host")
+			}
+		}
+	}

@@ -1,0 +1,12 @@
+/*
+* Image interface
+* This is an API that loads an image and returns it as a bitmap, which can then rendered to the screen using other APIs.
+*/
+
+uses Color
+uses Bitmap
+
+interface Image{
+	Image(char path[])
+	Bitmap getBitmap()
+	}

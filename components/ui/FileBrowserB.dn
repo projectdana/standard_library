@@ -1,0 +1,362 @@
+data PrevDir{
+	char dir[]
+	PrevDir next
+	}
+
+data FileCategory{
+	char label[]
+	int dirCount
+	int fileCount
+	WH memberSize
+	
+	FileCategory next
+	FileCategory prev
+	}
+
+data GraphicsItem{
+	GraphicsObject object
+	GraphicsItem next
+	GraphicsItem prev
+	}
+
+component provides FileBrowser(ClickListener) requires io.FileSystem fileSystem, Button, data.StringUtil stringUtil, io.Output out, Font, os.SystemInfo sysInfo, data.IntUtil iu{
+
+	FileCategory categories
+	FileCategory categoriesEnd
+	
+	PrevDir history
+	
+	Button upButton
+	Button backButton
+	
+	Font labelFont
+	
+	Mutex sdLock
+	
+	GraphicsItem objects
+	GraphicsItem objectsEnd
+	
+	FileBrowser:FileBrowser()
+		{
+		upButton = new Button("Up")
+		backButton = new Button("Back")
+		
+		addObject(upButton)
+		addObject(backButton)
+		
+		upButton.addClickListener(this)
+		backButton.addClickListener(this)
+		
+		labelFont = new Font(sysInfo.getSystemFont(false), 15)
+		}
+	
+	FileBrowser:Adapt()
+		{
+		FileBrowser()
+		setPosition(xPosition, yPosition)
+		setDirectory(currentDirectory)
+		}
+	
+	char[] subString(char array[], int start, int length)
+		{
+		char result[]
+		
+		for (int i = 0; i < length; i++)
+			result = new char[](result, array[start+i])
+		
+		return result
+		}
+	
+	char[] normalisePath(char path[])
+		{
+		int nxt = 0
+		while ((nxt = stringUtil.find(path, "\\")) != StringUtil.NOT_FOUND)
+			{
+			path = new char[](subString(path, 0, nxt), "/", subString(path, nxt+1, path.arrayLength - (nxt+1)))
+			}
+		return path
+		}
+	
+	String[] sortStrings(String strings[])
+		{
+		return strings
+		}
+	
+	void FileBrowser:setDirectory(char dir[])
+		{
+		dir = normalisePath(clone dir)
+		
+		mutex(sdLock)
+			{
+			currentDirectory = dir
+			
+			categories = null
+			
+			FileEntry files[] = fileSystem.getDirectoryContents(currentDirectory)
+			
+			//alpha-sort contents
+			String tFiles[] = new String[files.arrayLength]
+			for (int i = 0; i < files.arrayLength; i++)
+				{
+				tFiles[i] = new String(files[i].name)
+				}
+			
+			tFiles = sortStrings(tFiles)
+			
+			//create one category for each new first letter
+			char curFL
+			int curFLCount = 0
+			FileCategory nextFC
+			
+			for (int i = 0; i < tFiles.arrayLength; i++)
+				{
+				if (stringUtil.uppercase(tFiles[i].string[0]) != curFL)
+					{
+					//if (nextFC != null && nextFC.dirCount == 0 && nextFC.fileCount == 0) categories -= nextFC;
+					
+					nextFC = new FileCategory()
+					nextFC.label = stringUtil.uppercase(tFiles[i].string[0])
+					
+					if (categories == null)
+						categories = nextFC
+						else
+						categoriesEnd.next = nextFC
+					categoriesEnd = nextFC
+					
+					curFL = stringUtil.uppercase(tFiles[i].string[0])[0]
+					}
+				
+				FileInfo info = fileSystem.getInfo(new char[](currentDirectory, tFiles[i].string))
+				if (info.type == FileInfo.TYPE_DIR)
+					nextFC.dirCount ++
+					else if (info.type == FileInfo.TYPE_FILE)
+					nextFC.fileCount ++
+				}
+			}
+		
+		myPanel.repaint()
+		}
+	
+	char[] FileBrowser:getDirectory()
+		{
+		return currentDirectory
+		}
+	
+	void ClickListener:click(Object o)
+		{
+		if (o === upButton)
+			{
+			//if there is more than one "/" on the path, remove the last one
+			String parts[] = stringUtil.explode(currentDirectory, "/")
+			if (parts.arrayLength > 1)
+				{
+				String xparts[] = new String[parts.arrayLength - 1]
+				xparts =[] parts
+				
+				char nxt[] = new char[](stringUtil.implode(xparts, "/"), "/")
+				
+				if (currentDirectory != "")
+					{
+					PrevDir npd = new PrevDir(currentDirectory)
+					npd.next = history
+					history = npd
+					}
+				
+				setDirectory(nxt)
+				}
+			}
+			else if (o === backButton)
+			{
+			if (history != null)
+				{
+				PrevDir gt = history
+				history = history.next
+				
+				setDirectory(gt.dir)
+				}
+			}
+		}
+	
+	void drawCategoryContents(Canvas c, FileCategory fc, int x, int y, int areaWidth, int areaHeight)
+		{
+		int sqWidth = 13
+		int sqHeight = 13
+		
+		int xSpacing = 17
+		int ySpacing = 17
+		
+		int cx = x + 5
+		int cy = y + 20
+		
+		for (int i = 0; i < fc.dirCount; i++)
+			{
+			if (cx + sqWidth >= x + areaWidth)
+				{
+				cy += ySpacing
+				cx = x + 5
+				}
+			
+			c.drawRect(new Rect2D(cx, cy, sqWidth, sqHeight, new Color(157, 188, 220, 255)))
+			
+			cx += xSpacing
+			}
+		
+		for (int i = 0; i < fc.fileCount; i++)
+			{
+			if (cx + sqWidth >= x + areaWidth)
+				{
+				cy += ySpacing
+				cx = x + 5
+				}
+			
+			c.drawRect(new Rect2D(cx, cy, sqWidth, sqHeight, new Color(250, 250, 250, 255)))
+			
+			cx += xSpacing
+			}
+		}
+	
+	void FileBrowser:paint(Canvas c)
+		{
+		for (GraphicsItem gi = objects; gi != null; gi = gi.next)
+			{
+			gi.object.paint(c)
+			}
+		
+		int cx = xPosition
+		int cy = yPosition + 25
+		
+		for (FileCategory fw = categories; fw != null; fw = fw.next)
+			{
+			if (cx + 80 > width)
+				{
+				cy = cy + 90
+				cx = xPosition
+				}
+			
+			c.drawRectOutline(new Rect2D(cx, cy, 80, 80, new Color(170, 170, 170, 255)))
+			
+			drawCategoryContents(c, fw, cx, cy, 80, 80)
+			
+			c.drawText(new Point2D(cx+2, cy+1, new Color(0, 0, 0, 255)), labelFont, fw.label)
+			
+			cx += 85
+			}
+		}
+	
+	void FileBrowser:setPanel(Panel p)
+		{
+		myPanel = p
+		
+		myPanel.addClickTarget(this)
+		}
+	
+	Panel FileBrowser:getPanel()
+		{
+		return myPanel
+		}
+	
+	WH FileBrowser:getPreferredSize()
+		{
+		return new WH(width, height)
+		}
+	
+	Point FileBrowser:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+	
+	void FileBrowser:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		
+		upButton.setPosition(xPosition, yPosition)
+		backButton.setPosition(xPosition+50, yPosition)
+		}
+	
+	void FileBrowser:setSize(int newWidth, int newHeight)
+		{
+		width = newWidth
+		height = newHeight
+		}
+	
+	WH FileBrowser:getSize()
+		{
+		return new WH(width, height)
+		}
+	
+	Rect FileBrowser:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, height)
+		}
+	
+	void FileBrowser:addClickListener(ClickListener cl)
+		{
+		
+		}
+	
+	void FileBrowser:remClickListener(ClickListener cl)
+		{
+		
+		}
+	
+	ClickListenerItem[] FileBrowser:getClickListeners()
+		{
+		return null
+		}
+	
+	void FileBrowser:click(int x, int y, int button)
+		{
+		}
+	
+	void FileBrowser:setBackground(Color c)
+		{
+		}
+	
+	Color FileBrowser:getBackground()
+		{
+		return null
+		}
+	
+	void FileBrowser:repaint()
+		{
+		myPanel.repaint()
+		}
+	
+	void FileBrowser:addObject(GraphicsObject go)
+		{
+		GraphicsItem newItem = new GraphicsItem(go)
+		
+		if (objects == null)
+			objects = newItem
+			else
+			objectsEnd.next = newItem
+		
+		newItem.prev = objectsEnd
+		objectsEnd = newItem
+		
+		go.setPanel(this)
+		}
+	
+	void FileBrowser:remObject(GraphicsObject go)
+		{
+		}
+	
+	GraphicsObjectItem[] FileBrowser:getObjects()
+		{
+		return objects
+		}
+	
+	void FileBrowser:addClickTarget(ClickableObject co)
+		{
+		}
+	
+	void FileBrowser:remClickTarget(ClickableObject co)
+		{
+		}
+	
+	ClickableObjectItem[] FileBrowser:getClickTargets()
+		{
+		return null
+		}
+	}

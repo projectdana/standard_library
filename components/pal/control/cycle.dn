@@ -1,0 +1,33 @@
+/* This is a simple program which connects to the PAL REST API and cycles through each configuration; a learning approach for PAL should be based on this component (by changing main()). */
+
+uses data.String
+
+uses pal.Perception
+
+const char DEFAULT_SERVER_IP[] = "localhost"
+const int DEFAULT_SERVER_PORT = 8008
+
+component provides App requires pal.control.RestAPI, time.Timer timer {
+	
+	int App:main(AppParam params[])
+		{
+		RestAPI restAPI = new RestAPI(DEFAULT_SERVER_IP, DEFAULT_SERVER_PORT)
+		
+		String configs[] = restAPI.getConfigs()
+		
+		int i = 0
+		while (true)
+			{
+			restAPI.setConfig(configs[i].string)
+			
+			i ++
+			
+			if (i == configs.arrayLength) i = 0
+			
+			timer.sleep(2000)
+			}
+		
+		return 0
+		}
+	
+	}

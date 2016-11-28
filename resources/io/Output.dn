@@ -1,0 +1,15 @@
+/*
+ {"description" : "Output text, typically to a command-line interface."}
+*/
+
+interface Output{
+	/*
+	 {"@description" : "Output a text string."}
+	*/
+	void print(char s[])
+	
+	/*
+	 {"@description" : "Output a text string followed by a new line character."}
+	*/
+	void println(char s[])
+	}

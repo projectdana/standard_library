@@ -1,0 +1,75 @@
+component provides App requires io.Output out, composition.ObjectWriter, data.json.JSONParser parser {
+	
+	char[] formatFunction(JSONElement fnc)
+		{
+		char result[]
+		
+		char name[] = parser.getValue(fnc, "name").value
+		char returnType[] = parser.getValue(fnc, "returnType").value
+		
+		result = new char[](returnType, " ", name, "(")
+		
+		JSONElement params = parser.getValue(fnc, "parameters")
+		
+		for (int i = 0; i < params.children.arrayLength; i++)
+			{
+			char paramType[] = parser.getValue(params.children[i], "type").value
+			
+			result = new char[](result, paramType)
+			
+			if (i + 1 < params.children.arrayLength)
+				result = new char[](result, ", ")
+			}
+		
+		result = new char[](result, ")")
+		
+		return result
+		}
+	
+	void printInterface(JSONElement pi)
+		{
+		char package[] = parser.getValue(pi, "package").value
+		char alias[] = parser.getValue(pi, "alias").value
+		
+		out.println(" -- $alias, from package $package")
+		
+		JSONElement functions = parser.getValue(pi, "functions")
+		
+		for (int n = 0; n < functions.children.arrayLength; n++)
+			{
+			JSONElement fnc = functions.children[n]
+			
+			out.println("     $(formatFunction(fnc))")
+			}
+		}
+	
+	int App:main(AppParam params[])
+		{
+		ObjectWriter ow = new ObjectWriter(params[0].string)
+		
+		char content[] = ow.getInfoSection("DNIL", "json").content
+		
+		JSONElement document = parser.parseDocument(content)
+		
+		out.println("Provided interfaces:")
+		
+		JSONElement providedInterfaces = parser.getValue(document, "providedInterfaces")
+		
+		for (int j = 0; j < providedInterfaces.children.arrayLength; j++)
+			{
+			printInterface(providedInterfaces.children[j])
+			}
+		
+		out.println("Required interfaces:")
+		
+		JSONElement requiredInterfaces = parser.getValue(document, "requiredInterfaces")
+		
+		for (int j = 0; j < requiredInterfaces.children.arrayLength; j++)
+			{
+			printInterface(requiredInterfaces.children[j])
+			}
+		
+		return 0
+		}
+	
+	}

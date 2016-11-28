@@ -1,0 +1,11 @@
+/*
+ {"description" : "Get the IP address associated with a host name, using the DNS service."}
+*/
+
+interface DNS{
+	/*
+	 {"@description" : "Use DNS to convert a host name to an IP address.",
+			"@return" : "IP address, as a string (may be in IPv4 or IPv6 format). Returns null if the host name could not be resolved to an IP address."}
+	*/
+	char[] getHostIP(char hostname[])
+	}

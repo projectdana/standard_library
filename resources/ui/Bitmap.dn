@@ -1,0 +1,22 @@
+/*
+{ "description" : "This describes a 'bitmap' which can be drawn to the screen. It is simply a rectangle of Pixel values, each with a red, green, blue and alpha (opacity) value. It is implied that pixels.arrayLength must be equal to size.width * size.height. Note that this data type has nothing to do with the common bitmap file format."}
+*/
+
+uses Color
+uses WH
+
+data Bitmap{
+	WH size
+	// note it's implied that pixels.arrayLength must equal size.width * size.height
+	Pixel pixels[]
+	}
+
+/*
+{ "description" : "Container for a pixel, indicating red, green, blue and alpha values. The alpha value is a level of opacity, where 255 indicates completely opaque."}
+*/
+record Pixel{
+	byte r
+	byte g
+	byte b
+	byte a
+	}

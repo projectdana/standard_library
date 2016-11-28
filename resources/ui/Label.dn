@@ -1,0 +1,12 @@
+/*
+* Label interface
+* This is an API that represents a piece of text on the screen.
+*/
+
+uses GraphicsObject
+uses Rect
+
+interface Label extends GraphicsObject{
+	Label(char text[], char font[])
+	void setText(char text[])
+	}

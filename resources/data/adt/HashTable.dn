@@ -1,0 +1,44 @@
+data HashTableItem{
+	char key[]
+	Data value
+	}
+
+/*
+ {"description" : "A data store of key:value pairs. Each key that is put into the hash table should be unique."}
+*/
+interface HashTable{
+	/*
+	 {"@description" : "The contents of the hash table."}
+	*/
+	transfer HashTableItem content[]
+	
+	/*
+	 {"@description" : "Add a new key:value pair to the hash table."}
+	*/
+	void put(char key[], Data value)
+	
+	/*
+	 {"@description" : "Update an existing key:value pair to have a new value."}
+	*/
+	void update(char key[], Data newValue)
+	
+	/*
+	 {"@description" : "Get the value of a given key."}
+	*/
+	Data get(char key[])
+	
+	/*
+	 {"@description" : "Remove a key:value pair from the hash table."}
+	*/
+	void delete(char key[])
+	
+	/*
+	 {"@description" : "Get the number of key:value pairs stored in the hash table."}
+	*/
+	int getLength()
+	
+	/*
+	 {"@description" : "Get the contents of the hash table as an array."}
+	*/
+	HashTableItem[] getContents()
+	}

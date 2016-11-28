@@ -1,0 +1,72 @@
+data VC{
+	char result[]
+	}
+
+library interface SystemLib{
+	void getPlatformName(VC result)
+	void getPlatformVersion(VC result)
+	void getChipName(VC result)
+	void getHostName(VC result)
+	bool getVar(char name[], VC result)
+	void getSystemFont(bool monospaced, VC result)
+	}
+
+component provides Service, os.SystemInfo requires NativeLoader inl
+	{
+	static library SystemLib lib
+	
+	implementation SystemInfo{
+		char[] SystemInfo:getVariable(char name[])
+			{
+			VC res = new VC()
+			lib.getVar(name, res)
+			return res.result
+			}
+		
+		char[] SystemInfo:getHostName()
+			{
+			VC res = new VC()
+			lib.getHostName(res)
+			return res.result
+			}
+		
+		char[] SystemInfo:getPlatformName()
+			{
+			VC res = new VC()
+			lib.getPlatformName(res)
+			return res.result
+			}
+		
+		char[] SystemInfo:getPlatformVersion()
+			{
+			VC res = new VC()
+			lib.getPlatformVersion(res)
+			return res.result
+			}
+		
+		char[] SystemInfo:getChipName()
+			{
+			VC res = new VC()
+			lib.getChipName(res)
+			return res.result
+			}
+		
+		char[] SystemInfo:getSystemFont(bool monospaced)
+			{
+			VC res = new VC()
+			lib.getSystemFont(monospaced, res)
+			return res.result
+			}
+		}
+	
+	implementation Service{
+		void Service:start()
+			{
+			lib = new SystemLib() from inl.load("sysinfo") :< SystemLib
+			}
+		
+		void Service:stop()
+			{
+			}
+		}
+	}

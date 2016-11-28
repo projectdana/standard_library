@@ -1,0 +1,10 @@
+/*
+* XYClickListener interface
+* A callback interface for objects that want to be notified of click events with x/y coordinates and a button type (see MouseButtons).
+*/
+
+uses MouseButtons
+
+interface XYClickListener{
+	void click(int x, int y, int button)
+	}

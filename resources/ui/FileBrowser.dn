@@ -1,0 +1,14 @@
+/*
+* FileBrowser interface
+* This is an API that represents file browser object, allowing a user to navigate a directory tree.
+*/
+
+uses GraphicsObject
+
+interface FileBrowser extends Panel{
+	transfer char currentDirectory[]
+	
+	FileBrowser()
+	void setDirectory(char dir[])
+	char[] getDirectory()
+	}

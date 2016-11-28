@@ -1,0 +1,22 @@
+/*
+* GraphicsObject interface
+* This is an API that represents a generic graphical object. All other graphical object types should inherit from this one.
+*/
+
+uses Window
+uses WH
+uses Point
+uses Panel
+
+interface GraphicsObject{
+	transfer Panel myPanel
+	transfer int xPosition
+	transfer int yPosition
+	
+	void setPanel(Panel rp)
+	Panel getPanel()
+	void paint(Canvas c)
+	void setPosition(int x, int y)
+	Point getPosition()
+	WH getPreferredSize()
+	}

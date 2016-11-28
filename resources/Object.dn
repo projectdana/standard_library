@@ -1,0 +1,22 @@
+/*
+{"title" : "Object interface",
+	"description" : "This is the common base type from which every interface ultimately inherits. The functions that appear here are therefore available on every object."}
+*/
+
+interface Object{
+	bool clone(Object rhs)
+		{
+		return false
+		}
+	
+	bool equals(Object rhs)
+		{
+		return dana.equalObjectReference(rhs)
+		}
+	
+	char[] toString()
+		{
+		return "<object>"
+		}
+	
+	}

@@ -1,0 +1,205 @@
+data ListItem{
+	Data item
+	ListItem next
+	ListItem prev
+	}
+
+component provides Stack(Destructor, AdaptEvents) {
+	
+	ListItem list
+	ListItem listEnd
+	int length
+	Mutex listLock
+	
+	void Stack:add(Data item)
+		{
+		mutex(listLock)
+			{
+			ListItem ni = new ListItem(item)
+			
+			if (list == null)
+				{
+				list = ni
+				}
+				else
+				{
+				listEnd.next = ni
+				ni.prev = listEnd
+				}
+			
+			listEnd = ni
+			
+			length ++
+			}
+		}
+	
+	void Stack:remove(Data item)
+		{
+		mutex(listLock)
+			{
+			ListItem lw = list
+			while (lw != null)
+				{
+				if (lw.item === item)
+					{
+					if (lw.prev != null)
+						lw.prev.next = lw.next
+						else
+						list = lw.next
+					
+					if (lw.next != null)
+						lw.next.prev = lw.prev
+						else
+						listEnd = lw.prev
+					
+					lw.next = null
+					lw.prev = null
+					
+					break
+					}
+				
+				lw = lw.next
+				}
+			
+			length --
+			}
+		}
+	
+	void Stack:update(Data item, Data newVersion)
+		{
+		mutex(listLock)
+			{
+			ListItem lw = list
+			while (lw != null)
+				{
+				if (lw.item === item)
+					{
+					lw.item = newVersion
+					
+					break
+					}
+				
+				lw = lw.next
+				}
+			}
+		}
+	
+	Data Stack:service()
+		{
+		mutex(listLock)
+			{
+			if (listEnd != null)
+				{
+				ListItem current = listEnd
+				
+				listEnd = listEnd.prev
+				
+				current.prev = null
+				
+				if (listEnd != null)
+					{
+					listEnd.next = null
+					}
+					else
+					{
+					list = null
+					}
+				
+				length --
+				
+				return current.item
+				}
+				else
+				{
+				return null
+				}
+			}
+		}
+	
+	int Stack:getLength()
+		{
+		mutex(listLock)
+			{
+			return length
+			}
+		}
+	
+	Data[] Stack:getContents()
+		{
+		mutex(listLock)
+			{
+			Data items[] = new Data[length]
+			
+			int j = 0
+			for (ListItem i = list; i != null; i = i.next)
+				{
+				items[j] = i.item
+				j ++
+				}
+			
+			return items
+			}
+		}
+	
+	void buildFromArray(Data items[])
+		{
+		clearList()
+		
+		for (int i = 0; i < items.arrayLength; i++)
+			{
+			add(items[i])
+			}
+		}
+	
+	bool Stack:clone(Object o)
+		{
+		Stack src = o
+		
+		Data items[] = src.getContents()
+		
+		buildFromArray(items)
+		
+		return true
+		}
+	
+	void clearList()
+		{
+		ListItem lw = list
+		list = null
+		listEnd = null
+		while (lw != null)
+			{
+			ListItem td = lw
+			
+			lw = lw.next
+			
+			td.next = null
+			td.prev = null
+			}
+		
+		length = 0
+		}
+	
+	void Destructor:destroy()
+		{
+		clearList()
+		}
+	
+	void AdaptEvents:destroy()
+		{
+		clearList()
+		}
+	
+	void AdaptEvents:inactive()
+		{
+		//flatten list contents to transfer state
+		content = getContents()
+		}
+	
+	void AdaptEvents:active()
+		{
+		//unpack list contents from transfer state
+		buildFromArray(content)
+		}
+	
+	}

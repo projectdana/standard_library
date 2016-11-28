@@ -1,0 +1,23 @@
+/*
+ {"description" : "Load and link (using default components) a component from a file into main memory."}
+*/
+
+interface RecursiveLoader{
+	/*
+	 {"@description" : "Load a component from a file into main memory, plus all of its needed support components (recursively)."}
+	*/
+	LoadedComponents load(char path[])
+	
+	}
+
+data LoadedComponent {
+	IDC class
+	char path[]
+	}
+
+data LoadedComponents {
+	IDC mainComponent
+	
+	char graph[]
+	LoadedComponent loadedComponents[]
+	}

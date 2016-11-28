@@ -1,0 +1,150 @@
+//this is a simple HTTP/1.0 web server supporting GET only
+
+const char server_name[] = "Dana Web Server [0.1]"
+
+const char htdocs[] = "htdocs"
+
+component provides App requires io.Output out, data.IntUtil iu, net.TCPSocket, net.TCPServerSocket, io.FileSystem fileSystem, io.File, data.StringUtil stringUtil{
+	
+	char[] getParam(char buf[], int i)
+		{
+		char result[]
+		
+		int si = 0
+		while (i > 0)
+			{
+			//find the next space character
+			while (si < buf.arrayLength && buf[si] != " ")
+				si ++
+			
+			if (si == buf.arrayLength)
+				return null
+			
+			si ++
+			i --
+			}
+		
+		int ei = si
+		//find the *next* space character and return a bounded pointer to this section
+		while (ei < buf.arrayLength && buf[ei] != " ")
+			{
+			ei ++
+			i ++
+			}
+		
+		return stringUtil.subString(buf, si, i)
+		}
+	
+	char[] normalisePath(char resource[])
+		{
+		resource = new char[](htdocs, resource)
+		
+		if (fileSystem.getInfo(resource).type == FileInfo.TYPE_DIR)
+			{
+			//try appending known "index" files
+			char test[]
+			
+			test = new char[](resource, "index.html")
+			if (fileSystem.exists(test))
+				return test
+			}
+		
+		return resource
+		}
+	
+	char[] getMIMEType(char resource[])
+		{
+		//NOTE: return proper MIME types
+		return "text/html"
+		}
+	
+	void streamHandler(TCPSocket s)
+		{
+		char command[]
+		char buf[]
+		int len
+		
+		while ((buf = s.recv(1)).arrayLength > 0 && buf != "\r" && buf != "\n")
+			{
+			command = new char[](command, buf)
+			}
+		
+		if (buf != "\r" && buf != "\n")
+			{
+			out.println("Error: Client disconnected prematurely ($command)")
+			s.disconnect()
+			return
+			}
+		
+		out.println("Command:: $command")
+		
+		NetworkEndpoint ne = s.getRemoteEndpoint()
+		
+		out.println("client address: $(ne.address):$(iu.intToString(ne.port))")
+		
+		char cmd[] = getParam(command, 0)
+		char resource[] = getParam(command, 1)
+		char version[] = getParam(command, 2)
+		
+		resource = normalisePath(resource) //append index.html, etc.
+		
+		out.println("cmd: '$cmd'")
+		out.println("res: '$resource'")
+		out.println("ver: '$version'")
+		
+		if (cmd == "GET")
+			{
+			if (fileSystem.exists(resource))
+				{
+				File fd = new File(resource, File.FILE_ACCESS_READ)
+				
+				char mt[] = getMIMEType(resource)
+				
+				s.send("HTTP/1.0 200 OK\r\n")
+				s.send("Server: $server_name\r\n")
+				s.send("Content-Type: $mt\r\n")
+				s.send("Content-Length: $(iu.intToString(fd.getSize()))\r\n")
+				s.send("Content-Encoding: binary\r\n")
+				s.send("Connection: close\r\n")
+				s.send("\r\n")
+				
+				byte fbuf[]
+				while ((fbuf = fd.read(128)).arrayLength > 0)
+					s.send(fbuf)
+				
+				fd.close()
+				}
+				else
+				{
+				s.send("HTTP/1.0 404 Resource Not Found\r\n")
+				s.send("Server: $server_name\r\n")
+				s.send("Connection: close\r\n")
+				s.send("\r\n")
+				}
+			}
+			else
+			{
+			s.send("HTTP/1.0 501 Not Implemented\r\n")
+			s.send("Server: $server_name\r\n")
+			s.send("Connection: close\r\n")
+			s.send("\r\n")
+			}
+		
+		s.disconnect()
+		}
+	
+	int App:main(AppParam params[])
+		{
+		TCPServerSocket host = new TCPServerSocket()
+		host.bind(TCPServerSocket.ANY_ADDRESS, 2012)
+		
+		while (true)
+			{
+			TCPSocket client = new TCPSocket()
+			if (client.accept(host))
+				asynch::streamHandler(client)
+			}
+		
+		return 0
+		}
+	}

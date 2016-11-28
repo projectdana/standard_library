@@ -1,0 +1,32 @@
+data VC{
+	char result[]
+	}
+
+library interface DNSLib{
+	bool getHostIP(char hostname[], VC result)
+	}
+
+component provides Service, DNS requires NativeLoader inl
+	{
+	static library DNSLib lib
+
+	implementation DNS{
+		char[] DNS:getHostIP(char hostname[])
+			{
+			VC res = new VC()
+			lib.getHostIP(hostname, res)
+			return res.result
+		}
+	}
+
+	implementation Service{
+		void Service:start()
+		{
+			lib = new DNSLib() from inl.load("dns") :< DNSLib
+		}
+
+		void Service:stop()
+			{
+			}
+		}
+	}

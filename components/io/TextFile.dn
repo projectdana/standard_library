@@ -1,0 +1,64 @@
+const int BUF_EX_SIZE = 2048
+
+component provides io.TextFile requires io.File, io.Output out {
+	
+	TextFile:TextFile(char path[], byte mode)
+		{
+		super(path, mode)
+		}
+	
+	char[] TextFile:readLine()
+		{
+		int bufferSize = BUF_EX_SIZE
+		char buf[] = new char[BUF_EX_SIZE]
+		int ndx = 0
+		
+		char c[]
+		
+		while (!eof())
+			{
+			c = read(1)
+			
+			if (c == "\r")
+				{
+				if ((c = read(1)).arrayLength == 1 && c != "\n")
+					setPos(getPos()-1)
+				
+				char result[] = new char[ndx]
+				result =[] buf
+				return result
+				}
+				else if (c == "\n")
+				{
+				char result[] = new char[ndx]
+				result =[] buf
+				return result
+				}
+				else
+				{
+				buf[ndx] = c[0]
+				ndx ++
+				
+				if (ndx == bufferSize)
+					{
+					buf = new char[](buf, new char[BUF_EX_SIZE])
+					bufferSize += BUF_EX_SIZE
+					}
+				}
+			}
+		
+		char result[]
+		if (ndx > 0)
+			{
+			result = new char[ndx]
+			result =[] buf
+			}
+		return result
+		}
+	
+	void TextFile:writeLine(char text[])
+		{
+		write(new char[](text, "\n"))
+		}
+	
+	}

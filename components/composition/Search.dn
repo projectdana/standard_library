@@ -1,0 +1,269 @@
+const byte danaMagic[] = new int[](0x44, 0x41, 0x4E, 0x41, 0x0, 0x1)
+
+component provides Search requires data.StringUtil stringUtil, io.FileSystem fileSystem, ObjectWriter, io.File, data.json.JSONParser parser, io.Output out, System system, os.SystemInfo systemInfo {
+	
+	bool Search:isDanaComponent(char path[])
+		{
+		File fd = new File(path, File.FILE_ACCESS_READ)
+		
+		if (fd != null)
+			{
+			byte buf[] = fd.read(danaMagic.arrayLength)
+			
+			if (buf == danaMagic)
+				{
+				fd.close()
+				
+				return true
+				}
+			
+			fd.close()
+			}
+		
+		return false
+		}
+	
+	bool providesInterface(char path[], char intfPackage[])
+		{
+		ObjectWriter ow = new ObjectWriter(path)
+		
+		InfoSection section = ow.getInfoSection("DNIL", "json")
+		
+		JSONElement document = parser.parseDocument(section.content)
+		
+		JSONElement providedInterfaces = parser.getValue(document, "providedInterfaces")
+		
+		for (int j = 0; j < providedInterfaces.children.arrayLength; j++)
+			{
+			JSONElement pi = providedInterfaces.children[j]
+			char package[] = parser.getValue(pi, "package").value
+			
+			if (package == intfPackage)
+				return true
+			}
+		
+		return false
+		}
+	
+	String[] findComponentsIn(char path[], char intfPackage[])
+		{
+		String result[]
+		FileEntry files[] = fileSystem.getDirectoryContents(path)
+		
+		//out.println("Finding in '$path'")
+		
+		for (int i = 0; i < files.arrayLength; i++)
+			{
+			char fullPath[] = new char[](path, files[i].name)
+			//out.println(" - check '$fullPath'")
+			
+			if (fileSystem.getInfo(fullPath).type == FileInfo.TYPE_FILE)
+				{
+				//is it a Dana component and does it provide the interface that we're looking for?
+				
+				if (isDanaComponent(fullPath) && providesInterface(fullPath, intfPackage))
+					{
+					result = new String[](result, new String(fullPath))
+					}
+				}
+			}
+		
+		return result
+		}
+	
+	String[] getStandardSearchPaths()
+		{
+		String result[] = new String[](new String("./"))
+		
+		//System search paths
+		result = new String[](result, system.getSearchPaths())
+		
+		//CST
+		result = new String[](result, new String(new char[](systemInfo.getVariable("DANA_HOME"), "/components/")))
+		
+		//pre-process strings into a common format
+		for (int i = 0; i < result.arrayLength; i++)
+			{
+			result[i] = new String(normalisePath(result[i].string))
+			if (result[i].string[result[i].string.arrayLength-1] != "/")
+				result[i].string = new char[](result[i].string, "/")
+			}
+		
+		return result
+		}
+	
+	String[] getComponentsFrom(char intfPackage[], String searchPaths[])
+		{
+		String result[]
+		
+		String parts[] = clone stringUtil.explode(intfPackage, ".")
+		parts[parts.arrayLength-1] = new String("")
+		
+		char path[] = stringUtil.implode(parts, "/")
+		
+		for (int i = 0; i < searchPaths.arrayLength; i++)
+			{
+			char test[] = new char[](searchPaths[i].string, path)
+			
+			result = new String[](result, findComponentsIn(test, intfPackage))
+			}
+		
+		return result
+		}
+	
+	String[] Search:getComponents(char intfPackage[])
+		{
+		//return the relative paths to all components that provide the given interface (both locally and from the CST)
+		return getComponentsFrom(intfPackage, getStandardSearchPaths())
+		}
+	
+	char[] normalisePath(char path[])
+		{
+		path = clone path
+		
+		for (int i = 0; i < path.arrayLength; i++)
+			{
+			if (path[i] == "\\") path[i] = "/"
+			}
+		
+		return path
+		}
+	
+	String[] Search:getComponentsIn(char intfPackage[], String searchPaths[])
+		{
+		//pre-process strings into a common format
+		searchPaths = clone searchPaths
+		
+		for (int i = 0; i < searchPaths.arrayLength; i++)
+			{
+			searchPaths[i] = new String(normalisePath(searchPaths[i].string))
+			if (searchPaths[i].string.arrayLength != 0 && searchPaths[i].string[searchPaths[i].string.arrayLength-1] != "/")
+				searchPaths[i].string = new char[](searchPaths[i].string, "/")
+			}
+		
+		//search as normal
+		return getComponentsFrom(intfPackage, searchPaths)
+		}
+	
+	//this function takes a "base" path from which to check for a manifest (may be an empty string) and a "pkg" path which is expected to be in a dotted form, i.e. net.TCPSocket
+	char[] checkManifest(char base[], char pkg[])
+		{
+		//convert all dots to slashes and ignore the last thing
+		String parts[] = stringUtil.explode(pkg, ".")
+		char path[] = base
+		char interfaceAlias[] = pkg
+
+		if (parts.arrayLength > 0) interfaceAlias = parts[parts.arrayLength - 1].string
+		
+		for (int i = 0; parts.arrayLength > 0 && i < parts.arrayLength - 1; i++)
+			{
+			path = new char[](path, "/", parts[i].string)
+			}
+		
+		char fullBasePath[] = new char[](path, "/")
+		
+		path = new char[](path, "/.manifest")
+		
+		if (fileSystem.exists(path))
+			{
+			//parse the file into JSON
+			File fd = new File(path, File.FILE_ACCESS_READ)
+			char buf[] = fd.read(fd.getSize())
+			fd.close()
+			
+			//out.println(buf);
+			
+			JSONElement je = parser.parseDocument(buf)
+			
+			JSONElement links = parser.getValue(je, "defaultLinks")
+			
+			for (int i = 0; i < links.children.arrayLength; i++)
+				{
+				char ifn[] = parser.getValue(links.children[i], "interface").value
+				//out.println("link: '$ifn'")
+				
+				if (parser.getValue(links.children[i], "interface").value == interfaceAlias)
+					{
+					char comPath[] = parser.getValue(links.children[i], "component").value
+					char result[] = new char[](fullBasePath, comPath, ".o")
+					
+					//out.println("candidate: '$result'")
+					
+					if (fileSystem.exists(result)) return result
+					}
+				}
+			}
+		
+		return null
+		}
+	
+	char[] checkRelativePath(char base[], char pkg[])
+		{
+		char test[]
+		
+		test = checkManifest(base, pkg)
+		
+		if (test != null) return test
+		
+		test = pkg
+		if (fileSystem.exists(new char[](base, test)))
+			return test
+		
+		//local with .o?
+		test = new char[](pkg, ".o")
+		if (fileSystem.exists(new char[](base, test)))
+			return test
+		
+		//all dots (except final one) converted to slashes
+		String parts[] = stringUtil.explode(pkg, ".")
+		if (parts.arrayLength > 0)
+			test = new char[](base, parts[0].string)
+			else
+			test = null
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			if (i + 1 != parts.arrayLength)
+				test = new char[](test, "/", parts[i].string)
+				else
+				test = new char[](test, ".", parts[i].string)
+			}
+		
+		if (fileSystem.exists(test))
+			return test
+		
+		//all dots (including final one) converted to slashes, with ".o" appended
+		if (parts.arrayLength > 0)
+			test = new char[](base, parts[0].string)
+			else
+			test = null
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			test = new char[](test, "/", parts[i].string)
+			}
+		
+		test = new char[](test, ".o")
+		
+		if (fileSystem.exists(test))
+			return test
+		
+		return null
+		}
+	
+	char[] Search:getDefaultComponent(char intfPackage[])
+		{
+		//search for the "default" automated linking component for intfPackage, including manifest checks
+		String paths[] = getStandardSearchPaths()
+		
+		for (int i = 0; i < paths.arrayLength; i++)
+			{
+			char path[]
+			if ((path = checkRelativePath(paths[i].string, intfPackage)) != null)
+				return path
+			}
+		
+		return null
+		}
+	
+	}

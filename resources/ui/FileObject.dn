@@ -1,0 +1,14 @@
+/*
+* FileBrowser interface
+* This is an API that represents a graphical representation of a file or directory, typically used inside a file browser.
+*/
+
+uses ClickableObject
+
+interface FileObject extends ClickableObject{
+	transfer char filePath[]
+	
+	FileObject(char path[])
+	void setFile(char path[])
+	char[] getFile()
+	}

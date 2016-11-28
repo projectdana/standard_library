@@ -1,0 +1,9 @@
+component provides App requires io.Output out{
+	
+	int App:main(AppParam params[])
+		{
+		out.println("Hi! :-)")
+		
+		return 0
+		}
+	}

@@ -1,0 +1,14 @@
+component provides App requires io.Output out, data.IntUtil iu, time.Timer it {
+	
+	int App:main(AppParam params[])
+		{
+		for (int i = 1; i < 5; i++)
+			{
+			it.sleep(1000)
+			out.println("$(iu.intToString(i)) seconds")
+			}
+		
+		return 0
+		}
+	
+	}

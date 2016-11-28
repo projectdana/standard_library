@@ -1,0 +1,14 @@
+data RunStatus{
+	bool executed
+	int result
+	}
+
+/*
+ {"description" : "Launch system commands on the host OS."}
+*/
+interface Run{
+	/*
+	 {"@description" : "Execute a command and wait until the command has finished executing, returning its status when it does so."}
+	*/
+	RunStatus execute(char path[])
+	}

@@ -1,0 +1,10 @@
+/*
+ {"description" : "Read user input, typically from a command-line interface."}
+*/
+
+interface Input{
+	/*
+	 {"@description" : "Wait for a line of user input and return it (e.g. when the user has pressed enter)."}
+	*/
+	char[] readln()
+	}

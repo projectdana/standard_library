@@ -1,0 +1,33 @@
+uses time.DateTime
+
+library interface ICalLib{
+	void getLocalTime(DateTime d)
+	}
+
+component provides Service, time.Calendar requires NativeLoader inl, io.Output out
+	{
+	static library ICalLib lib
+	
+	implementation Calendar{
+	
+		DateTime Calendar:getTime()
+			{
+			DateTime t = new DateTime()
+			lib.getLocalTime(t)
+			
+			return t
+			}
+		}
+	
+	implementation Service{
+		
+		void Service:start()
+			{
+			lib = new ICalLib() from inl.load("calendar") :< ICalLib
+			}
+		
+		void Service:stop()
+			{
+			}
+		}
+	}

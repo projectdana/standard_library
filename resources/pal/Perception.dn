@@ -1,0 +1,48 @@
+uses time.DateTime
+
+data Metric {
+	char name[]
+	char sourceComponent[]
+	int totalValue
+	int totalCount
+	bool preferHigh
+	DateTime timeFirst
+	DateTime timeLast
+	}
+
+data Event {
+	char name[]
+	char sourceComponent[]
+	int totalValue
+	int totalCount
+	DateTime timeFirst
+	DateTime timeLast
+	}
+
+data PerceptionData {
+	Event events[]
+	Metric metrics[]
+	}
+
+/*
+{ "description" : "Accepts perception data from components and returns all perception data recorded so far." }
+*/
+
+interface Perception {
+	
+	/*
+	{ "@description" : "Records a metric with a given name. Metrics are used to understand the current wellbeing of a component." }
+	*/
+	void addMetric(char name[], int value, bool preferHigh)
+	
+	/*
+	{ "@description" : "Records an event with a given name. Events are used to understand the deployment environment of a component." }
+	*/
+	void addEvent(char name[], int value)
+	
+	/*
+	{ "@description" : "Returns all perception data recorded since the last time this function was called." }
+	*/
+	PerceptionData getPerception()
+	
+	}

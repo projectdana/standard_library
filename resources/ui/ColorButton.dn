@@ -1,0 +1,18 @@
+/*
+* ColorButton interface
+* This is an API that represents a clickable GUI button with a given color (and no label).
+*/
+
+uses ClickableObject
+
+interface ColorButton extends ClickableObject{
+	
+	transfer WH size
+	transfer Color color
+	
+	void setColor(Color c)
+	Color getColor()
+	
+	void setSize(WH size)
+	WH getSize()
+	}

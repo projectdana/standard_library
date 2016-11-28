@@ -1,0 +1,61 @@
+/*
+ {"description" : "Create, read and write files, typically stored on a hard disk. See the FileSystem API for further meta-operations relating to files."}
+*/
+
+interface File{
+	/*
+	 {"@description" : "Flag to open a file in read mode. The file will not be opened if it does not exists."}
+	*/
+	const int FILE_ACCESS_READ = 0
+	
+	/*
+	 {"@description" : "Flag to open a file in write-append mode. The file will be created if it does not exist; if it does exist its contents will be unchanged by the act of opening the file."}
+	*/
+	const int FILE_ACCESS_WRITE = 1
+	
+	/*
+	 {"@description" : "Open a file in a chosen mode, using one of FILE_ACCESS_READ or FILE_ACCESS_WRITE."}
+	*/
+	File(char fn[], byte accessType)
+	
+	/*
+	 {"@description" : "Read a given number of bytes from a file.",
+			"@return" : "The number of bytes requested, or less than this if the end of the file is reached before length bytes."}
+	*/
+	byte[] read(int length)
+	
+	/*
+	 {"@description" : "Write an array of bytes to a file.",
+			"@return" : "The number of bytes actually written to the file (returning a number less that data.arrayLength indicates that an error occurred)."}
+	*/
+	int write(byte data[])
+	
+	/*
+	 {"@description" : "Move the logical read/write position of the file to a specified offset.",
+			"@return" : "True if the operation succeeded, false otherwise (for example if the requested position is larger than the size of the file)."}
+	*/
+	bool setPos(int pos)
+	
+	/*
+	 {"@description" : "Get the current read/write position of the file. This offset is the location at which the next bytes will be read or written by read() or write().",
+			"@return" : "The current read/write position of the file."}
+	*/
+	int getPos()
+	
+	/*
+	 {"@description" : "Check if the end of the file has been reached. This only makes sense when a file has been opened in read mode.",
+			"@return" : "True if the end of the file has been reached, false otherwise."}
+	*/
+	bool eof()
+	
+	/*
+	 {"@description" : "Get the size of the file in bytes.",
+			"@return" : "The current size of the file, in bytes."}
+	*/
+	int getSize()
+	
+	/*
+	 {"@description" : "Close the file. Note that, for files open in write mode, the contents of the file may not reflect everything that has been written using write() if close is not called."}
+	*/
+	void close()
+	}

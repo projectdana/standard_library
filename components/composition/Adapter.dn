@@ -1,0 +1,103 @@
+component provides Adapter {
+	
+	Object[] buildObjectList(ObjectInstance iw)
+		{
+		int listSize = 0
+		ObjectInstance w = iw
+		while (w != null)
+			{
+			listSize ++
+			w = w.next
+			}
+		
+		Object result[] = new Object[listSize]
+		listSize = 0
+		w = iw
+		while (w != null)
+			{
+			result[listSize] = w.object
+			listSize ++
+			w = w.next
+			}
+		
+		return result
+		}
+	
+	void adaptStatelessObject(Object object, IDC source, char type[])
+		{
+		if (dana.pauseObject(object))
+			{
+			// - construct a new object, state-linked to the current object
+			Object a = dana.adaptConstruct(source :< type, object)
+			// - notify the object that it's now the "inactive" copy
+			dana.notifyInactive(object)
+			// - rewire live object so calls now go to the new one (a becomes null)
+			Object b = dana.rewireObject(object, a)
+			// - notify the object that it's now the "active" copy
+			dana.notifyActive(object)
+			// - allow new calls to proceed in the new object
+			dana.resumeObject(object)
+			// - wait for all in-progress calls to finish in the old object
+			dana.waitForObject(b)
+			// - destroy the old object
+			dana.adaptDestroy(b)
+			}
+		}
+	
+	void adaptStatefulObject(Object object, IDC source, char type[])
+		{
+		if (dana.pauseObject(object))
+			{
+			// - wait for all in-progress calls to finish in the old object
+			dana.waitForObject(object)
+			// - construct a new object, state-linked to the current object
+			Object a = dana.adaptConstruct(source :< type, object)
+			// - notify the object that it's now the "inactive" copy
+			dana.notifyInactive(object)
+			// - rewire live object so calls now go to the new one (a becomes null)
+			Object b = dana.rewireObject(object, a)
+			// - notify the object that it's now the "active" copy
+			dana.notifyActive(object)
+			// - allow new calls to proceed in the new object
+			dana.resumeObject(object)
+			// - destroy the old object
+			dana.adaptDestroy(b)
+			}
+		}
+	
+	bool Adapter:adaptObject(Object object, IDC newImplementation, char typeName[])
+		{
+		if (dana.hasTransferState(object))
+			adaptStatefulObject(object, newImplementation, typeName)
+			else
+			adaptStatelessObject(object, newImplementation, typeName)
+		
+		return true
+		}
+	
+	bool Adapter:adaptRequiredInterface(IDC ofComponent, char interfaceName[], IDC toComponent)
+		{
+		if (ofComponent :> interfaceName != null)
+			{
+			//temporarily prevent new object instances being created or destroyed, and snapshot the current set of objects
+			dana.pause(ofComponent :> interfaceName)
+			//switch the binding from this role to the new component (all new objects will be sourced from the new component)
+			ofComponent :> interfaceName = toComponent :< interfaceName
+			Object objects[] = buildObjectList(dana.getObjects(ofComponent :> interfaceName))
+			dana.resume(ofComponent :> interfaceName)
+			
+			//switch all existing objects to the new class
+			for (int i = 0; i < objects.arrayLength; i++)
+				{
+				adaptObject(objects[i], toComponent, interfaceName)
+				}
+			}
+			else
+			{
+			throw new Exception("No bindport of type '$interfaceName' found on component")
+			}
+		
+		return true
+		}
+	
+	}

@@ -1,0 +1,18 @@
+const char hostIP[] = "127.0.0.1"
+const int hostPort = 2012
+
+component provides App requires io.Output out, net.UDPClient udp {
+	
+	int App:main(AppParam params[])
+		{
+		if (params.arrayLength == 0)
+			{
+			out.println("Please enter a message to send!")
+			return 1
+			}
+		
+		udp.send("127.0.0.1", 2012, new char[](params[0].string, "\n"))
+		
+		return 0
+		}
+	}

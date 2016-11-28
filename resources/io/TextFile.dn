@@ -1,0 +1,23 @@
+/*
+{"description" : "Create, read and write text files on a line-by-line basis."}
+*/
+
+uses File
+
+interface TextFile extends File{
+	
+	/*
+	 {"@description" : "Open a file in a chosen mode, using one of File.FILE_ACCESS_READ or File.FILE_ACCESS_WRITE."}
+	*/
+	TextFile(char path[], byte accessType)
+	
+	/*
+	 {"@description" : "Read one line of text from the file."}
+	*/
+	char[] readLine()
+	
+	/*
+	 {"@description" : "Write the given text to the file, followed by a new line character."}
+	*/
+	void writeLine(char line[])
+	}

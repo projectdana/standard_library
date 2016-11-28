@@ -1,0 +1,209 @@
+component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONParser parser, data.IntUtil iu, data.StringUtil stringUtil {
+	
+	char serverIP[]
+	int serverPort
+	
+	RestAPI:RestAPI(char ip[], int port)
+		{
+		serverIP = ip
+		serverPort = port
+		}
+	
+	String[] readHeaders(TCPSocket socket)
+		{
+		String headers[]
+		
+		char buf[]
+		char last4[] = new char[4]
+		
+		while (last4 != "\r\n\r\n")
+			{
+			char b[] = socket.recv(1)
+			buf = new char[](buf, b)
+			last4[0] = last4[1]
+			last4[1] = last4[2]
+			last4[2] = last4[3]
+			last4[3] = b[0]
+			}
+		
+		headers = stringUtil.explode(buf, "\r\n")
+		
+		return headers
+		}
+	
+	char[] getHeaderValue(String headers[], char field[])
+		{
+		for (int i = 0; i < headers.arrayLength; i++)
+			{
+			String tokens[] = stringUtil.explode(headers[i].string, ":")
+			
+			if (tokens.arrayLength >= 1 && stringUtil.lowercase(tokens[0].string) == field)
+				{
+				int ndx = stringUtil.find(headers[i].string, ":") + 1
+				return stringUtil.trim(stringUtil.subString(headers[i].string, ndx, headers[i].string.arrayLength - ndx))
+				}
+			}
+		
+		return null
+		}
+	
+	char[] get(char resource[])
+		{
+		char request[] = "GET $resource HTTP/1.0\r\n\r\n"
+		
+		TCPSocket s = new TCPSocket()
+		
+		if (s.connect(serverIP, serverPort))
+			{
+			s.send(request)
+			
+			String headers[] = readHeaders(s)
+			
+			char returnContent[]
+			
+			if (getHeaderValue(headers, "content-length") != null)
+				{
+				int size = iu.intFromString(getHeaderValue(headers, "content-length"))
+				returnContent = s.recv(size)
+				}
+			
+			s.disconnect()
+			
+			return returnContent
+			}
+		
+		return null
+		}
+	
+	char[] post(char resource[], char contentType[], byte content[])
+		{
+		char request[] = "POST $resource HTTP/1.0\r\n"
+		request = new char[](request, "content-type: $contentType\r\n")
+		request = new char[](request, "content-length: $(iu.intToString(content.arrayLength))\r\n")
+		request = new char[](request, "\r\n")
+		
+		TCPSocket s = new TCPSocket()
+		
+		if (s.connect(serverIP, serverPort))
+			{
+			s.send(request)
+			
+			s.send(content)
+			
+			String headers[] = readHeaders(s)
+			
+			char returnContent[]
+			
+			if (getHeaderValue(headers, "content-length") != null)
+				{
+				int size = iu.intFromString(getHeaderValue(headers, "content-length"))
+				returnContent = s.recv(size)
+				}
+			
+			s.disconnect()
+			
+			return returnContent
+			}
+		
+		return null
+		}
+	
+	//function to get a list of all available configurations of components for the target system
+	String[] RestAPI:getConfigs()
+		{
+		char response[] = get("/meta/get_all_configs")
+		
+		JSONElement doc = parser.parseDocument(response)
+		
+		JSONElement arr = parser.getValue(doc, "configs")
+		
+		String configs[]
+		
+		for (int i = 0; i < arr.children.arrayLength; i++)
+			{
+			configs = new String[](configs, new String(arr.children[i].value))
+			}
+		
+		return configs
+		}
+	
+	char[] RestAPI:getConfig()
+		{
+		char response[] = get("/meta/get_config")
+		
+		return response
+		}
+	
+	//function to adapt the system to the chosen configuration of components
+	bool RestAPI:setConfig(char config[])
+		{
+		post("/meta/set_config", "text/json", "{\"config\": \"$config\"}")
+		
+		return true
+		}
+	
+	DateTime dateFromString(char str[])
+		{
+		DateTime result = new DateTime()
+		
+		String tokens[] = stringUtil.explode(str, "-:")
+		
+		result.year = iu.intFromString(tokens[0].string)
+		result.month = iu.intFromString(tokens[1].string)
+		result.day = iu.intFromString(tokens[2].string)
+		
+		result.hour = iu.intFromString(tokens[3].string)
+		result.minute = iu.intFromString(tokens[4].string)
+		result.second = iu.intFromString(tokens[5].string)
+		
+		return result
+		}
+	
+	//function to get the latest perception data
+	PerceptionData RestAPI:getPerception()
+		{
+		char response[] = get("/meta/get_perception")
+		
+		JSONElement doc = parser.parseDocument(response)
+		
+		PerceptionData pd = new PerceptionData()
+		
+		JSONElement metrics = parser.getValue(doc, "metrics")
+		
+		for (int i = 0; i < metrics.children.arrayLength; i++)
+			{
+			JSONElement jmetric = metrics.children[i]
+			
+			Metric metric = new Metric()
+			metric.name = parser.getValue(jmetric, "name").value
+			metric.sourceComponent = parser.getValue(jmetric, "source").value
+			metric.totalValue = iu.intFromString(parser.getValue(jmetric, "value").value)
+			metric.totalCount = iu.intFromString(parser.getValue(jmetric, "count").value)
+			metric.preferHigh = parser.getValue(jmetric, "preferHigh").value == "true"
+			metric.timeFirst = dateFromString(parser.getValue(jmetric, "startTime").value)
+			metric.timeLast = dateFromString(parser.getValue(jmetric, "endTime").value)
+			
+			pd.metrics = new Metric[](pd.metrics, metric)
+			}
+		
+		JSONElement events = parser.getValue(doc, "events")
+		
+		for (int i = 0; i < events.children.arrayLength; i++)
+			{
+			JSONElement jevent = events.children[i]
+			
+			Event event = new Event()
+			event.name = parser.getValue(jevent, "name").value
+			event.sourceComponent = parser.getValue(jevent, "source").value
+			event.totalValue = iu.intFromString(parser.getValue(jevent, "value").value)
+			event.totalCount = iu.intFromString(parser.getValue(jevent, "count").value)
+			event.timeFirst = dateFromString(parser.getValue(jevent, "startTime").value)
+			event.timeLast = dateFromString(parser.getValue(jevent, "endTime").value)
+			
+			pd.events = new Event[](pd.events, event)
+			}
+		
+		return pd
+		}
+
+}

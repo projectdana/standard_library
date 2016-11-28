@@ -1,0 +1,11 @@
+component provides App requires io.Output out, data.IntUtil iu, time.Calendar ic, time.Timer timer {
+	
+	int App:main(AppParam params[])
+		{
+		DateTime t = ic.getTime()
+		
+		out.println("date/time: $(iu.intToString(t.year))-$(iu.intToString(t.month))-$(iu.intToString(t.day)) $(iu.intToString(t.hour)):$(iu.intToString(t.minute)):$(iu.intToString(t.second)).$(iu.intToString(t.millisecond))")
+		
+		return 0
+		}
+	}

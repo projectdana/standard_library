@@ -1,0 +1,13 @@
+component provides App requires io.Output out, io.Input input {
+
+	int App:main(AppParam params[])
+		{
+		out.print("Type something and press enter: ")
+		
+		char str[] = input.readln()
+		
+		out.println("You typed: '$str'")
+		
+		return 0
+		}
+	}

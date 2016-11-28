@@ -1,0 +1,10 @@
+/*
+{"description" : "Send UDP packets."}
+*/
+
+interface UDPClient{
+	/*
+	{"@description" : "Send a UDP packet to a specified IP address and port."}
+	*/
+	bool send(char address[], int port, byte data[])
+	}

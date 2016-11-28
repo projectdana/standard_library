@@ -1,0 +1,24 @@
+uses GraphicsObject
+uses Rect
+uses MouseButtons
+
+data ClickListenerItem{
+	ClickListener l
+	}
+
+interface ClickListener{
+	void click(Object source)
+	}
+
+/*
+ {"description" : "A graphical entity that can be clicked on (e.g. with a mouse) triggering click events to any registered listeners."}
+*/
+interface ClickableObject extends GraphicsObject{
+	transfer ClickListener listeners[]
+	
+	Rect getBounds()
+	void addClickListener(ClickListener cl)
+	void remClickListener(ClickListener cl)
+	ClickListenerItem[] getClickListeners()
+	void click(int x, int y, int button)
+	}

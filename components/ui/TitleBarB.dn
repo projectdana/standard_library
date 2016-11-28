@@ -1,0 +1,222 @@
+const int HEIGHT = 30
+const int EDGE_DISTANCE = 1
+
+component provides TitleBar(XYMouseListener, ClickListener, Destructor) requires Font, io.Output out, data.IntUtil iu, os.SystemInfo sysInfo, ColorButton{
+	
+	bool drag
+	int lastX
+	int lastY
+	
+	int dragX
+	int dragY
+	
+	Font titleFont
+	
+	ColorButton closeButton
+	ColorButton minButton
+	ColorButton maxButton
+	
+	TitleBar:TitleBar(char newTitle[])
+		{
+		title = newTitle
+		
+		closeButton = new ColorButton()
+		closeButton.setSize(new WH(HEIGHT, HEIGHT))
+		closeButton.setColor(new Color(204, 96, 96, 255))
+		closeButton.addClickListener(this)
+		
+		minButton = new ColorButton()
+		minButton.setSize(new WH(HEIGHT, HEIGHT))
+		minButton.setColor(new Color(103, 169, 244, 255))
+		minButton.addClickListener(this)
+		
+		maxButton = new ColorButton()
+		maxButton.setSize(new WH(HEIGHT, HEIGHT))
+		maxButton.setColor(new Color(103, 169, 244, 255))
+		maxButton.addClickListener(this)
+		
+		titleFont = new Font(sysInfo.getSystemFont(false), 20)
+		}
+	
+	TitleBar:Adapt()
+		{
+		TitleBar(title)
+		setWindow(window)
+		}
+	
+	Rect TitleBar:getRect()
+		{
+		Rect w = window.getRect()
+		return new Rect(EDGE_DISTANCE, EDGE_DISTANCE, w.width - EDGE_DISTANCE, HEIGHT)
+		}
+	
+	void TitleBar:setTitle(char t[])
+		{
+		title = t
+		}
+	
+	void TitleBar:setWindow(Window w)
+		{
+		window = w
+		
+		lastX = window.getRect().x
+		lastY = window.getRect().y
+		
+		window.addXYMouseListener(this)
+		
+		w.addObject(closeButton)
+		w.addObject(maxButton)
+		w.addObject(minButton)
+		}
+	
+	void TitleBar:paint(Canvas c)
+		{
+		int width = window.getRect().width
+		
+		c.drawRect(new Rect2D(EDGE_DISTANCE, EDGE_DISTANCE, width - (EDGE_DISTANCE * 2), HEIGHT, new Color(100, 124, 150, 255)))
+		
+		c.drawText(new Point2D(EDGE_DISTANCE + 3, EDGE_DISTANCE + 1, new Color(250, 250, 250, 255)), titleFont, title)
+		
+		closeButton.setPosition(width - EDGE_DISTANCE - 30, EDGE_DISTANCE)
+		maxButton.setPosition(width - EDGE_DISTANCE - 62, EDGE_DISTANCE)
+		minButton.setPosition(width - EDGE_DISTANCE - 94, EDGE_DISTANCE)
+		}
+	
+	void ClickListener:click(Object o)
+		{
+		if (o === closeButton)
+			{
+			for (int i = 0; i < closeListeners.arrayLength; i++)
+				closeListeners[i].closeEvent()
+			}
+			else if (o === maxButton)
+			{
+			for (int i = 0; i < eventListeners.arrayLength; i++)
+				eventListeners[i].maximiseEvent()
+			}
+			else if (o === minButton)
+			{
+			for (int i = 0; i < eventListeners.arrayLength; i++)
+				eventListeners[i].minimiseEvent()
+			}
+		}
+	
+	void XYMouseListener:mouseDown(int x, int y, int button)
+		{
+		if (button == MouseButtons.BUTTON_LEFT)
+			{
+			int width = window.getRect().width
+			
+			int rx = window.getRect().x
+			int ry = window.getRect().y
+			
+			rx = x - rx
+			ry = y - ry
+			
+			if (rx >= EDGE_DISTANCE && rx <= width - EDGE_DISTANCE && ry >= EDGE_DISTANCE && ry <= EDGE_DISTANCE + HEIGHT)
+				{
+				drag = true
+				
+				dragX = x
+				dragY = y
+				}
+			}
+		}
+	
+	void XYMouseListener:mouseUp(int x, int y, int button)
+		{
+		if (button == MouseButtons.BUTTON_LEFT)
+			{
+			drag = false
+			}
+		}
+	
+	void XYMouseListener:mouseMove(int x, int y)
+		{
+		if (drag)
+			{
+			int newX = 0
+			int newY = 0
+			
+			if (x > dragX)
+				newX = lastX + (x - dragX)
+				else
+				newX = lastX - (dragX - x)
+			
+			if (y > dragY)
+				newY = lastY + (y - dragY)
+				else
+				newY = lastY - (dragY - y)
+			
+			window.setPosition(newX, newY)
+			
+			lastX = newX
+			lastY = newY
+			
+			dragX = x
+			dragY = y
+			}
+		}
+	
+	char[] TitleBar:getTitle()
+		{
+		return title
+		}
+	
+	Window TitleBar:getWindow()
+		{
+		return window
+		}
+	
+	void TitleBar:addCloseListener(CloseEventListener l)
+		{
+		closeListeners = new CloseEventListener[](closeListeners, l)
+		}
+	
+	void TitleBar:remCloseListener(CloseEventListener l)
+		{
+		CloseEventListener nl[] = new CloseEventListener[closeListeners.arrayLength - 1]
+		int j = 0
+		for (int i = 0; i < closeListeners.arrayLength; i++)
+			{
+			CloseEventListener q = closeListeners[i]
+			
+			if (q !== l)
+				{
+				nl[j] = closeListeners[i]
+				j ++
+				}
+			}
+		closeListeners = nl
+		}
+	
+	void TitleBar:addEventListener(TitleBarEventListener l)
+		{
+		eventListeners = new TitleBarEventListener[](eventListeners, l)
+		}
+	
+	void TitleBar:remEventListener(TitleBarEventListener l)
+		{
+		TitleBarEventListener nl[] = new TitleBarEventListener[eventListeners.arrayLength - 1]
+		int j = 0
+		for (int i = 0; i < eventListeners.arrayLength; i++)
+			{
+			TitleBarEventListener q = eventListeners[i]
+			
+			if (q !== l)
+				{
+				nl[j] = eventListeners[i]
+				j ++
+				}
+			}
+		eventListeners = nl
+		}
+	
+	void Destructor:destroy()
+		{
+		window.remObject(closeButton)
+		window.remObject(minButton)
+		window.remObject(maxButton)
+		}
+	
+	}

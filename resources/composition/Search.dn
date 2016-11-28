@@ -1,0 +1,30 @@
+uses data.String
+
+/*
+ {"description" : "Utilities to locate components."}
+*/
+
+interface Search {
+	/*
+		{"@description" : "Check if a file is a compiled Dana component."}
+	*/
+	bool isDanaComponent(char path[])
+	
+	/*
+		{"@description" : "Get the list of components that provide the given interface, using standard search paths.",
+			"intfPackage" : "The interface type to search for, complete with its package path in dot format."}
+	*/
+	String[] getComponents(char intfPackage[])
+	
+	/*
+		{"@description" : "Get the list of components that provide the given interface, using the given directories as search paths.",
+			"intfPackage" : "The interface type to search for, complete with its package path in dot format."}
+	*/
+	String[] getComponentsIn(char intfPackage[], String searchPaths[])
+	
+	/*
+		{"@description" : "Get the default component (as would be used in automated linking) that provides the given interface.",
+			"intfPackage" : "The interface type to search for, complete with its package path in dot format."}
+	*/
+	char[] getDefaultComponent(char intfPackage[])
+	}

@@ -1,0 +1,62 @@
+library interface IOUDPLib{
+	bool send(char address[], int port, byte content[])
+	bool recv(int hnd, Datagram d)
+	int bind(char address[], int port)
+	void unbind(int hnd)
+	}
+
+component provides Service, net.UDPServer, net.UDPClient requires NativeLoader inl
+	{
+	static library IOUDPLib lib
+	
+	implementation UDPClient{
+		
+		bool UDPClient:send(char address[], int port, byte content[])
+			{
+			return lib.send(address, port, content)
+			}
+		}
+	
+	implementation UDPServer{
+		
+		int platformSocket
+		
+		Datagram UDPServer:recv()
+			{
+			Datagram d = new Datagram()
+			
+			lib.recv(platformSocket, d)
+			
+			return d
+			}
+		
+		bool UDPServer:bind(char address[], int port)
+			{
+			int platformHandle = lib.bind(address, port)
+			
+			if (platformHandle == 0)
+				return false
+			
+			platformSocket = platformHandle
+			
+			return true
+			}
+		
+		void UDPServer:unbind()
+			{
+			lib.unbind(platformSocket)
+			}
+		}
+	
+	implementation Service{
+		
+		void Service:start()
+			{
+			lib = new IOUDPLib() from inl.load("io_udp") :< IOUDPLib
+			}
+		
+		void Service:stop()
+			{
+			}
+		}
+	}

@@ -1,0 +1,50 @@
+component provides App(ui.ClickListener, ui.CloseEventListener) requires ui.Window, ui.Button, io.Output out{
+	
+	Button b1
+	Button b2
+	
+	Thread main
+	
+	void ClickListener:click(Object o)
+		{
+		if (b1 === o)
+			out.println("A BUTTON CLICK!")
+		
+		if (b2 === o)
+			out.println("A BUTTON CLICK TOO!")
+		}
+	
+	void CloseEventListener:closeEvent()
+		{
+		main.signal()
+		}
+	
+	int App:main(AppParam params[])
+		{
+		Window window = new Window("MyWindow")
+		window.setSize(200, 200)
+		window.setVisible(true)
+		
+		b1 = new Button("One")
+		b2 = new Button("Two")
+		
+		b1.setPosition(10, 40)
+		b2.setPosition(70, 40)
+		
+		window.addObject(b1)
+		b1.addClickListener(this)
+		
+		window.addObject(b2)
+		b2.addClickListener(this)
+		
+		window.addCloseListener(this)
+		
+		main = this.thread
+		this.thread.wait()
+		
+		window.close()
+		
+		return 0
+		}
+	
+	}

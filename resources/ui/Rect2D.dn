@@ -1,0 +1,14 @@
+/*
+* Rect2D type
+* This data type describes a rectangle with a color; x/y typically represents the coordinates of the top left corner and width/height represent its size.
+*/
+
+uses Color
+
+data Rect2D{
+	int x
+	int y
+	int width
+	int height
+	Color color
+	}

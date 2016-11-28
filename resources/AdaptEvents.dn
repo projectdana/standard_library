@@ -1,0 +1,21 @@
+/*
+ {"description" : "This interface can be provided as a secondary interface of an object, allowing it to then receive notifications of adaptation events."}
+*/
+
+interface AdaptEvents{
+	
+	/*
+	 { "@description" : "This function is called when an object implementation becomes the 'active' one for that object (i.e. this object implementation has been adapted to)." }
+	*/
+	void active(){}
+	
+	/*
+	 { "@description" : "This function is called when an object implementation becomes 'inactive' for that object (i.e. this object implementation has been adapted away from)." }
+	*/
+	void inactive(){}
+	
+	/*
+	 { "@description" : "This function is called when an object is being destroyed after having been made `inactive'. Note that if the object also implements Destructor as a secondary interface, only AdaptEvents:destroy() is called (i.e. Destructor:destroy() is not called in this case)." }
+	*/
+	void destroy(){}
+	}

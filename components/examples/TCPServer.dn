@@ -1,0 +1,36 @@
+component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocket, data.IntUtil iu {
+	
+	void streamHandler(TCPSocket s)
+		{
+		char buf[]
+		
+		NetworkEndpoint remoteEP = s.getRemoteEndpoint()
+		NetworkEndpoint localEP = s.getLocalEndpoint()
+		
+		while ((buf = s.recv(64)).arrayLength > 0)
+			out.print("$buf")
+		
+		out.println("remote: $(remoteEP.address)::$(iu.intToString(remoteEP.port))")
+		out.println("local: $(localEP.address)::$(iu.intToString(localEP.port))")
+		
+		s.disconnect()
+		}
+	
+	int App:main(AppParam params[])
+		{
+		TCPServerSocket host = new TCPServerSocket()
+		host.bind(TCPServerSocket.ANY_ADDRESS, 2012)
+		
+		out.println("Waiting for clients...")
+		
+		while (true)
+			{
+			TCPSocket client = new TCPSocket()
+			
+			if (client.accept(host))
+				asynch::streamHandler(client)
+			}
+		
+		return 0
+		}
+	}

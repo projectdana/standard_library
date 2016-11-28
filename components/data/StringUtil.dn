@@ -1,0 +1,228 @@
+component provides StringUtil requires io.Output out, data.adt.List {
+	
+	char[] StringUtil:subString(char array[], int start, int length)
+		{
+		char result[] = new char[length]
+		
+		for (int i = 0; i < length; i++)
+			result[i] = array[start+i]
+		
+		return result
+		}
+	
+	bool isWhitespace(char c)
+		{
+		return c == " " || c == "\n" || c == "\r" || c == "\t"
+		}
+	
+	char[] StringUtil:ltrim(char string[])
+		{
+		int i = 0
+		for (; i < string.arrayLength && isWhitespace(string[i]); i ++){}
+		
+		if (i == string.arrayLength)
+			{
+			return null
+			}
+			else
+			{
+			return subString(string, i, string.arrayLength - i)
+			}
+		}
+	
+	char[] StringUtil:rtrim(char string[])
+		{
+		int i = string.arrayLength - 1
+		for (; i != INT_MAX && isWhitespace(string[i]); i --){}
+		
+		if (i == INT_MAX)
+			{
+			return null
+			}
+			else
+			{
+			return subString(string, 0, i+1)
+			}
+		}
+	
+	char[] StringUtil:trim(char string[])
+		{
+		return rtrim(ltrim(string))
+		}
+	
+	char[] StringUtil:uppercase(char string[])
+		{
+		string = clone string
+		for (int i = 0; i < string.arrayLength; i ++)
+			{
+			if (string[i] >= "a" && string[i] <= "z")
+				string[i] -= 32
+			}
+		
+		return string
+		}
+	
+	char[] StringUtil:lowercase(char string[])
+		{
+		string = clone string
+		for (int i = 0; i < string.arrayLength; i ++)
+			{
+			if (string[i] >= "A" && string[i] <= "Z")
+				string[i] += 32
+			}
+		
+		return string
+		}
+	
+	bool substr_cmp(char a[], int start, int len, char b[])
+		{
+		int j = 0
+		for (int i = start; i < start+len; i++)
+			{
+			if (a[i] != b[j]) return false
+			j ++
+			}
+		
+		return true
+		}
+	
+	int StringUtil:find(char string[], char term[])
+		{
+		for (int i = 0; i < string.arrayLength && string.arrayLength - i >= term.arrayLength; i ++)
+			{
+			if (substr_cmp(string, i, term.arrayLength, term))
+				return i
+			}
+		
+		return StringUtil.NOT_FOUND
+		}
+	
+	int StringUtil:ifind(char string[], char term[])
+		{
+		term = lowercase(term)
+		string = lowercase(string)
+		
+		for (int i = 0; i < string.arrayLength && string.arrayLength - i >= term.arrayLength; i ++)
+			{
+			if (substr_cmp(string, i, term.arrayLength, term))
+				return i
+			}
+		
+		return StringUtil.NOT_FOUND
+		}
+	
+	int StringUtil:rfind(char string[], char term[])
+		{
+		if (string.arrayLength >= term.arrayLength)
+			{
+			for (int i = string.arrayLength - term.arrayLength; i != INT_MAX; i --)
+				{
+				if (substr_cmp(string, i, term.arrayLength, term))
+					return i
+				}
+			}
+		
+		return StringUtil.NOT_FOUND
+		}
+	
+	int StringUtil:irfind(char string[], char term[])
+		{
+		if (string.arrayLength >= term.arrayLength)
+			{
+			term = lowercase(term)
+			string = lowercase(string)
+			
+			for (int i = string.arrayLength - term.arrayLength; i != INT_MAX; i --)
+				{
+				if (substr_cmp(string, i, term.arrayLength, term))
+					return i
+				}
+			}
+		
+		return StringUtil.NOT_FOUND
+		}
+	
+	bool StringUtil:iequal(char a[], char b[])
+		{
+		a = lowercase(a)
+		b = lowercase(b)
+		
+		return a == b
+		}
+	
+	bool isAnyOf(char c, char tokens[])
+		{
+		for (int i = 0; i < tokens.arrayLength; i ++)
+			{
+			if (c == tokens[i])
+				return true
+			}
+		
+		return false
+		}
+	
+	String[] StringUtil:explode(char str[], char tokens[])
+		{
+		List lst = new List()
+		String res[]
+		String th
+		
+		for (int i = 0; i < str.arrayLength; i++)
+			{
+			if (isAnyOf(str[i], tokens))
+				{
+				if (th != null) lst.add(th)
+				th = null
+				}
+				else
+				{
+				if (th == null)
+					th = new String()
+				
+				th.string = new char[](th.string, str[i])
+				}
+			}
+		
+		if (th != null) lst.add(th)
+		
+		if (lst.getLength() != 0)
+			{
+			int i = 0
+			res = new String[lst.getLength()]
+			for (String s = lst.getFirst(); s != null; s = lst.getNext())
+				{
+				res[i] = s
+				i ++
+				}
+			}
+		
+		return res
+		}
+	
+	char[] StringUtil:implode(String parts[], char glue[])
+		{
+		char result[]
+		
+		for (int i = 0; i < parts.arrayLength; i++)
+			{
+			if (i > 0 && result != null && parts[i] != null)
+				result = new char[](result, glue)
+			
+			if (parts[i] != null)
+				result = new char[](result, parts[i].string)
+			}
+		
+		return result
+		}
+	
+	bool StringUtil:isNumeric(char str[])
+		{
+		for (int i = 0; i < str.arrayLength; i ++)
+			{
+			if (!isAnyOf(str[i], "0123456789")) return false
+			}
+		
+		return true
+		}
+	
+	}

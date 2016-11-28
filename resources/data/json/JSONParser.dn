@@ -1,0 +1,38 @@
+const byte JSON_ELEMENT_OBJECT	= 1
+const byte JSON_ELEMENT_STRING	= 2
+const byte JSON_ELEMENT_NUMBER	= 3
+const byte JSON_ELEMENT_BOOLEAN	= 4
+const byte JSON_ELEMENT_ARRAY	= 5
+
+data JSONElement {
+	int type
+	char name[]
+	char value[]
+	JSONElement children[]
+	}
+
+/*
+ {"description" : "JSON parser: provide an entire JSON document as input and extract values of interest."}
+*/
+interface JSONParser {
+	
+	/*
+	 {"@description" : "Parse a JSON document, provided as a string, and return the root JSONElement of the document."}
+	*/
+	JSONElement parseDocument(char document[])
+	
+	/*
+	 {"@description" : "Get a value from the given JSONElement."}
+	*/
+	JSONElement getValue(JSONElement object, char name[])
+	
+	/*
+	 {"@description" : "Get a value using a dot format, for example 'person.name'."}
+	*/
+	JSONElement getValueByDot(char dotNotation[], JSONElement object)
+	
+	/*
+	 {"@description" : "Convert a parsed JSONElement into a string-based JSON document."}
+	*/
+	char[] documentToString(JSONElement object)
+	}

@@ -1,0 +1,4 @@
+BSTitle=ui.TitleBar
+ColorButton->ColorButton
+Font->UIPlane
+SystemInfo->SystemInfo

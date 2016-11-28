@@ -1,0 +1,60 @@
+component provides pal.Perception requires time.Calendar calendar {
+	
+	static PerceptionData perception
+	static Mutex plock
+	
+	void Perception:addMetric(char name[], int value, bool preferHigh)
+		{
+		mutex(plock)
+			{
+			if (perception == null)
+				perception = new PerceptionData()
+			
+			for (int i = 0; i < perception.metrics.arrayLength; i++)
+				{
+				if (perception.metrics[i].name == name)
+					{
+					perception.metrics[i].totalValue += value
+					perception.metrics[i].totalCount ++
+					perception.metrics[i].timeLast = calendar.getTime()
+					return
+					}
+				}
+			
+			perception.metrics = new Metric[](perception.metrics, new Metric(name, "", value, 1, preferHigh, calendar.getTime()))
+			}
+		}
+	
+	void Perception:addEvent(char name[], int value)
+		{
+		mutex(plock)
+			{
+			if (perception == null)
+				perception = new PerceptionData()
+			
+			for (int i = 0; i < perception.events.arrayLength; i++)
+				{
+				if (perception.events[i].name == name)
+					{
+					perception.events[i].totalValue += value
+					perception.events[i].totalCount ++
+					perception.events[i].timeLast = calendar.getTime()
+					return
+					}
+				}
+			
+			perception.events = new Event[](perception.events, new Event(name, "", value, 1, calendar.getTime()))
+			}
+		}
+	
+	PerceptionData Perception:getPerception()
+		{
+		mutex(plock)
+			{
+			PerceptionData r = perception
+			perception = null
+			return r
+			}
+		}
+	
+	}

@@ -1,0 +1,12 @@
+/*
+* Point2D type
+* This data type describes an x/y coordinate with a color.
+*/
+
+uses Color
+
+data Point2D{
+	int x
+	int y
+	Color color
+	}

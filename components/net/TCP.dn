@@ -1,0 +1,203 @@
+data BC{
+	byte content[]
+	}
+
+library interface IOTCPLib{
+	int connect(char address[], int port)
+	void disconnect(int hnd)
+	int send(int hnd, byte content[])
+	int recv(int hnd, int length, BC result)
+	int accept(int hnd)
+	int bind(char address[], int port)
+	void unbind(int hnd)
+	void getLocalAddress(int hnd, NetworkEndpoint ha)
+	void getRemoteAddress(int hnd, NetworkEndpoint ha)
+	}
+
+component provides net.TCPServerSocket, net.TCPSocket, Service requires NativeLoader inl, io.Output out {
+	static library IOTCPLib lib
+	
+	implementation TCPSocket{
+		bool connected
+		int platformSocket
+		Mutex accessLock
+		Mutex connectLock
+		
+		int TCPSocket:send(byte content[])
+			{
+			mutex(accessLock)
+				{
+				if (connected)
+					return lib.send(platformSocket, content)
+					else
+					throw new Exception("Socket is not connected for data send")
+				}
+			}
+		
+		byte[] TCPSocket:recv(int length)
+			{
+			BC result = new BC()
+			
+			mutex(accessLock)
+				{
+				if (connected)
+					{
+					lib.recv(platformSocket, length, result)
+					return result.content
+					}
+					else
+					throw new Exception("Socket is not connected for data receive")
+				}
+			}
+		
+		bool TCPSocket:accept(TCPServerSocket server)
+			{
+			mutex(connectLock)
+				{
+				if (connected)
+					{
+					lib.disconnect(platformSocket)
+					connected = false
+					}
+				
+				mutex(server.accessLock)
+					{
+					if (server.connected)
+						{
+						int clientHandle = lib.accept(server.platformSocket)
+						
+						if (clientHandle == 0)
+							return false
+						
+						platformSocket = clientHandle
+						connected = true
+						
+						return true
+						}
+						else
+						{
+						throw new Exception("Server socket is not bound for accept")
+						}
+					}
+				}
+			}
+		
+		bool TCPSocket:connect(char address[], int port)
+			{
+			mutex(connectLock)
+				{
+				if (connected)
+					{
+					lib.disconnect(platformSocket)
+					connected = false
+					}
+				
+				int platformHandle = lib.connect(address, port)
+				
+				if (platformHandle == 0)
+					return false
+				
+				platformSocket = platformHandle
+				connected = true
+				
+				return true
+				}
+			}
+		
+		void TCPSocket:disconnect()
+			{
+			mutex(connectLock)
+				{
+				if (connected)
+					{
+					lib.disconnect(platformSocket)
+					connected = false
+					platformSocket = 0
+					}
+				}
+			}
+		
+		NetworkEndpoint TCPSocket:getLocalEndpoint()
+			{
+			NetworkEndpoint ha = new NetworkEndpoint()
+			
+			mutex(connectLock)
+				{
+				if (connected)
+					{
+					lib.getLocalAddress(platformSocket, ha)
+					}
+					else
+					{
+					throw new Exception("Socket is not connected")
+					}
+				}
+			
+			return ha
+			}
+		
+		NetworkEndpoint TCPSocket:getRemoteEndpoint()
+			{
+			NetworkEndpoint ha = new NetworkEndpoint()
+			
+			mutex(connectLock)
+				{
+				if (connected)
+					{
+					lib.getRemoteAddress(platformSocket, ha)
+					}
+					else
+					{
+					throw new Exception("Socket is not connected")
+					}
+				}
+			
+			return ha
+			}
+		}
+	
+	implementation TCPServerSocket{
+		bool connected
+		int platformSocket
+		Mutex accessLock
+		
+		bool TCPServerSocket:bind(char address[], int port)
+			{
+			mutex(accessLock)
+				{
+				int platformHandle = lib.bind(address, port)
+				
+				if (platformHandle == 0)
+					throw new Exception("Could not bind to address '$address'")
+				
+				platformSocket = platformHandle
+				connected = true
+				
+				return true
+				}
+			}
+		
+		void TCPServerSocket:unbind()
+			{
+			mutex(accessLock)
+				{
+				if (connected)
+					{
+					lib.unbind(platformSocket)
+					connected = false
+					}
+				}
+			}
+		}
+	
+	implementation Service{
+		void Service:start()
+			{
+			lib = new IOTCPLib() from inl.load("io_tcp") :< IOTCPLib
+			}
+		
+		void Service:stop()
+			{
+			}
+		}
+	}

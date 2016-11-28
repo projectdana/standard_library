@@ -1,0 +1,665 @@
+/*
+This is an extremely simple assembly module. See http://rex.projectdana.com for the full research project version, including visualisation tools.
+*/
+
+uses Service
+uses App
+
+data Interface {
+	//name of the required interface
+	char name[]
+	//path of the component to which this required interface is currently connected, if any
+	char currentWiring[]
+	}
+
+data Component {
+	//path to the component and loaded version, if any
+	char path[]
+	IDC class
+	
+	int completeWirings
+	bool serviceStarted
+	
+	//the set of required interfaces of this component
+	Interface interfaces[]
+	}
+
+//the below are used when building the list of configs
+data ReqIntf {
+	char package[]
+	char alias[]
+	}
+
+data Binding{
+	char wiringName[]
+	int fromIndex
+	int toIndex
+	}
+
+data ConfigBuilder {
+	String components[]
+	Binding bindings[]
+	}
+
+data RICache {
+	char com[]
+	ReqIntf ris[]
+	}
+
+data OptionsCache {
+	char package[]
+	String options[]
+	}
+
+component provides pal.Assembly requires io.FileSystem fileSystem, io.File, composition.Loader loader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, composition.Adapter adapter, os.SystemInfo systemInfo {
+	
+	App myApp
+	bool appStarted
+	bool appFinished
+	bool exitCode
+	
+	bool verbose
+	
+	//the cache of loaded components and their current wirings
+	Component components[]
+	
+	//the set of all available complete compositions of components that each form a working system
+	String configs[]
+	
+	//the search paths we'll be using to locate components
+	String searchPaths[]
+	
+	IDC perception
+	
+	//cached data to speed up initial search
+	RICache riCache[]
+	OptionsCache optionsCache[]
+	
+	ReqIntf[] getRequiredInterfaces(char com[])
+		{
+		ReqIntf result[]
+		
+		//check the cache first
+		for (int i = 0; i < riCache.arrayLength; i++)
+			{
+			if (riCache[i].com == com) return riCache[i].ris
+			}
+		
+		//not found - go to disk
+		ObjectWriter reader = new ObjectWriter(com)
+		InfoSection section = reader.getInfoSection("DNIL", "json")
+		
+		JSONElement document = parser.parseDocument(section.content)
+		
+		JSONElement requiredInterfaces = parser.getValue(document, "requiredInterfaces")
+		
+		if (requiredInterfaces != null)
+			{
+			for (int i = 0; i < requiredInterfaces.children.arrayLength; i++)
+				{
+				JSONElement ri = requiredInterfaces.children[i]
+				char package[] = parser.getValue(ri, "package").value
+				char alias[] = parser.getValue(ri, "alias").value
+				
+				result = new ReqIntf[](result, new ReqIntf(package, alias))
+				}
+			}
+		
+		riCache = new RICache[](riCache, new RICache(com, result))
+		
+		if (verbose) out.print("[$com] ")
+		
+		return result
+		}
+	
+	ConfigBuilder cloneConfigBuilder(ConfigBuilder cb)
+		{
+		ConfigBuilder ncb = new ConfigBuilder()
+		
+		for (int i = 0; i < cb.components.arrayLength; i++)
+			{
+			ncb.components = new String[](ncb.components, new String(cb.components[i].string))
+			}
+		
+		for (int i = 0; i < cb.bindings.arrayLength; i++)
+			{
+			ncb.bindings = new Binding[](ncb.bindings, new Binding(cb.bindings[i].wiringName, cb.bindings[i].fromIndex, cb.bindings[i].toIndex))
+			}
+		
+		return ncb
+		}
+	
+	bool isAutoBinding(char package[])
+		{
+		String interfaces[] = system.getAutoBindings()
+		
+		for (int i = 0; i < interfaces.arrayLength; i++)
+			{
+			if (interfaces[i].string == package) return true
+			}
+		
+		if (package == "pal.Perception") return true
+		
+		return false
+		}
+	
+	ConfigBuilder expandCB(ConfigBuilder c, ConfigBuilder newBranch, char newDependencyFromCom[], char newDependencyIntf[], char newDependencyToCom[])
+		{
+		//return a clone of c with the entire extra branch newBranch added to it, and also newDependency added
+		ConfigBuilder cb = cloneConfigBuilder(c)
+		ConfigBuilder nb = cloneConfigBuilder(newBranch)
+		
+		//adjust all binding indices to prepare for append
+		for (int i = 0; i < nb.bindings.arrayLength; i++)
+			{
+			nb.bindings[i].fromIndex += cb.components.arrayLength
+			nb.bindings[i].toIndex += cb.components.arrayLength
+			}
+		
+		cb.bindings = new Binding[](cb.bindings, new Binding(newDependencyIntf, 0, cb.components.arrayLength))
+		
+		cb.components = new String[](cb.components, nb.components)
+		cb.bindings = new Binding[](cb.bindings, nb.bindings)
+		
+		return cb
+		}
+	
+	ConfigBuilder addCBDependency(ConfigBuilder c, char newDependencyFromCom[], char newDependencyIntf[], char newDependencyToCom[])
+		{
+		//return a clone of c with newDependency added to it
+		ConfigBuilder cb = cloneConfigBuilder(c)
+		
+		//adjust all binding indices to prepare for new component insertion
+		for (int i = 0; i < cb.bindings.arrayLength; i++)
+			{
+			cb.bindings[i].fromIndex += 1
+			cb.bindings[i].toIndex += 1
+			}
+		
+		//insert newDependencyFromCom at the start (newDependencyToCom should already be in the list)
+		cb.components = new String[](new String(newDependencyFromCom), cb.components)
+		
+		//add the new wiring
+		// - we know that newDependencyFromCom is necessarily index 0 (because we insert it above), and newDependencyToCom must be 1 (from the way that this function is used within loadSystem)
+		cb.bindings = new Binding[](cb.bindings, new Binding(newDependencyIntf, 0, 1))
+		
+		return cb
+		}
+	
+	int getStringArrayIndex(String array[], char str[])
+		{
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			if (array[i].string == str)
+				return i
+			}
+		return 0
+		}
+	
+	ConfigBuilder addCBDependencyT(ConfigBuilder cb, char newDependencyFromCom[], char newDependencyIntf[], char newDependencyToCom[])
+		{
+		int indexFrom = getStringArrayIndex(cb.components, newDependencyFromCom)
+		int indexTo = getStringArrayIndex(cb.components, newDependencyToCom)
+		
+		//add the new wiring
+		cb.bindings = new Binding[](cb.bindings, new Binding(newDependencyIntf, indexFrom, indexTo))
+		
+		return cb
+		}
+	
+	bool hasRequiredInterfaces(ReqIntf ris[])
+		{
+		int ric = 0
+		
+		for (int i = 0; i < ris.arrayLength; i++)
+			{
+			if (!isAutoBinding(ris[i].package))
+				{
+				ric ++
+				}
+			}
+		
+		return ric != 0
+		}
+	
+	String[] getComponentsIn(char package[])
+		{
+		//check the cache
+		for (int i = 0; i < optionsCache.arrayLength; i++)
+			{
+			if (optionsCache[i].package == package) return optionsCache[i].options
+			}
+		
+		//not found - go to disk
+		String options[] = search.getComponentsIn(package, searchPaths)
+		
+		optionsCache = new OptionsCache[](optionsCache, new OptionsCache(package, options))
+		
+		return options
+		}
+	
+	bool containsBinding(ConfigBuilder cb, char com[], char intf[])
+		{
+		for (int i = 0; i < cb.components.arrayLength; i++)
+			{
+			if (cb.components[i].string == com)
+				{
+				//now check for a wiring that refers to this using intf
+				for (int j = 0; j < cb.bindings.arrayLength; j++)
+					{
+					if (cb.bindings[j].fromIndex == i && cb.bindings[j].wiringName == intf)
+						{
+						return true
+						}
+					}
+				
+				return false
+				}
+			}
+		
+		return false
+		}
+	
+	char[] getTargetOfBinding(ConfigBuilder cb, char com[], char intf[])
+		{
+		for (int i = 0; i < cb.components.arrayLength; i++)
+			{
+			if (cb.components[i].string == com)
+				{
+				//now check for a wiring that refers to this using intf
+				for (int j = 0; j < cb.bindings.arrayLength; j++)
+					{
+					if (cb.bindings[j].fromIndex == i && cb.bindings[j].wiringName == intf)
+						{
+						return cb.components[cb.bindings[j].toIndex].string
+						}
+					}
+				}
+			}
+		
+		return null
+		}
+	
+	//NOTE: this function is designed to handle cycles in the dependency graph by using the already-chosen component for each cyclical re-use of a dependency in this branch -- i.e. the implementing component already chosen for the branch in which the cycle appears
+	// - the "current" parameter to this function, and all use of it within the function, is purely to detect cycles
+	ConfigBuilder[] loadSystem(char com[], ConfigBuilder current)
+		{
+		ReqIntf ris[] = getRequiredInterfaces(com)
+		
+		ConfigBuilder result[]
+		
+		if (hasRequiredInterfaces(ris))
+			{
+			for (int i = 0; i < ris.arrayLength; i++)
+				{
+				if (!isAutoBinding(ris[i].package))
+					{
+					if (containsBinding(current, com, ris[i].alias))
+						{
+						//halt recursion by pretending this component is fully wired up (which we know it must be earlier in the recursion)
+						result = new ConfigBuilder[](result, new ConfigBuilder(new String(com)))
+						}
+						else
+						{
+						String options[] = getComponentsIn(ris[i].package)
+						
+						if (options.arrayLength == 0)
+							throw new Exception("No components found to satisfy '$(ris[i].package)' of '$com'")
+						
+						ConfigBuilder prevResult[] = result
+						result = null
+						
+						//if this is the FIRST required interface (prevResult.arrayLength == 0) we just build a new set of options
+						// - otherwise, we ADD to the existing list the set of options for the next required interface
+						if (prevResult.arrayLength != 0)
+							{
+							for (int j = 0; j < options.arrayLength; j++)
+								{
+								ConfigBuilder newCurrent = cloneConfigBuilder(current)
+								newCurrent.components = new String[](newCurrent.components, new String(options[j].string))
+								addCBDependencyT(newCurrent, com, ris[i].alias, options[j].string)
+								
+								ConfigBuilder subResults[] = loadSystem(options[j].string, newCurrent)
+								
+								//we need to add every sub result (sub-branch option) [0..n] to every existing configuration [0..m]
+								for (int n = 0; n < subResults.arrayLength; n++)
+									{
+									for (int m = 0; m < prevResult.arrayLength; m++)
+										{
+										result = new ConfigBuilder[](result, expandCB(prevResult[m], subResults[n], com, ris[i].alias, options[j].string))
+										}
+									}
+								}
+							}
+							else
+							{
+							for (int j = 0; j < options.arrayLength; j++)
+								{
+								ConfigBuilder newCurrent = current
+								newCurrent.components = new String[](newCurrent.components, new String(options[j].string))
+								addCBDependencyT(newCurrent, com, ris[i].alias, options[j].string)
+								
+								ConfigBuilder subResults[] = loadSystem(options[j].string, newCurrent)
+								
+								for (int n = 0; n < subResults.arrayLength; n++)
+									{
+									result = new ConfigBuilder[](result, addCBDependency(subResults[n], com, ris[i].alias, options[j].string))
+									}
+								}
+							}
+						}
+					}
+				}
+			
+			return result
+			}
+			else
+			{
+			return new ConfigBuilder[](new ConfigBuilder(new String(com)))
+			}
+		}
+	
+	char[] flattenCB(ConfigBuilder cb)
+		{
+		char result[]
+		
+		for (int i = 0; i < cb.components.arrayLength; i++)
+			{
+			result = new char[](result, cb.components[i].string)
+			
+			if (i + 1 < cb.components.arrayLength) result = new char[](result, ",")
+			}
+		
+		result = new char[](result, "|")
+		
+		for (int i = 0; i < cb.bindings.arrayLength; i++)
+			{
+			result = new char[](result, cb.bindings[i].wiringName, ":", iu.intToString(cb.bindings[i].fromIndex), ":", iu.intToString(cb.bindings[i].toIndex))
+			
+			if (i + 1 < cb.bindings.arrayLength) result = new char[](result, ",")
+			}
+		
+		return result
+		}
+	
+	bool componentLoaded(char comp[])
+		{
+		for (int i = 0; i < components.arrayLength; i++)
+			{
+			if (components[i].path == comp)
+				return true
+			}
+		
+		return false
+		}
+	
+	void loadComponent(char comp[])
+		{
+		//out.println(" -- loading '$comp'")
+		
+		Component c = new Component(comp)
+		c.class = loader.load(comp)
+		
+		ReqIntf ris[] = getRequiredInterfaces(comp)
+		for (int i = 0; i < ris.arrayLength; i++)
+			{
+			c.interfaces = new Interface[](c.interfaces, new Interface(ris[i].alias))
+			
+			if (isAutoBinding(ris[i].package))
+				c.completeWirings ++
+			
+			if (ris[i].package == "pal.Perception")
+				c.class :> "Perception" = perception :< "Perception"
+			}
+		
+		if (c.completeWirings == c.interfaces.arrayLength)
+			{
+			//service start?
+			if (c.class :< Service != null)
+				{
+				//out.println(" -- starting service on '$(c.path)'")
+				Service svc = new Service() from c.class :< Service
+				svc.start()
+				}
+			}
+		
+		components = new Component[](components, c)
+		}
+	
+	char[] normalisePath(char path[])
+		{
+		path = clone path
+		
+		for (int i = 0; i < path.arrayLength; i++)
+			{
+			if (path[i] == "\\") path[i] = "/"
+			}
+		
+		return path
+		}
+	
+	String[] getStandardSearchPaths(char main[])
+		{
+		//local
+		String result[] = new String[](new String("./"))
+		
+		main = normalisePath(main)
+		
+		if (stringUtil.rfind(main, "/") != StringUtil.NOT_FOUND)
+			{
+			main = stringUtil.subString(main, 0, stringUtil.rfind(main, "/"))
+			result = new String[](result, new String(main))
+			}
+		
+		//System search paths
+		result = new String[](result, system.getSearchPaths())
+		
+		//CST
+		result = new String[](result, new String(new char[](systemInfo.getVariable("DANA_HOME"), "/components/")))
+		
+		//pre-process strings into a common format
+		for (int i = 0; i < result.arrayLength; i++)
+			{
+			result[i] = new String(normalisePath(result[i].string))
+			if (result[i].string.arrayLength > 0 && result[i].string[result[i].string.arrayLength-1] != "/")
+				result[i].string = new char[](result[i].string, "/")
+			}
+		
+		return result
+		}
+	
+	Assembly:Assembly(char main[], IDC perc)
+		{
+		main = normalisePath(main)
+		
+		if (!fileSystem.exists(main))
+			throw new Exception("Main component '$main' not found")
+		
+		perception = perc
+		
+		searchPaths = getStandardSearchPaths(main)
+		
+		ConfigBuilder exs[] = loadSystem(main, new ConfigBuilder(new String[](new String(main))))
+		
+		if (verbose) out.println("")
+		
+		//flatten config builders into plain strings for "configs"
+		char q[]
+		
+		for (int i = 0; i < exs.arrayLength; i++)
+			{
+			q = flattenCB(exs[i])
+			configs = new String[](configs, new String(q))
+			}
+		
+		//out.println("[pre-caching components into memory]")
+		
+		//load every component
+		for (int i = 0; i < configs.arrayLength; i++)
+			{
+			String comps[] = stringUtil.explode(stringUtil.explode(configs[i].string, "|")[0].string, ",")
+			
+			for (int j = 0; j < comps.arrayLength; j++)
+				{
+				if (!componentLoaded(comps[j].string))
+					loadComponent(comps[j].string)
+				}
+			}
+		}
+	
+	String[] Assembly:getConfigs()
+		{
+		return configs
+		}
+	
+	Component getComponent(char path[])
+		{
+		for (int i = 0; i < components.arrayLength; i++)
+			{
+			if (components[i].path == path) return components[i]
+			}
+		
+		return null
+		}
+	
+	Interface getInterface(Component c, char name[])
+		{
+		for (int i = 0; i < c.interfaces.arrayLength; i++)
+			{
+			if (c.interfaces[i].name == name) return c.interfaces[i]
+			}
+		
+		return null
+		}
+	
+	//this function wires up a component's dependency, but makes sure that dependency itself is fully wired first
+	int forwardWire(String comps[], String wirings[], int index)
+		{
+		int wiringsChanged = 0
+		
+		String args[] = stringUtil.explode(wirings[index].string, ":")
+		
+		char intfName[] = args[0].string
+		int fromIndex = iu.intFromString(args[1].string)
+		int toIndex = iu.intFromString(args[2].string)
+		
+		wirings[index] = null
+		
+		// - wire everything *ahead* of this first
+		for (int i = 0; i < wirings.arrayLength; i++)
+			{
+			if (wirings[i] != null)
+				{
+				String argsB[] = stringUtil.explode(wirings[i].string, ":")
+				
+				char intfNameB[] = argsB[0].string
+				int fromIndexB = iu.intFromString(argsB[1].string)
+				int toIndexB = iu.intFromString(argsB[2].string)
+				
+				if (fromIndexB == toIndex)
+					wiringsChanged += forwardWire(comps, wirings, i)
+				}
+			}
+		
+		// - and now do this wiring
+		Component fromComponent = getComponent(comps[fromIndex].string)
+		Component toComponent = getComponent(comps[toIndex].string)
+		
+		Interface iq = getInterface(fromComponent, intfName)
+		
+		if (iq.currentWiring == null)
+			{
+			//it's new, so just connect it
+			fromComponent.class :> intfName = toComponent.class :< intfName
+			fromComponent.completeWirings ++
+			
+			if (verbose) out.println(" -- wiring $(fromComponent.path) :: $intfName >> $(toComponent.path)")
+			
+			wiringsChanged ++
+			
+			if (fromComponent.completeWirings == fromComponent.interfaces.arrayLength)
+				{
+				//service start?
+				if (fromComponent.class :< Service != null)
+					{
+					//out.println(" -- starting service on '$(fromComponent.path)'")
+					Service svc = new Service() from fromComponent.class :< Service
+					svc.start()
+					}
+				}
+			}
+			else if (iq.currentWiring != toComponent.path)
+			{
+			//it's already wired to something (and something different), so adapt it
+			
+			if (verbose) out.println(" -- adapting $(fromComponent.path) :: $intfName >> $(toComponent.path)")
+			
+			adapter.adaptRequiredInterface(fromComponent.class, intfName, toComponent.class)
+			
+			wiringsChanged ++
+			}
+		
+		iq.currentWiring = toComponent.path
+		
+		return wiringsChanged
+		}
+	
+	Mutex configLock
+	
+	void launchMain(IDC class)
+		{
+		myApp = new App() from class :< App
+		exitCode = myApp.main(null)
+		appFinished = true
+		}
+	
+	bool Assembly:setConfig(char conf[])
+		{
+		//check if app has exited
+		if (appFinished) throw new Exception("Hosted application has completed execution")
+		
+		//validate configuration
+		bool found
+		for (int i = 0; i < configs.arrayLength; i++)
+			{
+			if (conf == configs[i].string)
+				found = true
+			}
+		
+		if (!found) throw new Exception("Configuration not known")
+		
+		//adapt to the configuration
+		if (verbose) out.println(" [setting config to '$conf']")
+		
+		// - walk through all wirings of the new configuration and apply them (using forwardWire to satisfy forward dependencies first)
+		String comps[] = stringUtil.explode(stringUtil.explode(conf, "|")[0].string, ",")
+		String wirings[] = clone stringUtil.explode(stringUtil.explode(conf, "|")[1].string, ",")
+		
+		mutex(configLock)
+			{
+			int wiringsChanged
+			
+			for (int i = 0; i < wirings.arrayLength; i++)
+				{
+				if (wirings[i] != null)
+					{
+					wiringsChanged += forwardWire(comps, wirings, i)
+					}
+				}
+			
+			if (!appStarted)
+				{
+				appStarted = true
+				asynch::launchMain(components[0].class)
+				}
+			}
+		
+		return true
+		}
+	
+	bool Assembly:appFinished()
+		{
+		return appFinished
+		}
+	
+	}

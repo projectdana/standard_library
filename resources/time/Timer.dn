@@ -1,0 +1,11 @@
+/*
+ {"description" : "Pause for a specified amout of time."}
+*/
+
+interface Timer{
+	
+	/*
+	 {"@description" : "Pause for time t (milliseconds by default)."}
+	*/
+	void sleep(int t)
+	}

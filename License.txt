@@ -1,0 +1,5 @@
+The Dana language and technology are (c) Francis Research Ltd. This product is distributed to you according to the following conditions.
+
+1. Dana is, and always will be, FREE for you to use in NON-PROFIT contexts.
+
+2. No warranty of any kind is provided for the use of this software and no liability is accepted for any damage caused by its use.

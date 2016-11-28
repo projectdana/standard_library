@@ -1,0 +1,18 @@
+/*
+{"title" : "NativeLoader interface",
+	"description" : "This API allows for the loading of native libraries as Dana components. It is implemented by the Dana VM."}
+*/
+
+interface NativeLoader{
+	/*
+	{"description" : "Loads a specified native library, returning an IDC which can be queried for other interfaces.",
+		"path" : "A native library name. There are special conventions for native library names: a name provided here, such as mylibrary, will be automatically transformed into 'mylibrary[platform.chip].dnl' where platform is 'win' or 'ubu' etc., and chip is 'x86' or 'x64' etc. These elements are automatically derived by the platform on which the Dana virtual machine is running."}
+	*/
+	IDC load(char path[])
+	
+	/*
+	{"description" : "Unloads a native library that was previously loaded with the load function.",
+		"l" : "The IDC reference of the native library to unload."}
+	*/
+	void unload(IDC l)
+	}

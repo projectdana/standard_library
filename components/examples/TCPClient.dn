@@ -1,0 +1,28 @@
+const char hostIP[] = "127.0.0.1"
+const int hostPort = 2012
+
+component provides App requires io.Output out, net.TCPSocket{
+	
+	int App:main(AppParam params[])
+		{
+		if (params.arrayLength == 0)
+			{
+			out.println("Please enter a message to send!")
+			return 1
+			}
+		
+		TCPSocket client = new TCPSocket()
+		
+		if (client.connect(hostIP, hostPort))
+			{
+			client.send(new char[](params[0].string, "\n"))
+			client.disconnect()
+			}
+			else
+			{
+			out.println("Could not connect to host $hostIP")
+			}
+		
+		return 0
+		}
+	}

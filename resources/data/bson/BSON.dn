@@ -1,0 +1,27 @@
+uses data.json.JSONParser
+
+data BSONDocument{
+  byte value[]
+}
+
+/*
+ {"description" : "An API to translate between JSON and BSON documents."}
+*/
+
+interface BSON {
+
+  /*
+	{"json" : "The json document to serialise into BSON format."}
+  */
+  BSONDocument serialise(JSONElement json)
+
+  /*
+	{"bson" : "The bson document to serialise into JSON format."}
+  */
+  JSONElement deserialise(BSONDocument bson)
+
+  /*
+	{"bsonDocuments" : "A byte array of documents to parse into separate BSONDocuments."}
+  */
+  BSONDocument[] parse(byte bsonDocuments[])
+}

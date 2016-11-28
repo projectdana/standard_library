@@ -1,0 +1,3 @@
+App=GAppFonts.o
+Window->UIPlane
+Label->UILabel

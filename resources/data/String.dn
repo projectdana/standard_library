@@ -1,0 +1,8 @@
+/*
+* String data type
+* This is an utility data type that is used by other interfaces, for example when an array of strings needs to be input to or returned from a function.
+*/
+
+data String{
+	char string[]
+	}

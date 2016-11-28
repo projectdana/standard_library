@@ -1,0 +1,17 @@
+interface ByteUtil{
+
+	/*
+	 {"bytes" : "An array of bytes to reverse."}
+	*/
+	byte[] reverse(byte bytes[])
+	
+	/*
+	 {"hexString" : "An array of ascii hex characters to transpose back into a byte array."}
+	*/
+	byte[] fromHexString(char hexString[])
+
+	/*
+	 {"bytes" : "An array of bytes to transform into a hexidecimal string."}
+	*/
+	char[] toHexString(byte bytes[])
+}

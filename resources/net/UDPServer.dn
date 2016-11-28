@@ -1,0 +1,41 @@
+data Datagram{
+	char address[]
+	int port
+	byte content[]
+	}
+
+/*
+{"description" : "Bind a UDP server socket to receive UDP packets."}
+*/
+
+interface UDPServer{
+	/*
+	{"@description" : "Bind to any and all IP addresses of the host."}
+	*/
+	const char ANY_ADDRESS[] = "ANY"
+	
+	/*
+	{"@description" : "Bind to any and all IPv4 addresses of the host."}
+	*/
+	const char ANY_ADDRESS_v4[] = "ANY_v4"
+	
+	/*
+	{"@description" : "Bind to any and all IPv6 addresses of the host."}
+	*/
+	const char ANY_ADDRESS_v6[] = "ANY_v6"
+	
+	/*
+	{"@description" : "Bind a UDP server socket to a given IP address and port number."}
+	*/
+	bool bind(char address[], int port)
+	
+	/*
+	{"@description" : "Unbind this socket (allowing other sockets to bind to this address/port)."}
+	*/
+	void unbind()
+	
+	/*
+	{"@description" : "Receive a UDP packet (blocks until a packet is received)."}
+	*/
+	Datagram recv()
+	}

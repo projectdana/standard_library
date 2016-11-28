@@ -1,0 +1,3 @@
+BSButton=ui.Button.o
+Font->UIPlane
+SystemInfo->SystemInfo

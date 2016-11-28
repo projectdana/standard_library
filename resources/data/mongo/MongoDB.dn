@@ -1,0 +1,52 @@
+uses data.json.JSONParser
+
+/*
+ {"description" : "MongoDB database driver."}
+*/
+
+interface MongoDB {
+	
+	/*
+	 {"@description" : "Create a new MongoDB connection on the given IP address and port."}
+	*/
+	MongoDB(char ip[], int port)
+
+	/*
+	 {"@description" : "Insert a record. If you insert into a collection that does not exist, it will be created.",
+			"collection" : "The name of the collection that is the target of the insert.",
+			"jsonDocuments" : "The JSON documents to insert."}
+	*/
+	bool insert(char collection[], JSONElement jsonQuery[])
+
+	/*
+	 {"@description" : "Find an element in a collection.",
+			"collection" : "The name of the collection that is the target of the find operation.",
+			"jsonQuery" : "The JSON query to execute on the database.",
+			"numberToReturn" : "The maximum number of documents to return. Set to zero to use the default."}
+	*/
+	JSONElement[] find(char collection[], JSONElement jsonQuery, int32 numberToReturn)
+	
+	/*
+	 {"@description" : "Find an element in a collection, using a modifier.",
+			"collection" : "The name of the collection that is the target of the find operation.",
+			"jsonQuery" : "The JSON query to execute on the database.",
+			"modifier" : "A JSON object containing the set of modifiers, such as ordering predicates. For a full list of modifiers, see http://docs.mongodb.org/manual/reference/operator/query-modifier/."
+			"numberToReturn" : "The maximum number of documents to return. Set to zero to use the default."}
+	*/
+	JSONElement[] findWithModifier(char collection[], JSONElement jsonQuery, JSONElement modifier, int32 numberToReturn)
+
+	/*
+	 {"@description" : "Update an element in a collection.",
+			"collection" : "The name of the collection that is the target of the update operation.",
+			"jsonQuery" : "The JSON query to execute on the database.",
+			"update" : "The updated version of the record."}
+	*/
+	bool update(char collection[], JSONElement jsonQuery, JSONElement update)
+
+	/*
+	 {"@description" : "Delete an element from a collection.",
+			"collection" : "The name of the collection that is the target of the delete operation.",
+			"jsonQuery" : "The JSON query to execute on the database."}
+	*/
+	bool delete(char collection[], JSONElement jsonQuery)
+}

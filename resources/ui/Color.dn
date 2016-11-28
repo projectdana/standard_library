@@ -1,0 +1,10 @@
+/*
+{ "description" : "Container for a color value, indicating red, green, blue and alpha values. The alpha value is a level of opacity, where 255 indicates completely opaque."}
+*/
+
+data Color{
+	byte r
+	byte g
+	byte b
+	byte a
+	}

@@ -1,0 +1,15 @@
+/*
+ {"description" : "Convert between integers and strings."}
+*/
+
+interface IntUtil{
+	/*
+	 {"@description" : "Convert an integer to a string."}
+	*/
+	char[] intToString(int1024 i)
+	
+	/*
+	 {"@description" : "Convert a string to an integer."}
+	*/
+	int1024 intFromString(char s[])
+	}

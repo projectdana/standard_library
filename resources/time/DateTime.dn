@@ -1,0 +1,13 @@
+/*
+{ "description" : "A simple data type to describe a date and time, typically using a Gregorian calendar system."}
+*/
+
+data DateTime{
+	int16 year
+	byte month
+	byte day
+	byte hour
+	byte minute
+	byte second
+	int16 millisecond
+	}

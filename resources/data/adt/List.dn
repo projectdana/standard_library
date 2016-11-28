@@ -1,0 +1,41 @@
+/*
+ {"description" : "An ordered list of items."}
+*/
+
+interface List{
+	/*
+	 {"@description" : "The contents of the list."}
+	*/
+	transfer Data content[]
+	
+	/*
+	 {"@description" : "Add a new item to the list."}
+	*/
+	void add(Data item)
+	
+	/*
+	 {"@description" : "Remove an item from the list."}
+	*/
+	void remove(Data item)
+	
+	/*
+	 {"@description" : "Update an existing list item to a new version."}
+	*/
+	void update(Data item, Data newVersion)
+	
+	/*
+	 {"@description" : "Iterator: call this function to begin iterating over the list. Note that this function, together with getNext(), are not thread-safe: if getFirst() is called by thread A, which then begins using getNext() to iterate through the list, a second call of getFirst() by thread B will reset thread A's iterator.",
+			"@return" : "The first element in the list, or null if the list is empty."}
+	*/
+	Data getFirst()
+	
+	/*
+	 {"@description" : "Iterator: call this function to get the next element in the list.",
+			"@return" : "The next element in the list, or null if the end of the list has been reached."}
+	*/
+	Data getNext()
+	
+	int getIteratorIndex()
+	int getLength()
+	Data[] getContents()
+	}

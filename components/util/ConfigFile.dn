@@ -1,0 +1,46 @@
+// ConfigFile.dn
+// This component reads config files ({properties: values}) and collects the values.
+// Author: Roberto Rodrigues Filho
+// August @ 2015
+
+component provides util.ConfigFile requires io.TextFile, data.StringUtil strUtil, data.adt.HashTable {
+	
+	HashTable tableInfo
+	
+	ConfigFile:ConfigFile(char configFile[]) {
+		TextFile file = new TextFile(configFile, File.FILE_ACCESS_READ)
+		
+		if (file == null) {
+			throw new Exception("File '$configFile' not found")
+		}
+		
+		tableInfo = new HashTable()
+		
+		char line[]
+		int start
+		char key[]
+		char value[]
+		
+		while ((line = file.readLine()) != null) {
+			start = strUtil.find(line, new char[](":"))			
+			key = strUtil.trim(strUtil.subString(line, 0, start))
+			value = strUtil.trim(strUtil.subString(line, start++,
+				line.arrayLength-start))
+
+			tableInfo.put(key, new String(value))
+		}
+		
+		file.close()
+	}
+
+	char[] ConfigFile:getValue(char property[]) {
+		String str = tableInfo.get(property)
+		
+		if (str != null) {
+			return str.string
+		} else {
+			return null
+		}
+	}
+
+}

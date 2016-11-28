@@ -1,0 +1,257 @@
+data GraphicsItem{
+	GraphicsObject object
+	GraphicsItem next
+	GraphicsItem prev
+	}
+
+data ClickableItem{
+	ClickableObject object
+	ClickableItem next
+	ClickableItem prev
+	}
+
+component provides GraphicsListView requires io.Output out, data.IntUtil iu{
+	
+	GraphicsItem objects
+	GraphicsItem lastObject
+	
+	ClickableItem clickObjects
+	ClickableItem lastClickObject
+	
+	void GraphicsListView:paint(Canvas c)
+		{
+		//background
+		c.drawRect(new Rect2D(xPosition, yPosition, width, height, new Color(210, 210, 220, 100)))
+		
+		c.pushSurface(new Rect(xPosition, yPosition, width, height), 0, 0)
+		
+		//paint each object in turn
+		// - for each one we get its preferred size as a basis on which to position the next objects...
+		int cx = 10
+		int cy = 10
+		int largestRowHeight = 0
+		for (GraphicsItem li = objects; li != null; li = li.next)
+			{
+			if (li.object != null)
+				{
+				WH prefsz = li.object.getPreferredSize()
+				
+				if (cx + prefsz.width > xPosition + width)
+					{
+					cy += largestRowHeight + 10
+					cx = 10
+					largestRowHeight = prefsz.height
+					}
+				
+				li.object.setPosition(cx, cy)
+				li.object.paint(c)
+				if (prefsz.height > largestRowHeight) largestRowHeight = prefsz.height
+				
+				cx += prefsz.width + 10
+				}
+			}
+		
+		c.popSurface()
+		}
+	
+	void GraphicsListView:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+	
+	void GraphicsListView:setPanel(Panel p)
+		{
+		myPanel = p
+		myPanel.addClickTarget(this)
+		}
+	
+	Panel GraphicsListView:getPanel()
+		{
+		return myPanel
+		}
+	
+	WH GraphicsListView:getPreferredSize()
+		{
+		return new WH(width, height)
+		}
+	
+	void GraphicsListView:addObject(GraphicsObject go)
+		{
+		GraphicsItem newItem = new GraphicsItem(go)
+		
+		if (objects == null)
+			objects = newItem
+			else
+			lastObject.next = newItem
+		
+		newItem.prev = lastObject
+		lastObject = newItem
+		
+		go.setPanel(this)
+		repaint()
+		}
+	
+	void GraphicsListView:remObject(GraphicsObject go)
+		{
+		
+		}
+	
+	GraphicsObjectItem[] GraphicsListView:getObjects()
+		{
+		return null
+		}
+	
+	void GraphicsListView:clear()
+		{
+		//clean up the two lists by removing all references to the items
+		
+		GraphicsItem iw = objects
+		while (iw != null)
+			{
+			GraphicsItem td = iw
+			iw = iw.next
+			
+			td.next = null
+			td.prev = null
+			}
+		
+		ClickableItem cw = clickObjects
+		while (cw != null)
+			{
+			ClickableItem td = cw
+			cw = cw.next
+			
+			td.next = null
+			td.prev = null
+			}
+		
+		objects = null
+		clickObjects = null
+		
+		myPanel.repaint()
+		}
+	
+	Rect GraphicsListView:getBounds()
+		{
+		return new Rect(xPosition, yPosition, 480, 390)
+		}
+	
+	Point GraphicsListView:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+	
+	void GraphicsListView:addClickListener(ClickListener cl)
+		{
+		}
+	
+	void GraphicsListView:remClickListener(ClickListener cl)
+		{
+		}
+
+	ClickListenerItem[] GraphicsListView:getClickListeners()
+		{
+		return null
+		}
+	
+	void GraphicsListView:click(int x, int y, int button)
+		{
+		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
+			{
+			while (ci != null && ci.object == null)
+				{
+				ClickableItem td = ci
+				ci = ci.next
+				
+				if (td.prev == null)
+					clickObjects = td.next
+					else
+					td.prev.next = td.next
+				
+				if (td.next == null)
+					lastClickObject = td.prev
+					else
+					td.next.prev = td.prev
+				}
+			
+			if (ci != null)
+				{
+				Rect r = ci.object.getBounds()
+				
+				if (x - xPosition >= r.x && x - xPosition <= r.x + r.width && y - yPosition >= r.y && y - yPosition <= r.y + r.height)
+					{
+					ci.object.click(x, y, button)
+					break
+					}
+				}
+			}
+		}
+	
+	void GraphicsListView:setBackground(Color c)
+		{
+		}
+	
+	Color GraphicsListView:getBackground()
+		{
+		return null
+		}
+	
+	void GraphicsListView:repaint()
+		{
+		myPanel.repaint()
+		}
+	
+	void GraphicsListView:setSize(int w, int h)
+		{
+		width = w
+		height = h
+		}
+	
+	WH GraphicsListView:getSize()
+		{
+		return new WH(width, height)
+		}
+	
+	void GraphicsListView:addClickTarget(ClickableObject co)
+		{
+		ClickableItem nci = new ClickableItem(co)
+		
+		if (clickObjects == null)
+			clickObjects = nci
+			else
+			lastClickObject.next = nci
+		
+		nci.prev = lastClickObject
+		lastClickObject = nci
+		}
+	
+	void GraphicsListView:remClickTarget(ClickableObject o)
+		{
+		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
+			{
+			if (ci.object === o)
+				{
+				ClickableItem td = ci
+				
+				if (td.prev == null)
+					clickObjects = td.next
+					else
+					td.prev.next = td.next
+				
+				if (td.next == null)
+					lastClickObject = td.prev
+					else
+					td.next.prev = td.prev
+				
+				break
+				}
+			}
+		}
+	
+	ClickableObjectItem[] GraphicsListView:getClickTargets()
+		{
+		return null
+		}
+	
+	}

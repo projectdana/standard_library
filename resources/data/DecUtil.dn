@@ -1,0 +1,15 @@
+/*
+{ "description" : "Convert between decimal fractions and strings."}
+*/
+
+interface DecUtil{
+	/*
+	{ "@description" : "Convert a decimal fraction to a string."}
+	*/
+	char[] decToString(dec128 i)
+	
+	/*
+	{ "@description" : "Convert a string to a decimal fraction."}
+	*/
+	dec128 decFromString(char s[])
+	}

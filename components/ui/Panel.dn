@@ -1,0 +1,226 @@
+data GraphicsItem{
+	GraphicsObject object
+	GraphicsItem next
+	GraphicsItem prev
+	}
+
+data ClickableItem{
+	ClickableObject object
+	ClickableItem next
+	ClickableItem prev
+	}
+
+component provides Panel requires io.Output out{
+	
+	GraphicsItem objects
+	GraphicsItem lastObject
+	
+	ClickableItem clickObjects
+	ClickableItem lastClickObject
+	
+	bool backgroundSet
+	Color backgroundColor
+	
+	void Panel:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+	
+	void Panel:setPanel(Panel p)
+		{
+		myPanel = p
+		myPanel.addClickTarget(this)
+		}
+	
+	Panel Panel:getPanel()
+		{
+		return myPanel
+		}
+	
+	WH Panel:getPreferredSize()
+		{
+		return new WH(width, height)
+		}
+	
+	void Panel:paint(Canvas c)
+		{
+		//background
+		if (backgroundSet) c.drawRect(new Rect2D(xPosition, yPosition, width, height, backgroundColor))
+		
+		for (GraphicsItem gi = objects; gi != null; gi = gi.next)
+			{
+			gi.object.paint(c)
+			}
+		}
+	
+	void Panel:addObject(GraphicsObject go)
+		{
+		GraphicsItem newItem = new GraphicsItem(go)
+		
+		if (objects == null)
+			objects = newItem
+			else
+			lastObject.next = newItem
+		
+		newItem.prev = lastObject
+		lastObject = newItem
+		
+		go.setPanel(this)
+		
+		repaint()
+		}
+	
+	void Panel:remObject(GraphicsObject go)
+		{
+		for (GraphicsItem bi = objects; bi != null; bi = bi.next)
+			{
+			if (bi.object == go)
+				{
+				GraphicsItem td = bi
+				
+				if (td.prev == null)
+					objects = td.next
+					else
+					td.prev.next = td.next
+				
+				if (td.next == null)
+					lastObject = td.prev
+					else
+					td.next.prev = td.prev
+				
+				return
+				}
+			}
+		}
+	
+	GraphicsObjectItem[] Panel:getObjects()
+		{
+		return null
+		}
+	
+	Rect Panel:getBounds()
+		{
+		return new Rect(xPosition, yPosition, 480, 390)
+		}
+	
+	Point Panel:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+	
+	void Panel:addClickListener(ClickListener cl)
+		{
+		}
+	
+	void Panel:remClickListener(ClickListener cl)
+		{
+		}
+	
+	ClickListenerItem[] Panel:getClickListeners()
+		{
+		return null
+		}
+	
+	void Panel:setBackground(Color c)
+		{
+		backgroundSet = true
+		backgroundColor = c
+		}
+	
+	Color Panel:getBackground()
+		{
+		return backgroundColor
+		}
+	
+	void Panel:repaint()
+		{
+		myPanel.repaint()
+		}
+	
+	void Panel:setSize(int w, int h)
+		{
+		width = w
+		height = h
+		}
+	
+	WH Panel:getSize()
+		{
+		return new WH(width, height)
+		}
+	
+	void Panel:click(int x, int y, int button)
+		{
+		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
+			{
+			while (ci != null && ci.object == null)
+				{
+				ClickableItem td = ci
+				ci = ci.next
+				
+				if (td.prev == null)
+					clickObjects = td.next
+					else
+					td.prev.next = td.next
+				
+				if (td.next == null)
+					lastClickObject = td.prev
+					else
+					td.next.prev = td.prev
+				}
+			
+			if (ci != null)
+				{
+				Rect r = ci.object.getBounds()
+				
+				if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+					{
+					ci.object.click(x, y, button)
+					break
+					}
+				}
+			}
+		}
+	
+	void Panel:addClickTarget(ClickableObject co)
+		{
+		ClickableItem nci = new ClickableItem(co)
+		
+		if (clickObjects == null)
+			clickObjects = nci
+			else
+			lastClickObject.next = nci
+		
+		nci.prev = lastClickObject
+		lastClickObject = nci
+		}
+	
+	void Panel:remClickTarget(ClickableObject o)
+		{
+		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
+			{
+			if (ci.object === o)
+				{
+				ClickableItem td = ci
+				
+				if (td.prev == null)
+					clickObjects = td.next
+					else
+					td.prev.next = td.next
+				
+				if (td.next == null)
+					lastClickObject = td.prev
+					else
+					td.next.prev = td.prev
+				
+				break
+				}
+			}
+		}
+	
+	ClickableObjectItem[] Panel:getClickTargets()
+		{
+		return null
+		}
+	
+	}

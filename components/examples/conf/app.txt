@@ -1,0 +1,3 @@
+App=examples.GApp
+Window->UIPlane
+Button->BSButton

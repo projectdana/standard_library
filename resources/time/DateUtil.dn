@@ -1,0 +1,38 @@
+uses time.DateTime
+
+/*
+{ "description" : "Perform equality checks and conversions between two different DateTime instances."}
+*/
+
+interface DateUtil {
+	const int16 MAX_MSEC 		= 1000
+	const byte 	MAX_SEC	 		= 60
+	const byte 	MAX_MIN	 		= 60
+	const byte	MAX_HOUR 		= 24
+	const byte	MAX_MONTH 		= 12
+
+	/*
+	{ "@description" : "Returns true if first comes before second."}
+	*/
+	bool before(DateTime first, DateTime second)
+	
+	/*
+	{ "@description" : "Returns true if first comes after second."}
+	*/
+	bool after(DateTime first, DateTime second)
+
+	/*
+	{ "@description" : "Returns true if first and second are exactly the same time."}
+	*/
+	bool equal(DateTime first, DateTime second)
+
+	/*
+	{ "@description" : "Returns a DateTime instances that represents the difference between first and second."}
+	*/
+	DateTime diff(DateTime first, DateTime second)
+
+	/*
+	{ "@description" : "Converts a DateTime instance into milliseconds (commonly used after diff). The result of this function will be inaccurate if the given date/time is too large to fit into an integer."}
+	*/
+	int toMilliseconds(DateTime date)
+}

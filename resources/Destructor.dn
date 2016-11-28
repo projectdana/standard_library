@@ -1,0 +1,10 @@
+/*
+ {"description" : "This interface can be provided as a secondary interface of an object, allowing it to be notified of when it is being destroyed."}
+*/
+
+interface Destructor{
+	/*
+	 {"@description" : "This function is called when an object is being destroyed."}
+	*/
+	void destroy()
+	}
