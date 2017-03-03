@@ -12,7 +12,7 @@ component provides List(Destructor, AdaptEvents) {
 	int length
 	int iteratorIndex
 	
-	Mutex listLock
+	Mutex listLock = new Mutex()
 	
 	void List:add(Data item)
 		{

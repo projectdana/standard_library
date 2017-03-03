@@ -10,7 +10,7 @@ component provides FileObject(AdaptEvents) requires io.FileSystem fileSystem, Fo
 		setFile(f)
 		}
 	
-	FileObject:Adapt()
+	void AdaptEvents:active()
 		{
 		labelFont = new Font(sysInfo.getSystemFont(false), 15)
 		setFile(filePath)

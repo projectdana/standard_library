@@ -55,6 +55,15 @@ component provides App requires io.Output out, data.IntUtil iu, net.TCPSocket, n
 	char[] getMIMEType(char resource[])
 		{
 		//NOTE: return proper MIME types
+		String parts[] = stringUtil.explode(resource, ".")
+		if (parts.arrayLength > 1)
+			{
+			if (parts[1].string == "html")
+				return "text/html"
+				else if (parts[1].string == "jpg")
+				return "image/jpeg"
+			}
+		
 		return "text/html"
 		}
 	

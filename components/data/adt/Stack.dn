@@ -9,7 +9,7 @@ component provides Stack(Destructor, AdaptEvents) {
 	ListItem list
 	ListItem listEnd
 	int length
-	Mutex listLock
+	Mutex listLock = new Mutex()
 	
 	void Stack:add(Data item)
 		{

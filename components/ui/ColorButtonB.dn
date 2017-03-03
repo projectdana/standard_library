@@ -5,11 +5,6 @@ component provides ColorButton(AdaptEvents) requires io.Output out, data.IntUtil
 	
 	bool visible = true
 	
-	ColorButton:Adapt()
-		{
-		myPanel.addClickTarget(this)
-		}
-	
 	void ColorButton:setPosition(int x, int y)
 		{
 		xPosition = x

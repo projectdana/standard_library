@@ -35,7 +35,7 @@ record DanaInfoSection{
 	int size //size of the section's content, excluding this header
 	}
 
-component provides ObjectReader requires io.File {
+component provides ObjectReader requires io.File, System system {
 	
 	char objectPath[]
 	ObjectInfo info
@@ -66,12 +66,12 @@ component provides ObjectReader requires io.File {
 			throw new Exception("Error: File is not a Dana object")
 			}
 		
-		if (hdr.hostType != dana.getHostType())
+		if (hdr.hostType != system.getHostType())
 			{
 			throw new Exception("Error: File was compiled for a different architecture")
 			}
 		
-		if (hdr.vpuType != dana.getVPUType())
+		if (hdr.vpuType != system.getVMType())
 			{
 			throw new Exception("Error: File was compiled for a different VPU version")
 			}

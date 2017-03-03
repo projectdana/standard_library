@@ -14,6 +14,8 @@ component provides Service, util.Math requires NativeLoader inl, io.Output out {
 			return lib.sqrt(n)
 			}
 		
+		//TODO: internally, this currently just uses the integer version of sqrt, so the result is the square root of the truncated decimal
+		// - see the math native library
 		dec Math:sqrtDec(dec n)
 			{
 			return lib.sqrtDec(n)

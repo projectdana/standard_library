@@ -51,22 +51,28 @@ component provides App requires io.Output out, composition.ObjectWriter, data.js
 		
 		JSONElement document = parser.parseDocument(content)
 		
-		out.println("Provided interfaces:")
-		
 		JSONElement providedInterfaces = parser.getValue(document, "providedInterfaces")
 		
-		for (int j = 0; j < providedInterfaces.children.arrayLength; j++)
+		if (providedInterfaces != null)
 			{
-			printInterface(providedInterfaces.children[j])
+			out.println("Provided interfaces:")
+			
+			for (int j = 0; j < providedInterfaces.children.arrayLength; j++)
+				{
+				printInterface(providedInterfaces.children[j])
+				}
 			}
-		
-		out.println("Required interfaces:")
 		
 		JSONElement requiredInterfaces = parser.getValue(document, "requiredInterfaces")
 		
-		for (int j = 0; j < requiredInterfaces.children.arrayLength; j++)
+		if (requiredInterfaces != null)
 			{
-			printInterface(requiredInterfaces.children[j])
+			out.println("Required interfaces:")
+			
+			for (int j = 0; j < requiredInterfaces.children.arrayLength; j++)
+				{
+				printInterface(requiredInterfaces.children[j])
+				}
 			}
 		
 		return 0

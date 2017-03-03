@@ -153,9 +153,9 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	
 	bool isUses(ParseToken tokens[], int start)
 		{
-		if (tokens[start].type == ParseToken.TYPE_TOKEN && tokens[start].content == "uses")
+		if (tokens[start].type == ParseToken.TYPE_PARTICLE && tokens[start].content == "uses")
 			{
-			if (start + 1 < tokens.arrayLength && tokens[start+1].type == ParseToken.TYPE_TOKEN)
+			if (start + 1 < tokens.arrayLength && tokens[start+1].type == ParseToken.TYPE_PARTICLE)
 				{
 				return true
 				}
@@ -166,7 +166,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	
 	int consumeUses(ParseToken tokens[], int start, IncludeList incList)
 		{
-		if (tokens[start].type == ParseToken.TYPE_TOKEN && tokens[start].content == "uses")
+		if (tokens[start].type == ParseToken.TYPE_PARTICLE && tokens[start].content == "uses")
 			{
 			int count = 1
 			start ++
@@ -208,7 +208,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	
 	bool isTypeDefinition(ParseToken tokens[], int start)
 		{
-		if (tokens[start].type == ParseToken.TYPE_TOKEN &&
+		if (tokens[start].type == ParseToken.TYPE_PARTICLE &&
 			(tokens[start].content == "data" || tokens[start].content == "interface" || tokens[start].content == "record"))
 			{
 			start ++

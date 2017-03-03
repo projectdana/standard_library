@@ -19,7 +19,7 @@ data GraphicsItem{
 	GraphicsItem prev
 	}
 
-component provides FileBrowser(ClickListener) requires io.FileSystem fileSystem, Button, data.StringUtil stringUtil, io.Output out, Font, os.SystemInfo sysInfo, data.IntUtil iu{
+component provides FileBrowser(ClickListener,AdaptEvents) requires io.FileSystem fileSystem, Button, data.StringUtil stringUtil, io.Output out, Font, os.SystemInfo sysInfo, data.IntUtil iu{
 
 	FileCategory categories
 	FileCategory categoriesEnd
@@ -31,7 +31,7 @@ component provides FileBrowser(ClickListener) requires io.FileSystem fileSystem,
 	
 	Font labelFont
 	
-	Mutex sdLock
+	Mutex sdLock = new Mutex()
 	
 	GraphicsItem objects
 	GraphicsItem objectsEnd
@@ -50,7 +50,7 @@ component provides FileBrowser(ClickListener) requires io.FileSystem fileSystem,
 		labelFont = new Font(sysInfo.getSystemFont(false), 15)
 		}
 	
-	FileBrowser:Adapt()
+	void AdaptEvents:active()
 		{
 		FileBrowser()
 		setPosition(xPosition, yPosition)

@@ -45,7 +45,7 @@ interface ObjectWriter{
 	InfoSection getInfoSection(char type[], char cType[])
 	
 	/*
-		{"@description" : "Add a new info section to the object file."}
+		{"@description" : "Add a new info section to the object file. Note that the name and type fields are a maximum of 4 characters (any additional characters are truncated)."}
 	*/
 	void addInfoSection(InfoSection newSection)
 	

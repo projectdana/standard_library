@@ -75,7 +75,7 @@ component provides composition.RecursiveLoader requires composition.Search searc
 				int index = loadSupportComponent(np, lc)
 				IDC ncom = lc.loadedComponents[index].class
 				
-				com :> ri[i].alias = ncom :< ri[i].alias
+				dana.rewire(com :> ri[i].alias, ncom :< ri[i].alias)
 				
 				if (lc.graph.arrayLength != 0)
 					lc.graph = new char[](lc.graph, ",")

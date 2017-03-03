@@ -51,6 +51,7 @@ library interface UIPlaneLib{
 	void getFontName(int phandle, VC result)
 	bool isFontFixedWidth(int phandle)
 	void getTextBitmapWith(int phandle, char text[], Bitmap pixels, byte r, byte g, byte b, byte a)
+	void unloadFont(int fd)
 	}
 
 data XYListener{
@@ -71,7 +72,7 @@ data ClickableItem{
 	ClickableItem prev
 	}
 
-component provides Window(XYClickListener, XYMouseListener, TitleBarEventListener), Font, Service requires NativeLoader inl, TitleBar, io.Output out, data.IntUtil iu
+component provides Window(XYClickListener, XYMouseListener, TitleBarEventListener), Font(Destructor), Service requires NativeLoader inl, TitleBar, io.Output out, data.IntUtil iu
 	{
 	static library UIPlaneLib lib
 	
@@ -82,13 +83,13 @@ component provides Window(XYClickListener, XYMouseListener, TitleBarEventListene
 		ClickableItem clickItems
 		ClickableItem clickItemsEnd
 		
-		Mutex mouseListenerLock
+		Mutex mouseListenerLock = new Mutex()
 		XYListener mouseListeners
 		XYListener mouseListenersEnd
 		
 		TitleBar titleBar
 		
-		Mutex windowStateLock
+		Mutex windowStateLock = new Mutex()
 		
 		int currentX = 100
 		int currentY = 80
@@ -627,6 +628,11 @@ component provides Window(XYClickListener, XYMouseListener, TitleBarEventListene
 			Bitmap result = new Bitmap(new WH())
 			lib.getTextBitmapWith(platformHandle, string, result, textColor.r, textColor.g, textColor.b, textColor.a)
 			return result
+			}
+		
+		void Destructor:destroy()
+			{
+			lib.unloadFont(platformHandle)
 			}
 		}
 	

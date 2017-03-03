@@ -9,7 +9,7 @@ component provides Queue(Destructor, AdaptEvents) {
 	ListItem list
 	ListItem listEnd
 	int length
-	Mutex listLock
+	Mutex listLock = new Mutex()
 	
 	void Queue:add(Data item)
 		{

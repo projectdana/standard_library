@@ -1,7 +1,7 @@
 component provides pal.Perception requires time.Calendar calendar {
 	
 	static PerceptionData perception
-	static Mutex plock
+	static Mutex plock = new Mutex()
 	
 	void Perception:addMetric(char name[], int value, bool preferHigh)
 		{

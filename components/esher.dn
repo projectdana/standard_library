@@ -21,7 +21,7 @@ data Role{
 	Role next
 	}
 
-component provides App requires io.Output out, io.Input stdin, io.TextFile, composition.Loader loader, data.StringUtil stringUtil, data.IntUtil iu, os.SystemInfo systemInfo, io.FileSystem fileSystem, composition.Adapter adapter {
+component provides App requires io.Output out, io.Input stdin, io.TextFile, Loader loader, data.StringUtil stringUtil, data.IntUtil iu, os.SystemInfo systemInfo, io.FileSystem fileSystem, composition.Adapter adapter {
 	
 	char manifest[]
 	Role roles
@@ -165,7 +165,7 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, comp
 					{
 					if (d.toRole == r.name)
 						{
-						rx.class :> d.interfaceType = r.class :< d.interfaceType
+						dana.rewire(rx.class :> d.interfaceType, r.class :< d.interfaceType)
 						d.connected = true
 						break
 						}
@@ -184,7 +184,7 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, comp
 				{
 				if (d.toRole == rx.name && !d.connected)
 					{
-					r.class :> d.interfaceType = rx.class :< d.interfaceType
+					dana.rewire(r.class :> d.interfaceType, rx.class :< d.interfaceType)
 					d.connected = true
 					}
 				}
@@ -354,7 +354,7 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, comp
 		Role rf = null
 		while (rw != null)
 			{
-			if (rw == role)
+			if (rw === role)
 				{
 				if (rf == null)
 					roles = rw.next
@@ -364,7 +364,6 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, comp
 				if (lastRole == rw)
 					lastRole = rf
 				
-				//we must destroy the objects here, otherwise they'll be destroyed after component unloading
 				rw.app = null
 				rw.svc = null
 				
@@ -374,8 +373,6 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, comp
 			rf = rw
 			rw = rw.next
 			}
-		
-		loader.unload(class)
 		}
 	
 	void rewire(Role lhs, char bp[], Role rhs)

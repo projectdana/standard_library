@@ -10,7 +10,7 @@ component provides HashTable(Destructor, AdaptEvents) {
 	ListItem list
 	ListItem listEnd
 	int length
-	Mutex listLock
+	Mutex listLock = new Mutex()
 	
 	void HashTable:put(char key[], Data value)
 		{

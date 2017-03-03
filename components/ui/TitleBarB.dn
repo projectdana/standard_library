@@ -1,7 +1,7 @@
 const int HEIGHT = 30
 const int EDGE_DISTANCE = 1
 
-component provides TitleBar(XYMouseListener, ClickListener, Destructor) requires Font, io.Output out, data.IntUtil iu, os.SystemInfo sysInfo, ColorButton{
+component provides TitleBar(XYMouseListener, ClickListener, AdaptEvents, Destructor) requires Font, io.Output out, data.IntUtil iu, os.SystemInfo sysInfo, ColorButton{
 	
 	bool drag
 	int lastX
@@ -38,7 +38,7 @@ component provides TitleBar(XYMouseListener, ClickListener, Destructor) requires
 		titleFont = new Font(sysInfo.getSystemFont(false), 20)
 		}
 	
-	TitleBar:Adapt()
+	void AdaptEvents:active()
 		{
 		TitleBar(title)
 		setWindow(window)
@@ -213,6 +213,13 @@ component provides TitleBar(XYMouseListener, ClickListener, Destructor) requires
 		}
 	
 	void Destructor:destroy()
+		{
+		window.remObject(closeButton)
+		window.remObject(minButton)
+		window.remObject(maxButton)
+		}
+	
+	void AdaptEvents:destroy()
 		{
 		window.remObject(closeButton)
 		window.remObject(minButton)

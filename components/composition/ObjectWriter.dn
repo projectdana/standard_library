@@ -35,7 +35,7 @@ record DanaInfoSection{
 	int size //size of the section's content, excluding this header
 	}
 
-component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data.StringUtil stringUtil, data.IntUtil iu, io.Output out {
+component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data.StringUtil stringUtil, data.IntUtil iu, io.Output out, System system {
 	
 	ObjectInfo info
 	int lastInfoIndex
@@ -65,12 +65,12 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 			throw new Exception("Error: File is not a Dana object")
 			}
 		
-		if (hdr.hostType != dana.getHostType())
+		if (hdr.hostType != system.getHostType())
 			{
 			throw new Exception("Error: File was compiled for a different architecture")
 			}
 		
-		if (hdr.vpuType != dana.getVPUType())
+		if (hdr.vpuType != system.getVMType())
 			{
 			throw new Exception("Error: File was compiled for a different VPU version")
 			}
@@ -156,9 +156,9 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 		//strip off what's after the last trailing "/", if anything
 		String parts[] = clone stringUtil.explode(path, "/\\")
 		
-		if (parts.arrayLength > 0)
+		if (parts.arrayLength > 1)
 			{
-			parts[parts.arrayLength-1].string = ""
+			parts[parts.arrayLength-1] = null
 			char result[] = new char[](stringUtil.implode(parts, "/"), "/")
 			return result
 			}

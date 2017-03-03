@@ -8,10 +8,9 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 		labelFont = new Font(sysInfo.getSystemFont(false), 15)
 		}
 	
-	Button:Adapt()
+	void AdaptEvents:active()
 		{
 		labelFont = new Font(sysInfo.getSystemFont(false), 15)
-		myPanel.addClickTarget(this)
 		}
 	
 	void Button:setPosition(int x, int y)

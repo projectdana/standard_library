@@ -27,7 +27,7 @@ data DCQ{
 	FileEntry entries[]
 	}
 
-component provides Service, io.File, io.FileSystem requires NativeLoader inl, io.Output out{
+component provides Service, io.File, io.FileSystem requires NativeLoader inl {
 	
 	static library IIOFileLib lib
 	

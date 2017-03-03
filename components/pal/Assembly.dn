@@ -58,7 +58,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, comp
 	bool appFinished
 	bool exitCode
 	
-	bool verbose
+	bool verbose = true
 	
 	//the cache of loaded components and their current wirings
 	Component components[]
@@ -409,7 +409,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, comp
 				c.completeWirings ++
 			
 			if (ris[i].package == "pal.Perception")
-				c.class :> "Perception" = perception :< "Perception"
+				dana.rewire(c.class :> "Perception", perception :< "Perception")
 			}
 		
 		if (c.completeWirings == c.interfaces.arrayLength)
@@ -570,7 +570,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, comp
 		if (iq.currentWiring == null)
 			{
 			//it's new, so just connect it
-			fromComponent.class :> intfName = toComponent.class :< intfName
+			dana.rewire(fromComponent.class :> intfName, toComponent.class :< intfName)
 			fromComponent.completeWirings ++
 			
 			if (verbose) out.println(" -- wiring $(fromComponent.path) :: $intfName >> $(toComponent.path)")
@@ -604,7 +604,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, comp
 		return wiringsChanged
 		}
 	
-	Mutex configLock
+	Mutex configLock = new Mutex()
 	
 	void launchMain(IDC class)
 		{

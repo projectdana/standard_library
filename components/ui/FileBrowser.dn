@@ -14,7 +14,7 @@ data GraphicsItem{
 	GraphicsItem prev
 	}
 
-component provides FileBrowser(ClickListener) requires Panel, FileObject, GraphicsListView, io.FileSystem fileSystem, Button, data.StringUtil stringUtil, io.Output out{
+component provides FileBrowser(ClickListener,AdaptEvents) requires Panel, FileObject, GraphicsListView, io.FileSystem fileSystem, Button, data.StringUtil stringUtil, io.Output out{
 	FileItem fileObjects
 	FileItem fileObjectsEnd
 	FileItem fileObjectsGC
@@ -26,7 +26,7 @@ component provides FileBrowser(ClickListener) requires Panel, FileObject, Graphi
 	
 	GraphicsListView view
 	
-	Mutex sdLock
+	Mutex sdLock = new Mutex()
 	
 	GraphicsItem objects
 	GraphicsItem objectsEnd
@@ -42,7 +42,7 @@ component provides FileBrowser(ClickListener) requires Panel, FileObject, Graphi
 		backButton.addClickListener(this)		
 		}
 	
-	FileBrowser:Adapt()
+	void AdaptEvents:active()
 		{
 		FileBrowser()
 		setPosition(xPosition, yPosition)

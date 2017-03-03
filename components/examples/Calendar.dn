@@ -1,4 +1,4 @@
-component provides App requires io.Output out, data.IntUtil iu, time.Calendar ic, time.Timer timer {
+component provides App requires io.Output out, data.IntUtil iu, time.Calendar ic {
 	
 	int App:main(AppParam params[])
 		{

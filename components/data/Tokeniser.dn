@@ -408,6 +408,9 @@ component provides data.Tokeniser requires io.Output out, data.StringUtil string
 				
 				//out.println(next.content)
 				
+				if (next.type == ParseToken.TYPE_TOKEN && !isValidToken(next.content))
+					next.type = ParseToken.TYPE_PARTICLE
+				
 				i += next.sourceLength
 				result = new ParseToken[](result, next)
 				}
