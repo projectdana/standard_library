@@ -10,10 +10,28 @@ data InfoSection{
 	byte content[]
 	}
 
+/*
+ {"description" : "Utility to inspect compiled Dana components. This is primarily used to examine 'info sections' in these components such as the list of interfaces that a component has."}
+*/
 interface ObjectReader{
+	/*
+		{"@description" : "Create an ObjectReader for a given compiled component file." }
+	*/
 	ObjectReader(char path[])
+	
+	/*
+		{"@description" : "Get general information about the object file." }
+	*/
 	ObjectInfo getInfo()
+	
+	/*
+		{"@description" : "Iterate through each info section." }
+	*/
 	InfoSection getNextSection()
+	
+	/*
+		{"@description" : "Query the compiled component for a specific info section, identified by a 4-character section type." }
+	*/
 	InfoSection getInfoSection(char type[])
 	
 	char[] getPath()

@@ -51,7 +51,7 @@ data OptionsCache {
 	String options[]
 	}
 
-component provides pal.Assembly requires io.FileSystem fileSystem, io.File, composition.Loader loader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, composition.Adapter adapter, os.SystemInfo systemInfo {
+component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Loader loader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, composition.Adapter adapter, os.SystemInfo systemInfo {
 	
 	App myApp
 	bool appStarted

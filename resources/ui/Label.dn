@@ -1,6 +1,5 @@
 /*
-* Label interface
-* This is an API that represents a piece of text on the screen.
+{ "description" : "A renderable piece of text on a grapical interface." }
 */
 
 uses GraphicsObject

@@ -1,16 +1,33 @@
 /*
-{ "description" : "Controls a target program (starting at its 'main' component, which must implement the App interface) by discovering the possible ways in which it can be assembled and adapting it to one of those assemblies." }
+{ "description" : "This is an interface from the PAL framework for emergent software systems. This interface controls the composition of a target program (starting at its 'main' component, which must implement the App interface) by discovering the possible ways in which it can be assembled and adapting it to one of those assemblies." }
 */
 
 uses data.String
 
 interface Assembly {
 	
+	/*
+	{ "@description" : "Constructor function which discovers the set of possible assemblies for a given 'main' component.",
+		"main" : "Path to a compiled Dana component which impements the App interface.",
+		"perceptionModule" : "A loaded Dana component which implements the pal.Perception interface." }
+	*/
 	Assembly(char main[], IDC perceptionModule)
 	
+	/*
+	{ "@description" : "Gets a list of all valid assemblies of the software system being managed, where each assembly is identified with a unique string." }
+	*/
 	String[] getConfigs()
+	
+	/*
+	{ "@description" : "Changes the current assembly.",
+		"conf" : "Identifier of the assembly to adapt to, which must be one previously returned by getConfigs()",
+		"@return" : "Returns true if adaptation was successful, false otherwise." }
+	*/
 	bool setConfig(char conf[])
 	
+	/*
+	{ "@description" : "Checks if the main method of the program has exited, returning true if so." }
+	*/
 	bool appFinished()
 	
 	}

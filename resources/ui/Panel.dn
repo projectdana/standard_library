@@ -1,8 +1,3 @@
-/*
-* Panel interface
-* Panel objects host other graphical objects. A Panel is itself a GraphicsObject, so panels can be nested.
-*/
-
 uses GraphicsObject
 uses Color
 
@@ -13,6 +8,10 @@ data GraphicsObjectItem{
 data ClickableObjectItem{
 	ClickableObject object
 	}
+
+/*
+ {"description" : "Panel objects host other graphical objects. A Panel is itself a GraphicsObject, so panels can be nested."}
+*/
 
 interface Panel extends ClickableObject{
 	transfer int width

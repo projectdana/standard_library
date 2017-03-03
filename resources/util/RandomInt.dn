@@ -3,6 +3,13 @@
 */
 
 interface RandomInt{
+	/*
+	 {"@description" : "Set a 'seed' value for the random number generator. Some implementations may generate the same sequence of numbers from the same seed, so this should generally be set from something like the current time to help ensure good pseudo-random numbers."}
+	*/
 	void setSeed(int s)
+	
+	/*
+	 {"@description" : "Get a pseudo-random number between zero and 'top', exluding top itself."}
+	*/
 	int get(int top)
 	}

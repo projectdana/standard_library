@@ -5,7 +5,7 @@ data ReqIntf {
 	char alias[]
 	}
 
-component provides composition.RecursiveLoader requires composition.Search search, composition.Loader loader, data.json.JSONParser parser, composition.ObjectWriter, System system, data.IntUtil iu {
+component provides composition.RecursiveLoader requires composition.Search search, Loader loader, data.json.JSONParser parser, composition.ObjectWriter, System system, data.IntUtil iu {
 	
 	ReqIntf[] getRequiredInterfaces(char com[])
 		{

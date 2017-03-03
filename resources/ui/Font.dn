@@ -1,33 +1,59 @@
 /*
-* Font interface
-* This is an API that allows the creation of font instances for use with other graphical objects. Note that Dana comes with standard fonts within the resources-ext directory so that the programmer can rely on at least these fonts always being available. See also the SystemInfo API which reports on the default system fonts.
+{ "description" : "This is an API that allows the creation of font instances for use with other graphical objects. Note that Dana comes with standard fonts within the resources-ext directory so that the programmer can rely on at least these fonts always being available. See also the SystemInfo API which reports on the default system fonts." }
 */
 
 uses Bitmap
 
-data FontMetrics{
-	//the total height of the font in pixels (this is the maximum height of the tallest glyph in the entire typeface)
-	int height
-	//of the height, how much is "ascent" above the "baseline" (which is an imaginary 1 pixel line)
-	int ascent
-	//of the height, how much is "descent" below the "baseline" (which is an imaginary 1 pixel line)
-	int descent
-	//the recommended number of pixels between lines (this is an optional typeface attribute - might be 0)
-	int lineskip
-	}
-
 interface Font{
-	//creates a new font instance, from a given font file
+	/*
+	{ "@description" : "Creates a new font instance, from a given font file, using a given font size." }
+	*/
 	Font(char path[], int size)
 	
-	//these three functions provide information about this font, including whether or not each character in the font has the same width (monospaced)
+	/*
+	{ "@description" : "Get the FontMetrics of this font." }
+	*/
 	FontMetrics getFontMetrics()
+	
+	/*
+	{ "@description" : "Get the friendly name of this font." }
+	*/
 	char[] getFontName()
+	
+	/*
+	{ "@description" : "Get the character spacing affinity of the font (fixed width or variable-width)." }
+	*/
 	bool isFixedCharacterWidth()
 	
-	//this function returns the width, in pixels, of the given text as rendered by this font
+	/*
+	{ "@description" : "Get the width, in pixels, of the given text as rendered by this font." }
+	*/
 	int getTextWidth(char text[])
 	
-	//this function returns a piece of text, rendered with this font, as a bitmap
+	/*
+	{ "@description" : "Get a piece of text, rendered with this font on a single line, as a bitmap." }
+	*/
 	Bitmap getBitmap(char text[], Color textColor)
+	}
+
+/*
+{ "description" : "Description of a font's details." }
+*/
+data FontMetrics{
+	/*
+	{ "@description" : "The total height of the font in pixels (this is the maximum height of the tallest glyph in the entire typeface)." }
+	*/
+	int height
+	/*
+	{ "@description" : "Of the height, how much is "ascent" above the "baseline" (which is an imaginary 1 pixel line)." }
+	*/
+	int ascent
+	/*
+	{ "@description" : "Of the height, how much is "descent" below the "baseline" (which is an imaginary 1 pixel line)." }
+	*/
+	int descent
+	/*
+	{ "@description" : "The recommended number of pixels between lines (this is an optional typeface attribute which might be 0)." }
+	*/
+	int lineskip
 	}

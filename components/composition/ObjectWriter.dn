@@ -133,6 +133,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 			byte serialData[]
 			
 			DanaInfoSection is
+			is.size = 0
 			serialData = dana.getByteArrayOf(is)
 			serialData =[] fd.read(serialData.arrayLength)
 			
@@ -185,6 +186,8 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 	
 	void ObjectWriter:addInfoSection(InfoSection newSection)
 		{
+		DanaInfoSection dis
+		
 		//find an unused temporary filename
 		char tmp[] = getTmpFile(objectPath)
 		
@@ -210,7 +213,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 		int iss = hdr.infoSectionsSize
 		
 		hdr.infoSectionsCount ++
-		hdr.infoSectionsSize += newSection.content.arrayLength
+		hdr.infoSectionsSize += newSection.content.arrayLength + dana.getByteArrayOf(dis).arrayLength
 		
 		info.infoSectionCount ++
 		
@@ -221,7 +224,6 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 		output.write(buf)
 		
 		// - write the new infosection
-		DanaInfoSection dis
 		dis.sectionType =[] newSection.sectionType
 		dis.contentType =[] newSection.contentType
 		dis.size = newSection.content.arrayLength

@@ -5,5 +5,8 @@
 uses DateTime
 
 interface Calendar{
+	/*
+	{ "@description" : "Returns the current date and time." }
+	*/
 	DateTime getTime()
 	}

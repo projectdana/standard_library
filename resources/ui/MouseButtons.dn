@@ -1,3 +1,8 @@
+/*
+{ "description" : "This is a container type for a set of constants used to represent different mouse buttons in 'click' notifications and other mouse-related activity." }
+*/
+
+
 data MouseButtons{
 	const int BUTTON_LEFT	= 1
 	const int BUTTON_RIGHT	= 2
