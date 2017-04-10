@@ -40,7 +40,7 @@ component provides Service, io.File, io.FileSystem requires NativeLoader inl {
 			int ph = lib.open(path, mode)
 			
 			if (ph == 0)
-				throw new Exception("File '$path' not found")
+				throw new Exception("Unable to open file '$path'")
 			
 			platformHandle = ph
 			pos = 0
