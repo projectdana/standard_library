@@ -1,7 +1,7 @@
 const int WIDTH = 20
 const int HEIGHT = 20
 
-component provides ColorButton(AdaptEvents) requires io.Output out, data.IntUtil iu{
+component provides ColorButton(AdaptDestructor) requires io.Output out, data.IntUtil iu{
 	
 	bool visible = true
 	
@@ -109,7 +109,7 @@ component provides ColorButton(AdaptEvents) requires io.Output out, data.IntUtil
 		return myPanel
 		}
 	
-	void AdaptEvents:destroy()
+	void AdaptDestructor:destroy()
 		{
 		visible = false
 		myPanel.repaint()

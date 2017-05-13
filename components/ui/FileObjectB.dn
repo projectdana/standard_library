@@ -1,4 +1,4 @@
-component provides FileObject(AdaptEvents) requires io.FileSystem fileSystem, Font, os.SystemInfo sysInfo, data.StringUtil stringUtil, io.Output out{
+component provides FileObject(AdaptEvents, AdaptDestructor) requires io.FileSystem fileSystem, Font, os.SystemInfo sysInfo, data.StringUtil stringUtil, io.Output out{
 	
 	Font labelFont
 	char label[]
@@ -155,7 +155,7 @@ component provides FileObject(AdaptEvents) requires io.FileSystem fileSystem, Fo
 		return new WH(40, 60)
 		}
 	
-	void AdaptEvents:destroy()
+	void AdaptDestructor:destroy()
 		{
 		myPanel.repaint()
 		}

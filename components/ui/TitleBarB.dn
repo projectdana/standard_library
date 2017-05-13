@@ -219,11 +219,4 @@ component provides TitleBar(XYMouseListener, ClickListener, AdaptEvents, Destruc
 		window.remObject(maxButton)
 		}
 	
-	void AdaptEvents:destroy()
-		{
-		window.remObject(closeButton)
-		window.remObject(minButton)
-		window.remObject(maxButton)
-		}
-	
 	}

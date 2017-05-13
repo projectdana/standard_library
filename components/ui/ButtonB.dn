@@ -1,4 +1,4 @@
-component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, Font, os.SystemInfo sysInfo {
+component provides Button(AdaptEvents, AdaptDestructor) requires io.Output out, data.IntUtil iu, Font, os.SystemInfo sysInfo {
 	
 	Font labelFont
 	
@@ -114,7 +114,7 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 		return text == bq.getText()
 		}
 	
-	void AdaptEvents:destroy()
+	void AdaptDestructor:destroy()
 		{
 		myPanel.repaint()
 		}

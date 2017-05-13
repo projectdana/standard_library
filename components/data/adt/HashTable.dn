@@ -175,11 +175,6 @@ component provides HashTable(Destructor, AdaptEvents) {
 		clearList()
 		}
 	
-	void AdaptEvents:destroy()
-		{
-		clearList()
-		}
-	
 	void AdaptEvents:inactive()
 		{
 		//flatten list contents to transfer state
