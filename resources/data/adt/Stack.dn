@@ -28,6 +28,11 @@ interface Stack{
 	*/
 	Data service()
 	
+	/*
+	 {"@description" : "Read (but do not remove) the top element on the stack, according to the stack policy."}
+	*/
+	Data peek()
+	
 	//information
 	int getLength()
 	Data[] getContents()

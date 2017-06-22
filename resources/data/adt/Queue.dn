@@ -24,9 +24,14 @@ interface Queue{
 	void update(Data item, Data newVersion)
 	
 	/*
-	 {"@description" : "Read and remove temove an element from the queue according to the queue policy."}
+	 {"@description" : "Read and remove an element from the queue according to the queue policy."}
 	*/
 	Data service()
+	
+	/*
+	 {"@description" : "Read (but do not remove) the first element on the queue according to the queue policy."}
+	*/
+	Data peek()
 	
 	//information
 	int getLength()

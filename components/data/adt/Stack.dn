@@ -116,6 +116,17 @@ component provides Stack(Destructor, AdaptEvents) {
 			}
 		}
 	
+	Data Stack:peek()
+		{
+		mutex(listLock)
+			{
+			if (listEnd != null)
+				return listEnd.item
+				else
+				return null
+			}
+		}
+	
 	int Stack:getLength()
 		{
 		mutex(listLock)

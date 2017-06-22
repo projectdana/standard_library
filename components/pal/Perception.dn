@@ -21,7 +21,9 @@ component provides pal.Perception requires time.Calendar calendar {
 					}
 				}
 			
-			perception.metrics = new Metric[](perception.metrics, new Metric(name, "", value, 1, preferHigh, calendar.getTime()))
+			Metric m = new Metric(name, "", value, 1, preferHigh, calendar.getTime())
+			m.timeLast = m.timeFirst
+			perception.metrics = new Metric[](perception.metrics, m)
 			}
 		}
 	
@@ -43,7 +45,9 @@ component provides pal.Perception requires time.Calendar calendar {
 					}
 				}
 			
-			perception.events = new Event[](perception.events, new Event(name, "", value, 1, calendar.getTime()))
+			Event e = new Event(name, "", value, 1, calendar.getTime())
+			e.timeLast = e.timeFirst
+			perception.events = new Event[](perception.events, e)
 			}
 		}
 	

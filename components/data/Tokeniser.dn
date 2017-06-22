@@ -391,11 +391,11 @@ component provides data.Tokeniser requires io.Output out, data.StringUtil string
 					{
 					next = consumeNumber(content, i)
 					}
-					else if (isToken(content, i, blockComment[0].string))
+					else if (blockComment != null && isToken(content, i, blockComment[0].string))
 					{
 					next = consumeBlockComment(content, i)
 					}
-					else if (isToken(content, i, lineComment.string))
+					else if (lineComment != null && isToken(content, i, lineComment.string))
 					{
 					next = consumeLineComment(content, i)
 					}

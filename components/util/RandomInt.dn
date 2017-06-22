@@ -5,7 +5,7 @@
 
 component provides RandomInt
 	{
-	int32 seed = 1
+	int seed = 1
 	
 	void RandomInt:setSeed(int s)
 		{
@@ -15,8 +15,8 @@ component provides RandomInt
 	
 	int RandomInt:get(int top)
 		{
-		int32 hi
-		int32 lo
+		int hi
+		int lo
 		
 		lo = 16807 * (seed * 0xFFFF)
 		hi = 16807 * (seed >> 16)
