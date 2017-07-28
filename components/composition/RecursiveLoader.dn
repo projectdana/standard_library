@@ -75,13 +75,16 @@ component provides composition.RecursiveLoader requires composition.Search searc
 				int index = loadSupportComponent(np, lc)
 				IDC ncom = lc.loadedComponents[index].class
 				
-				dana.rewire(com :> ri[i].alias, ncom :< ri[i].alias)
-				
-				if (lc.graph.arrayLength != 0)
-					lc.graph = new char[](lc.graph, ",")
-				lc.graph = new char[](lc.graph, "$(ri[i].alias):$(iu.intToString(comIndex)):$(iu.intToString(index))")
-				
-				loadComponents(index, np, lc)
+				if (dana.getComponent(com :> ri[i].alias) == null)
+					{
+					dana.rewire(com :> ri[i].alias, ncom :< ri[i].alias)
+					
+					if (lc.graph.arrayLength != 0)
+						lc.graph = new char[](lc.graph, ",")
+					lc.graph = new char[](lc.graph, "$(ri[i].alias):$(iu.intToString(comIndex)):$(iu.intToString(index))")
+					
+					loadComponents(index, np, lc)
+					}
 				}
 			}
 		

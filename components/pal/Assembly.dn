@@ -438,6 +438,16 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		return path
 		}
 	
+	bool arrayContains(String a[], char str[])
+		{
+		for (int i = 0; i < a.arrayLength; i++)
+			{
+			if (a[i].string == str) return true
+			}
+		
+		return false
+		}
+	
 	String[] getStandardSearchPaths(char main[])
 		{
 		//local
@@ -463,6 +473,17 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			result[i] = new String(normalisePath(result[i].string))
 			if (result[i].string.arrayLength > 0 && result[i].string[result[i].string.arrayLength-1] != "/")
 				result[i].string = new char[](result[i].string, "/")
+			}
+		
+		//remove duplicates
+		String cd[] = result
+		result = null
+		for (int i = 0; i < cd.arrayLength; i++)
+			{
+			if (!arrayContains(result, cd[i].string))
+				{
+				result = new String[](result, cd[i])
+				}
 			}
 		
 		return result

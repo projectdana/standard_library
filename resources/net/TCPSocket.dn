@@ -23,7 +23,7 @@ interface TCPSocket{
 	/*
 	{"@description" : "Send data over an open TCP connection."}
 	*/
-	int send(byte data[])
+	int send(byte content[])
 	
 	/*
 	{"@description" : "Wait for data to arrive over an open TCP connection. This function will block until the requested amount of data has been received, or the TCP connection has been terminated."}

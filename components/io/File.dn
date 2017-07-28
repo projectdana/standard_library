@@ -34,6 +34,7 @@ component provides Service, io.File, io.FileSystem requires NativeLoader inl {
 	implementation File {
 		int platformHandle
 		int pos
+		Mutex rwLock = new Mutex()
 		
 		File:File(char path[], byte mode)
 			{
@@ -48,33 +49,73 @@ component provides Service, io.File, io.FileSystem requires NativeLoader inl {
 		
 		int File:write(byte content[])
 			{
-			int wa = lib.write(platformHandle, content)
-			pos += wa
-			return wa
+			mutex(rwLock)
+				{
+				if (platformHandle != 0)
+					{
+					int wa = lib.write(platformHandle, content)
+					pos += wa
+					return wa
+					}
+					else
+					{
+					throw new Exception("File is not open for write")
+					}
+				}
 			}
 		
 		byte[] File:read(int length)
 			{
-			BC result = new BC()
-			int ra = lib.read(platformHandle, length, result)
-			pos += ra
-			return result.content
+			mutex(rwLock)
+				{
+				if (platformHandle != 0)
+					{
+					BC result = new BC()
+					int ra = lib.read(platformHandle, length, result)
+					pos += ra
+					return result.content
+					}
+					else
+					{
+					throw new Exception("File is not open for read")
+					}
+				}
 			}
 		
 		bool File:eof()
 			{
-			return lib.eof(platformHandle)
+			mutex(rwLock)
+				{
+				if (platformHandle != 0)
+					{
+					return lib.eof(platformHandle)
+					}
+					else
+					{
+					return true
+					}
+				}
 			}
 		
 		bool File:setPos(int p)
 			{
-			if (lib.setPos(platformHandle, p))
+			mutex(rwLock)
 				{
-				pos = p
-				return true
+				if (platformHandle != 0)
+					{
+					if (lib.setPos(platformHandle, p))
+						{
+						pos = p
+						return true
+						}
+					
+					return false
+					}
+					else
+					{
+					throw new Exception("File is not open for setPos")
+					}
 				}
-			
-			return false
 			}
 		
 		int File:getPos()
@@ -84,13 +125,33 @@ component provides Service, io.File, io.FileSystem requires NativeLoader inl {
 		
 		int File:getSize()
 			{
-			return lib.getSize(platformHandle)
+			mutex(rwLock)
+				{
+				if (platformHandle != 0)
+					{
+					return lib.getSize(platformHandle)
+					}
+					else
+					{
+					throw new Exception("File is not open for size")
+					}
+				}
 			}
 		
 		void File:close()
 			{
-			lib.close(platformHandle)
-			platformHandle = 0
+			mutex(rwLock)
+				{
+				if (platformHandle != 0)
+					{
+					lib.close(platformHandle)
+					platformHandle = 0
+					}
+					else
+					{
+					throw new Exception("File is not open for closing")
+					}
+				}
 			}
 		}
 	
@@ -163,14 +224,14 @@ component provides Service, io.File, io.FileSystem requires NativeLoader inl {
 				}
 			}
 		
-		bool FileSystem:createDirectory(char from[])
+		bool FileSystem:createDirectory(char path[])
 			{
-			return lib.createDirectory(from)
+			return lib.createDirectory(path)
 			}
 		
-		bool FileSystem:deleteDirectory(char from[])
+		bool FileSystem:deleteDirectory(char path[])
 			{
-			return lib.deleteDirectory(from)
+			return lib.deleteDirectory(path)
 			}
 		}
 	

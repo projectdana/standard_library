@@ -26,9 +26,9 @@ interface File{
 	
 	/*
 	 {"@description" : "Write an array of bytes to a file.",
-			"@return" : "The number of bytes actually written to the file (returning a number less that data.arrayLength indicates that an error occurred)."}
+			"@return" : "The number of bytes actually written to the file (returning a number less that content.arrayLength indicates that an error occurred)."}
 	*/
-	int write(byte data[])
+	int write(byte content[])
 	
 	/*
 	 {"@description" : "Move the logical read/write position of the file to a specified offset.",
