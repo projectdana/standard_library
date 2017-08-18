@@ -1,4 +1,5 @@
 conf/appfb.txt
+conf/canvas.txt
 conf/sys_info.txt
 conf/window.txt
 conf/title.txt
@@ -11,3 +12,4 @@ conf/glviewer.txt
 conf/fs.txt
 conf/stringutil.txt
 conf/list.txt
+conf/label.txt

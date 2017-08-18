@@ -1,0 +1,5 @@
+data EventData {
+	Object source
+	int type
+	Data details
+	}

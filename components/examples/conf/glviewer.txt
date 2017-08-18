@@ -1,1 +1,2 @@
 GLViewer=ui.GraphicsListView.o
+Panel->Panel

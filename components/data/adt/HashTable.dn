@@ -1,106 +1,121 @@
-data ListItem{
+data ListItem {
 	char key[]
 	Data value
 	ListItem next
 	ListItem prev
 	}
 
+data HashBucket {
+	ListItem items
+	}
+
 component provides HashTable(Destructor, AdaptEvents) {
 	
-	ListItem list
-	ListItem listEnd
+	int HT_LEN = 100
+	HashBucket table[] = new HashBucket[HT_LEN]
+	
 	int length
+	
 	Mutex listLock = new Mutex()
 	
-	void HashTable:put(char key[], Data value)
+	int hash(char key[])
 		{
-		mutex(listLock)
+		int result = 1
+		
+		for (int i = 0; i < key.arrayLength; i++)
 			{
-			ListItem ni = new ListItem(key, value)
-			
-			if (list == null)
-				{
-				list = ni
-				}
-				else
-				{
-				listEnd.next = ni
-				ni.prev = listEnd
-				}
-			
-			listEnd = ni
-			
-			length ++
+			result = result * key[i]
 			}
+		
+		return result % HT_LEN
+		}
+	
+	ListItem getHashItem(char key[])
+		{
+		int index = hash(key)
+		
+		if (table[index] != null)
+			{
+			ListItem lw = table[index].items
+			while (lw != null)
+				{
+				if (lw.key == key)
+					{
+					return lw
+					}
+				
+				lw = lw.next
+				}
+			}
+		
+		return null
 		}
 	
 	Data HashTable:get(char key[])
 		{
 		mutex(listLock)
 			{
-			ListItem lw = list
-			while (lw != null)
-				{
-				if (lw.key == key)
-					{
-					return lw.value
-					}
-				
-				lw = lw.next
-				}
+			ListItem lw = getHashItem(key)
+			
+			if (lw != null) return lw.value
 			
 			return null
 			}
 		}
 	
-	void HashTable:update(char key[], Data newVersion)
+	void HashTable:put(char key[], Data value)
 		{
 		mutex(listLock)
 			{
-			ListItem lw = list
-			while (lw != null)
+			ListItem lw = getHashItem(key)
+			
+			if (lw != null)
 				{
-				if (lw.key == key)
-					{
-					lw.value = newVersion
-					
-					break
-					}
+				lw.value = value
+				}
+				else
+				{
+				int index = hash(key)
 				
-				lw = lw.next
+				if (table[index] == null)
+					table[index] = new HashBucket()
+				
+				ListItem ni = new ListItem(key, value)
+				ni.next = table[index].items
+				if (table[index].items != null) table[index].items.prev = ni
+				table[index].items = ni
+				
+				length ++
 				}
 			}
+		}
+	
+	void HashTable:update(char key[], Data newVersion)
+		{
+		put(key, newVersion)
 		}
 	
 	void HashTable:delete(char key[])
 		{
 		mutex(listLock)
 			{
-			ListItem lw = list
-			while (lw != null)
-				{
-				if (lw.key == key)
-					{
-					if (lw.prev != null)
-						lw.prev.next = lw.next
-						else
-						list = lw.next
-					
-					if (lw.next != null)
-						lw.next.prev = lw.prev
-						else
-						listEnd = lw.prev
-					
-					lw.next = null
-					lw.prev = null
-					
-					break
-					}
-				
-				lw = lw.next
-				}
+			ListItem lw = getHashItem(key)
 			
-			length --
+			if (lw != null)
+				{
+				HashBucket bucket = table[hash(key)]
+				
+				if (lw.prev != null)
+					lw.prev.next = lw.next
+				
+				if (lw.next != null)
+					lw.next.prev = lw.prev
+				
+				if (bucket.items === lw)
+					bucket.items = lw.next
+				
+				length --
+				}
 			}
 		}
 	
@@ -119,12 +134,18 @@ component provides HashTable(Destructor, AdaptEvents) {
 			HashTableItem items[] = new HashTableItem[length]
 			
 			int j = 0
-			for (ListItem i = list; i != null; i = i.next)
+			for (int i = 0; i < HT_LEN; i++)
 				{
-				items[j] = new HashTableItem()
-				items[j].key = i.key
-				items[j].value = i.value
-				j ++
+				if (table[i] != null)
+					{
+					for (ListItem q = table[i].items; q != null; q = q.next)
+						{
+						items[j] = new HashTableItem()
+						items[j].key = q.key
+						items[j].value = q.value
+						j ++
+						}
+					}
 				}
 			
 			return items
@@ -154,17 +175,22 @@ component provides HashTable(Destructor, AdaptEvents) {
 	
 	void clearList()
 		{
-		ListItem lw = list
-		list = null
-		listEnd = null
-		while (lw != null)
+		for (int i = 0; i < HT_LEN; i++)
 			{
-			ListItem td = lw
-			
-			lw = lw.next
-			
-			td.next = null
-			td.prev = null
+			if (table[i] != null)
+				{
+				ListItem q = table[i].items
+				while (q != null)
+					{
+					ListItem td = q
+					q = q.next
+					
+					td.next = null
+					td.prev = null
+					}
+				
+				table[i].items = null
+				}
 			}
 		
 		length = 0

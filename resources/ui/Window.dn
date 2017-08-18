@@ -1,37 +1,16 @@
-uses GraphicsObject
-uses Point2D
-uses Rect2D
-uses Line2D
-uses ClickableObject
-uses XYMouseListener
-uses TitleBar
 uses Rect
-uses Bitmap
-uses Font
-
-interface Canvas extends Panel{
-	void drawRect(Rect2D rect)
-	void drawRectOutline(Rect2D rect)
-	void drawLine(Line2D line)
-	void drawPoint(Point2D point)
-	void drawBitmap(Bitmap map, int x, int y)
-	void drawText(Point2D position, Font f, char text[])
-	void pushSurface(Rect rect, int xscr, int yscr)
-	void popSurface()
-	}
 
 /*
- {"description" : "This allows the programmer to create new graphical windows on the screen. A Window inherits from Canvas, which defines the fundamental drawing API supported by the window. Any graphical objects that are added to the window are asked to 'paint' themselves using the Canvas API. A button for example may use the Canvas.drawRect function to draw the clickable button area, and the Canvas.drawText function to draw the button's label."}
+ {"description" : "This allows the programmer to create new graphical windows on the screen."}
 */
-interface Window extends Canvas{
+interface Window extends Panel {
+	const int EVENT_CLOSE = 1
+	eventsource windowEvents
+	
 	Window(char title[])
 	
 	void setVisible(bool b)
 	void setTitle(char title[])
-	
-	void addXYMouseListener(XYMouseListener ml)
-	
-	void addCloseListener(CloseEventListener el)
 	
 	Rect getRect()
 	

@@ -1,19 +1,27 @@
-component provides App(CloseEventListener) requires ui.Window, ui.Label, io.Output out{
+uses events.EventData
+
+component provides App requires ui.Window, ui.Label, io.Output out {
+	
+	Window window
 	
 	Thread main
 	
-	void CloseEventListener:closeEvent()
+	eventsink Events(EventData ed)
 		{
-		main.signal()
+		if (ed.source === window)
+			{
+			main.signal()
+			}
 		}
 	
 	int App:main(AppParam params[])
 		{
-		Window window = new Window("Font test")
+		window = new Window("Font test")
+		window.setSize(600, 200)
 		window.setVisible(true)
 		
-		Label label1 = new Label("Default Dana system font.", "SourceSansPro.ttf")
-		Label label2 = new Label("Default Dana system font (monospaced).", "LiberationMono.ttf")
+		Label label1 = new Label("Default Dana system font.", "SourceSansPro.ttf", 18)
+		Label label2 = new Label("Default Dana system font (monospaced).", "LiberationMono.ttf", 18)
 		
 		label1.setPosition(10, 40)
 		label2.setPosition(10, 80)
@@ -21,9 +29,10 @@ component provides App(CloseEventListener) requires ui.Window, ui.Label, io.Outp
 		window.addObject(label1)
 		window.addObject(label2)
 		
-		window.addCloseListener(this)
-		
 		main = this.thread
+		
+		sinkevent Events(window.windowEvents)
+		
 		this.thread.wait()
 		
 		window.close()

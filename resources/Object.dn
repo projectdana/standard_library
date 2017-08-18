@@ -19,4 +19,9 @@ interface Object{
 		return "<object>"
 		}
 	
+	char[] getID()
+		{
+		return dana.getSelfID()
+		}
+	
 	}

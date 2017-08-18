@@ -7,6 +7,7 @@ interface List{
 	 {"@description" : "The contents of the list."}
 	*/
 	transfer Data content[]
+	transfer int iteratorIndex
 	
 	/*
 	 {"@description" : "Add a new item to the list."}
@@ -35,7 +36,12 @@ interface List{
 	*/
 	Data getNext()
 	
-	int getIteratorIndex()
+	/*
+	 {"@description" : "Iterator: call this function to check if we've reached the end of the list.",
+			"@return" : "True if the end of the list has been reached; false otherwise."}
+	*/
+	bool isEnd()
+	
 	int getLength()
 	Data[] getContents()
 	}

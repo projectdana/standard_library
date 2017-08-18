@@ -1,4 +1,4 @@
-component provides Button(AdaptEvents, AdaptDestructor) requires io.Output out, data.IntUtil iu, Font, os.SystemInfo sysInfo {
+component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, Font, os.SystemInfo sysInfo {
 	
 	Font labelFont
 	
@@ -11,18 +11,13 @@ component provides Button(AdaptEvents, AdaptDestructor) requires io.Output out, 
 	void AdaptEvents:active()
 		{
 		labelFont = new Font(sysInfo.getSystemFont(false), 15)
+		postRepaint()
 		}
 	
 	void Button:setPosition(int x, int y)
 		{
 		xPosition = x
 		yPosition = y
-		}
-	
-	void Button:setPanel(Panel p)
-		{
-		myPanel = p
-		myPanel.addClickTarget(this)
 		}
 	
 	void Button:paint(Canvas c)
@@ -35,33 +30,13 @@ component provides Button(AdaptEvents, AdaptDestructor) requires io.Output out, 
 		{
 		if (button == MouseButtons.BUTTON_LEFT)
 			{
-			for (int i = 0; i < listeners.arrayLength; i++)
-				{
-				listeners[i].click(this)
-				}
+			emitevent clickEvents(ClickableObject.EVENT_CLICK, null)
 			}
 		}
 	
-	void Button:addClickListener(ClickListener cl)
+	void Button:postRepaint()
 		{
-		listeners = new ClickListener[](listeners, cl)
-		}
-	
-	void Button:remClickListener(ClickListener cl)
-		{
-		ClickListener nl[] = new ClickListener[listeners.arrayLength - 1]
-		int j = 0
-		for (int i = 0; i < listeners.arrayLength; i++)
-			{
-			ClickListener q = listeners[i]
-			
-			if (q !== cl)
-				{
-				nl[j] = listeners[i]
-				j ++
-				}
-			}
-		listeners = nl
+		emitevent graphicsEvents(GraphicsObject.EVENT_REPAINT, null)
 		}
 	
 	void Button:setText(char t[])
@@ -89,32 +64,10 @@ component provides Button(AdaptEvents, AdaptDestructor) requires io.Output out, 
 		return new Point(xPosition, yPosition)
 		}
 	
-	ClickListenerItem[] Button:getClickListeners()
-		{
-		ClickListenerItem lst[] = new ClickListenerItem[listeners.arrayLength]
-		for (int i = 0; i < lst.arrayLength; i++)
-			{
-			lst[i] = new ClickListenerItem(listeners[i])
-			}
-		
-		return lst
-		}
-	
-	Panel Button:getPanel()
-		{
-		return myPanel
-		}
-	
-	
 	bool Button:equals(Object o)
 		{
 		Button bq = o
 		
 		return text == bq.getText()
-		}
-	
-	void AdaptDestructor:destroy()
-		{
-		myPanel.repaint()
 		}
 	}

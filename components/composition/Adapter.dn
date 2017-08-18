@@ -10,11 +10,11 @@ component provides Adapter {
 			// - construct a new object, state-linked to the current object
 			Object a = dana.adaptConstruct(source :< type, object)
 			// - notify the object that it's now the "inactive" copy
-			if ((ae = dana.getObjectID(object, AdaptEvents)) != null) ae.inactive()
+			if ((ae = dana.getObjectInterface(ofComponent, object, AdaptEvents)) != null) ae.inactive()
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			if ((ae = dana.getObjectID(object, AdaptEvents)) != null) ae.active()
+			if ((ae = dana.getObjectInterface(source, object, AdaptEvents)) != null) ae.active()
 			// - allow new calls to proceed in the new object
 			dana.resumeObject(object)
 			// - wait for all in-progress calls to finish in the old object
@@ -34,11 +34,11 @@ component provides Adapter {
 			// - construct a new object, state-linked to the current object
 			Object a = dana.adaptConstruct(source :< type, object)
 			// - notify the object that it's now the "inactive" copy
-			if ((ae = dana.getObjectID(object, AdaptEvents)) != null) ae.inactive()
+			if ((ae = dana.getObjectInterface(ofComponent, object, AdaptEvents)) != null) ae.inactive()
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			if ((ae = dana.getObjectID(object, AdaptEvents)) != null) ae.active()
+			if ((ae = dana.getObjectInterface(source, object, AdaptEvents)) != null) ae.active()
 			// - allow new calls to proceed in the new object
 			dana.resumeObject(object)
 			// - destroy the old object

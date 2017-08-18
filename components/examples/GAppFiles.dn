@@ -1,52 +1,37 @@
-component provides App(ui.ClickListener, CloseEventListener) requires ui.Window, ui.Button, ui.FileBrowser, io.Output out{
+uses events.EventData
+
+component provides App requires ui.Window, ui.Button, ui.FileBrowser, io.Output out{
 	
-	Button b1
-	Button b2
+	Window window
 	
 	Thread main
 	
-	void ClickListener:click(Object o)
+	eventsink Events(EventData ed)
 		{
-		if (b1 === o)
-			out.println("A BUTTON CLICK!")
-		
-		if (b2 === o)
-			out.println("A BUTTON CLICK TOO!")
-		}
-	
-	void CloseEventListener:closeEvent()
-		{
-		main.signal()
+		if (ed.source === window)
+			{
+			main.signal()
+			}
 		}
 	
 	int App:main(AppParam params[])
 		{
-		Window window = new Window("My file browser")
+		window = new Window("My file browser")
+		window.setSize(400, 400)
 		window.setVisible(true)
 		
 		FileBrowser browser = new FileBrowser()
 		
-		b1 = new Button("One")
-		b2 = new Button("Two")
-		
-		b1.setPosition(10, 40)
-		b2.setPosition(70, 40)
-		
-		window.addObject(b1)
-		b1.addClickListener(this)
-		
-		window.addObject(b2)
-		b2.addClickListener(this)
-		
-		browser.setPosition(10, 100)
-		browser.setSize(480, 390)
+		browser.setPosition(5, 30)
+		browser.setSize(385, 340)
 		
 		window.addObject(browser)
 		browser.setDirectory("c:/")
 		
-		window.addCloseListener(this)
-		
 		main = this.thread
+		
+		sinkevent Events(window.windowEvents)
+		
 		this.thread.wait()
 		
 		window.close()

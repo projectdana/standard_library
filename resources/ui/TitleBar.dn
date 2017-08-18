@@ -5,22 +5,24 @@
 
 uses Window
 uses Rect
+uses Canvas
 
-interface CloseEventListener{
-	void closeEvent()
+data TitleEvent {
+	int x
+	int y
 	}
 
-interface TitleBarEventListener{
-	void maximiseEvent()
-	void minimiseEvent()
-	}
-
-interface TitleBar{
+interface TitleBar extends Panel {
 	
 	transfer char title[]
-	transfer Window window
-	transfer CloseEventListener closeListeners[]
-	transfer TitleBarEventListener eventListeners[]
+	transfer Rect windowRect
+	
+	const int EVENT_MOVE = 1
+	const int EVENT_MAX = 2
+	const int EVENT_MIN = 3
+	const int EVENT_CLOSE = 4
+	
+	eventsource titleBarEvents
 	
 	TitleBar(char title[])
 	
@@ -29,14 +31,5 @@ interface TitleBar{
 	void setTitle(char title[])
 	char[] getTitle()
 	
-	void setWindow(Window w)
-	Window getWindow()
-	
-	void addCloseListener(CloseEventListener l)
-	void remCloseListener(CloseEventListener l)
-	
-	void addEventListener(TitleBarEventListener l)
-	void remEventListener(TitleBarEventListener l)
-	
-	void paint(Canvas c)
+	void setWindowRect(Rect w)
 	}

@@ -10,7 +10,6 @@ component provides List(Destructor, AdaptEvents) {
 	ListItem listEnd
 	ListItem iteratorNext
 	int length
-	int iteratorIndex
 	
 	Mutex listLock = new Mutex()
 	
@@ -132,6 +131,11 @@ component provides List(Destructor, AdaptEvents) {
 			}
 		}
 	
+	bool List:isEnd()
+		{
+		return iteratorNext == null
+		}
+	
 	int List:getLength()
 		{
 		mutex(listLock)
@@ -155,11 +159,6 @@ component provides List(Destructor, AdaptEvents) {
 			
 			return items
 			}
-		}
-	
-	int List:getIteratorIndex()
-		{
-		return iteratorIndex
 		}
 	
 	void buildFromArray(Data items[])
@@ -216,6 +215,14 @@ component provides List(Destructor, AdaptEvents) {
 		{
 		//unpack list contents from transfer state
 		buildFromArray(content)
+		
+		//recall our iterator position
+		int q = iteratorIndex
+		getFirst()
+		for (int i = 0; i < q; i++)
+			{
+			getNext()
+			}
 		}
 	
 	}

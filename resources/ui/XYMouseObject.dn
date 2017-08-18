@@ -5,8 +5,8 @@
 
 uses MouseButtons
 
-interface XYMouseListener{
-	void mouseDown(int x, int y, int button)
-	void mouseUp(int x, int y, int button)
-	void mouseMove(int x, int y)
+interface XYMouseObject extends ClickableObject {
+	void mouseDown(int x, int y, int button){}
+	void mouseUp(int x, int y, int button){}
+	void mouseMove(int x, int y){}
 	}

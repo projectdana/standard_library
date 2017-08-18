@@ -5,6 +5,6 @@
 
 uses GraphicsObject
 
-interface GraphicsListView extends Panel{
-	void clear()
+interface GraphicsListView extends Panel {
+	GraphicsListView()
 	}

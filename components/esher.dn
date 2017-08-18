@@ -165,6 +165,16 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 					{
 					if (d.toRole == r.name)
 						{
+						if (rx.class :> d.interfaceType == null)
+							{
+							throw new Exception("Component $(rx.source) claims to require $(d.interfaceType) but does not")
+							}
+						
+						if (r.class :< d.interfaceType == null)
+							{
+							throw new Exception("Component $(r.source) claims to provide $(d.interfaceType) but does not")
+							}
+						
 						dana.rewire(rx.class :> d.interfaceType, r.class :< d.interfaceType)
 						d.connected = true
 						break
@@ -184,6 +194,16 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 				{
 				if (d.toRole == rx.name && !d.connected)
 					{
+					if (rx.class :< d.interfaceType == null)
+						{
+						throw new Exception("Component $(rx.source) claims to provide $(d.interfaceType) but does not")
+						}
+					
+					if (r.class :> d.interfaceType == null)
+						{
+						throw new Exception("Component $(r.source) claims to require $(d.interfaceType) but does not")
+						}
+					
 					dana.rewire(r.class :> d.interfaceType, rx.class :< d.interfaceType)
 					d.connected = true
 					}

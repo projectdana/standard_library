@@ -2,5 +2,6 @@ FileBrowser=ui\FileBrowserB
 FileSystem->FileSystem
 Button->BSButton
 StringUtil->StringUtil
-Font->UIPlane
+Font->Canvas
 SystemInfo->SystemInfo
+Panel->Panel

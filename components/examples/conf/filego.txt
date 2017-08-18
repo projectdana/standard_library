@@ -1,5 +1,5 @@
 FileGO=ui\FileObject.o
 FileSystem->FileSystem
 SystemInfo->SystemInfo
-Font->UIPlane
+Font->Canvas
 StringUtil->StringUtil

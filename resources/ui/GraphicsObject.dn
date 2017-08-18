@@ -7,14 +7,18 @@ uses Window
 uses WH
 uses Point
 uses Panel
+uses Canvas
 
 interface GraphicsObject{
 	transfer Panel myPanel
 	transfer int xPosition
 	transfer int yPosition
 	
-	void setPanel(Panel rp)
-	Panel getPanel()
+	const int EVENT_REPAINT = 1
+	eventsource graphicsEvents
+	
+	void postRepaint()
+	
 	void paint(Canvas c)
 	void setPosition(int x, int y)
 	Point getPosition()

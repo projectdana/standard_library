@@ -5,7 +5,7 @@
 uses ClickableObject
 
 interface Button extends ClickableObject{
-
+	
 	/*
 	 {"@description" : "The button's current label text."}
 	*/

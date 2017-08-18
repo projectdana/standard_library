@@ -1,2 +1,2 @@
 UILabel=ui.Label
-Font->UIPlane
+Font->Canvas

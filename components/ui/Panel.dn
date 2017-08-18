@@ -10,7 +10,9 @@ data ClickableItem{
 	ClickableItem prev
 	}
 
-component provides Panel requires io.Output out{
+uses events.EventData
+
+component provides Panel requires io.Output out {
 	
 	GraphicsItem objects
 	GraphicsItem lastObject
@@ -21,21 +23,20 @@ component provides Panel requires io.Output out{
 	bool backgroundSet
 	Color backgroundColor
 	
+	eventsink Events(EventData ed)
+		{
+		if (ed.type == GraphicsObject.EVENT_REPAINT)
+			postRepaint()
+		}
+	
+	Panel:Panel()
+		{
+		}
+	
 	void Panel:setPosition(int x, int y)
 		{
 		xPosition = x
 		yPosition = y
-		}
-	
-	void Panel:setPanel(Panel p)
-		{
-		myPanel = p
-		myPanel.addClickTarget(this)
-		}
-	
-	Panel Panel:getPanel()
-		{
-		return myPanel
 		}
 	
 	WH Panel:getPreferredSize()
@@ -48,10 +49,15 @@ component provides Panel requires io.Output out{
 		//background
 		if (backgroundSet) c.drawRect(new Rect2D(xPosition, yPosition, width, height, backgroundColor))
 		
+		//occlude contents at panel boundary
+		c.pushSurface(new Rect(xPosition, yPosition, width, height), 0, 0)
+		
 		for (GraphicsItem gi = objects; gi != null; gi = gi.next)
 			{
 			gi.object.paint(c)
 			}
+		
+		c.popSurface()
 		}
 	
 	void Panel:addObject(GraphicsObject go)
@@ -66,9 +72,12 @@ component provides Panel requires io.Output out{
 		newItem.prev = lastObject
 		lastObject = newItem
 		
-		go.setPanel(this)
+		if (go hastype ClickableObject)
+			addClickTarget(go)
 		
-		repaint()
+		sinkevent Events(go.graphicsEvents)
+		
+		postRepaint()
 		}
 	
 	void Panel:remObject(GraphicsObject go)
@@ -89,9 +98,45 @@ component provides Panel requires io.Output out{
 					else
 					td.next.prev = td.prev
 				
-				return
+				break
 				}
 			}
+		
+		if (go hastype ClickableObject)
+			remClickTarget(go)
+		
+		postRepaint()
+		}
+	
+	void Panel:clearObjects()
+		{
+		GraphicsItem iw = objects
+		while (iw != null)
+			{
+			GraphicsItem td = iw
+			iw = iw.next
+			
+			td.next = null
+			td.prev = null
+			}
+		
+		objects = null
+		lastObject = null
+		
+		ClickableItem ci = clickObjects
+		while (ci != null)
+			{
+			ClickableItem td = ci
+			ci = ci.next
+			
+			td.next = null
+			td.prev = null
+			}
+		
+		clickObjects = null
+		lastClickObject = null
+		
+		postRepaint()
 		}
 	
 	GraphicsObjectItem[] Panel:getObjects()
@@ -101,7 +146,7 @@ component provides Panel requires io.Output out{
 	
 	Rect Panel:getBounds()
 		{
-		return new Rect(xPosition, yPosition, 480, 390)
+		return new Rect(xPosition, yPosition, width, height)
 		}
 	
 	Point Panel:getPosition()
@@ -109,17 +154,9 @@ component provides Panel requires io.Output out{
 		return new Point(xPosition, yPosition)
 		}
 	
-	void Panel:addClickListener(ClickListener cl)
+	void Panel:postRepaint()
 		{
-		}
-	
-	void Panel:remClickListener(ClickListener cl)
-		{
-		}
-	
-	ClickListenerItem[] Panel:getClickListeners()
-		{
-		return null
+		emitevent graphicsEvents(GraphicsObject.EVENT_REPAINT, null)
 		}
 	
 	void Panel:setBackground(Color c)
@@ -131,11 +168,6 @@ component provides Panel requires io.Output out{
 	Color Panel:getBackground()
 		{
 		return backgroundColor
-		}
-	
-	void Panel:repaint()
-		{
-		myPanel.repaint()
 		}
 	
 	void Panel:setSize(int w, int h)
@@ -153,36 +185,17 @@ component provides Panel requires io.Output out{
 		{
 		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
 			{
-			while (ci != null && ci.object == null)
-				{
-				ClickableItem td = ci
-				ci = ci.next
-				
-				if (td.prev == null)
-					clickObjects = td.next
-					else
-					td.prev.next = td.next
-				
-				if (td.next == null)
-					lastClickObject = td.prev
-					else
-					td.next.prev = td.prev
-				}
+			Rect r = ci.object.getBounds()
 			
-			if (ci != null)
+			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				Rect r = ci.object.getBounds()
-				
-				if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
-					{
-					ci.object.click(x, y, button)
-					break
-					}
+				ci.object.click(x - r.x, y - r.y, button)
+				break
 				}
 			}
 		}
 	
-	void Panel:addClickTarget(ClickableObject co)
+	void addClickTarget(ClickableObject co)
 		{
 		ClickableItem nci = new ClickableItem(co)
 		
@@ -195,7 +208,7 @@ component provides Panel requires io.Output out{
 		lastClickObject = nci
 		}
 	
-	void Panel:remClickTarget(ClickableObject o)
+	void remClickTarget(ClickableObject o)
 		{
 		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
 			{
@@ -218,9 +231,10 @@ component provides Panel requires io.Output out{
 			}
 		}
 	
-	ClickableObjectItem[] Panel:getClickTargets()
-		{
-		return null
-		}
+	/*
+	void Panel:mouseDown(int x, int y, int button){}
+	void Panel:mouseUp(int x, int y, int button){}
+	void Panel:mouseMove(int x, int y){}
+	*/
 	
 	}

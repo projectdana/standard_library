@@ -1,0 +1,48 @@
+/*
+ {"description" : "Canvas defines a fundamental drawing API, typically used by a Window and offered as a painting surface to any objects on the window."}
+*/
+
+uses Rect2D
+uses Line2D
+uses Color
+uses Point2D
+uses Bitmap
+uses Font
+uses Rect
+
+data MouseEvent	{
+	int type
+	
+	int button
+	int x
+	int y
+	}
+
+interface Canvas {
+	
+	const int EVENT_MOUSE_UP = 1
+	const int EVENT_MOUSE_DOWN = 2
+	const int EVENT_MOUSE_MOVE = 3
+	
+	eventsource events
+	
+	Canvas()
+	
+	void setVisible(bool v)
+	void setTitle(char title[])
+	void setPosition(int x, int y)
+	void setSize(int w, int h)
+	void setBackground(Color c)
+	
+	void drawRect(Rect2D rect)
+	void drawRectOutline(Rect2D rect)
+	void drawLine(Line2D line)
+	void drawPoint(Point2D point)
+	void drawBitmap(Bitmap map, int x, int y)
+	void drawText(Point2D position, Font f, char text[])
+	void pushSurface(Rect rect, int xscr, int yscr)
+	void popSurface()
+	void paint()
+	
+	void close()
+	}

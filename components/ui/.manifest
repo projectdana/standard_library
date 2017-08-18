@@ -1,5 +1,5 @@
 {
 "defaultLinks":	[
-				{"interface": "Font", "component": "Window"}
+				{"interface": "Font", "component": "Canvas"}
 				]
 }

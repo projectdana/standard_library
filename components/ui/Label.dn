@@ -4,19 +4,28 @@ component provides Label requires Font {
 	
 	Font font
 	
-	Label:Label(char txt[], char fontPath[])
+	Color color
+	
+	Label:Label(char txt[], char fontPath[], int fontSize)
 		{
-		font = new Font(fontPath, 18)
+		font = new Font(fontPath, fontSize)
 		
 		if (font == null) throw new Exception("Font '$fontPath' could not be loaded")
 		
 		text = txt
+		
+		color = new Color(0, 0, 0, 255)
 		}
 	
 	void Label:setText(char txt[])
 		{
 		text = txt
-		myPanel.repaint()
+		postRepaint()
+		}
+	
+	void Label:setColor(Color c)
+		{
+		color = c
 		}
 	
 	void Label:setPosition(int x, int y)
@@ -30,14 +39,9 @@ component provides Label requires Font {
 		return new Point(xPosition, yPosition)
 		}
 	
-	void Label:setPanel(Panel p)
-		{
-		myPanel = p
-		}
-	
 	void Label:paint(Canvas c)
 		{
-		c.drawText(new Point2D(xPosition, yPosition, new Color(0, 0, 0, 255)), font, text)
+		c.drawText(new Point2D(xPosition, yPosition, color), font, text)
 		}
 	
 	WH Label:getPreferredSize()
@@ -45,8 +49,5 @@ component provides Label requires Font {
 		return new WH(font.getTextWidth(text), font.getFontMetrics().height)
 		}
 	
-	Panel Label:getPanel()
-		{
-		return myPanel
-		}
+	void Label:postRepaint(){}
 	}

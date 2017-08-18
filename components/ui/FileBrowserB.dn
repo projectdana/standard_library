@@ -19,7 +19,15 @@ data GraphicsItem{
 	GraphicsItem prev
 	}
 
-component provides FileBrowser(ClickListener,AdaptEvents) requires io.FileSystem fileSystem, Button, data.StringUtil stringUtil, io.Output out, Font, os.SystemInfo sysInfo, data.IntUtil iu{
+data ClickableItem{
+	ClickableObject object
+	ClickableItem next
+	ClickableItem prev
+	}
+
+uses events.EventData
+
+component provides FileBrowser(AdaptEvents) requires Panel, io.FileSystem fileSystem, Button, data.StringUtil stringUtil, io.Output out, Font, os.SystemInfo sysInfo, data.IntUtil iu{
 
 	FileCategory categories
 	FileCategory categoriesEnd
@@ -36,16 +44,22 @@ component provides FileBrowser(ClickListener,AdaptEvents) requires io.FileSystem
 	GraphicsItem objects
 	GraphicsItem objectsEnd
 	
+	ClickableItem clickObjects
+	ClickableItem lastClickObject
+	
+	
 	FileBrowser:FileBrowser()
 		{
+		super()
+		
 		upButton = new Button("Up")
 		backButton = new Button("Back")
 		
 		addObject(upButton)
 		addObject(backButton)
 		
-		upButton.addClickListener(this)
-		backButton.addClickListener(this)
+		upButton.setPosition(0, 0)
+		backButton.setPosition(50, 0)
 		
 		labelFont = new Font(sysInfo.getSystemFont(false), 15)
 		}
@@ -53,7 +67,7 @@ component provides FileBrowser(ClickListener,AdaptEvents) requires io.FileSystem
 	void AdaptEvents:active()
 		{
 		FileBrowser()
-		setPosition(xPosition, yPosition)
+		
 		setDirectory(currentDirectory)
 		}
 	
@@ -134,47 +148,12 @@ component provides FileBrowser(ClickListener,AdaptEvents) requires io.FileSystem
 				}
 			}
 		
-		myPanel.repaint()
+		postRepaint()
 		}
 	
 	char[] FileBrowser:getDirectory()
 		{
 		return currentDirectory
-		}
-	
-	void ClickListener:click(Object o)
-		{
-		if (o === upButton)
-			{
-			//if there is more than one "/" on the path, remove the last one
-			String parts[] = stringUtil.explode(currentDirectory, "/")
-			if (parts.arrayLength > 1)
-				{
-				String xparts[] = new String[parts.arrayLength - 1]
-				xparts =[] parts
-				
-				char nxt[] = new char[](stringUtil.implode(xparts, "/"), "/")
-				
-				if (currentDirectory != "")
-					{
-					PrevDir npd = new PrevDir(currentDirectory)
-					npd.next = history
-					history = npd
-					}
-				
-				setDirectory(nxt)
-				}
-			}
-			else if (o === backButton)
-			{
-			if (history != null)
-				{
-				PrevDir gt = history
-				history = history.next
-				
-				setDirectory(gt.dir)
-				}
-			}
 		}
 	
 	void drawCategoryContents(Canvas c, FileCategory fc, int x, int y, int areaWidth, int areaHeight)
@@ -217,20 +196,21 @@ component provides FileBrowser(ClickListener,AdaptEvents) requires io.FileSystem
 	
 	void FileBrowser:paint(Canvas c)
 		{
-		for (GraphicsItem gi = objects; gi != null; gi = gi.next)
-			{
-			gi.object.paint(c)
-			}
+		super(c)
 		
-		int cx = xPosition
-		int cy = yPosition + 25
+		c.pushSurface(new Rect(getPosition().x, getPosition().y, getSize().width, getSize().height), 0, 0)
+		
+		int myWidth = getSize().width
+		
+		int cx = 0
+		int cy = 50
 		
 		for (FileCategory fw = categories; fw != null; fw = fw.next)
 			{
-			if (cx + 80 > width)
+			if (cx + 80 > myWidth)
 				{
 				cy = cy + 90
-				cx = xPosition
+				cx = 0
 				}
 			
 			c.drawRectOutline(new Rect2D(cx, cy, 80, 80, new Color(170, 170, 170, 255)))
@@ -241,122 +221,7 @@ component provides FileBrowser(ClickListener,AdaptEvents) requires io.FileSystem
 			
 			cx += 85
 			}
-		}
-	
-	void FileBrowser:setPanel(Panel p)
-		{
-		myPanel = p
 		
-		myPanel.addClickTarget(this)
-		}
-	
-	Panel FileBrowser:getPanel()
-		{
-		return myPanel
-		}
-	
-	WH FileBrowser:getPreferredSize()
-		{
-		return new WH(width, height)
-		}
-	
-	Point FileBrowser:getPosition()
-		{
-		return new Point(xPosition, yPosition)
-		}
-	
-	void FileBrowser:setPosition(int x, int y)
-		{
-		xPosition = x
-		yPosition = y
-		
-		upButton.setPosition(xPosition, yPosition)
-		backButton.setPosition(xPosition+50, yPosition)
-		}
-	
-	void FileBrowser:setSize(int newWidth, int newHeight)
-		{
-		width = newWidth
-		height = newHeight
-		}
-	
-	WH FileBrowser:getSize()
-		{
-		return new WH(width, height)
-		}
-	
-	Rect FileBrowser:getBounds()
-		{
-		return new Rect(xPosition, yPosition, width, height)
-		}
-	
-	void FileBrowser:addClickListener(ClickListener cl)
-		{
-		
-		}
-	
-	void FileBrowser:remClickListener(ClickListener cl)
-		{
-		
-		}
-	
-	ClickListenerItem[] FileBrowser:getClickListeners()
-		{
-		return null
-		}
-	
-	void FileBrowser:click(int x, int y, int button)
-		{
-		}
-	
-	void FileBrowser:setBackground(Color c)
-		{
-		}
-	
-	Color FileBrowser:getBackground()
-		{
-		return null
-		}
-	
-	void FileBrowser:repaint()
-		{
-		myPanel.repaint()
-		}
-	
-	void FileBrowser:addObject(GraphicsObject go)
-		{
-		GraphicsItem newItem = new GraphicsItem(go)
-		
-		if (objects == null)
-			objects = newItem
-			else
-			objectsEnd.next = newItem
-		
-		newItem.prev = objectsEnd
-		objectsEnd = newItem
-		
-		go.setPanel(this)
-		}
-	
-	void FileBrowser:remObject(GraphicsObject go)
-		{
-		}
-	
-	GraphicsObjectItem[] FileBrowser:getObjects()
-		{
-		return objects
-		}
-	
-	void FileBrowser:addClickTarget(ClickableObject co)
-		{
-		}
-	
-	void FileBrowser:remClickTarget(ClickableObject co)
-		{
-		}
-	
-	ClickableObjectItem[] FileBrowser:getClickTargets()
-		{
-		return null
+		c.popSurface()
 		}
 	}

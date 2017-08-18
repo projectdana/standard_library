@@ -1,7 +1,7 @@
 const int WIDTH = 20
 const int HEIGHT = 20
 
-component provides ColorButton(AdaptDestructor) requires io.Output out, data.IntUtil iu{
+component provides ColorButton(AdaptEvents) requires io.Output out, data.IntUtil iu{
 	
 	bool visible = true
 	
@@ -10,11 +10,10 @@ component provides ColorButton(AdaptDestructor) requires io.Output out, data.Int
 		xPosition = x
 		yPosition = y
 		}
-
-	void ColorButton:setPanel(Panel p)
+	
+	void AdaptEvents:active()
 		{
-		myPanel = p
-		myPanel.addClickTarget(this)
+		postRepaint()
 		}
 	
 	void ColorButton:paint(Canvas c)
@@ -29,33 +28,8 @@ component provides ColorButton(AdaptDestructor) requires io.Output out, data.Int
 		{
 		if (button == MouseButtons.BUTTON_LEFT)
 			{
-			for (int i = 0; i < listeners.arrayLength; i++)
-				{
-				listeners[i].click(this)
-				}
+			emitevent clickEvents(ClickableObject.EVENT_CLICK, null)
 			}
-		}
-	
-	void ColorButton:addClickListener(ClickListener cl)
-		{
-		listeners = new ClickListener[](listeners, cl)
-		}
-	
-	void ColorButton:remClickListener(ClickListener cl)
-		{
-		ClickListener nl[] = new ClickListener[listeners.arrayLength - 1]
-		int j = 0
-		for (int i = 0; i < listeners.arrayLength; i++)
-			{
-			ClickListener q = listeners[i]
-			
-			if (q !== cl)
-				{
-				nl[j] = listeners[i]
-				j ++
-				}
-			}
-		listeners = nl
 		}
 	
 	void ColorButton:setColor(Color newColor)
@@ -93,25 +67,8 @@ component provides ColorButton(AdaptDestructor) requires io.Output out, data.Int
 		return new Point(xPosition, yPosition)
 		}
 	
-	ClickListenerItem[] ColorButton:getClickListeners()
+	void ColorButton:postRepaint()
 		{
-		ClickListenerItem lst[] = new ClickListenerItem[listeners.arrayLength]
-		for (int i = 0; i < lst.arrayLength; i++)
-			{
-			lst[i] = new ClickListenerItem(listeners[i])
-			}
-		
-		return lst
-		}
-	
-	Panel ColorButton:getPanel()
-		{
-		return myPanel
-		}
-	
-	void AdaptDestructor:destroy()
-		{
-		visible = false
-		myPanel.repaint()
+		emitevent graphicsEvents(GraphicsObject.EVENT_REPAINT, null)
 		}
 	}
