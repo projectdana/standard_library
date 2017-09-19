@@ -65,7 +65,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
     int byteCount = 0
 
     while(byteCount < bsonDocuments.arrayLength){
-      int32 size
+      int4 size
 
       dana.getByteArrayOf(size) =[] bu.reverse(su.subString(bsonDocuments,byteCount,4))
 
@@ -77,7 +77,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
     return docs
   }
 
-  byte[] toLittleEndian(int32 value){
+  byte[] toLittleEndian(int4 value){
     return bu.reverse(dana.getByteArrayOf(value))
   }
 
@@ -333,7 +333,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
     int count = 0
 
-    int32 size
+    int4 size
 
     dana.getByteArrayOf(size) =[] bu.reverse(su.subString(content,count,4))
 
@@ -352,7 +352,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
       if(type == BSON_EMBEDDED_DOCUMENT){
 
-        int32 objectSize
+        int4 objectSize
 
         dana.getByteArrayOf(objectSize) =[]  bu.reverse(su.subString(content,count,4))
 
@@ -368,7 +368,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
         char value[] = ""
 
-        int32 valueSize
+        int4 valueSize
         dana.getByteArrayOf(valueSize) =[] bu.reverse(su.subString(content,count,4))
 
         //we've digested the size integer
@@ -408,7 +408,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
       if(type == BSON_INT_32){
 
-        int32 value
+        int4 value
 
         dana.getByteArrayOf(value) =[] bu.reverse(su.subString(content,count,4))
 
@@ -442,7 +442,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
       if(type == BSON_ARRAY){
 
-        int32 arraySize
+        int4 arraySize
 
         dana.getByteArrayOf(arraySize) =[] bu.reverse(su.subString(content,count,4))
 

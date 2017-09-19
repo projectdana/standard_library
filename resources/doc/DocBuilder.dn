@@ -29,6 +29,15 @@ data FieldDef {
 	char doc_description[]
 	}
 
+data EventSourceDef {
+	char name[]
+	char displayName[]
+	char type[]
+	bool array
+	
+	char doc_description[]
+	}
+
 data FunctionDef {
 	char name[]
 	char returnType[]
@@ -40,6 +49,7 @@ data FunctionDef {
 
 data InterfaceDef extends TypeDef {
 	FunctionDef functions[]
+	EventSourceDef eventSources[]
 	FieldDef transferFields[]
 	FieldDef constants[]
 	

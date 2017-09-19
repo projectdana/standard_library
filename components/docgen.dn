@@ -188,6 +188,27 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 						fd.write("</div>")
 						}
 					
+					// - event sources
+					
+					if (id.eventSources.arrayLength > 0)
+						{
+						fd.write("<div class = \"doc_eventsource_list\">")
+						
+						fd.write("<div class = \"doc_eventsource_list_hdr\">")
+						fd.write("Event sources")
+						fd.write("</div>")
+						
+						for (int j = 0; j < id.eventSources.arrayLength; j++)
+							{
+							fd.write("<div class = \"doc_eventsource_list_item\">")
+							//fd.write(formatType(sf, id.eventSources[j].type))
+							//fd.write(" ")
+							fd.write(id.eventSources[j].displayName)
+							fd.write("</div>")
+							}
+						fd.write("</div>")
+						}
+					
 					// - the list of functions as a summary (with hyperlinks to their descriptions)
 					
 					fd.write("<div class = \"doc_function_list\">")
@@ -262,6 +283,39 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 							
 							fd.write("<div class = \"doc_transfer_field\">")
 							fd.write("<span class = \"doc_function_description_param_name\">$(id.transferFields[j].name)</span> ")
+							fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
+							fd.write("</div>")
+							}
+						fd.write("</div>")
+						
+						fd.write("</div>")
+						}
+					
+					//the list of eventsource fields in detail
+					if (id.eventSources.arrayLength > 0)
+						{
+						fd.write("<div class = \"doc_function_description\">")
+						
+						fd.write("<div class = \"doc_event_sources_heading\">")
+						
+						fd.write("Event sources")
+						
+						fd.write("</div>")
+						
+						fd.write("<div class = \"doc_function_description_parameters\">")
+						for (int j = 0; j < id.eventSources.arrayLength; j++)
+							{
+							char desc[] = null
+							
+							if (id.eventSources[j].doc_description != null)
+								{
+								JSONElement doc = parser.parseDocument(id.eventSources[j].doc_description)
+								if (parser.getValue(doc, "@description") != null)
+									desc = parser.getValue(doc, "@description").value
+								}
+							
+							fd.write("<div class = \"doc_event_source\">")
+							fd.write("<span class = \"doc_function_description_param_name\">$(id.eventSources[j].name)</span> ")
 							fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
 							fd.write("</div>")
 							}

@@ -4,12 +4,30 @@
 
 interface Math {
 	/*
-	 {"@description" : "Return the square root of an integer value. If the result would be a decimal number it is truncated."}
-	*/
-	int sqrt(int val)
-	
-	/*
 	 {"@description" : "Return the square root of a decimal value."}
 	*/
-	dec sqrtDec(dec val)
+	dec sqrt(dec val)
+	
+	dec power(dec val, dec power)
+	dec rootn(dec val, dec root)
+	
+	dec log(dec val)
+	dec natlog(dec val)
+	dec natexp(dec val)
+	
+	dec cos(dec val)
+	dec sin(dec val)
+	dec tan(dec val)
+	
+	dec acos(dec val)
+	dec asin(dec val)
+	dec atan(dec val)
+	
+	dec cosh(dec val)
+	dec sinh(dec val)
+	dec tanh(dec val)
+	
+	dec acosh(dec val)
+	dec asinh(dec val)
+	dec atanh(dec val)
 	}

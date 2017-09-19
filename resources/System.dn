@@ -16,6 +16,11 @@ interface System {
 	byte[] getHostType()
 	
 	/*
+	{"@description" : "Get the VM's version number."}
+	*/
+	char[] getVersion()
+	
+	/*
 	{"@description" : "Get the list of search paths used by the Dana virtual machine when looking for components (affected e.g. by the -sp parameter)."}
 	*/
 	String[] getSearchPaths()

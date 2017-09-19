@@ -46,6 +46,25 @@ body{
 	font-family: monospace;
 }
 
+.doc_eventsource_list{
+	padding: 2px;
+	background-color: #FEC;
+}
+
+.doc_eventsource_list_hdr{
+	padding: 2px;
+	background-color: #FDB;
+	font-weight: bold;
+	color: #444;
+}
+
+.doc_eventsource_list_item{
+	padding: 2px;
+	margin-top: 4px;
+	margin-bottom: 4px;
+	font-family: monospace;
+}
+
 .doc_transfer_list{
 	padding: 2px;
 	background-color: #EEF;
@@ -120,6 +139,11 @@ body{
 .doc_function_description_return{
 	margin-top: 10px;
 	margin-left: 10px;
+}
+
+.doc_event_sources_heading{
+	font-size: large;
+	background-color: #FDB;
 }
 
 .doc_transfer_fields_heading{

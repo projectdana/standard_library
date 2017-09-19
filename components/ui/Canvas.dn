@@ -13,8 +13,6 @@ library interface UIPlaneLib{
 	
 	int makeWindow()
 	
-	int selectEvent(int phandle, WindowEventData w)
-	
 	void startPoly()
 	void addPolyPoint(int x, int y, byte r, byte g, byte b, byte a)
 	void endPoly()
@@ -64,34 +62,26 @@ library interface UIPlaneLib{
 	void unloadFont(int fd)
 	}
 
-component provides Canvas(Destructor), Font(Destructor), Service requires NativeLoader inl, TitleBar, io.Output out, data.IntUtil iu
+uses events.EventData
+
+component provides Canvas(Destructor), Font(Destructor), Service requires NativeLoader inl, io.Output out, data.IntUtil iu
 	{
 	static library UIPlaneLib lib
 	
 	implementation Canvas {
 		int platformHandle
 		Mutex windowStateLock = new Mutex()
-		bool destroy
 		
-		void eventLoop()
+		eventsink LibEvents(EventData ed)
 			{
-			while (true)
-				{
-				WindowEventData wed = new WindowEventData()
-				int e = lib.selectEvent(platformHandle, wed)
-				
-				if (destroy) break
-				
-				emitevent events(e, new MouseEvent(e, wed.button_id, wed.x, wed.y))
-				}
+			WindowEventData wed = ed.details
+			emitevent events(ed.type, new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
 			}
 		
 		Canvas:Canvas()
 			{
 			platformHandle = lib.makeWindow()
-			if (platformHandle == 0) throw new Exception("Platform window creation failed") //TODO
-			
-			asynch::eventLoop()
+			if (platformHandle == 0) throw new Exception("Platform window creation failed")
 			}
 		
 		void Canvas:setVisible(bool b)
@@ -116,7 +106,6 @@ component provides Canvas(Destructor), Font(Destructor), Service requires Native
 				{
 				if (platformHandle != 0)
 					{
-					destroy = true
 					lib.closeWindow(platformHandle)
 					platformHandle = 0
 					}

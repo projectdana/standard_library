@@ -84,6 +84,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 									new String("const"),
 									new String("transfer"),
 									new String("static"),
+									new String("eventsource"),
 									new String("new"),
 									new String("true"),
 									new String("false"),
@@ -405,6 +406,23 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		return true
 		}
 	
+	bool isEventSourceDeclaration(SourceFile sf, ParseToken tokens[], int start)
+		{
+		//[const|transfer|copy] <type> <name> [sqBrackets]
+		
+		if (tokens[start].content != "eventsource")
+			return false
+		
+		start ++
+		
+		if (!isPlainName(sf, tokens[start].content))
+			return false
+		
+		start ++
+		
+		return true
+		}
+	
 	bool isFunctionDeclaration(SourceFile sf, InterfaceDef forInterface, ParseToken tokens[], int start)
 		{
 		//regular:
@@ -540,6 +558,31 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			id.transferFields = new FieldDef[](id.transferFields, field)
 			else if (qConstant)
 			id.constants = new FieldDef[](id.constants, field)
+		
+		return start - os
+		}
+	
+	int consumeInterfaceEventSourceDeclaration(InterfaceDef id, ParseToken docComment, ParseToken tokens[], int start)
+		{
+		//eventsource <name>
+		EventSourceDef field = new EventSourceDef()
+		
+		int os = start
+		
+		//eventsource
+		//...
+		
+		start ++
+		
+		//field name
+		field.name = tokens[start].content
+		field.displayName = field.name
+		
+		start ++
+		
+		if (docComment != null) field.doc_description = docComment.content
+		
+		id.eventSources = new EventSourceDef[](id.eventSources, field)
 		
 		return start - os
 		}
@@ -806,6 +849,12 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 						{
 						//out.println(" - field")
 						ac = consumeInterfaceFieldDeclaration(id, lastDocComment, tokens, start)
+						lastDocComment = null
+						}
+						else if (isEventSourceDeclaration(root_sf, tokens, start))
+						{
+						//out.println(" - eventsource")
+						ac = consumeInterfaceEventSourceDeclaration(id, lastDocComment, tokens, start)
 						lastDocComment = null
 						}
 						else if (tokens[start].content == "}")
