@@ -911,6 +911,8 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 					start ++
 					count ++
 					}
+				
+				td.extendsType = getDataDef(root_sf, pkg)
 				}
 			
 			//the type definition

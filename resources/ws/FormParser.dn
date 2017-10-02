@@ -1,0 +1,30 @@
+/*
+ {"description" : "A parsed form field."}
+*/
+
+data FormField {
+	char key[]
+	byte value[]
+	}
+
+/*
+ {"description" : "Container for parsed form data."}
+*/
+
+data FormData {
+	FormField fields[]
+	}
+
+/*
+ {"description" : "Interface to parse the data sent in a HTTP web form via a POST request. The content type of the post, and the payload, should be directly passed into this interface. The implementation attempts to parse the form based on all known content types."}
+*/
+
+interface FormParser {
+	
+	/*
+	 {"@description" : "Parses form data from a POST request.",
+		"@return" : "The parsed form data, or null if no known parser was available for the given content type or the payload was malformed. Note that FormData may contain fields that are sub-types of FormField, depending on the type of form that was parsed."}
+	*/
+	FormData getFormData(char contentType[], byte payload[])
+	
+	}

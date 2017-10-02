@@ -1,0 +1,19 @@
+uses ws.FormParser
+
+/*
+ {"description" : "Interface for pluggable HTTP web form encodings."}
+*/
+
+interface Parser {
+	
+	/*
+	 {"@description" : "Detect whether or not an implementation is able to parse forms of this content type."}
+	*/
+	bool canParse(char contentType[])
+	
+	/*
+	 {"@description" : "Parse the given form. This function is only called if canParse returns true."}
+	*/
+	FormData parse(char contentType[], byte payload[])
+	
+	}

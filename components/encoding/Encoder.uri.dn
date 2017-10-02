@@ -1,0 +1,149 @@
+//NOTE: this component doesn't deal with UTF-8 input, and ideally should
+
+component provides Encoder:uri {
+	
+	bool encodeURIChar(char x)
+		{
+		return (x < "0" || (x > "9" && x < "A") || (x > "Z" && x < "a") || x > "z")
+				&& x != "-" && x != "_" && x != "." && x != "~"
+		}
+	
+	char[] byteToHex(byte b)
+		{
+		char res[] = new char[2]
+		
+		byte x = b & 0xF
+		
+		res[1] = "0123456789ABCDEF"[x]
+		
+		x = b & 0xF0
+		x = x >> 4
+		
+		res[0] = "0123456789ABCDEF"[x]
+		
+		return res
+		}
+	
+	byte hexVal(char x)
+		{
+		if (x == "0") return 0
+		else if (x == "1") return 1
+		else if (x == "2") return 2
+		else if (x == "3") return 3
+		else if (x == "4") return 4
+		else if (x == "5") return 5
+		else if (x == "6") return 6
+		else if (x == "7") return 7
+		else if (x == "8") return 8
+		else if (x == "9") return 9
+		else if (x == "a" || x == "A") return 10
+		else if (x == "b" || x == "B") return 11
+		else if (x == "c" || x == "C") return 12
+		else if (x == "d" || x == "D") return 13
+		else if (x == "e" || x == "E") return 14
+		else if (x == "f" || x == "F") return 15
+		
+		return 255
+		}
+	
+	byte hexToByte(char x[])
+		{
+		byte r = hexVal(x[0])
+		
+		r = r << 4
+		
+		r += hexVal(x[1])
+		
+		return r
+		}
+	
+	char[] Encoder:encode(char x[])
+		{
+		//detect the new content length
+		int len = 0
+		for (int i = 0; i < x.arrayLength; i++)
+			{
+			if (encodeURIChar(x[i]))
+				{
+				len += 3
+				}
+				else
+				{
+				len ++
+				}
+			}
+		
+		//now do the encoding, if needed
+		
+		if (len == x.arrayLength) return x
+		
+		char result[] = new char[len]
+		
+		len = 0
+		for (int i = 0; i < x.arrayLength; i++)
+			{
+			if (encodeURIChar(x[i]))
+				{
+				char cv[] = byteToHex(x[i])
+				
+				result[len] = "%"
+				result[len+1] = cv[0]
+				result[len+2] = cv[1]
+				
+				len += 3
+				}
+				else
+				{
+				result[len] = x[i]
+				len ++
+				}
+			}
+		
+		return result
+		}
+	
+	char[] Encoder:decode(char x[])
+		{
+		//detect the new content length
+		int len = 0
+		for (int i = 0; i < x.arrayLength; i++)
+			{
+			if (x[i] == "%")
+				i += 2
+			
+			len ++
+			}
+		
+		if (len == x.arrayLength) return x
+		
+		//perform the decoding
+		char result[] = new char[len]
+		char dch[] = new char[2]
+		len = 0
+		for (int i = 0; i < x.arrayLength; i++)
+			{
+			if (x[i] == "%")
+				{
+				dch[0] = x[i+1]
+				dch[1] = x[i+2]
+				
+				result[len] = hexToByte(dch)
+				
+				i += 2
+				}
+				else if (x[i] == "+")
+				{
+				result[len] = " "
+				}
+				else
+				{
+				result[len] = x[i]
+				}
+			
+			len ++
+			}
+		
+		return result
+		}
+	
+	}

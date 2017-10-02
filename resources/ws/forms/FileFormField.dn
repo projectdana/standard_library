@@ -1,0 +1,10 @@
+uses ws.FormParser
+
+/*
+ {"description" : "Extends FormField with additional data for uploaded files of a web form."}
+*/
+
+data FileFormField extends FormField {
+	char encoding[]
+	char filename[]
+	}

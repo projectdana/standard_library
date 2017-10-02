@@ -12,19 +12,19 @@ interface Search {
 	
 	/*
 		{"@description" : "Get the list of components that provide the given interface, using standard search paths.",
-			"intfPackage" : "The interface type to search for, complete with its package path in dot format."}
+			"intfPackage" : "The interface type to search for, complete with its package path in dot format. A semantic flavour wildcard can optionally be appended to intfPackage following a colon, as in Parser:*, to locate all implementations of all semantic flavours, excluding plain implementations of the interface. A specific semantic flavour can be appended such as Parser:multipart to find all implementations of that specific flavour."}
 	*/
 	String[] getComponents(char intfPackage[])
 	
 	/*
 		{"@description" : "Get the list of components that provide the given interface, using the given directories as search paths.",
-			"intfPackage" : "The interface type to search for, complete with its package path in dot format."}
+			"intfPackage" : "The interface type to search for, complete with its package path in dot format. A semantic flavour wildcard can optionally be appended to intfPackage following a colon, as in Parser:*, to locate all implementations of all semantic flavours, excluding plain implementations of the interface. A specific semantic flavour can be appended such as Parser:multipart to find all implementations of that specific flavour."}
 	*/
 	String[] getComponentsIn(char intfPackage[], String searchPaths[])
 	
 	/*
 		{"@description" : "Get the default component (as would be used in automated linking) that provides the given interface.",
-			"intfPackage" : "The interface type to search for, complete with its package path in dot format."}
+			"intfPackage" : "The interface type to search for, complete with its package path in dot format. A semantic flavour can optionally be appended to intfPackage following a colon, for example Parser:multipart."}
 	*/
 	char[] getDefaultComponent(char intfPackage[])
 	}

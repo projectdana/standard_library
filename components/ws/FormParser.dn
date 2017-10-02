@@ -1,0 +1,31 @@
+uses ws.forms.Parser
+
+component provides FormParser requires io.Output out, composition.Search search, composition.RecursiveLoader loader {
+	
+	FormData FormParser:getFormData(char contentType[], byte payload[])
+		{
+		//search for any parser that can handle this contentType
+		
+		String candidates[] = search.getComponents("ws.forms.Parser:*")
+		
+		for (int i = 0; i < candidates.arrayLength; i++)
+			{
+			IDC com = loader.load(candidates[i].string).mainComponent
+			
+			if (com :< Parser != null)
+				{
+				Parser p = new Parser() from com :< Parser
+				
+				if (p.canParse(contentType))
+					{
+					return p.parse(contentType, payload)
+					}
+				}
+			}
+		
+		throw new Exception("No known form parser for content type '$contentType'")
+		
+		return null
+		}
+	
+	} 

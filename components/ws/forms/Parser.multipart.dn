@@ -1,0 +1,207 @@
+uses ws.DocStream
+uses ws.forms.FileFormField
+
+component provides Parser:multipart requires io.Output out, data.StringUtil stringUtil, data.IntUtil iu {
+	
+	bool substr_cmp(char a[], int start, int len, char b[])
+		{
+		int j = 0
+		for (int i = start; i < start+len; i++)
+			{
+			if (a[i] != b[j]) return false
+			j ++
+			}
+		
+		return true
+		}
+	
+	int getBoundaryOffset(byte payload[], int start, byte boundary[])
+		{
+		for (int i = start; i < payload.arrayLength && payload.arrayLength - i >= boundary.arrayLength; i ++)
+			{
+			if (substr_cmp(payload, i, boundary.arrayLength, boundary))
+				return i
+			}
+		
+		return StringUtil.NOT_FOUND
+		}
+	
+	char[] getHeaderValue(Header hdrs[], char key[])
+		{
+		key = stringUtil.lowercase(key)
+		
+		for (int i = 0; i < hdrs.arrayLength; i++)
+			{
+			if (stringUtil.lowercase(hdrs[i].key) == key)
+				{
+				return hdrs[i].value
+				}
+			}
+		
+		return null
+		}
+	
+	bool headerExists(Header hdrs[], char key[])
+		{
+		key = stringUtil.lowercase(key)
+		
+		for (int i = 0; i < hdrs.arrayLength; i++)
+			{
+			if (stringUtil.lowercase(hdrs[i].key) == key)
+				{
+				return true
+				}
+			}
+		
+		return false
+		}
+	
+	//TODO: this is a bit too simple for multipart headers; we need to do an explode that preserves strings using quote marks...
+	Header[] getSubHeaders(char content[])
+		{
+		Header headers[]
+		String parts[] = stringUtil.explode(content, ";")
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			int ndx = stringUtil.find(parts[i].string, "=") + 1
+			char key[] = stringUtil.trim(stringUtil.subString(parts[i].string, 0, ndx - 1))
+			char value[] = stringUtil.trim(stringUtil.subString(parts[i].string, ndx, parts[i].string.arrayLength - ndx))
+			
+			headers = new Header[](headers, new Header(stringUtil.lowercase(key), value))
+			}
+		
+		return headers
+		}
+	
+	char[] trimQuotes(char str[])
+		{
+		int start = 0
+		int end = str.arrayLength
+		
+		if (str[start] == "\"")
+			start ++
+		
+		if (str[end-1] == "\"")
+			end --
+		
+		return stringUtil.subString(str, start, end - start)
+		}
+	
+	// https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html
+	FormData parseMultiPartForm(char contentType[], byte payload[])
+		{
+		FormData fdata = new FormData()
+		
+		String typeinfo[] = stringUtil.explode(contentType, ";")
+		
+		//extract the boundary delimiter, which is a sub-field of the contentType header
+		Header subh[] = getSubHeaders(contentType)
+		
+		char boundary[] = getHeaderValue(subh, "boundary")
+		
+		boundary = new char[]("--", boundary)
+		
+		//from here the data is organised within payload as follows:
+		// - find the first boundary field
+		// - after this will be a "\r\n" (meaning a field) or a "--" (meaning the end of the fields)
+		// - for a field, there are zero or more header lines, each terminated by \r\n, then a blank line with \r\n
+		// - we then have the actual data of this field, up to the next boundary field, where we repeat the above
+		
+		int next = getBoundaryOffset(payload, 0, boundary)
+		next = next + boundary.arrayLength
+		
+		boundary = new char[]("\r\n", boundary)
+		
+		while (next != StringUtil.NOT_FOUND)
+			{
+			//the next two bytes are either \r\n, or --
+			// - in the former case, we're about to read a new section, else we're at the end
+			
+			if (stringUtil.subString(payload, next, 2) == "\r\n")
+				{
+				//now we have header fields to read, up to a blank line
+				
+				int start = next
+				
+				char buf[]
+				char last4[] = new char[4]
+				
+				while (last4 != "\r\n\r\n")
+					{
+					char b[] = payload[next]
+					
+					last4[0] = last4[1]
+					last4[1] = last4[2]
+					last4[2] = last4[3]
+					last4[3] = b[0]
+					
+					next ++
+					}
+				
+				buf = stringUtil.subString(payload, start, next - start)
+				
+				Header headers[] = null
+				
+				String lines[] = stringUtil.explode(buf, "\r\n")
+				
+				for (int i = 0; i < lines.arrayLength; i++)
+					{
+					int ndx = stringUtil.find(lines[i].string, ":") + 1
+					char key[] = stringUtil.subString(lines[i].string, 0, ndx - 1)
+					char value[] = stringUtil.trim(stringUtil.subString(lines[i].string, ndx, lines[i].string.arrayLength - ndx))
+					
+					headers = new Header[](headers, new Header(stringUtil.lowercase(key), value))
+					}
+				
+				//now we have content, up to the start of the next boundary
+				
+				start = next
+				
+				next = getBoundaryOffset(payload, next+1, boundary)
+				
+				byte content[] = stringUtil.subString(payload, start, next - start)
+				
+				//now we've collected all headers, plus the content
+				// - check which type of field this is (plain or file)
+				// - we do this by checking for a field called "filename" or a content-type header
+				subh = getSubHeaders(getHeaderValue(headers, "content-disposition"))
+				FormField nf = null
+				
+				if (headerExists(subh, "filename") || headerExists(headers, "content-type"))
+					{
+					nf = new FileFormField(trimQuotes(getHeaderValue(subh, "name")),
+											content,
+											getHeaderValue(headers, "content-type"),
+											trimQuotes(getHeaderValue(subh, "filename")))
+					}
+					else
+					{
+					nf = new FormField(trimQuotes(getHeaderValue(subh, "name")),
+										content)
+					}
+				
+				fdata.fields = new FormField[](fdata.fields, nf)
+				
+				next = next + boundary.arrayLength
+				}
+				else if (stringUtil.subString(payload, next, 2) == "--")
+				{
+				break
+				}
+			}
+		
+		return fdata
+		}
+	
+	bool Parser:canParse(char contentType[])
+		{
+		return stringUtil.subString(contentType, 0, "multipart/form-data".arrayLength) == "multipart/form-data"
+		}
+	
+	FormData Parser:parse(char contentType[], byte payload[])
+		{
+		return parseMultiPartForm(contentType, payload)
+		}
+	
+	} 

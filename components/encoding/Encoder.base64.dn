@@ -1,0 +1,151 @@
+// https://en.wikipedia.org/wiki/Base64
+
+component provides Encoder:base64 {
+	
+	static char indexTable[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+	
+	char[] Encoder:encode(char x[])
+		{
+		//detect how many padding bytes we need in the result (0 or 4)
+		int paddn = ((x.arrayLength % 3) != 0) * 4
+		
+		char result[] = new char[((x.arrayLength / 3)*4)+paddn]
+		int ri = 0
+		int i
+		
+		for (i = 0; i+2 < x.arrayLength; i += 3)
+			{
+			//take each 6-bit sequence and encode into a character
+			result[ri] = indexTable[x[i] >> 2]
+			ri ++
+			
+			result[ri] = indexTable[(x[i] << 4) | (x[i+1] >> 4)]
+			ri ++
+			
+			result[ri] = indexTable[(x[i+1] << 2) | (x[i+2] >> 6)]
+			ri ++
+			
+			result[ri] = indexTable[x[i+2]]
+			ri ++
+			}
+		
+		//pad result out, if needed
+		if (x.arrayLength % 3 == 2)
+			{
+			result[ri] = indexTable[x[i] >> 2]
+			ri ++
+			
+			result[ri] = indexTable[(x[i] << 4) | (x[i+1] >> 4)]
+			ri ++
+			
+			result[ri] = indexTable[x[i+1] << 2]
+			ri ++
+			
+			result[ri] = "="
+			}
+			else if (x.arrayLength % 3 == 1)
+			{
+			result[ri] = indexTable[x[i] >> 2]
+			ri ++
+			
+			result[ri] = indexTable[(x[i] << 4)]
+			ri ++
+			
+			result[ri] = "="
+			result[ri+1] = "="
+			}
+		
+		return result
+		}
+	
+	byte indexOf(byte b)
+		{
+		if (b >= 65 && b <= 90)
+			return b - 65
+			else if (b >= 97 && b <= 122)
+			return b - 71
+			else if (b >= 48 && b <= 57)
+			return b + 4
+			else if (b == "+")
+			return 62
+			else if (b == "/")
+			return 63
+			else
+			throw new Exception("Malformed base64 content")
+		}
+	
+	bool validEncoding(char x[])
+		{
+		if (x == null || x.arrayLength == 0)
+			return true
+		
+		if (x[x.arrayLength-1] == "=" && (x.arrayLength % 4) != 0)
+			return false
+		
+		for (int i = 0; i < x.arrayLength; i ++)
+			{
+			if (x[i] < 48 || (x[i] > 57 && x[i] < 65) || (x[i] > 90 && x[i] < 97) || (x[i] > 122))
+				{
+				if (x[i] == "=" && i < i == x.arrayLength-2)
+					return false
+				}
+			}
+		
+		if (x.arrayLength >= 2 && (x[x.arrayLength-2] == "=" && x[x.arrayLength-1] != "="))
+			return false
+		
+		return true
+		}
+	
+	//here we support decoding of both padded and unpadded data
+	char[] Encoder:decode(char x[])
+		{
+		if (!validEncoding(x))
+			throw new Exception("Malformed base64 content")
+		
+		int paddm = (x[x.arrayLength-1] == "=") + (x[x.arrayLength-2] == "=")
+		
+		char result[] = new char[((x.arrayLength / 4)*3) - paddm]
+		int ri = 0
+		int i
+		
+		for (i = 0; i + 3 < x.arrayLength; i += 4)
+			{
+			if (x[i+2] == "=")
+				{
+				result[ri] = (indexOf(x[i]) << 2) | (indexOf(x[i+1]) >> 4)
+				}
+				else if (x[i+3] == "=")
+				{
+				result[ri] = (indexOf(x[i]) << 2) | (indexOf(x[i+1]) >> 4)
+				result[ri+1] = (indexOf(x[i+1]) << 4) | (indexOf(x[i+2]) >> 2)
+				}
+				else
+				{
+				result[ri] = (indexOf(x[i]) << 2) | (indexOf(x[i+1]) >> 4)
+				result[ri+1] = (indexOf(x[i+1]) << 4) | (indexOf(x[i+2]) >> 2)
+				result[ri+2] = (indexOf(x[i+2]) << 6) | (indexOf(x[i+3]))
+				}
+			
+			ri += 3
+			}
+		
+		//finally, deal with unpadded overflow
+		if (i + 2 < x.arrayLength)
+			{
+			char add[] = new char[2]
+			add[0] = (indexOf(x[i]) << 2) | (indexOf(x[i+1]) >> 4)
+			add[1] = (indexOf(x[i+1]) << 4) | (indexOf(x[i+2]) >> 2)
+			result = new char[](result, add)
+			}
+			else if (i + 1 < x.arrayLength)
+			{
+			char add[] = new char[1]
+			add[0] = (indexOf(x[i]) << 2) | (indexOf(x[i+1]) >> 4)
+			result = new char[](result, add)
+			}
+		
+		return result
+		}
+	
+	}

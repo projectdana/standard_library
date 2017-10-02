@@ -1,0 +1,4 @@
+interface Encoder {
+	char[] encode(char x[])
+	char[] decode(char x[])
+	}

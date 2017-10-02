@@ -1,0 +1,196 @@
+uses net.TCPSocket
+
+component provides DocStream requires data.IntUtil intUtil, io.Output out, data.StringUtil stringUtil, encoding.Encoder:uri encoder {
+	
+	Header requestHeaders[]
+	Header sessionKeys[]
+	Header newSessionKeys[]
+	
+	TCPSocket socket
+	bool firstWrite = true
+	bool autoChunked = false
+	bool streamEnded = false
+	
+	DocStream:DocStream(TCPSocket s, Header headers[])
+		{
+		socket = s
+		requestHeaders = headers
+		
+		//extract session state from headers, by scanning for any "Cookie:" key and extracting sub-headers
+		for (int i = 0; i < requestHeaders.arrayLength; i++)
+			{
+			if (stringUtil.lowercase(requestHeaders[i].key) == "cookie")
+				{
+				Header subh[] = getSubHeaders(requestHeaders[i].value)
+				sessionKeys = new Header[](sessionKeys, subh)
+				}
+			}
+		
+		//uri-decode all cookie values
+		for (int i = 0; i < sessionKeys.arrayLength; i++)
+			{
+			sessionKeys[i].value = encoder.decode(sessionKeys[i].value)
+			}
+		}
+	
+	Header[] getSubHeaders(char content[])
+		{
+		Header headers[]
+		String parts[] = stringUtil.explode(content, ";")
+		
+		for (int i = 0; i < parts.arrayLength; i++)
+			{
+			int ndx = stringUtil.find(parts[i].string, "=") + 1
+			char key[] = stringUtil.trim(stringUtil.subString(parts[i].string, 0, ndx - 1))
+			char value[] = stringUtil.trim(stringUtil.subString(parts[i].string, ndx, parts[i].string.arrayLength - ndx))
+			
+			headers = new Header[](headers, new Header(key, value))
+			}
+		
+		return headers
+		}
+	
+	char[] intToHex(int i)
+		{
+		byte bytes[] = dana.getByteArrayOf(i)
+		char res[]
+		
+		for (int p = bytes.arrayLength - 1; p != INT_MAX; p--)
+			{
+			byte x = bytes[p] & 0xF
+			
+			res = new char[]("0123456789ABCDEF"[x], res)
+			
+			x = bytes[p] & 0xF0
+			x = x >> 4
+			
+			res = new char[]("0123456789ABCDEF"[x], res)
+			}
+		
+		return res
+		}
+	
+	void writeChunkHeader(char dt[])
+		{
+		char q[] = intToHex(dt.arrayLength)
+		
+		socket.send(new char[](q, ";\r\n"))
+		}
+	
+	Header[] DocStream:getRequestHeaders()
+		{
+		return requestHeaders
+		}
+	
+	void DocStream:write(char dt[])
+		{
+		if (streamEnded)
+			throw new Exception("Stream end has been set; no further data can be written")
+		
+		if (firstWrite)
+			{
+			writeStatus(200, "OK", new Header("transfer-encoding", "chunked"))
+			
+			firstWrite = false
+			autoChunked = true
+			}
+		
+		if (autoChunked) writeChunkHeader(dt)
+		
+		socket.send(dt)
+		}
+	
+	void DocStream:writeStatus(int code, char reason[], Header headers[])
+		{
+		if (streamEnded)
+			throw new Exception("Stream end has been set; no further data can be written")
+		
+		if (firstWrite)
+			{
+			char hdrLine[] = new char[]("HTTP/1.1 ", intUtil.intToString(code), " ", reason, "\r\n")
+			socket.send(hdrLine)
+			
+			for (int i = 0; i < headers.arrayLength; i++)
+				{
+				socket.send(new char[](headers[i].key, ":", headers[i].value, "\r\n"))
+				}
+			
+			for (int i = 0; i < newSessionKeys.arrayLength; i++)
+				{
+				socket.send(new char[](newSessionKeys[i].key, ":", newSessionKeys[i].value, "\r\n"))
+				}
+			
+			socket.send("\r\n")
+			}
+			else
+			{
+			throw new Exception("Request status can only be written once")
+			}
+		
+		firstWrite = false
+		}
+	
+	void DocStream:setSessionKey(char key[], char value[])
+		{
+		if (!firstWrite)
+			throw new Exception("Session keys cannot be modified after the start of a response")
+		
+		//NOTE: we only need to send back Set-Cookie if anything has actually changed...
+		
+		// https://en.wikipedia.org/wiki/HTTP_cookie
+		
+		for (int i = 0; i < sessionKeys.arrayLength; i++)
+			{
+			if (sessionKeys[i].key == key)
+				sessionKeys[i].value = value
+			}
+		
+		newSessionKeys = new Header[](newSessionKeys, new Header("Set-Cookie", "$key=$(encoder.encode(value))"))
+		}
+	
+	char[] DocStream:getSessionKey(char key[])
+		{
+		for (int i = 0; i < sessionKeys.arrayLength; i++)
+			{
+			if (sessionKeys[i].key == key)
+				return sessionKeys[i].value
+			}
+		
+		return null
+		}
+	
+	void DocStream:remSessionKey(char key[])
+		{
+		if (!firstWrite)
+			throw new Exception("Session keys cannot be modified after the start of a response")
+		
+		// https://stackoverflow.com/questions/5285940/correct-way-to-delete-cookies-server-side
+		
+		for (int i = 0; i < sessionKeys.arrayLength; i++)
+			{
+			if (sessionKeys[i].key == key)
+				{
+				sessionKeys[i].value = null
+				newSessionKeys = new Header[](newSessionKeys, new Header("Set-Cookie", "$key=; expires=Thu, 01 Jan 1970 00:00:00 GMT"))
+				}
+			}
+		}
+	
+	void DocStream:endStream()
+		{
+		if (!streamEnded)
+			{
+			if (!firstWrite)
+				{
+				if (autoChunked) socket.send("0;\r\n")
+				}
+				else
+				{
+				writeStatus(200, "OK", new Header("content-length", "0"))
+				}
+			
+			streamEnded = true
+			}
+		}
+	
+	}

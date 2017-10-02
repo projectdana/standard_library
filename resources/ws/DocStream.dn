@@ -1,0 +1,58 @@
+uses net.TCPSocket
+
+/*
+ {"description" : "Contains a key/value pair, used to represent a HTTP header."}
+*/
+
+data Header {
+	char key[]
+	char value[]
+	}
+
+/*
+ {"description" : "Interface to write HTTP response data to a client request, including setting session cookie state."}
+*/
+
+interface DocStream {
+	
+	/*
+	 {"@description" : "Construct a new doc stream. This is done automatically by a web framework."}
+	*/
+	DocStream(TCPSocket s, Header headers[])
+	
+	/*
+	 {"@description" : "Get the list of request headers send by the client."}
+	*/
+	Header[] getRequestHeaders()
+	
+	/*
+	 {"@description" : "Set a piece of session state, identified by a given key, to equal a given value. This causes a cookie to be set, so that this session state is available on subsequent web requests. This function must be called before any use of write() or writeStatus()."}
+	*/
+	void setSessionKey(char key[], char value[])
+	
+	/*
+	 {"@description" : "Get a piece of session state, identified by a given key, as previously set by setSessionKey.",
+		"@return" : "The value of the session state key, as previously set by setSessionKey, or null if no such key exists."}
+	*/
+	char[] getSessionKey(char key[])
+	
+	/*
+	 {"@description" : "Delete a piece of session state, identified by a given key. The deleted session state will no longer be available to subsequent web requests. This function must be called before any use of write() or writeStatus()."}
+	*/
+	void remSessionKey(char key[])
+	
+	/*
+	 {"@description" : "Send data to the connected client. By default, content is assumed to be text (HTML) and uses chunked encoding; other content types should be indicated by first using writeStatus()."}
+	*/
+	void write(char str[])
+	
+	/*
+	 {"@description" : "Set status code of the request, set all headers (such as 'content-type' and 'content-length') and send them to the client. This function is only effective the first time that it use used per request."}
+	*/
+	void writeStatus(int code, char reason[], Header headers[])
+	
+	/*
+	 {"@description" : "Indicate that sending of response data is complete. This function is automatically called by the web framework and so does not need to be used by the web app. After this function has been called, no further data can be sent in response to this request."}
+	*/
+	void endStream()
+	}

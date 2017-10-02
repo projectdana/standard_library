@@ -1,0 +1,36 @@
+component provides Parser:urlencoded requires io.Output out, data.StringUtil stringUtil, data.IntUtil iu, encoding.Encoder:uri encoder {
+	
+	FormData parseURLEncodedForm(byte payload[])
+		{
+		FormData fdata = new FormData()
+		
+		String parts[] = stringUtil.explode(payload, "&")
+		
+		for (int i = 0; i < parts.arrayLength; i++)
+			{
+			String sparts[] = stringUtil.explode(parts[i].string, "=")
+			
+			char key[] = sparts[0].string
+			char value[]
+			
+			if (sparts.arrayLength == 2) value = sparts[1].string
+			
+			FormField ff = new FormField(encoder.decode(key), encoder.decode(value))
+			
+			fdata.fields = new FormField[](fdata.fields, ff)
+			}
+		
+		return fdata
+		}
+	
+	bool Parser:canParse(char contentType[])
+		{
+		return contentType == "application/x-www-form-urlencoded"
+		}
+	
+	FormData Parser:parse(char contentType[], byte payload[])
+		{
+		return parseURLEncodedForm(payload)
+		}
+	
+	} 

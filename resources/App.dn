@@ -1,4 +1,12 @@
 /*
+{ "description" : "Container for a command-line parameter, used in the App interface."}
+*/
+
+data AppParam{
+	char string[]
+	}
+
+/*
 { "description" : "This interface is used by the entry-point component for command-line programs; a component must implement this interface to be executable from a command-line environment. The params[] array is populated with any parameters that follow the program name (for example issuing the command 'dana MyApp xyz 123' creates a params array with 2 cells, the first cell containing 'xyz' and the second containing '123'."}
 */
 
@@ -8,12 +16,4 @@ interface App{
 		"params" : "Array of the command-line arguments with which the program was started."}
 	*/
 	int main(AppParam params[])
-	}
-
-/*
-{ "description" : "Container for a command-line parameter, used in the App interface."}
-*/
-
-data AppParam{
-	char string[]
 	}

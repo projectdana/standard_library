@@ -4,30 +4,92 @@
 
 interface Math {
 	/*
-	 {"@description" : "Return the square root of a decimal value."}
+	 {"@description" : "Returns the square root of a decimal value."}
 	*/
 	dec sqrt(dec val)
 	
+	/*
+	 {"@description" : "Returns the given power of a decimal value."}
+	*/
 	dec power(dec val, dec power)
+	
+	/*
+	 {"@description" : "Returns the given root of a decimal value."}
+	*/
 	dec rootn(dec val, dec root)
 	
+	/*
+	 {"@description" : "Returns the base 10 logarithm of a decimal value."}
+	*/
 	dec log(dec val)
+	
+	/*
+	 {"@description" : "Returns the natural (base e) logarithm of a decimal value."}
+	*/
 	dec natlog(dec val)
+	
+	/*
+	 {"@description" : "Returns the base e exponential function of a decimal value."}
+	*/
 	dec natexp(dec val)
 	
+	/*
+	 {"@description" : "Returns the cosine of a decimal value supplied in degrees."}
+	*/
 	dec cos(dec val)
+	
+	/*
+	 {"@description" : "Returns the sine of a decimal value supplied in degrees."}
+	*/
 	dec sin(dec val)
+	
+	/*
+	 {"@description" : "Returns the tangent of a decimal value supplied in degrees."}
+	*/
 	dec tan(dec val)
 	
+	/*
+	 {"@description" : "Returns the arc cosine of a decimal value supplied in degrees."}
+	*/
 	dec acos(dec val)
+	
+	/*
+	 {"@description" : "Returns the arc sine of a decimal value supplied in degrees."}
+	*/
 	dec asin(dec val)
+	
+	/*
+	 {"@description" : "Returns the arc tangent of a decimal value supplied in degrees."}
+	*/
 	dec atan(dec val)
 	
+	/*
+	 {"@description" : "Returns the hyberbolic cosine of a decimal value supplied in degrees."}
+	*/
 	dec cosh(dec val)
+	
+	/*
+	 {"@description" : "Returns the hyberbolic sine of a decimal value supplied in degrees."}
+	*/
 	dec sinh(dec val)
+	
+	/*
+	 {"@description" : "Returns the hyberbolic tangent of a decimal value supplied in degrees."}
+	*/
 	dec tanh(dec val)
 	
+	/*
+	 {"@description" : "Returns the area hyberbolic cosine of a decimal value supplied in degrees."}
+	*/
 	dec acosh(dec val)
+	
+	/*
+	 {"@description" : "Returns the area hyberbolic sine of a decimal value supplied in degrees."}
+	*/
 	dec asinh(dec val)
+	
+	/*
+	 {"@description" : "Returns the area hyberbolic tangent of a decimal value supplied in degrees."}
+	*/
 	dec atanh(dec val)
 	}

@@ -1,0 +1,25 @@
+uses DocStream
+
+/*
+ {"description" : "Interface for web app components."}
+*/
+
+interface Web {
+	
+	/*
+	 {"@description" : "This function is called when a HTTP GET request is made."}
+	*/
+	bool get(char path[], DocStream stream)
+		{
+		return false
+		}
+	
+	/*
+	 {"@description" : "This function is called when a HTTP POST request is made."}
+	*/
+	bool post(char path[], char contentType[], byte content[], DocStream stream)
+		{
+		return false
+		}
+	
+	}

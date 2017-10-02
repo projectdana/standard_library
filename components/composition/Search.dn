@@ -25,6 +25,11 @@ component provides Search requires data.StringUtil stringUtil, io.FileSystem fil
 	
 	bool providesInterface(char path[], char intfPackage[])
 		{
+		char flavour[]
+		String parts[] = stringUtil.explode(intfPackage, ":")
+		intfPackage = parts[0].string
+		if (parts.arrayLength == 2) flavour = parts[1].string
+		
 		ObjectWriter ow = new ObjectWriter(path)
 		
 		InfoSection section = ow.getInfoSection("DNIL", "json")
@@ -37,8 +42,17 @@ component provides Search requires data.StringUtil stringUtil, io.FileSystem fil
 			{
 			JSONElement pi = providedInterfaces.children[j]
 			char package[] = parser.getValue(pi, "package").value
+			char semantic[]
+			JSONElement jp = parser.getValue(pi, "semantic")
+			if (jp != null) semantic = jp.value
 			
-			if (package == intfPackage)
+			if (flavour == null && semantic.arrayLength == 0 && package == intfPackage)
+				return true
+			
+			if (flavour == "*" && semantic.arrayLength > 0 && package == intfPackage)
+				return true
+			
+			if (flavour == semantic && package == intfPackage)
 				return true
 			}
 		
@@ -149,11 +163,16 @@ component provides Search requires data.StringUtil stringUtil, io.FileSystem fil
 	char[] checkManifest(char base[], char pkg[])
 		{
 		//convert all dots to slashes and ignore the last thing
-		String parts[] = stringUtil.explode(pkg, ".")
+		
+		// - first we strip off any flavour qualifier
+		String qparts[] = stringUtil.explode(pkg, ":")
+		String parts[] = stringUtil.explode(qparts[0].string, ".")
+		
 		char path[] = base
 		char interfaceAlias[] = pkg
 
 		if (parts.arrayLength > 0) interfaceAlias = parts[parts.arrayLength - 1].string
+		if (qparts.arrayLength == 2) interfaceAlias = new char[](interfaceAlias, ":", qparts[1].string)
 		
 		for (int i = 0; parts.arrayLength > 0 && i < parts.arrayLength - 1; i++)
 			{
@@ -209,30 +228,19 @@ component provides Search requires data.StringUtil stringUtil, io.FileSystem fil
 		if (fileSystem.exists(new char[](base, test)))
 			return test
 		
+		String qparts[] = stringUtil.explode(pkg, ":")
+		pkg = qparts[0].string
+		char flavour[]
+		if (qparts.arrayLength == 2) flavour = new char[](".", qparts[1].string)
+		
 		//local with .o?
-		test = new char[](pkg, ".o")
+		test = new char[](pkg, flavour, ".o")
 		if (fileSystem.exists(new char[](base, test)))
 			return test
 		
-		//all dots (except final one) converted to slashes
-		String parts[] = stringUtil.explode(pkg, ".")
-		if (parts.arrayLength > 0)
-			test = new char[](base, parts[0].string)
-			else
-			test = null
-		
-		for (int i = 1; i < parts.arrayLength; i++)
-			{
-			if (i + 1 != parts.arrayLength)
-				test = new char[](test, "/", parts[i].string)
-				else
-				test = new char[](test, ".", parts[i].string)
-			}
-		
-		if (fileSystem.exists(test))
-			return test
-		
 		//all dots (including final one) converted to slashes, with ".o" appended
+		String parts[] = stringUtil.explode(pkg, ".")
+		
 		if (parts.arrayLength > 0)
 			test = new char[](base, parts[0].string)
 			else
@@ -243,7 +251,7 @@ component provides Search requires data.StringUtil stringUtil, io.FileSystem fil
 			test = new char[](test, "/", parts[i].string)
 			}
 		
-		test = new char[](test, ".o")
+		test = new char[](test, flavour, ".o")
 		
 		if (fileSystem.exists(test))
 			return test
