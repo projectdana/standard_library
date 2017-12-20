@@ -1,14 +1,10 @@
-data VC{
-	char result[]
-	}
-
 library interface SystemLib{
-	void getPlatformName(VC result)
-	void getPlatformVersion(VC result)
-	void getChipName(VC result)
-	void getHostName(VC result)
-	bool getVar(char name[], VC result)
-	void getSystemFont(bool monospaced, VC result)
+	char[] getPlatformName()
+	char[] getPlatformVersion()
+	char[] getChipName()
+	char[] getHostName()
+	char[] getVar(char name[])
+	char[] getSystemFont(bool monospaced)
 	}
 
 component provides Service, os.SystemInfo requires NativeLoader inl
@@ -18,44 +14,32 @@ component provides Service, os.SystemInfo requires NativeLoader inl
 	implementation SystemInfo{
 		char[] SystemInfo:getVariable(char name[])
 			{
-			VC res = new VC()
-			lib.getVar(name, res)
-			return res.result
+			return lib.getVar(name)
 			}
 		
 		char[] SystemInfo:getHostName()
 			{
-			VC res = new VC()
-			lib.getHostName(res)
-			return res.result
+			return lib.getHostName()
 			}
 		
 		char[] SystemInfo:getPlatformName()
 			{
-			VC res = new VC()
-			lib.getPlatformName(res)
-			return res.result
+			return lib.getPlatformName()
 			}
 		
 		char[] SystemInfo:getPlatformVersion()
 			{
-			VC res = new VC()
-			lib.getPlatformVersion(res)
-			return res.result
+			return lib.getPlatformVersion()
 			}
 		
 		char[] SystemInfo:getChipName()
 			{
-			VC res = new VC()
-			lib.getChipName(res)
-			return res.result
+			return lib.getChipName()
 			}
 		
 		char[] SystemInfo:getSystemFont(bool monospaced)
 			{
-			VC res = new VC()
-			lib.getSystemFont(monospaced, res)
-			return res.result
+			return lib.getSystemFont(monospaced)
 			}
 		}
 	

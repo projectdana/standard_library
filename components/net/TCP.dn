@@ -1,12 +1,8 @@
-data BC{
-	byte content[]
-	}
-
 library interface IOTCPLib{
 	int connect(char address[], int port)
 	void disconnect(int hnd)
 	int send(int hnd, byte content[])
-	int recv(int hnd, int length, BC result)
+	byte[] recv(int hnd, int length)
 	int accept(int hnd)
 	int bind(char address[], int port)
 	void unbind(int hnd)
@@ -36,15 +32,10 @@ component provides net.TCPServerSocket, net.TCPSocket, Service requires NativeLo
 		
 		byte[] TCPSocket:recv(int length)
 			{
-			BC result = new BC()
-			
 			mutex(accessLock)
 				{
 				if (connected)
-					{
-					lib.recv(platformSocket, length, result)
-					return result.content
-					}
+					return lib.recv(platformSocket, length)
 					else
 					throw new Exception("Socket is not connected for data receive")
 				}

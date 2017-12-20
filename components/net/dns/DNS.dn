@@ -1,9 +1,5 @@
-data VC{
-	char result[]
-	}
-
 library interface DNSLib{
-	bool getHostIP(char hostname[], VC result)
+	char[] getHostIP(char hostname[])
 	}
 
 component provides Service, DNS requires NativeLoader inl
@@ -13,10 +9,8 @@ component provides Service, DNS requires NativeLoader inl
 	implementation DNS{
 		char[] DNS:getHostIP(char hostname[])
 			{
-			VC res = new VC()
-			lib.getHostIP(hostname, res)
-			return res.result
-		}
+			return lib.getHostIP(hostname)
+			}
 	}
 
 	implementation Service{

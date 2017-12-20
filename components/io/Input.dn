@@ -1,9 +1,5 @@
 library interface ICmdLib{
-	void getLine(String q)
-	}
-
-data String{
-	char content[]
+	char[] getLine()
 	}
 
 component provides Service, io.Input requires NativeLoader inl{
@@ -13,9 +9,7 @@ component provides Service, io.Input requires NativeLoader inl{
 	implementation Input{
 		char[] Input:readln()
 			{
-			String q = new String()
-			lib.getLine(q)
-			return q.content
+			return lib.getLine()
 			}
 		}
 	

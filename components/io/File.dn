@@ -1,11 +1,7 @@
-data BC{
-	byte content[]
-	}
-
 library interface IIOFileLib{
 	int open(char file[], byte mode)
 	int write(int fd, byte content[])
-	int read(int fd, int length, BC result)
+	byte[] read(int fd, int length)
 	bool setPos(int fd, int pos)
 	int getSize(int fd)
 	bool eof(int fd)
@@ -70,10 +66,9 @@ component provides Service, io.File, io.FileSystem requires NativeLoader inl, io
 				{
 				if (platformHandle != 0)
 					{
-					BC result = new BC()
-					int ra = lib.read(platformHandle, length, result)
-					pos += ra
-					return result.content
+					byte result[] = lib.read(platformHandle, length)
+					pos += result.arrayLength
+					return result
 					}
 					else
 					{

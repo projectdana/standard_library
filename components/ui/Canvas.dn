@@ -1,7 +1,3 @@
-data VC{
-	char result[]
-	}
-
 data WindowEventData {
 	int button_id
 	int x
@@ -56,7 +52,7 @@ library interface UIPlaneLib{
 	int loadFont(char path[], int size)
 	int getTextWidth(int phandle, char text[])
 	void getFontMetrics(int phandle, FontMetrics metrics)
-	void getFontName(int phandle, VC result)
+	char[] getFontName(int phandle)
 	bool isFontFixedWidth(int phandle)
 	void getTextBitmapWith(int phandle, char text[], Bitmap pixels, byte r, byte g, byte b, byte a)
 	void unloadFont(int fd)
@@ -131,8 +127,11 @@ component provides Canvas(Destructor), Font(Destructor), Service requires Native
 		void Canvas:drawRectOutline(Rect2D r)
 			{
 			drawLine(new Line2D(r.x, r.y, (r.x + r.width) - 1, r.y, r.color))
+			
 			drawLine(new Line2D(r.x, r.y, r.x, (r.y + r.height) - 1, r.color))
+			
 			drawLine(new Line2D((r.x + r.width) - 1, r.y, (r.x + r.width) - 1, (r.y + r.height) - 1, r.color))
+			
 			drawLine(new Line2D(r.x, (r.y + r.height) - 1, (r.x + r.width) - 1, (r.y + r.height) - 1, r.color))
 			}
 		
@@ -237,9 +236,7 @@ component provides Canvas(Destructor), Font(Destructor), Service requires Native
 		
 		char[] Font:getFontName()
 			{
-			VC result = new VC()
-			lib.getFontName(platformHandle, result)
-			return result.result
+			return lib.getFontName(platformHandle)
 			}
 		
 		bool Font:isFixedCharacterWidth()
