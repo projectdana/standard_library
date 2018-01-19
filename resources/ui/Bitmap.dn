@@ -7,16 +7,6 @@ uses WH
 
 data Bitmap{
 	WH size
-	// note it's implied that pixels.arrayLength must equal size.width * size.height
-	Pixel pixels[]
-	}
-
-/*
-{ "description" : "Container for a pixel, indicating red, green, blue and alpha values. The alpha value is a level of opacity, where 255 indicates completely opaque."}
-*/
-record Pixel{
-	byte r
-	byte g
-	byte b
-	byte a
+	// note it's implied that pixels is an array of groups (r, g, b, a) and that its arrayLength/4 must equal size.width * size.height
+	byte pixels[]
 	}

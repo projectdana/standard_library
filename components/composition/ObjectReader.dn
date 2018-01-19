@@ -2,7 +2,7 @@
 const byte danaMagic[] = new int[](0x44, 0x41, 0x4E, 0x41, 0x0, 0x1)
 
 //a Dana object header
-record SourceHeader{
+data SourceHeader{
 	//basic identification; this part is always the same total size
 	byte magic[6]
 	byte checksum[4]
@@ -23,13 +23,8 @@ record SourceHeader{
 	int infoSectionsCount
 	}
 
-//a Dana object relocation record
-record Relocation{
-	int offset
-	}
-
 //an info section header
-record DanaInfoSection{
+data DanaInfoSection{
 	byte sectionType[4] //type code identifying the section's purpose (0.x.x.x, D.N.x.x, F.R.x.x are reserved)
 	byte contentType[4] //type code identifying the kind of content (json, xml, jpeg, etc.)
 	int size //size of the section's content, excluding this header
@@ -49,7 +44,7 @@ component provides ObjectReader requires io.File, System system {
 		if (fd == null)
 			throw new Exception("File not found")
 		
-		SourceHeader hdr
+		SourceHeader hdr = new SourceHeader()
 		byte serialHDR[] = dana.getByteArrayOf(hdr)
 		
 		byte buf[]
@@ -109,7 +104,7 @@ component provides ObjectReader requires io.File, System system {
 			{
 			byte serialData[]
 			
-			DanaInfoSection is
+			DanaInfoSection is = new DanaInfoSection()
 			serialData = dana.getByteArrayOf(is)
 			serialData =[] fd.read(serialData.arrayLength)
 			
@@ -150,7 +145,7 @@ component provides ObjectReader requires io.File, System system {
 			{
 			byte serialData[]
 			
-			DanaInfoSection is
+			DanaInfoSection is = new DanaInfoSection()
 			serialData = dana.getByteArrayOf(is)
 			serialData =[] fd.read(serialData.arrayLength)
 			
