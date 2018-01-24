@@ -1,0 +1,17 @@
+/*
+{ "description" : "Search for values in an array."}
+*/
+
+interface Search {
+	
+	/*
+	{ "@description" : "Search an array for cells matching a template, returning all matching cells.",
+			"list" : "The array to search.",
+			"field" : "The field to search against.",
+			"template" : "An instance of the same type as the data held in list, in which the field to match against is set to the value being searched for."
+			"@return" : "An array of cells matching the search term."
+	}
+	*/
+	Data[] search(Data list[], TypeField field, Data template)
+	
+	}

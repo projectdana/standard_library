@@ -1,0 +1,113 @@
+uses reflect.Type
+uses data.String
+
+component provides CSVParser requires io.Output out, data.StringUtil stringUtil, data.IntUtil intUtil, data.DecUtil decUtil, data.adt.List, io.TextFile {
+	
+	bool isAnyOf(char c, char tokens[])
+		{
+		for (int i = 0; i < tokens.arrayLength; i ++)
+			{
+			if (c == tokens[i])
+				return true
+			}
+		
+		return false
+		}
+	
+	bool isStringCharacter(char c)
+		{
+		return c == "\""
+		}
+	
+	String[] explodeKE(char str[], char tokens[])
+		{
+		List lst = new List()
+		String res[]
+		String th
+		
+		bool inString
+		for (int i = 0; i < str.arrayLength; i++)
+			{
+			if (!inString && isAnyOf(str[i], tokens))
+				{
+				if (th == null)	th = new String()
+				lst.add(th)
+				th = null
+				}
+				else
+				{
+				if (th == null)	th = new String()
+				th.string = new char[](th.string, str[i])
+				}
+			
+			if (isStringCharacter(str[i]))
+				{
+				inString = !inString
+				}
+			}
+		
+		lst.add(th)
+		
+		if (lst.getLength() != 0)
+			{
+			int i = 0
+			res = new String[lst.getLength()]
+			for (String s = lst.getFirst(); s != null; s = lst.getNext())
+				{
+				res[i] = new String(stringUtil.trim(s.string))
+				i ++
+				}
+			}
+		
+		return res
+		}
+	
+	bool isStringArrayType(Type t)
+		{
+		return t.class == Type.ARRAY && t.fields[0].type.class == Type.INTEGER && t.fields[0].type.size == 1
+		}
+	
+	Data[] CSVParser:parseDocument(char path[], char separators[], Data template)
+		{
+		Data result[]
+		
+		Type type = typeof(template)
+		
+		TextFile fd = new TextFile(path, File.FILE_ACCESS_READ)
+		
+		if (fd != null)
+			{
+			while (!fd.eof())
+				{
+				char ln[] = fd.readLine()
+				
+				String s[] = explodeKE(ln, separators)
+				
+				Data nd = clone template
+				
+				for (int i = 0; i < type.fields.arrayLength; i++)
+					{
+					if (type.fields[i].type.class == Type.INTEGER)
+						{
+						nd:.i = intUtil.intFromString(s[i].string)
+						}
+						else if (type.fields[i].type.class == Type.DECIMAL)
+						{
+						nd:.i = decUtil.decFromString(s[i].string)
+						}
+						else if (isStringArrayType(type.fields[i].type))
+						{
+						nd:.i = s[i].string
+						}
+					}
+				
+				result = new Data[](result, nd) from type
+				}
+			
+			fd.close()
+			}
+		
+		return result
+		}
+	
+	}

@@ -1,0 +1,37 @@
+component provides Sort {
+	
+	Data[] Sort:sort(Data list[], TypeField field, bool ascending)
+		{
+		Data result[] = clone list
+		
+		if (result.arrayLength > 1)
+			{
+			bool swap = true
+			while (swap)
+				{
+				swap = false
+				for (int i = 0; i < result.arrayLength - 1; i++)
+					{
+					bool doSwap = false
+					if (ascending)
+						doSwap = result[i+1]:.field < result[i]:.field
+						else
+						doSwap = result[i+1]:.field > result[i]:.field
+					
+					if (doSwap)
+						{
+						Data tmp = result[i]
+						
+						result[i] = result[i+1]
+						result[i+1] = tmp
+						
+						swap = true
+						}
+					}
+				}
+			}
+		
+		return result
+		}
+	
+	}

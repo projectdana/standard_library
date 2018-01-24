@@ -1,0 +1,17 @@
+/*
+{ "description" : "Sort values in an array."}
+*/
+
+interface Sort {
+	
+	/*
+	{ "@description" : "Sort an array of data instances into ascending or descending order by one of its fields.",
+			"list" : "The array to sort.",
+			"field" : "The field to use as the sort order.",
+			"ascending" : "Set to true for sort in ascending order, or false for descending order."
+			"@return" : "The sorted array."
+	}
+	*/
+	Data[] sort(Data list[], TypeField field, bool ascending)
+	
+	}

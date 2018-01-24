@@ -1,0 +1,17 @@
+/*
+{ "description" : "Read a file of comma-separated values."}
+*/
+
+interface CSVParser {
+	
+	/*
+	{ "@description" : "Read a text file of comma-separated values, in which new lines indicate row separators. The file is parsed according to the fields of the given template data type.",
+			"path" : "The file path to the text file.",
+			"separators" : "Tokens that separate cells (usually a comma).",
+			"template" : "The data type template into which the file will be parsed."
+			"@return" : "An array of the data type given by template, where each array cell represents a row of the CSV file."
+	}
+	*/
+	Data[] parseDocument(char path[], char separators[], Data template)
+	
+	}

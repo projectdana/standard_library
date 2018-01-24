@@ -20,6 +20,10 @@ const char BSON_BOOL_FALSE = 0x00
 const char BSON_BOOL_TRUE = 0x01
 const char BSON_NULL_TERMINATOR = 0x00
 
+data Int4{
+	int4 i
+	}
+
 component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil su, data.ByteUtil bu{
 
   /**
@@ -52,6 +56,17 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
     return new JSONElement(JSON_ELEMENT_OBJECT, "", "", digestBSONDocument(bson,false))
   }
 
+  int4 buildInt4(byte array[])
+	{
+	Int4 q = new Int4()
+	
+	byte x[] = dana.getByteArrayOf(q)
+	
+	x =[] array
+	
+	return q.i
+	}
+  
   /**
     BSON:parse
 
@@ -65,9 +80,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
     int byteCount = 0
 
     while(byteCount < bsonDocuments.arrayLength){
-      int4 size
-
-      dana.getByteArrayOf(size) =[] bu.reverse(su.subString(bsonDocuments,byteCount,4))
+      int4 size = buildInt4(bu.reverse(su.subString(bsonDocuments,byteCount,4)))
 
       docs = new BSONDocument[](docs, new BSONDocument(su.subString(bsonDocuments,byteCount,size)))
 
@@ -78,7 +91,9 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
   }
 
   byte[] toLittleEndian(int4 value){
-    return bu.reverse(dana.getByteArrayOf(value))
+	Int4 q = new Int4(value)
+	byte x[] = dana.getByteArrayOf(q)
+    return bu.reverse(x)
   }
 
   void serialiseName(char value[], BSONDocument bson){
@@ -333,10 +348,8 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
     int count = 0
 
-    int4 size
-
-    dana.getByteArrayOf(size) =[] bu.reverse(su.subString(content,count,4))
-
+    int4 size = buildInt4(bu.reverse(su.subString(content,count,4)))
+	
     count += 4
 
     //minus one for end of object
@@ -352,9 +365,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
       if(type == BSON_EMBEDDED_DOCUMENT){
 
-        int4 objectSize
-
-        dana.getByteArrayOf(objectSize) =[]  bu.reverse(su.subString(content,count,4))
+        int4 objectSize = buildInt4(bu.reverse(su.subString(content,count,4)))
 
         if(isInArray)
           elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_OBJECT, "", "", digestBSONDocument(new BSONDocument(su.subString(content,count,objectSize)),false)))
@@ -368,8 +379,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
         char value[] = ""
 
-        int4 valueSize
-        dana.getByteArrayOf(valueSize) =[] bu.reverse(su.subString(content,count,4))
+        int4 valueSize = buildInt4(bu.reverse(su.subString(content,count,4)))
 
         //we've digested the size integer
         count += 4
@@ -408,9 +418,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
       if(type == BSON_INT_32){
 
-        int4 value
-
-        dana.getByteArrayOf(value) =[] bu.reverse(su.subString(content,count,4))
+        int4 value = buildInt4(bu.reverse(su.subString(content,count,4)))
 
         //we've digested the integer
         count += 4
@@ -442,9 +450,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
       if(type == BSON_ARRAY){
 
-        int4 arraySize
-
-        dana.getByteArrayOf(arraySize) =[] bu.reverse(su.subString(content,count,4))
+        int4 arraySize = buildInt4(bu.reverse(su.subString(content,count,4)))
 
         JSONElement children[] = digestBSONDocument(new BSONDocument(su.subString(content,count,arraySize)),true)
 
