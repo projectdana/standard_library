@@ -10,9 +10,9 @@ const byte INTEGER		= 1
 const byte DECIMAL		= 2
 const byte DATA			= 3
 const byte OBJECT		= 4
-const byte FUNCTION		= 5
+const byte ARRAY		= 5
 const byte THREAD		= 6
-const byte ARRAY		= 7
+const byte FUNCTION		= 7
 const byte COMPONENT	= 8
 	byte class
 	byte flags

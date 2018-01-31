@@ -6,10 +6,10 @@ interface IntUtil{
 	/*
 	 {"@description" : "Convert an integer to a string."}
 	*/
-	char[] intToString(int512 i)
+	char[] intToString(int i)
 	
 	/*
 	 {"@description" : "Convert a string to an integer."}
 	*/
-	int512 intFromString(char s[])
+	int intFromString(char s[])
 	}

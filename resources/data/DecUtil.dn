@@ -6,10 +6,10 @@ interface DecUtil{
 	/*
 	{ "@description" : "Convert a decimal fraction to a string."}
 	*/
-	char[] decToString(dec16 i)
+	char[] decToString(dec i)
 	
 	/*
 	{ "@description" : "Convert a string to a decimal fraction."}
 	*/
-	dec64 decFromString(char s[])
+	dec decFromString(char s[])
 	}
