@@ -1,5 +1,9 @@
 uses net.TCPSocket
 
+data IntH {
+	int i
+	}
+
 component provides DocStream requires data.IntUtil intUtil, io.Output out, data.StringUtil stringUtil, encoding.Encoder:uri encoder {
 	
 	Header requestHeaders[]
@@ -52,7 +56,8 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 	
 	char[] intToHex(int i)
 		{
-		byte bytes[] = dana.getByteArrayOf(i)
+		IntH id = new IntH(i)
+		byte bytes[] = dana.getByteArrayOf(id)
 		char res[]
 		
 		for (int p = bytes.arrayLength - 1; p != INT_MAX; p--)

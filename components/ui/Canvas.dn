@@ -36,9 +36,6 @@ library interface UIPlaneLib{
 	
 	void commitBuffer(int phandle)
 	
-	void registerClickListener(int phandle, XYClickListener cl)
-	void registerMouseListener(int phandle, XYMouseListener cl)
-	
 	void setBackgroundColor(int phandle, byte r, byte g, byte b, byte a)
 	
 	void maximiseWindow(int phandle)
