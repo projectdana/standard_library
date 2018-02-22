@@ -24,7 +24,7 @@ interface MongoDB {
 			"jsonQuery" : "The JSON query to execute on the database.",
 			"numberToReturn" : "The maximum number of documents to return. Set to zero to use the default."}
 	*/
-	JSONElement[] find(char collection[], JSONElement jsonQuery, int32 numberToReturn)
+	JSONElement[] find(char collection[], JSONElement jsonQuery, int4 numberToReturn)
 	
 	/*
 	 {"@description" : "Find an element in a collection, using a modifier.",
@@ -33,7 +33,7 @@ interface MongoDB {
 			"modifier" : "A JSON object containing the set of modifiers, such as ordering predicates. For a full list of modifiers, see http://docs.mongodb.org/manual/reference/operator/query-modifier/."
 			"numberToReturn" : "The maximum number of documents to return. Set to zero to use the default."}
 	*/
-	JSONElement[] findWithModifier(char collection[], JSONElement jsonQuery, JSONElement modifier, int32 numberToReturn)
+	JSONElement[] findWithModifier(char collection[], JSONElement jsonQuery, JSONElement modifier, int4 numberToReturn)
 
 	/*
 	 {"@description" : "Update an element in a collection.",

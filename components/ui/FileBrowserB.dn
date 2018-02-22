@@ -71,6 +71,11 @@ component provides FileBrowser(AdaptEvents) requires Panel, io.FileSystem fileSy
 		setDirectory(currentDirectory)
 		}
 	
+	void AdaptEvents:inactive()
+		{
+		super()
+		}
+	
 	char[] subString(char array[], int start, int length)
 		{
 		char result[]

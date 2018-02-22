@@ -1,13 +1,5 @@
 uses net.TCPSocket
-
-/*
- {"description" : "Contains a key/value pair, used to represent a HTTP header."}
-*/
-
-data Header {
-	char key[]
-	char value[]
-	}
+uses net.http.Header
 
 /*
  {"description" : "Interface to write HTTP response data to a client request, including setting session cookie state."}

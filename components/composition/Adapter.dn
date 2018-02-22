@@ -19,8 +19,8 @@ component provides Adapter {
 			dana.resumeObject(object)
 			// - wait for all in-progress calls to finish in the old object
 			dana.waitForObject(b)
-			// - destroy the old object
-			dana.adaptDestroy(ofComponent, b)
+			// - wait for any in-progress asynchronous threads to finish
+			dana.waitForObjectThreads(b)
 			}
 		}
 	
@@ -41,8 +41,8 @@ component provides Adapter {
 			if ((ae = dana.getObjectInterface(source, object, AdaptEvents)) != null) ae.active()
 			// - allow new calls to proceed in the new object
 			dana.resumeObject(object)
-			// - destroy the old object
-			dana.adaptDestroy(ofComponent, b)
+			// - wait for any in-progress asynchronous threads to finish
+			dana.waitForObjectThreads(b)
 			}
 		}
 	

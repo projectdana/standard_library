@@ -64,7 +64,7 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 	
 	bool isStringArrayType(Type t)
 		{
-		return t.class == Type.ARRAY && t.fields[0].type.class == Type.INTEGER && t.fields[0].type.size == 1
+		return t.class == Type.ARRAY && t.fields[0].type.class == Type.INTEGER && t.fields[0].type.flags == Type.F_CHAR
 		}
 	
 	Data[] CSVParser:parseDocument(char path[], char separators[], Data template)

@@ -68,6 +68,11 @@ component provides TitleBar(AdaptEvents) requires Panel, Label, io.Output out, d
 		postRepaint()
 		}
 	
+	void AdaptEvents:inactive()
+		{
+		super()
+		}
+	
 	void postClose()
 		{
 		emitevent titleBarEvents(TitleBar.EVENT_CLOSE, null)

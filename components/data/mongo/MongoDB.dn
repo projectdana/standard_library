@@ -1,26 +1,26 @@
 uses data.String
 uses data.bson.BSON
 
-const int32 OP_REPLY = 1             //returned by the database
-const int32 OP_MSG = 1000            // generic msg command
-const int32 OP_UPDATE = 2001         // update document
-const int32 OP_INSERT = 2002         // insert new document
-const int32 OP_QUERY = 2004          // query a collection
-const int32 OP_GET_MORE = 2005       // get more data from a query
-const int32 OP_DELETE = 2006         // delete documents
-const int32 OP_KILL_CURSORS = 2007   // tell db we are finished with a cursor.
+const int4 OP_REPLY = 1             //returned by the database
+const int4 OP_MSG = 1000            // generic msg command
+const int4 OP_UPDATE = 2001         // update document
+const int4 OP_INSERT = 2002         // insert new document
+const int4 OP_QUERY = 2004          // query a collection
+const int4 OP_GET_MORE = 2005       // get more data from a query
+const int4 OP_DELETE = 2006         // delete documents
+const int4 OP_KILL_CURSORS = 2007   // tell db we are finished with a cursor.
 
-const int32 MONGO_HEADER_SIZE = 16   //16 bytes
+const int4 MONGO_HEADER_SIZE = 16   //16 bytes
 
-const int32 MONGO_MAX_RAND = 65535
+const int4 MONGO_MAX_RAND = 65535
 
-const int32 MONGO_TIMEOUT_VALUE = 1000
+const int4 MONGO_TIMEOUT_VALUE = 1000
 
 data MongoHeader{
-  int32   messageLength // total message size, including this
-  int32   requestID     // identifier for this message
-  int32   responseTo    // requestID from the original request (used in reponses from db)
-  int32   opCode        // request type - see table below
+  int4   messageLength // total message size, including this
+  int4   requestID     // identifier for this message
+  int4   responseTo    // requestID from the original request (used in reponses from db)
+  int4   opCode        // request type - see table below
 }
 
 /*
@@ -43,9 +43,9 @@ data MongoHeader{
 */
 data MongoUpdate{
     const int STATIC_INT_SIZE = 8
-    int32     ZERO               // 0 - reserved for future use
+    int4     ZERO               // 0 - reserved for future use
     char   fullCollectionName[] // "dbname.collectionname"
-    int32     flags              // bit vector. see below
+    int4     flags              // bit vector. see below
     BSONDocument  selector           // the query to select the document
     BSONDocument  update             // specification of the update to perform
 }
@@ -66,7 +66,7 @@ data MongoUpdate{
 */
 data MongoInsert{
     const int STATIC_INT_SIZE = 4
-    int32     flags              // bit vector - see below
+    int4     flags              // bit vector - see below
     char   fullCollectionName[] // "dbname.collectionname"
     BSONDocument document          // one or more documents to insert into the collection
 }
@@ -104,20 +104,20 @@ data MongoInsert{
 */
 data MongoQuery{
   const int STATIC_INT_SIZE = 12
-  int32     flags                  // bit vector of query options.  See below for details.
+  int4     flags                  // bit vector of query options.  See below for details.
   char  fullCollectionName[]    // "dbname.collectionname"
-  int32     numberToSkip           // number of documents to skip
-  int32     numberToReturn         // number of documents to return
+  int4     numberToSkip           // number of documents to skip
+  int4     numberToReturn         // number of documents to return
                                     //  in the first OP_REPLY batch
   BSONDocument  document                  // query object.  See below for details.
 }
 
 data MongoQueryRF{
   const int STATIC_INT_SIZE = 12
-  int32     flags                  // bit vector of query options.  See below for details.
+  int4     flags                  // bit vector of query options.  See below for details.
   char  fullCollectionName[]    // "dbname.collectionname"
-  int32     numberToSkip           // number of documents to skip
-  int32     numberToReturn         // number of documents to return
+  int4     numberToSkip           // number of documents to skip
+  int4     numberToReturn         // number of documents to return
                                     // in the first OP_REPLY batch
   BSONDocument  document                  // query object.  See below for details.
   BSONDocument  returnFieldsSelector   // Selector indicating the field
@@ -136,10 +136,10 @@ data MongoQueryRF{
   The database will respond to an OP_GET_MORE message with an OP_REPLY message.
 */
 data MongoGetMore{
-  int32     ZERO               // 0 - reserved for future use
+  int4     ZERO               // 0 - reserved for future use
   char   fullCollectionName[] // "dbname.collectionname"
-  int32     numberToReturn     // number of documents to return
-  int64     cursorID           // cursorID from the OP_REPLY
+  int4     numberToReturn     // number of documents to return
+  int8     cursorID           // cursorID from the OP_REPLY
 }
 
 /*
@@ -158,9 +158,9 @@ data MongoGetMore{
 */
 data MongoDelete{
   const int STATIC_INT_SIZE = 8
-  int32     ZERO               // 0 - reserved for future use
+  int4     ZERO               // 0 - reserved for future use
   char   fullCollectionName[] // "dbname.collectionname"
-  int32     flags              // bit vector - see below for details.
+  int4     flags              // bit vector - see below for details.
   BSONDocument  document           // query object.  See below for details.
 }
 
@@ -174,9 +174,9 @@ cursorIDs
 If a cursor is read until exhausted (read until OP_QUERY or OP_GET_MORE returns zero for the cursor id), there is no need to kill the cursor.
 */
 data MongoKillCursors {
-    int32     ZERO              // 0 - reserved for future use
-    int32     numberOfCursorIDs // number of cursorIDs in message
-    int64    cursorIDs[]         // sequence of cursorIDs to close
+    int4     ZERO              // 0 - reserved for future use
+    int4     numberOfCursorIDs // number of cursorIDs in message
+    int8    cursorIDs[]         // sequence of cursorIDs to close
 }
 
 /*
@@ -200,13 +200,20 @@ data MongoDiagnosticMessage{
 */
 data MongoReply{
   MongoHeader header
-  int32     responseFlags  // bit vector - see details below
-  int64     cursorID       // cursor id if client needs to do get more's
-  int32     startingFrom   // where in the cursor this reply is starting
-  int32     numberReturned // number of documents in the reply
+  int4     responseFlags  // bit vector - see details below
+  int8     cursorID       // cursor id if client needs to do get more's
+  int4     startingFrom   // where in the cursor this reply is starting
+  int4     numberReturned // number of documents in the reply
   BSONDocument documents[]     // documents
 }
 
+data Int4{
+	int4 i
+	}
+
+data Int8{
+	int8 i
+	}
 
 component provides MongoDB requires io.Output out, data.json.JSONParser parser, data.bson.BSON bson, net.TCPSocket, data.IntUtil iu, data.StringUtil su, util.RandomInt, data.ByteUtil bu, time.Calendar cal, time.DateUtil du{
 
@@ -306,7 +313,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
     @param numberToReturn the number of documents to return, if you would like Mongo's default,
            set to 0.
   **/
-  JSONElement[] MongoDB:find(char collection[], JSONElement jsonQuery, int32 numberToReturn){
+  JSONElement[] MongoDB:find(char collection[], JSONElement jsonQuery, int4 numberToReturn){
 
     collection = new char[](collection,0)
 
@@ -348,7 +355,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
     @param numberToReturn the number of documents to return, if you would like Mongo's default,
            set to 0.
   **/
-  JSONElement[] MongoDB:findWithModifier(char collection[], JSONElement jsonQuery, JSONElement modifier, int32 numberToReturn){
+  JSONElement[] MongoDB:findWithModifier(char collection[], JSONElement jsonQuery, JSONElement modifier, int4 numberToReturn){
 
     collection = new char[](collection,0)
 
@@ -436,8 +443,10 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
     return true
   }
 
-  byte[] toLittleEndian(int32 value){
-    return bu.reverse(dana.getByteArrayOf(value))
+  byte[] toLittleEndian(int4 value){
+	Int4 i4 = new Int4(value)
+    byte result[] = bu.reverse(dana.getByteArrayOf(i4))
+	return result
   }
 
   byte[] serialiseMongoHeader(MongoHeader mh){
@@ -519,8 +528,8 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
     //the first four bytes contain message length
     received = client.recv(4)
 
-    int32 messageLength
-    dana.getByteArrayOf(messageLength) =[] bu.reverse(received)
+    int4 messageLength
+    messageLength = buildInt4(bu.reverse(received))
 
     //receive our data...
     while ((received = new byte[](received,client.recv(1))).arrayLength < messageLength){}
@@ -528,6 +537,26 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
     return received
   }
 
+   int4 buildInt4(byte array[])
+	{
+	Int4 q = new Int4()
+	
+	byte x[] = dana.getByteArrayOf(q)
+	x =[] array
+	
+	return q.i
+	}
+
+   int8 buildInt8(byte array[])
+	{
+	Int8 q = new Int8()
+	
+	byte x[] = dana.getByteArrayOf(q)
+	x =[] array
+	
+	return q.i
+	}
+  
   MongoReply toMongoReply(byte content[]){
     /*
       I acknowledge this could be done in a few lines...
@@ -538,49 +567,49 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
       Mongo also communicates in little endian, dana does not, hence the conversions...
     */
 
-    int32 messageLength
-    int32 requestID
-    int32 responseTo
-    int32 opCode
+    int4 messageLength
+    int4 requestID
+    int4 responseTo
+    int4 opCode
 
     int offset = 0
 
-    dana.getByteArrayOf(messageLength) =[] bu.reverse(su.subString(content,offset,4))
+    messageLength = buildInt4(bu.reverse(su.subString(content,offset,4)))
 
     offset += 4
 
-    dana.getByteArrayOf(requestID) =[] bu.reverse(su.subString(content,offset,4))
+    requestID = buildInt4(bu.reverse(su.subString(content,offset,4)))
 
     offset += 4
 
-    dana.getByteArrayOf(responseTo) =[] bu.reverse(su.subString(content,offset,4))
+    responseTo = buildInt4(bu.reverse(su.subString(content,offset,4)))
 
     offset += 4
 
-    dana.getByteArrayOf(opCode) =[] bu.reverse(su.subString(content,offset,4))
+    opCode = buildInt4(bu.reverse(su.subString(content,offset,4)))
 
     offset += 4
 
     MongoHeader mh = new MongoHeader(messageLength,requestID,responseTo,opCode)
 
-    int32 responseFlags
-    int64 cursorID
-    int32 startingFrom
-    int32 numberReturned
+    int4 responseFlags
+    int8 cursorID
+    int4 startingFrom
+    int4 numberReturned
 
-    dana.getByteArrayOf(responseFlags) =[] bu.reverse(su.subString(content,offset,4))
+    responseFlags = buildInt4(bu.reverse(su.subString(content,offset,4)))
 
     offset += 4
 
-    dana.getByteArrayOf(cursorID) =[] bu.reverse(su.subString(content,offset,8))
+    cursorID = buildInt8(bu.reverse(su.subString(content,offset,8)))
 
     offset += 8
 
-    dana.getByteArrayOf(startingFrom) =[] bu.reverse(su.subString(content,offset,4))
+    startingFrom = buildInt4(bu.reverse(su.subString(content,offset,4)))
 
     offset += 4
 
-    dana.getByteArrayOf(numberReturned) =[] bu.reverse(su.subString(content,offset,4))
+    numberReturned = buildInt4(bu.reverse(su.subString(content,offset,4)))
 
     offset += 4
 
