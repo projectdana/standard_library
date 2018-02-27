@@ -60,6 +60,29 @@ component provides composition.RecursiveLoader requires composition.Search searc
 		return lc.loadedComponents.arrayLength - 1
 		}
 	
+	void resolveDependency(LoadedComponents lc, int comIndex, char package[], char alias[])
+		{
+		IDC com = lc.loadedComponents[comIndex].class
+		
+		char np[] = search.getDefaultComponent(package)
+		
+		if (np == null) throw new Exception("Failed to find default component to satisfy dependency $package")
+		
+		int index = loadSupportComponent(np, lc)
+		IDC ncom = lc.loadedComponents[index].class
+		
+		if (dana.getComponent(com :> alias) == null)
+			{
+			dana.rewire(com :> alias, ncom :< alias)
+			
+			if (lc.graph.arrayLength != 0)
+				lc.graph = new char[](lc.graph, ",")
+			lc.graph = new char[](lc.graph, "$(alias):$(iu.intToString(comIndex)):$(iu.intToString(index))")
+			
+			loadComponents(index, np, lc)
+			}
+		}
+	
 	bool loadComponents(int comIndex, char path[], LoadedComponents lc)
 		{
 		//get the required interfaces of path, and load each one (if not already in lc), then wire up the interfaces
@@ -70,21 +93,7 @@ component provides composition.RecursiveLoader requires composition.Search searc
 			{
 			if (!isAutoBinding(ri[i].package))
 				{
-				char np[] = search.getDefaultComponent(ri[i].package)
-				
-				int index = loadSupportComponent(np, lc)
-				IDC ncom = lc.loadedComponents[index].class
-				
-				if (dana.getComponent(com :> ri[i].alias) == null)
-					{
-					dana.rewire(com :> ri[i].alias, ncom :< ri[i].alias)
-					
-					if (lc.graph.arrayLength != 0)
-						lc.graph = new char[](lc.graph, ",")
-					lc.graph = new char[](lc.graph, "$(ri[i].alias):$(iu.intToString(comIndex)):$(iu.intToString(index))")
-					
-					loadComponents(index, np, lc)
-					}
+				resolveDependency(lc, comIndex, ri[i].package, ri[i].alias)
 				}
 			}
 		

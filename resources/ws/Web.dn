@@ -22,4 +22,20 @@ interface Web {
 		return false
 		}
 	
+	/*
+	 {"@description" : "This function is called when a HTTP PUT request is made."}
+	*/
+	bool put(char path[], char contentType[], byte content[], DocStream stream)
+		{
+		return false
+		}
+	
+	/*
+	 {"@description" : "This function is called when a HTTP DELETE request is made."}
+	*/
+	bool delete(char path[], char contentType[], byte content[], DocStream stream)
+		{
+		return false
+		}
+	
 	}

@@ -5,9 +5,9 @@ URLs for your website are mapped as follows:
 
 Anything on SWC_PATH is directly served as static web content.
 
-For any other URL (such as /my/resource) the URL is treated as a directory path and we search for a file called "web.o" in that directory (starting at /my/resource/web.o). If no such file exists, the URL is shortened by one level and we search for "web.o" in this directory (i.e., at /my/web.o), continuing this search until we reach "/web.o".
+For any other URL (such as /my/resource) the URL is treated as a dotted file path and we search for a file with a corresponding name (starting at my.resource.o). If no such file exists, the URL is shortened by one level and we search for a file at this level (i.e., at my.o), continuing this search until we default to "/web.o".
 
-When the located web component is invoked, we pass into its "path" parameter any part of the URL that was removed. Using the example URL "/my/resource", if we locate the file "/my/web.o" we pass in the path "resource"; if we locate "/web.o" the path is "my/resource".
+When the located web component is invoked, we pass into its "path" parameter any part of the URL that was removed. Using the example URL "/my/resource", if we locate the file "my.o" we pass in the path "resource"; if we default to "/web.o" the path is "my/resource".
 
 Invocations on web components are serialised, so no concurrency control is necessary to gain mutual exclusion.
 */
@@ -20,15 +20,22 @@ const int LISTEN_PORT = 2018
 data Command {
 	const int GET = 1
 	const int POST = 2
+	const int PUT = 3
+	const int DELETE = 4
 	int type
 	
 	char resource[]
 	Header headers[]
 	}
 
+data PathMapping {
+	char path[]
+	char file[]
+	}
+
 component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocket, data.StringUtil stringUtil, data.IntUtil intUtil, io.FileSystem fileSystem, io.File, ws.DocStream, composition.RecursiveLoader loader {
 	
-	char web_root[] = "."
+	char web_root[] = "./"
 	
 	Command readCommand(TCPSocket socket)
 		{
@@ -89,57 +96,71 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		return null
 		}
 	
-	char[] getHandler(char command[])
+	char[] getHandler(String resource)
 		{
-		//parse command into /'s and find the most detailed directory, if any, that contains a file "web.o"
+		//parse command into /'s and find the most detailed file, if any, by converting to each "/" to ".", and adding ".o"
+		char command[] = resource.string
 		char path[]
 		
-		if (command[command.arrayLength-1] == "/")
-			path = new char[](web_root, command, "web.o")
+		resource.string = ""
+		
+		if (command[command.arrayLength-1] == "/" && command != "/")
+			{
+			command = stringUtil.subString(command, 0, command.arrayLength - 1)
+			path = new char[](web_root, stringUtil.implode(stringUtil.explode(command, "/"), "."), ".o")
+			}
+			else if (command == "/")
+			{
+			path = new char[](web_root, "web.o")
+			}
 			else
-			path = new char[](web_root, command, "/web.o")
+			{
+			path = new char[](web_root, stringUtil.implode(stringUtil.explode(command, "/"), "."), ".o")
+			}
 		
 		if (fileSystem.exists(path))
 			return path
 		
-		while (command != null)
+		while (stringUtil.find(command, "/") != StringUtil.NOT_FOUND)
 			{
-			if (stringUtil.find(command, "/") != StringUtil.NOT_FOUND)
-				command = stringUtil.subString(command, 0, stringUtil.rfind(command, "/"))
+			int offset = stringUtil.rfind(command, "/")
+			if (resource.string != null)
+				resource.string = new char[](stringUtil.subString(command, offset, command.arrayLength - offset), resource.string)
 				else
-				return null
+				resource.string = stringUtil.subString(command, offset, command.arrayLength - offset)
 			
-			path = new char[](web_root, command, "/web.o")
+			command = stringUtil.subString(command, 0, stringUtil.rfind(command, "/"))
+			
+			path = new char[](web_root, stringUtil.implode(stringUtil.explode(command, "/"), "."), ".o")
 			
 			if (fileSystem.exists(path))
 				return path
 			}
+		
+		path = new char[](web_root, "web.o")
+		
+		if (fileSystem.exists("web.o"))
+			return path
 		
 		return null
 		}
 	
 	bool serveFunction_GET(DocStream ds, char path[], char command[])
 		{
-		int offset = stringUtil.rfind(path, "/")
-		char rpath[] = stringUtil.subString(command, offset, command.arrayLength - offset)
-		
 		IDC com = loader.load(path).mainComponent
 		
 		Web rh = new Web() from com :< Web
 		
-		return rh.get(rpath, ds)
+		return rh.get(command, ds)
 		}
 	
 	bool serveFunction_POST(DocStream ds, char path[], char command[], char ctype[], byte payload[])
 		{
-		int offset = stringUtil.rfind(path, "/")
-		char rpath[] = stringUtil.subString(command, offset, command.arrayLength - offset)
-		
 		IDC com = loader.load(path).mainComponent
 		
 		Web rh = new Web() from com :< Web
 		
-		return rh.post(rpath, ctype, payload, ds)
+		return rh.post(command, ctype, payload, ds)
 		}
 	
 	bool serveFile(char command[], TCPSocket s)
@@ -185,6 +206,7 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		//call function associated with command, return result (as HTTP response)
 		
 		Command cmd = readCommand(s)
+		String resource = new String(cmd.resource)
 		char handler[]
 		
 		bool success = false
@@ -193,13 +215,13 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 			{
 			success = serveFile(cmd.resource, s)
 			}
-			else if ((handler = getHandler(cmd.resource)) != null)
+			else if ((handler = getHandler(resource)) != null)
 			{
 			DocStream ds = new DocStream(s, cmd.headers)
 			
 			if (cmd.type == Command.GET)
 				{
-				success = serveFunction_GET(ds, handler, cmd.resource)
+				success = serveFunction_GET(ds, handler, resource.string)
 				}
 				else if (cmd.type == Command.POST)
 				{
@@ -208,7 +230,7 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 				int plen = intUtil.intFromString(getHeaderValue(cmd, "content-length"))
 				byte payload[] = s.recv(plen)
 				
-				success = serveFunction_POST(ds, handler, cmd.resource, ctype, payload)
+				success = serveFunction_POST(ds, handler, resource.string, ctype, payload)
 				}
 			
 			if (success) ds.endStream()
