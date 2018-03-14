@@ -648,6 +648,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 			
 			if (fileSystem.getInfo(filePath).type == FileInfo.TYPE_FILE)
 				{
+				out.println("Parsing $filePath")
 				docBuilder.parseFile(filePath)
 				}
 				else
@@ -665,6 +666,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		
 		if (params.arrayLength > 0)
 			{
+			out.println("Parsing $(params[0].string)")
 			docBuilder.parseFile(params[0].string)
 			}
 			else

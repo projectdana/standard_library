@@ -1164,8 +1164,6 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	
 	bool DocBuilder:parseFile(char path[])
 		{
-		out.println("Parsing $path")
-		
 		File fd = new File(path, File.FILE_ACCESS_READ)
 		
 		if (fd != null)
