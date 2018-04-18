@@ -206,6 +206,14 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		//call function associated with command, return result (as HTTP response)
 		
 		Command cmd = readCommand(s)
+		
+		if (cmd == null)
+			{
+			//malformed / interrupted request
+			s.disconnect()
+			throw new Exception("malformed or interrupted request")
+			}
+		
 		String resource = new String(cmd.resource)
 		char handler[]
 		

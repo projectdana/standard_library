@@ -185,13 +185,13 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 											"This is a REST API for the PAL service. The following commands are available:",
 											"</div>",
 											"<div style=\"$divStyle\">",
-											"GET /meta/get_all_configs HTTP/1.0"
+											"GET /meta/get_all_configs HTTP/1.0",
 											"</div>",
 											"<div style=\"$divStyle\">",
-											"GET /meta/get_config HTTP/1.0"
+											"GET /meta/get_config HTTP/1.0",
 											"</div>",
 											"<div style=\"$divStyle\">",
-											"GET /meta/get_perception HTTP/1.0"
+											"GET /meta/get_perception HTTP/1.0",
 											"</div>",
 											"<div style=\"$divStyle\">",
 											"POST /meta/set_config HTTP/1.0<br/>",
