@@ -1,0 +1,12 @@
+component provides UnitTest requires util.Math math, io.Output out {
+	
+	bool UnitTest:runTest()
+		{
+		dec rd = math.sqrt(16.0)
+		
+		if (rd != 4.0) throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

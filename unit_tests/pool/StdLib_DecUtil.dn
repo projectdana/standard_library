@@ -1,0 +1,367 @@
+component provides UnitTest requires io.Output out, data.DecUtil decUtil {
+	
+	dec getDecimal()
+		{
+		return decUtil.decFromString("1.5")
+		}
+	
+	bool negativeTest()
+		{
+		dec a
+		dec b
+		dec c
+		
+		a = 6.0
+		b = 4.0
+		
+		c = a * b
+		
+		if (c != 24.0) return false
+		
+		a = 6.0
+		b = -4.0
+		
+		c = a * b
+		
+		if (c != -24.0) return false
+		
+		a = -6.0
+		b = 4.0
+		
+		c = a * b
+		
+		if (c != -24.0) return false
+		
+		a = -6.0
+		b = -4.0
+		
+		c = a * b
+		
+		if (c != 24.0) return false
+		
+		a = 6.0
+		b = 4.0
+		
+		c = a / b
+		
+		if (c != 1.5) return false
+		
+		a = 6.0
+		b = -4.0
+		
+		c = a / b
+		
+		if (c != -1.5) return false
+		
+		a = -6.0
+		b = 4.0
+		
+		c = a / b
+		
+		if (c != -1.5) return false
+		
+		a = -6.0
+		b = -4.0
+		
+		c = a / b
+		
+		if (c != 1.5) return false
+		
+		a = 6.0
+		b = 4.0
+		
+		c = a + b
+		
+		if (c != 10.0) return false
+		
+		a = 6.0
+		b = -4.0
+		
+		c = a + b
+		
+		if (c != 2.0) return false
+		
+		a = -6.0
+		b = 4.0
+		
+		c = a + b
+		
+		if (c != -2.0) return false
+		
+		a = -6.0
+		b = -4.0
+		
+		c = a + b
+		
+		if (c != -10.0) return false
+		
+		a = 6.0
+		b = 4.0
+		
+		c = a - b
+		
+		if (c != 2.0) return false
+		
+		a = 6.0
+		b = -4.0
+		
+		c = a - b
+		
+		if (c != 10.0) return false
+		
+		a = -6.0
+		b = 4.0
+		
+		c = a - b
+		
+		if (c != -10.0) return false
+		
+		a = -6.0
+		b = -4.0
+		
+		c = a - b
+		
+		if (c != -2.0) return false
+		
+		return true
+		}
+	
+	bool negativeTestND()
+		{
+		dec1 a
+		dec1 b
+		dec1 c
+		
+		a = 6.0
+		b = 4.0
+		
+		c = a * b
+		
+		if (c != 24.0) return false
+		
+		a = 6.0
+		b = -4.0
+		
+		c = a * b
+		
+		if (c != -24.0) return false
+		
+		a = -6.0
+		b = 4.0
+		
+		c = a * b
+		
+		if (c != -24.0) return false
+		
+		a = -6.0
+		b = -4.0
+		
+		c = a * b
+		
+		if (c != 24.0) return false
+		
+		a = 6.0
+		b = 4.0
+		
+		c = a / b
+		
+		if (c != 1.5) return false
+		
+		a = 6.0
+		b = -4.0
+		
+		c = a / b
+		
+		if (c != -1.5) return false
+		
+		a = -6.0
+		b = 4.0
+		
+		c = a / b
+		
+		if (c != -1.5) return false
+		
+		a = -6.0
+		b = -4.0
+		
+		c = a / b
+		
+		if (c != 1.5) return false
+		
+		a = 6.0
+		b = 4.0
+		
+		c = a + b
+		
+		if (c != 10.0) return false
+		
+		a = 6.0
+		b = -4.0
+		
+		c = a + b
+		
+		if (c != 2.0) return false
+		
+		a = -6.0
+		b = 4.0
+		
+		c = a + b
+		
+		if (c != -2.0) return false
+		
+		a = -6.0
+		b = -4.0
+		
+		c = a + b
+		
+		if (c != -10.0) return false
+		
+		a = 6.0
+		b = 4.0
+		
+		c = a - b
+		
+		if (c != 2.0) return false
+		
+		a = 6.0
+		b = -4.0
+		
+		c = a - b
+		
+		if (c != 10.0) return false
+		
+		a = -6.0
+		b = 4.0
+		
+		c = a - b
+		
+		if (c != -10.0) return false
+		
+		a = -6.0
+		b = -4.0
+		
+		c = a - b
+		
+		if (c != -2.0) return false
+		
+		return true
+		}
+	
+	bool UnitTest:runTest()
+		{
+		dec i = 31.3
+		
+		dec r = i / 5.0
+		
+		if (r != 6.26) throw new Exception("Failure in test 1")
+		
+		char uc[] = decUtil.decToString(i)
+		
+		if (uc != "31.3") throw new Exception("Failure in test 2")
+		
+		dec c = 0
+		c += 16
+		c += 29
+		c += 36
+		
+		c = c / 3
+		
+		if (c != 27) throw new Exception("Failure in test 3")
+		
+		dec d = 0.005
+		
+		if (decUtil.decToString(d) != "0.005") throw new Exception("Failure in test 4")
+		
+		//basic arithmetic with equal size operands
+		dec a = 1.0
+		dec b = 2.0
+		
+		c = a + b
+		
+		if (c != 3.0) throw new Exception("Failure in test 5")
+		if (c > 3.0) throw new Exception("Failure in test 6")
+		if (3.0 < c) throw new Exception("Failure in test 7")
+		
+		a = 4.0
+		b = 2.0
+		
+		c = a - b
+		
+		if (c != 2.0) throw new Exception("Failure in test 8")
+		
+		a = 5.0
+		b = 0.5
+		
+		c = a * b
+		
+		if (c != 2.5) throw new Exception("Failure in test 9")
+		
+		a = 12.0
+		b = 3.0
+		
+		c = a / b
+		
+		if (c != 4.0) throw new Exception("Failure in test 10")
+		
+		a = 0.5
+		b = 2.0
+		
+		c = a / b
+		
+		if (c != 0.25) throw new Exception("Failure in test 11")
+		
+		//rational overflow tests
+		a = 0.0
+		a -= 1.0
+		a += 2.5
+		
+		if (a != 1.5) throw new Exception("Failure in test 12")
+		
+		//arithmetic scaling tests
+		dec1 as = 2
+		
+		a = 200.6
+		
+		as = a / as
+		
+		if (as != 100.3) throw new Exception("Failure in test 13")
+		
+		a = a + as
+		
+		if (a != 300.9) throw new Exception("Failure in test 14")
+		
+		a = 0.3
+		as = as - a
+		
+		if (as != 100.0) throw new Exception("Failure in test 15")
+		
+		//mixed integer tests
+		
+		as = as * 1
+		
+		if (as != 100.0) throw new Exception("Failure in test 16")
+		
+		as = as * 0.5 * 1
+		
+		if (as != 50.0) throw new Exception("Failure in test 17")
+		
+		as = as * 0.5 * 1 * 0.5
+		
+		if (as != 12.5) throw new Exception("Failure in test 18")
+		
+		int q = 100
+		
+		q = q * 100 * 1.0
+		
+		if (q != 10000) throw new Exception("Failure in test 19")
+		
+		if (getDecimal() != 1.5) throw new Exception("Failure in test 20")
+		
+		if (!negativeTest()) throw new Exception("Failure in test 21")
+		
+		if (!negativeTestND()) throw new Exception("Failure in test 22")
+		
+		return true
+		}
+	
+	}

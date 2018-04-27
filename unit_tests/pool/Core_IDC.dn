@@ -1,0 +1,14 @@
+uses io.Output
+
+component provides UnitTest {
+	
+	bool UnitTest:runTest()
+		{
+		IDC com = dana.getIDC()
+		
+		Output o = new Output() from com :< Output
+		
+		return true
+		}
+	
+	}

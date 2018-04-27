@@ -1,0 +1,74 @@
+data Second {
+	int m
+	}
+
+data Person {
+	char name[]
+	int age
+	dec weight
+	Data content
+	Object object //TODO: actually fire an equality function! (but with adjusted rules)
+	Thread thread //TODO: test equality & assignment
+	IDC com //TODO: test equality & assignment
+	}
+
+data Persons {
+	char name[]
+	Data contents[]
+	Object objects[]
+	}
+
+component provides UnitTest requires io.Output out {
+
+	bool testFieldArrayAssign(Data a, Data b, TypeField t)
+		{
+		if ((a:.t)[0] == (b:.t)[0])
+			return false
+		
+		(a:.t)[0] = (b:.t)[0]
+		
+		if ((a:.t)[0] != (b:.t)[0])
+			return false
+		
+		return true
+		}
+
+	bool testFieldAssign(Data a, Data b, TypeField t)
+		{
+		if (a:.t == b:.t)
+			return false
+		
+		a:.t = b:.t
+		
+		if (a:.t != b:.t)
+			return false
+		
+		return true
+		}
+	
+	bool UnitTest:runTest()
+		{
+		Output oussen = new Output()
+		
+		Person pa = new Person("Sandy", 21, 2.5, new Second(4), oussen)
+		Person pb = new Person("Marcus", 24, 2.9, new Second(13), out)
+		
+		if (!testFieldAssign(pa, pb, Person.[name]) || pa.name != "Marcus") throw new Exception("Failure in test 1")
+		
+		if (!testFieldAssign(pa, pb, Person.[age]) || pa.age != 24) throw new Exception("Failure in test 2")
+		
+		if (!testFieldAssign(pa, pb, Person.[weight]) || pa.weight != 2.9) throw new Exception("Failure in test 3")
+		
+		if (!testFieldAssign(pa, pb, Person.[content]) || pa.content !== pb.content) throw new Exception("Failure in test 4")
+		
+		Persons psa = new Persons("Sandy", new Second(17))
+		Persons psb = new Persons("Marcus", new Second(19))
+		
+		if (!testFieldArrayAssign(psa, psb, Persons.[name])) throw new Exception("Failure in test 5")
+		
+		if (!testFieldArrayAssign(psa, psb, Persons.[contents])) throw new Exception("Failure in test 6")
+		
+		return true
+		}
+	
+	}

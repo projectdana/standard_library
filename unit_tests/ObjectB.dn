@@ -1,0 +1,9 @@
+
+component provides ObjectB {
+
+	ObjectB:ObjectB()
+		{
+		
+		}
+	
+	}

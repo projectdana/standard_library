@@ -1,0 +1,48 @@
+data Person {
+	char name[]
+	int age
+	}
+
+data Hero extends Person {
+	int level
+	}
+
+data QTest {
+	int a
+	int b
+	int c
+	}
+
+component provides UnitTest {
+	
+	bool UnitTest:runTest()
+		{
+		Person a = new Person("Wendalina Wobblegoth", 17)
+		Person b = clone a
+		
+		b.name[0] = "B"
+		
+		if (a.name != b.name) throw new Exception("Failure in test 1")
+		
+		Hero h = new Hero("Harmon Heavesqueezer", 22, 14)
+		
+		if (h.level != 14) throw new Exception("Failure in test 2")
+		
+		QTest qtA = new QTest(1, 2, 3)
+		QTest qtB = new QTest(1, 2, 3)
+		
+		if (qtA != qtB) throw new Exception("Failure in test 3")
+		
+		QTest n1
+		QTest n2
+		
+		if (n1 != n2) throw new Exception("Failure in test 4")
+		
+		QTest n3 = clone n1
+		
+		if (n3 != n1) throw new Exception("Failure in test 4")
+		
+		return true
+		}
+	
+	}

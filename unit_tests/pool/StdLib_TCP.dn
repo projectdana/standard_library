@@ -1,0 +1,44 @@
+component provides UnitTest requires net.TCPSocket, net.TCPServerSocket {
+	
+	void serverMethod(Thread t)
+		{
+		TCPServerSocket serverSocket = new TCPServerSocket()
+		serverSocket.bind(TCPServerSocket.ANY_ADDRESS, 6000)
+		
+		t.signal()
+		
+		TCPSocket client = new TCPSocket()
+		
+		client.accept(serverSocket)
+		
+		client.send("test_data")
+		
+		client.disconnect()
+		
+		serverSocket.unbind()
+		}
+	
+	bool UnitTest:runTest()
+		{
+		Thread serverThread = asynch::serverMethod(this.thread)
+		
+		this.thread.wait()
+		
+		TCPSocket client = new TCPSocket()
+		client.connect("127.0.0.1", 6000)
+		
+		char buf[]
+		char totalBuf[]
+		while ((buf = client.recv(64)).arrayLength > 0)
+			totalBuf = new char[](totalBuf, buf)
+		
+		client.disconnect()
+		
+		if (totalBuf != "test_data") throw new Exception("Failure in test 1")
+		
+		serverThread.join()
+		
+		return true
+		}
+	
+	}

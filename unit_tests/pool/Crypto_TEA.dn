@@ -1,0 +1,130 @@
+/* "TEA" encryption (with network-big-endian arithmetic) */
+
+const char filename[] = "ext-files/crypto_src.txt"
+
+data Int4{
+	int4 i
+	}
+
+component provides UnitTest requires io.File {
+	
+	byte[] readSubArray(byte ofArray[], int start, int length)
+		{
+		byte result[] = new byte[length]
+		
+		for (int i = 0; i < length; i++)
+			result[i] = ofArray[start+i]
+		
+		return result
+		}
+	
+	void writeSubArrayFromInt4(byte toArray[], int start, int4 input)
+		{
+		Int4 i4 = new Int4(input)
+		char x[] = dana.getByteArrayOf(i4)
+		
+		for (int i = 0; i < x.arrayLength; i++)
+			{
+			toArray[start+i] = x[i]
+			}
+		}
+	
+	int4 getInt4FromArrayRange(byte fromArray[], int fStart, int fLength)
+		{
+		Int4 i4 = new Int4()
+		char x[] = dana.getByteArrayOf(i4)
+		
+		for (int i = 0; i < fLength; i++)
+			{
+			x[i] = fromArray[fStart + i]
+			}
+		
+		return i4.i
+		}
+	
+	int4[] encryptBlock(int4 key[], int4 text[]){
+		int4 v0 = text[0] int4 v1 = text[1]
+		int4 delta = 0x9E3779B9
+		int4 sum = 0
+		
+		for (int i = 0; i < 32; i++){
+			sum += delta
+			v0 += ((v1 << 4) + key[0]) ^ (v1 + sum) ^ ((v1 >> 5) + key[1])
+			v1 += ((v0 << 4) + key[2]) ^ (v0 + sum) ^ ((v0 >> 5) + key[3])
+			}
+		
+		int4 result[] = new int4[](v0, v1)
+		return result
+		}
+	
+	int4[] decryptBlock(int4 key[], int4 text[]){
+		int4 v0 = text[0] int4 v1 = text[1]
+		int4 delta = 0x9E3779B9
+		int4 sum = delta << 5
+		
+		for (int i = 0; i < 32; i++){
+			v1 -= ((v0 << 4) + key[2]) ^ (v0 + sum) ^ ((v0 >> 5) + key[3])
+			v0 -= ((v1 << 4) + key[0]) ^ (v1 + sum) ^ ((v1 >> 5) + key[1])
+			sum -= delta
+			}
+		
+		int4 result[] = new int4[](v0, v1)
+		return result
+		}
+	
+	bool UnitTest:runTest()
+		{
+		int4 key[] = new int4[](16, 17, 35, 35)
+		char encrypted[]
+		char decrypted[]
+		char original[]
+		
+		File fd = new File(filename, File.FILE_ACCESS_READ)
+		if (fd != null)
+			{
+			while (! fd.eof())
+				{
+				//when we read 8 bytes from a file we may actually read less than 8 (if it's at the end)
+				// - we therefore pre-allocate an 8 byte array and copy whatever we read from the file into that
+				char buf[] = new char[8]
+				char rdbuf[] = fd.read(8)
+				
+				buf =[] rdbuf
+				
+				original = new char[](original, rdbuf)
+				
+				int4 v0
+				int4 v1
+				
+				v0 = getInt4FromArrayRange(buf, 0, 4)
+				v1 = getInt4FromArrayRange(buf, 4, 4)
+				
+				int4 res[] = encryptBlock(key, new int4[](v0, v1))
+				
+				writeSubArrayFromInt4(buf, 0, res[0])
+				writeSubArrayFromInt4(buf, 4, res[1])
+				
+				encrypted = new char[](encrypted, buf)
+				
+				// --
+				
+				v0 = getInt4FromArrayRange(buf, 0, 4)
+				v1 = getInt4FromArrayRange(buf, 4, 4)
+				
+				res = decryptBlock(key, new int4[](v0, v1))
+				
+				writeSubArrayFromInt4(buf, 0, res[0])
+				writeSubArrayFromInt4(buf, 4, res[1])
+				
+				decrypted = new char[](decrypted, buf)
+				}
+			
+			fd.close()
+			}
+		
+		if (decrypted != original) throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

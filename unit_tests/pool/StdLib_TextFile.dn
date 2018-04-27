@@ -1,0 +1,15 @@
+component provides UnitTest requires io.TextFile {
+	
+	bool UnitTest:runTest()
+		{
+		char buf[]
+		
+		File fd = new TextFile("potato.txt", File.FILE_ACCESS_READ)
+		
+		if (fd != null)
+			throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

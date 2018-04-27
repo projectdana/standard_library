@@ -1,0 +1,274 @@
+uses UnitTest
+uses Service
+
+const char SOURCE[] = "pool"
+
+data Dependency{
+	IDC com
+	char package[]
+	char sourcePath[]
+	}
+
+component provides App requires io.Output out, io.FileSystem fileSystem, io.File, Loader loader, composition.ObjectReader, data.json.JSONParser parser, data.StringUtil stringUtil, os.SystemInfo systemInfo, System system {
+	
+	//this function takes a "base" path from which to check for a manifest (may be an empty string) and a "pkg" path which is expected to be in a dotted form, i.e. net.TCPSocket
+	char[] checkManifest(char base[], char pkg[])
+		{
+		//convert all dots to slashes and ignore the last thing
+		String parts[] = stringUtil.explode(pkg, ".")
+		char path[] = base
+		char interfaceAlias[] = pkg
+
+		if (parts.arrayLength > 0) interfaceAlias = parts[parts.arrayLength - 1].string
+		
+		for (int i = 0; parts.arrayLength > 0 && i < parts.arrayLength - 1; i++)
+			{
+			path = new char[](path, "/", parts[i].string)
+			}
+		
+		char fullBasePath[] = new char[](path, "/")
+		
+		path = new char[](path, "/.manifest")
+		
+		if (fileSystem.exists(path))
+			{
+			//parse the file into JSON
+			File fd = new File(path, File.FILE_ACCESS_READ)
+			char buf[] = fd.read(fd.getSize())
+			fd.close()
+			
+			JSONElement je = parser.parseDocument(buf)
+			
+			JSONElement links = parser.getValue(je, "defaultLinks")
+			
+			for (int i = 0; i < links.children.arrayLength; i++)
+				{
+				char ifn[] = parser.getValue(links.children[i], "interface").value
+				//out.println("link: '$ifn'")
+				
+				if (parser.getValue(links.children[i], "interface").value == interfaceAlias)
+					{
+					char comPath[] = parser.getValue(links.children[i], "component").value
+					char result[] = new char[](fullBasePath, comPath, ".o")
+					
+					//out.println("candidate: '$result'")
+					
+					if (fileSystem.exists(result)) return result
+					}
+				}
+			}
+		
+		return null
+		}
+	
+	char[] checkRelativePath(char base[], char pkg[])
+		{
+		char test[]
+		
+		test = checkManifest(base, pkg)
+		
+		if (test != null) return test
+		
+		test = pkg
+		if (fileSystem.exists(new char[](base, test)))
+			return test
+		
+		//local with .o?
+		test = new char[](pkg, ".o")
+		if (fileSystem.exists(new char[](base, test)))
+			return test
+		
+		//all dots (except final one) converted to slashes
+		String parts[] = stringUtil.explode(pkg, ".")
+		if (parts.arrayLength > 0)
+			test = new char[](base, parts[0].string)
+			else
+			test = null
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			if (i + 1 != parts.arrayLength)
+				test = new char[](test, "/", parts[i].string)
+				else
+				test = new char[](test, ".", parts[i].string)
+			}
+		
+		if (fileSystem.exists(test))
+			return test
+		
+		//all dots (including final one) converted to slashes, with ".o" appended
+		if (parts.arrayLength > 0)
+			test = new char[](base, parts[0].string)
+			else
+			test = null
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			test = new char[](test, "/", parts[i].string)
+			}
+		
+		test = new char[](test, ".o")
+		
+		if (fileSystem.exists(test))
+			return test
+		
+		return null
+		}
+	
+	//this function takes a "package path" (formatted with dots) and searches for a matching component
+	// - we assume the package path indicates an interface, so we check: local manifest; local absolute; central manifest; central absolute
+	char[] resolvePackagePath(char source[])
+		{
+		char test[]
+		
+		test = checkRelativePath("", source)
+		
+		if (test != null) return test
+		
+		char danaHome[] = systemInfo.getVariable("DANA_HOME")
+		test = checkRelativePath(new char[](danaHome, "/components/"), source)
+		
+		return test
+		}
+	
+	//this function checks if a component has already been loaded
+	IDC findLoadedComponent(Dependency components[], char path[])
+		{
+		for (int i = 0; i < components.arrayLength; i++)
+			{
+			if (components[i].sourcePath == path)
+				return components[i].com
+			}
+		
+		return null
+		}
+	
+	bool isAutoBinding(char package[])
+		{
+		String interfaces[] = system.getAutoBindings()
+		
+		for (int i = 0; i < interfaces.arrayLength; i++)
+			{
+			if (interfaces[i].string == package) return true
+			}
+		
+		return false
+		}
+	
+	Dependency[] loadDependencies(IDC com, char path[], Dependency result[])
+		{
+		// - enumerate all of com's required interfaces; search for a component for each one
+		// - then follow this procedure recursively (avoiding loading the same component twice)
+		
+		ObjectReader reader = new ObjectReader(path)
+		InfoSection section = reader.getInfoSection("DNIL")
+		
+		JSONElement document = parser.parseDocument(section.content)
+		
+		JSONElement requiredInterfaces = parser.getValue(document, "requiredInterfaces")
+		
+		if (requiredInterfaces != null)
+			{
+			for (int i = 0; i < requiredInterfaces.children.arrayLength; i++)
+				{
+				JSONElement ri = requiredInterfaces.children[i]
+				char package[] = parser.getValue(ri, "package").value
+				char alias[] = parser.getValue(ri, "alias").value
+				
+				//out.println("Required interface: $package / $alias");
+				
+				if (!isAutoBinding(package))
+					{
+					IDC newCom
+					
+					char newPath[] = resolvePackagePath(package)
+					
+					if (newPath == null) throw new Exception("Failed to locate dependency $package of component $path")
+					
+					if ((newCom = findLoadedComponent(result, newPath)) == null)
+						{
+						newCom = loader.load(newPath)
+						
+						if (newCom :< Service != null)
+							{
+							Service svc = new Service() from newCom :< Service
+							svc.start()
+							}
+						
+						result = new Dependency[](result, new Dependency(newCom, clone package, clone newPath))
+						
+						loadDependencies(newCom, newPath, result)
+						}
+					
+					dana.rewire(com :> alias, newCom :< alias)
+					}
+				}
+			}
+		
+		return result
+		}
+	
+	void unloadDependencies(Dependency dependencies[])
+		{
+		for (int i = 0; i < dependencies.arrayLength; i++)
+			{
+			if (dependencies[i].com :< Service != null)
+				{
+				Service svc = new Service() from dependencies[i].com :< Service
+				svc.stop()
+				svc = null
+				}
+			}
+		}
+	
+	int App:main(AppParam params[])
+		{
+		FileEntry files[]
+		
+		if (params.arrayLength > 0)
+			{
+			files = params
+			}
+			else
+			{
+			out.println("Running all unit tests from '$SOURCE'")
+			
+			files = fileSystem.getDirectoryContents(SOURCE)
+			}
+		
+		for (int i = 0; i < files.arrayLength; i++)
+			{
+			char path[] = new char[](SOURCE, "/", files[i].name)
+			
+			FileInfo fi = fileSystem.getInfo(path)
+			
+			if (fi.type == FileInfo.TYPE_FILE && path[path.arrayLength-2] == "." && path[path.arrayLength-1] == "o")
+				{
+				IDC com = loader.load(path)
+				
+				if (com != null)
+					{
+					Dependency dps[] = loadDependencies(com, path, null)
+					
+					UnitTest ut = new UnitTest() from com
+					
+					out.println(" - $path")
+					
+					if (!ut.runTest())
+						{
+						return 1
+						}
+					
+					ut = null
+					
+					unloadDependencies(dps)
+					}
+				}
+			}
+		
+		out.println(" [all tests passed]")
+		
+		return 0
+		}
+	
+	}

@@ -1,0 +1,22 @@
+const char textA[] = "half"
+
+const char textB[10] = "half"
+
+component provides UnitTest {
+	
+	bool UnitTest:runTest()
+		{
+		if (textA.arrayLength != 4) throw new Exception("Failure in test 1")
+		
+		if (textB.arrayLength != 10) throw new Exception("Failure in test 2")
+		
+		char n = textA[3]
+		
+		if (n != "f") throw new Exception("Failure in test 3")
+		
+		if ("harren"[3] != "r") throw new Exception("Failure in test 4")
+		
+		return true
+		}
+	
+	}

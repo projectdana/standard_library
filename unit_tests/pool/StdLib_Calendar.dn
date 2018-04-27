@@ -1,0 +1,12 @@
+component provides UnitTest requires time.Calendar calendar {
+	
+	bool UnitTest:runTest()
+		{
+		DateTime dt = calendar.getTime()
+		
+		if (dt == null || dt.year == 0 || dt.month == 0 || dt.day == 0) throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

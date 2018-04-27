@@ -1,0 +1,26 @@
+component provides UnitTest requires net.UDPServer, net.UDPClient udp {
+	
+	void clientMethod()
+		{
+		udp.send("127.0.0.1", 2012, "test_data")
+		}
+	
+	bool UnitTest:runTest()
+		{
+		UDPServer host = new UDPServer()
+		host.bind(UDPServer.ANY_ADDRESS, 2012)
+		
+		Thread clientThread = asynch::clientMethod()
+		
+		Datagram dg = host.recv()
+		
+		if (dg.content != "test_data") throw new Exception("Failure in test 1")
+		
+		host.unbind()
+		
+		clientThread.join()
+		
+		return true
+		}
+	
+	}

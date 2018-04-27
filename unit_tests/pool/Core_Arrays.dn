@@ -1,0 +1,56 @@
+data Person {
+	char name[]
+	int age
+	}
+
+component provides UnitTest {
+	
+	bool UnitTest:runTest()
+		{
+		int cmpArray[] = new int[](99)
+		int intArray[] = new int[5]
+		intArray[4] = 99
+		
+		if (intArray[4] != 99) throw new Exception("Failure in test 1")
+		
+		Person personArray[] = new Person[5]
+		personArray[4] = new Person("Alex", 10)
+		
+		if (personArray[4].name != "Alex") throw new Exception("Failure in test 2")
+		
+		int staticIntArray[8]
+		
+		staticIntArray[7] = 92
+		
+		if (staticIntArray[7] != 92) throw new Exception("Failure in test 3")
+		
+		if (intArray[4] != cmpArray) throw new Exception("Failure in test 4")
+		
+		if (cmpArray != intArray[4]) throw new Exception("Failure in test 5")
+		
+		Person newPersonArray[]
+
+		newPersonArray = new Person[](newPersonArray, personArray[4])
+		
+		if (newPersonArray.arrayLength != 1) throw new Exception("Failure in test 6")
+		
+		dec decArray[] = new dec[](5.0, 4.5)
+		
+		if (decArray[0] != 5.0) throw new Exception("Failure in test 7")
+		
+		char cable[] = "hable"
+		
+		char able[10]
+		
+		able = cable
+		
+		if (able != "hable") throw new Exception("Failure in test 8")
+		
+		able = "ham"
+		
+		if (able != "ham") throw new Exception("Failure in test 9")
+		
+		return true
+		}
+	
+	}

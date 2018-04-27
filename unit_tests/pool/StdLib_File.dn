@@ -1,0 +1,35 @@
+component provides UnitTest requires io.File, io.FileSystem fileSystem {
+	
+	bool UnitTest:runTest()
+		{
+		char buf[]
+		
+		File fd = new File("test.txt", File.FILE_ACCESS_WRITE)
+		fd.write("hello\n")
+		fd.close()
+		
+		fd = new File("test.txt", File.FILE_ACCESS_READ)
+		buf = fd.read(128)
+		fd.close()
+		
+		if (buf != "hello\n") throw new Exception("Failure in test 1")
+		
+		fd = new File("test.txt", File.FILE_ACCESS_WRITE)
+		fd.setPos(fd.getSize())
+		fd.write("hello\n")
+		fd.close()
+		
+		fd = new File("test.txt", File.FILE_ACCESS_READ)
+		buf = fd.read(128)
+		fd.close()
+		
+		if (buf != "hello\nhello\n") throw new Exception("Failure in test 2")
+		
+		fileSystem.delete("test.txt")
+		
+		if (fileSystem.exists("test.txt")) throw new Exception("Failure in test 3")
+		
+		return true
+		}
+	
+	}

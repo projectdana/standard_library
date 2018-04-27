@@ -1,0 +1,39 @@
+data String {
+	char str[]
+	}
+
+component provides UnitTest {
+	
+	bool UnitTest:runTest()
+		{
+		String s = new String("hi")
+		Data d = s
+		
+		if (!(d hastype String)) throw new Exception("Failure in test 1")
+		
+		if (!(d hastype Data)) throw new Exception("Failure in test 2")
+		
+		if (!("string" hastype char[])) throw new Exception("Failure in test 3")
+		
+		dec decA = 99
+		
+		if (!(decA hastype dec)) throw new Exception("Failure in test 4")
+		
+		int intA = 29
+		
+		if (!(intA hastype int)) throw new Exception("Failure in test 5")
+		
+		if (!(intA hastype char)) throw new Exception("Failure in test 6")
+		
+		if (3 hastype int) throw new Exception("Failure in test 7")
+		
+		if (!(355 hastype int2)) throw new Exception("Failure in test 8")
+		
+		Thread t
+		
+		if (!(t hastype Thread)) throw new Exception("Failure in test 9")
+		
+		return true
+		}
+	
+	}

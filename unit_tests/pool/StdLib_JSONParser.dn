@@ -1,0 +1,21 @@
+component provides UnitTest requires io.Output out, data.IntUtil iu, data.json.JSONParser parser {
+	
+	bool UnitTest:runTest()
+		{
+		char document[] = "{ \"test\" : 33, \"works\" : true, \"arrayTest\" : [ { \"innerObjectTest\" : 43 }, [ { \"innerObject2\":{ \"array2\" : [ \"a\" ] } } ] ] }"
+		
+		JSONElement element = parser.parseDocument(document)
+		
+		if (iu.intFromString(parser.getValue(element,"test").value) != 33) throw new Exception("Failure in test 1")
+		
+		//if (parser.getValueByDot("arrayTest[1].[0].innerObject2.array2[0]",element).value != "a") throw new Exception("Failure in test 2")
+		
+		if (parser.getValueByDot("arrayTest[1].[0]",element).children.arrayLength != 1) throw new Exception("Failure in test 3")
+		
+		if (parser.getValueByDot("arrayTest[1].[0].innerObject2",element).name != "innerObject2") throw new Exception("Failure in test 4")
+		
+		if (parser.documentToString(element) != document) throw new Exception("Failure in test 5")
+		
+		return true
+		}
+	}

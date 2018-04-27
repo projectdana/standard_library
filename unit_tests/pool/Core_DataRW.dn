@@ -1,0 +1,139 @@
+uses data.String
+
+data Q{
+	Container c
+	}
+
+data QS{
+	Container cs[]
+	}
+
+component provides UnitTest requires ObjectA ant {
+	
+	//write to a read-only object
+	bool wrTestA(Container c)
+		{
+		c.number = 99
+		
+		return true
+		}
+	
+	//write to an object that I own, for which the reference comes from a read-only source
+	bool wrTestB()
+		{
+		String s = ant.getString(new String("china"))
+		s.string = "ham"
+		
+		return true
+		}
+	
+	//write to an object that should be writable to me but is referenced as a field of a read-only object
+	bool wrTestC(Container c)
+		{
+		c.item.string = "ham"
+		
+		return true
+		}
+	
+	//write to an object that should read-only to me but is referenced as a field of a writable object
+	bool wrTestD(Q q)
+		{
+		q.c.number = 92
+		
+		return true
+		}
+	
+	//write to a read-only array
+	bool wrTestE(Container cs[])
+		{
+		cs[0] = new Container()
+		
+		return true
+		}
+	
+	//write to an array that I own, for which the reference comes from a read-only source
+	bool wrTestF()
+		{
+		String s[] = ant.getStrings(new String[](new String("a"), new String("b")))
+		
+		s[0] = new String("p")
+		
+		return true
+		}
+	
+	//write to an array that should be writable to me but is referenced as a field of a read-only object
+	bool wrTestG()
+		{
+		ArrayContainer ac = ant.getAC(new String[](new String("a"), new String("b")))
+		
+		ac.s[0] = new String("q")
+		ac.s[1].string = "f"
+		
+		return true
+		}
+	
+	//write to an array that should read-only to me but is referenced as a field of a writable object
+	bool wrTestH(QS qs)
+		{
+		qs.cs[0] = new Container()
+		
+		return true
+		}
+	
+	//write to an object that is read-only but is referenced from a writable array
+	bool wrTestI()
+		{
+		Container cs[] = new Container[](ant.function(new String("yams")))
+		
+		cs[0].number = 99
+		
+		return true
+		}
+	
+	//write to an object that is writable but is referenced from a read-only array
+	bool wrTestJ()
+		{
+		String s[] = ant.getStringsIC(new String("Sarah"))
+		
+		s[0].string = "Elizabeth"
+		
+		return true
+		}
+	
+	bool UnitTest:runTest()
+		{
+		ObjectA oa = new ObjectA()
+		
+		Container c = oa.function(new String("cheeses"))
+		
+		Q q = new Q(c)
+		
+		Container cs[] = oa.functions(new String("gametes"))
+		
+		QS qs = new QS(cs)
+		
+		if (wrTestA(c)) throw new Exception("Unit test 1 failed")
+		
+		if (!wrTestB()) throw new Exception("Unit test 2 failed")
+		
+		if (!wrTestC(c)) throw new Exception("Unit test 3 failed")
+		
+		if (wrTestD(q)) throw new Exception("Unit test 4 failed")
+		
+		//if (wrTestE(q)) throw new Exception("Unit test 5 failed") //TODO: compiler AND runtime bug :-S (neither report an error!) (ok so I buy that the compiler would auto-generate an array construction, but Q is NOT compatible with Container for assignment!!!)
+		if (wrTestE(cs)) throw new Exception("Unit test 5 failed")
+		
+		if (!wrTestF()) throw new Exception("Unit test 6 failed")
+		
+		if (!wrTestG()) throw new Exception("Unit test 7 failed")
+		
+		if (wrTestH(qs)) throw new Exception("Unit test 8 failed")
+		
+		if (wrTestI()) throw new Exception("Unit test 9 failed")
+		
+		if (!wrTestJ()) throw new Exception("Unit test 10 failed")
+		
+		return true
+		}
+	
+	}

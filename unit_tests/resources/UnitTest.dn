@@ -1,0 +1,5 @@
+interface UnitTest {
+	
+	bool runTest()
+	
+	}

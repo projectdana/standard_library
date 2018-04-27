@@ -1,0 +1,24 @@
+uses data.String
+
+data Container {
+	String item
+	int number
+	}
+
+data ArrayContainer {
+	String s[]
+	}
+
+interface ObjectA{
+	Container function(Data item)
+	Container[] functions(Data item)
+	
+	ArrayContainer getAC(String s[])
+	
+	String getString(String s)
+	
+	String[] getStrings(String s[])
+	String[] getStringsIC(String s)
+	
+	void loopForever()
+	}

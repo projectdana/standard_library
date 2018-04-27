@@ -1,0 +1,25 @@
+uses io.Output
+uses ObjectA
+
+component provides UnitTest requires Loader loader, time.Timer timer, io.Output out {
+	
+	void stop(IDC com, Object o)
+		{
+		timer.sleep(100)
+		dana.halt(com, o)
+		}
+	
+	bool UnitTest:runTest()
+		{
+		IDC com = loader.load("ObjectA.o")
+	
+		ObjectA a = new ObjectA() from com :< ObjectA
+	
+		asynch::stop(com, a)
+		
+		a.loopForever()
+		
+		return true
+		}
+	
+	}

@@ -1,0 +1,32 @@
+component provides UnitTest {
+	
+	bool UnitTest:runTest()
+		{
+		int a = 2 + 2
+		
+		if (a != 4) throw new Exception("Failure in test 1")
+		
+		a = 4 * 4
+		
+		if (a != 16) throw new Exception("Failure in test 2")
+		
+		a = 360 / 60
+		
+		if (a != 6) throw new Exception("Failure in test 3")
+		
+		int16 q = INT_MAX
+		
+		q = q + INT_MAX
+		q -= INT_MAX
+		
+		if (q != INT_MAX) throw new Exception("Failure in test 4")
+		
+		q *= INT_MAX
+		q = q / INT_MAX
+		
+		if (q != INT_MAX) throw new Exception("Failure in test 5")
+		
+		return true
+		}
+	
+	}

@@ -1,0 +1,12 @@
+component provides UnitTest requires net.http.HTTPRequest request {
+	
+	bool UnitTest:runTest()
+		{
+		HTTPResponse response = request.get("http://www.projectdana.com", null)
+		
+		if (response.responseCode != "200") throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

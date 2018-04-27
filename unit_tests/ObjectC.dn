@@ -1,0 +1,21 @@
+
+component provides ObjectC(Destructor) {
+	
+	static int counter = 0
+	
+	ObjectC:ObjectC()
+		{
+		counter += 2
+		}
+	
+	int ObjectC:getCounter()
+		{
+		return counter
+		}
+	
+	void Destructor:destroy()
+		{
+		counter -= 2
+		}
+	
+	}

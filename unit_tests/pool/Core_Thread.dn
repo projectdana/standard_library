@@ -1,0 +1,34 @@
+component provides UnitTest {
+	
+	void thread()
+		{
+		
+		}
+	
+	bool nullTest()
+		{
+		Thread t
+		
+		t.join()
+		
+		return true
+		}
+	
+	bool UnitTest:runTest()
+		{
+		Thread t = asynch::thread()
+		Thread n = t
+		
+		t.join()
+		
+		if (n != t) throw new Exception("Failure in test 1")
+		
+		Thread ta[] = new Thread[5]
+		ta[0] = t
+		
+		if (nullTest()) throw new Exception("Failure in test 2")
+		
+		return true
+		}
+	
+	}

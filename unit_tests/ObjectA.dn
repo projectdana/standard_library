@@ -1,0 +1,42 @@
+
+component provides ObjectA requires io.Output out, data.IntUtil iu {
+
+	Container ObjectA:function(Data item)
+		{
+		return new Container(item, 0)
+		}
+	
+	Container[] ObjectA:functions(Data item)
+		{
+		return new Container[](new Container(item, 0), new Container(item, 1))
+		}
+	
+	ArrayContainer ObjectA:getAC(String s[])
+		{
+		return new ArrayContainer(s)
+		}
+	
+	String ObjectA:getString(String s)
+		{
+		return s
+		}
+	
+	String[] ObjectA:getStrings(String s[])
+		{
+		return s
+		}
+	
+	String[] ObjectA:getStringsIC(String s)
+		{
+		return new String[](s)
+		}
+	
+	void ObjectA:loopForever()
+		{
+		while(true)
+			{
+			
+			}
+		}
+	
+	}

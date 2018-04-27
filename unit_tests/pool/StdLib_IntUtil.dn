@@ -1,0 +1,14 @@
+component provides UnitTest requires io.Output out, data.IntUtil intUtil {
+	
+	bool UnitTest:runTest()
+		{
+		int i = 31
+		
+		char uc[] = intUtil.intToString(i)
+		
+		if (uc != "31") throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

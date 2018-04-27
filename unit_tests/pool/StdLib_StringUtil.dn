@@ -1,0 +1,50 @@
+component provides UnitTest requires io.Output out, data.StringUtil stringUtil {
+	
+	bool UnitTest:runTest()
+		{
+		char string[] = "hello"
+		
+		char uc[] = stringUtil.uppercase(string)
+		
+		if (uc != "HELLO") throw new Exception("Failure in test 1")
+		
+		char dotString[] = "abc.123.456"
+		
+		if (stringUtil.explode(dotString, ".").arrayLength != 3) throw new Exception("Failure in test 2")
+		
+		char q[] = "$string[0]"
+		
+		if (q != "hello[0]") throw new Exception("Failure in test 3")
+		
+		q = "$(string)[0]"
+		
+		if (q != "hello[0]") throw new Exception("Failure in test 4")
+		
+		q = "$(string[0])"
+		
+		if (q != "h") throw new Exception("Failure in test 5")
+		
+		q = "$(string[0])[0]"
+		
+		if (q != "h[0]") throw new Exception("Failure in test 6")
+		
+		q = "$string."
+		
+		if (q != "hello.") throw new Exception("Failure in test 7")
+		
+		q = "\$$string."
+		
+		if (q != "\$hello." || q.arrayLength != 7) throw new Exception("Failure in test 8")
+		
+		q = "\\\$$string."
+		
+		if (q != "\\\$hello." || q.arrayLength != 8) throw new Exception("Failure in test 9")
+		
+		q = " '$string' "
+		
+		if (q != " 'hello' ") throw new Exception("Failure in test 10")
+		
+		return true
+		}
+	
+	}

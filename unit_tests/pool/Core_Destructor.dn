@@ -1,0 +1,23 @@
+component provides UnitTest requires ObjectC {
+	
+	int test()
+		{
+		ObjectC c = new ObjectC()
+		
+		int result = c.getCounter()
+		
+		return result
+		}
+	
+	bool UnitTest:runTest()
+		{
+		int c = test()
+		
+		c = test()
+		
+		if (c != 2) throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

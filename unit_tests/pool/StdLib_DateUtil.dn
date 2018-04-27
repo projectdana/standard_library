@@ -1,0 +1,58 @@
+component provides UnitTest requires time.DateUtil dateCompare, time.Calendar ic, time.Timer t {
+
+	bool UnitTest:runTest() {
+
+		DateTime first  = null
+		DateTime second = null
+		DateTime result = null
+
+		first = ic.getTime()
+		t.sleep(1000)
+		second = ic.getTime()
+		
+		if ((dateCompare.before(first, second)) 
+			|| (dateCompare.equal(first, second))) {
+
+		} else {
+			throw new Exception("Failure in test 1")
+		}
+
+		if (!dateCompare.after(first, second)) {
+
+		} else {
+			throw new Exception("Failure in test 2")
+		}
+
+		first 	= new DateTime(0, 0, 2, 13, 39, 49, 400)
+        second	= new DateTime(0, 0, 1, 13, 39, 49, 500)
+        result  = new DateTime(0, 0, 0, 23, 59, 59, 900)
+
+		DateTime diff = dateCompare.diff(first, second)
+
+        if (!dateCompare.equal(diff, result)) {
+			throw new Exception("Failure in test 3")
+        }
+
+		first 	= new DateTime(2016, 1, 31, 0, 0, 0, 0)
+        second	= new DateTime(2015, 12, 1, 0, 0, 0, 0)
+        result  = new DateTime(0, 1, 30, 0, 0, 0, 0)
+
+        diff = dateCompare.diff(first, second)
+		
+		if (!dateCompare.equal(diff, result)) {
+			throw new Exception("Failure in test 4")
+        }
+
+        first 	= new DateTime(0, 0, 0, 12, 50, 0, 0)
+        second	= new DateTime(0, 0, 0, 13, 10, 0, 0)
+		result  = new DateTime(0, 0, 0, 0, 20, 0, 0)
+
+        diff = dateCompare.diff(first, second)
+
+        if (!dateCompare.equal(diff, result)) {
+			throw new Exception("Failure in test 5")
+        }
+
+		return true
+	}
+}

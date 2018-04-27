@@ -1,0 +1,17 @@
+component provides UnitTest requires os.SystemInfo sysInfo {
+	
+	bool UnitTest:runTest()
+		{
+		char platform[] = sysInfo.getPlatformName()
+		char chipType[] = sysInfo.getChipName()
+		
+		if (platform != "Windows" && platform != "Linux" && platform != "Darwin") throw new Exception("Failure in test 1")
+		
+		char danaHome[] = sysInfo.getVariable("DANA_HOME")
+		
+		if (danaHome.arrayLength == 0)  throw new Exception("Failure in test 2")
+		
+		return true
+		}
+	
+	}

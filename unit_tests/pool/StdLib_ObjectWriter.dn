@@ -1,0 +1,24 @@
+component provides UnitTest requires io.Output out, composition.ObjectWriter {
+	
+	bool UnitTest:runTest()
+		{
+		ObjectWriter ow = new ObjectWriter("PoolTest.o")
+		
+		InfoSection is = ow.getInfoSection("DNIL", "json")
+		
+		if (is == null) throw new Exception("Failure in test 1")
+		
+		InfoSection testSection = new InfoSection("test", "bool", "true")
+		
+		ow.addInfoSection(testSection)
+		
+		if (ow.getInfoSection("test", "bool") == null) throw new Exception("Failure in test 2")
+		
+		ow.deleteInfoSection("test", "bool")
+		
+		if (ow.getInfoSection("test", "bool") != null) throw new Exception("Failure in test 3")
+		
+		return true
+		}
+	
+	}

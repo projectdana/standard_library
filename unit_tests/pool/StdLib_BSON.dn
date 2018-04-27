@@ -1,0 +1,19 @@
+component provides UnitTest requires io.Output out, data.IntUtil iu, data.json.JSONParser parser, data.bson.BSON bson {
+	
+	bool UnitTest:runTest()
+		{
+		
+		char document[] = "{ \"test\" : 33, \"works\" : true, \"arrayTest\" : [ { \"innerObjectTest\" : 43 }, [ { \"innerObject2\":{ \"array2\" : [ \"a\" ] } } ] ] }"
+		  
+		JSONElement element = parser.parseDocument(document)
+			
+		BSONDocument b = bson.serialise(element)
+		
+		char bsonVersion[] = parser.documentToString(bson.deserialise(b))
+		
+		if (bsonVersion != document) throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

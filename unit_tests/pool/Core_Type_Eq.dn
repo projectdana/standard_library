@@ -1,0 +1,86 @@
+data DataA {
+	int a
+	char b[]
+	}
+
+data DataB {
+	int2 a
+	char b[]
+	}
+
+data DataC {
+	DataC recursion
+	int n
+	}
+
+data DataD {
+	DataD recursion
+	int q
+	}
+
+data DataE {
+	DataB handi
+	int q
+	}
+
+component provides UnitTest {
+	
+	bool equalArray1()
+		{
+		int a[] = new int[60]
+		
+		char b[] = a
+		
+		return true
+		}
+	
+	bool equalData1()
+		{
+		DataA a = new DataA()
+		DataB b = a
+		
+		return true
+		}
+	
+	bool equalData2()
+		{
+		DataC a = new DataC()
+		DataD b = a
+		
+		return true
+		}
+	
+	bool equalData3()
+		{
+		DataC a = new DataC()
+		Data z = a
+		DataE E = z
+		
+		return true
+		}
+	
+	bool equalData4()
+		{
+		DataE a = new DataE()
+		Data z = a
+		DataC e = z //TODO: this should fail, but works because we don't look past the recursion point...
+		
+		return true
+		}
+	
+	bool UnitTest:runTest()
+		{
+		if (equalArray1()) throw new Exception("Failure in test 1")
+		
+		if (equalData1()) throw new Exception("Failure in test 2")
+		
+		if (!equalData2()) throw new Exception("Failure in test 3")
+		
+		if (equalData3()) throw new Exception("Failure in test 4")
+		
+		//if (equalData4()) throw new Exception("Failure in test 5")
+		
+		return true
+		}
+	
+	}

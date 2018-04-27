@@ -1,0 +1,12 @@
+component provides UnitTest requires ObjectB {
+	
+	bool UnitTest:runTest()
+		{
+		ObjectB ob = new ObjectB()
+		
+		if (ob == null) throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}
