@@ -21,7 +21,7 @@ component provides TitleBar(AdaptEvents) requires Panel, Label, io.Output out, d
 	
 	eventsink Buttons(EventData ed)
 		{
-		if (ed.source === closeButton)
+		if (ed.type == ColorButton.[click] && ed.source === closeButton)
 			postClose()
 		}
 	
@@ -42,9 +42,11 @@ component provides TitleBar(AdaptEvents) requires Panel, Label, io.Output out, d
 		closeButton.setSize(new WH(20, 18))
 		closeButton.setColor(new Color(204, 96, 96, 255))
 		
-		addObject(closeButton)
+		addObject(closeButton) // <-- this line causes a segfault when this function exits (seems to have corrupted this stack frame)
+		// - note that this call *causes* an exception, so the function will not be terminating in a usual way
+		// - first, why does the "incompatible types" exception happen, and second, why does throwing this exception cause memory corruption when the function exits???
 		
-		sinkevent Buttons(closeButton.clickEvents)
+		sinkevent Buttons(closeButton)
 		
 		minButton = new ColorButton()
 		minButton.setSize(new WH(14, 14))
@@ -75,7 +77,7 @@ component provides TitleBar(AdaptEvents) requires Panel, Label, io.Output out, d
 	
 	void postClose()
 		{
-		emitevent titleBarEvents(TitleBar.EVENT_CLOSE, null)
+		emitevent close()
 		}
 	
 	Rect TitleBar:getRect()
@@ -152,7 +154,7 @@ component provides TitleBar(AdaptEvents) requires Panel, Label, io.Output out, d
 				else
 				newY = lastY - (dragY - y)
 			
-			emitevent titleBarEvents(TitleBar.EVENT_MOVE, new TitleEvent(newX, newY))
+			emitevent move(new TitleEvent(newX, newY))
 			
 			lastX = newX
 			lastY = newY

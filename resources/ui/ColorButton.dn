@@ -7,8 +7,6 @@ uses ClickableObject
 
 interface ColorButton extends ClickableObject {
 	
-	const int CLICK = 1
-	
 	transfer WH size
 	transfer Color color
 	

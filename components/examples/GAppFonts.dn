@@ -31,7 +31,7 @@ component provides App requires ui.Window, ui.Label, io.Output out {
 		
 		main = this.thread
 		
-		sinkevent Events(window.windowEvents)
+		sinkevent Events(window)
 		
 		this.thread.wait()
 		

@@ -36,6 +36,8 @@ data EventSourceDef {
 	bool array
 	
 	char doc_description[]
+	
+	FieldDef params[]
 	}
 
 data FunctionDef {

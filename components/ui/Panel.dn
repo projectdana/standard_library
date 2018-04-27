@@ -25,7 +25,7 @@ component provides Panel requires io.Output out {
 	
 	eventsink Events(EventData ed)
 		{
-		if (ed.type == GraphicsObject.EVENT_REPAINT)
+		if (ed.type == GraphicsObject.[repaint])
 			postRepaint()
 		}
 	
@@ -75,7 +75,7 @@ component provides Panel requires io.Output out {
 		if (go hastype ClickableObject)
 			addClickTarget(go)
 		
-		sinkevent Events(go.graphicsEvents)
+		sinkevent Events(go)
 		
 		postRepaint()
 		}
@@ -156,7 +156,7 @@ component provides Panel requires io.Output out {
 	
 	void Panel:postRepaint()
 		{
-		emitevent graphicsEvents(GraphicsObject.EVENT_REPAINT, null)
+		emitevent repaint()
 		}
 	
 	void Panel:setBackground(Color c)

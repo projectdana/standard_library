@@ -4,8 +4,8 @@ uses Rect
  {"description" : "This allows the programmer to create new graphical windows on the screen."}
 */
 interface Window extends Panel {
-	const int EVENT_CLOSE = 1
-	eventsource windowEvents
+	
+		event close()
 	
 	Window(char title[])
 	

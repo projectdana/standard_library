@@ -26,17 +26,20 @@ component provides FileBrowser(AdaptEvents) requires Panel, FileObject, Graphics
 	
 	eventsink Events(EventData ed)
 		{
-		if (ed.source === upButton)
+		if (ed.type == ClickableObject.[click])
 			{
-			asynch::upDirectory()
-			}
-			else if (ed.source === backButton)
-			{
-			asynch::backDirectory()
-			}
-			else
-			{
-			asynch::folderClick(ed.source)
+			if (ed.source === upButton)
+				{
+				asynch::upDirectory()
+				}
+				else if (ed.source === backButton)
+				{
+				asynch::backDirectory()
+				}
+				else
+				{
+				asynch::folderClick(ed.source)
+				}
 			}
 		}
 	
@@ -59,9 +62,9 @@ component provides FileBrowser(AdaptEvents) requires Panel, FileObject, Graphics
 		upButton.setPosition(0, 0)
 		backButton.setPosition(50, 0)
 		
-		sinkevent Events(upButton.clickEvents)
+		sinkevent Events(upButton)
 		
-		sinkevent Events(backButton.clickEvents)
+		sinkevent Events(backButton)
 		}
 	
 	void AdaptEvents:active()
@@ -124,7 +127,7 @@ component provides FileBrowser(AdaptEvents) requires Panel, FileObject, Graphics
 					
 					nfi.object = new FileObject(new char[](currentDirectory, files[i].name, "/"))
 					
-					sinkevent Events((nfi.object).clickEvents)
+					sinkevent Events(nfi.object)
 					
 					view.addObject(nfi.object)
 					

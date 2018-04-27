@@ -10,15 +10,15 @@ component provides App requires ui.Window, ui.Button, io.Output out {
 	
 	eventsink AppEvents(EventData ed)
 		{
-		if (ed.source === b1)
+		if (ed.type == Button.[click] && ed.source === b1)
 			{
 			out.println("A BUTTON CLICK!")
 			}
-			else if (ed.source === b2)
+			else if (ed.type == Button.[click] && ed.source === b2)
 			{
 			out.println("A BUTTON CLICK TOO!")
 			}
-			else if (ed.source === window && ed.type == Window.EVENT_CLOSE)
+			else if (ed.source === window && ed.type == Window.[close])
 			{
 			main.signal()
 			}
@@ -39,10 +39,10 @@ component provides App requires ui.Window, ui.Button, io.Output out {
 		window.addObject(b1)
 		window.addObject(b2)
 		
-		sinkevent AppEvents(b1.clickEvents)
-		sinkevent AppEvents(b2.clickEvents)
+		sinkevent AppEvents(b1)
+		sinkevent AppEvents(b2)
 		
-		sinkevent AppEvents(window.windowEvents)
+		sinkevent AppEvents(window)
 		
 		main = this.thread
 		this.thread.wait()

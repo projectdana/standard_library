@@ -79,6 +79,25 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		return result
 		}
 	
+	char[] formatEventHeader(SourceFile sf, EventSourceDef f)
+		{
+		char result[]
+		
+		result = new char[](result, f.name)
+		
+		result = new char[](result, "(")
+		
+		for (int q = 0; q < f.params.arrayLength; q++)
+			{
+			result = new char[](result, formatType(sf, f.params[q].type), " ", f.params[q].displayName)
+			
+			if (q + 1 < f.params.arrayLength) result = new char[](result, ", ")
+			}
+		result = new char[](result, ")")
+		
+		return result
+		}
+	
 	void writeFile(SourceFile sf)
 		{
 		//put "html" on the end
@@ -195,7 +214,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 						fd.write("<div class = \"doc_eventsource_list\">")
 						
 						fd.write("<div class = \"doc_eventsource_list_hdr\">")
-						fd.write("Event sources")
+						fd.write("Events")
 						fd.write("</div>")
 						
 						for (int j = 0; j < id.eventSources.arrayLength; j++)
@@ -203,7 +222,9 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 							fd.write("<div class = \"doc_eventsource_list_item\">")
 							//fd.write(formatType(sf, id.eventSources[j].type))
 							//fd.write(" ")
-							fd.write(id.eventSources[j].displayName)
+							//fd.write(id.eventSources[j].displayName)
+							//fd.write(id.eventSources[j].displayName)
+							fd.write(formatEventHeader(sf, id.eventSources[j]))
 							fd.write("</div>")
 							}
 						fd.write("</div>")
@@ -298,7 +319,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 						
 						fd.write("<div class = \"doc_event_sources_heading\">")
 						
-						fd.write("Event sources")
+						fd.write("Events")
 						
 						fd.write("</div>")
 						

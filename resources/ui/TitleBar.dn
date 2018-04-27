@@ -14,15 +14,13 @@ data TitleEvent {
 
 interface TitleBar extends Panel {
 	
-	transfer char title[]
-	transfer Rect windowRect
+		transfer char title[]
+		transfer Rect windowRect
 	
-	const int EVENT_MOVE = 1
-	const int EVENT_MAX = 2
-	const int EVENT_MIN = 3
-	const int EVENT_CLOSE = 4
-	
-	eventsource titleBarEvents
+		event move(TitleEvent t)
+		event maximise()
+		event minimise()
+		event close()
 	
 	TitleBar(char title[])
 	

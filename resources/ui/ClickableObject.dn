@@ -7,9 +7,7 @@ uses MouseButtons
 */
 interface ClickableObject extends GraphicsObject{
 	
-	const int EVENT_CLICK = 1
-	
-	eventsource clickEvents
+	event click()
 	
 	Rect getBounds()
 	void click(int x, int y, int button)

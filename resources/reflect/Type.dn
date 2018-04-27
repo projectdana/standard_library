@@ -13,7 +13,8 @@ const byte OBJECT		= 4
 const byte ARRAY		= 5
 const byte THREAD		= 6
 const byte FUNCTION		= 7
-const byte COMPONENT	= 8
+const byte EVENT		= 8
+const byte COMPONENT	= 9
 	byte class
 const byte F_BOOL		= 0x1
 const byte F_CHAR		= 0x2

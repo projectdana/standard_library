@@ -21,7 +21,7 @@ component provides TitleBar(AdaptEvents) requires Panel, Label, io.Output out, d
 	
 	eventsink Buttons(EventData ed)
 		{
-		if (ed.source === closeButton)
+		if (ed.type == ColorButton.[click] && ed.source === closeButton)
 			postClose()
 		}
 	
@@ -44,7 +44,7 @@ component provides TitleBar(AdaptEvents) requires Panel, Label, io.Output out, d
 		
 		addObject(closeButton)
 		
-		sinkevent Buttons(closeButton.clickEvents)
+		sinkevent Buttons(closeButton)
 		
 		minButton = new ColorButton()
 		minButton.setSize(new WH(HEIGHT, HEIGHT))
@@ -75,7 +75,7 @@ component provides TitleBar(AdaptEvents) requires Panel, Label, io.Output out, d
 	
 	void postClose()
 		{
-		emitevent titleBarEvents(TitleBar.EVENT_CLOSE, null)
+		emitevent close()
 		}
 	
 	Rect TitleBar:getRect()
@@ -152,7 +152,7 @@ component provides TitleBar(AdaptEvents) requires Panel, Label, io.Output out, d
 				else
 				newY = lastY - (dragY - y)
 			
-			emitevent titleBarEvents(TitleBar.EVENT_MOVE, new TitleEvent(newX, newY))
+			emitevent move(new TitleEvent(newX, newY))
 			
 			lastX = newX
 			lastY = newY

@@ -14,8 +14,7 @@ interface GraphicsObject{
 	transfer int xPosition
 	transfer int yPosition
 	
-	const int EVENT_REPAINT = 1
-	eventsource graphicsEvents
+	event repaint()
 	
 	void postRepaint()
 	

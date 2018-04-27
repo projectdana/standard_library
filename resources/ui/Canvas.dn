@@ -1,7 +1,3 @@
-/*
- {"description" : "Canvas defines a fundamental drawing API, typically used by a Window and offered as a painting surface to any objects on the window."}
-*/
-
 uses Rect2D
 uses Line2D
 uses Color
@@ -18,13 +14,15 @@ data MouseEvent	{
 	int y
 	}
 
+/*
+ {"description" : "Canvas defines a fundamental drawing API, typically used by a Window and offered as a painting surface to any objects on the window."}
+*/
+
 interface Canvas {
 	
-	const int EVENT_MOUSE_UP = 1
-	const int EVENT_MOUSE_DOWN = 2
-	const int EVENT_MOUSE_MOVE = 3
-	
-	eventsource events
+	event mouseUp(MouseEvent m)
+	event mouseDown(MouseEvent m)
+	event mouseMove(MouseEvent m)
 	
 	Canvas()
 	

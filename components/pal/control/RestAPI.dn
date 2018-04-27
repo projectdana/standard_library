@@ -192,15 +192,15 @@ component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONPar
 			{
 			JSONElement jevent = events.children[i]
 			
-			Event event = new Event()
-			event.name = parser.getValue(jevent, "name").value
-			event.sourceComponent = parser.getValue(jevent, "source").value
-			event.totalValue = iu.intFromString(parser.getValue(jevent, "value").value)
-			event.totalCount = iu.intFromString(parser.getValue(jevent, "count").value)
-			event.timeFirst = dateFromString(parser.getValue(jevent, "startTime").value)
-			event.timeLast = dateFromString(parser.getValue(jevent, "endTime").value)
+			Event e = new Event()
+			e.name = parser.getValue(jevent, "name").value
+			e.sourceComponent = parser.getValue(jevent, "source").value
+			e.totalValue = iu.intFromString(parser.getValue(jevent, "value").value)
+			e.totalCount = iu.intFromString(parser.getValue(jevent, "count").value)
+			e.timeFirst = dateFromString(parser.getValue(jevent, "startTime").value)
+			e.timeLast = dateFromString(parser.getValue(jevent, "endTime").value)
 			
-			pd.events = new Event[](pd.events, event)
+			pd.events = new Event[](pd.events, e)
 			}
 		
 		return pd

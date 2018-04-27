@@ -96,7 +96,7 @@ component provides FileObject(AdaptEvents) requires io.FileSystem fileSystem, Fo
 		{
 		if (button == MouseButtons.BUTTON_LEFT)
 			{
-			emitevent clickEvents(ClickableObject.EVENT_CLICK, null)
+			emitevent click()
 			}
 		}
 	
@@ -107,7 +107,7 @@ component provides FileObject(AdaptEvents) requires io.FileSystem fileSystem, Fo
 	
 	void FileObject:postRepaint()
 		{
-		emitevent graphicsEvents(GraphicsObject.EVENT_REPAINT, null)
+		emitevent repaint()
 		}
 	
 	}

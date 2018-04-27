@@ -1,7 +1,7 @@
 const int WIDTH = 20
 const int HEIGHT = 20
 
-component provides ColorButton(AdaptEvents) requires io.Output out, data.IntUtil iu{
+component provides ColorButton(AdaptEvents) requires io.Output out, data.IntUtil iu {
 	
 	bool visible = true
 	
@@ -28,7 +28,7 @@ component provides ColorButton(AdaptEvents) requires io.Output out, data.IntUtil
 		{
 		if (button == MouseButtons.BUTTON_LEFT)
 			{
-			emitevent clickEvents(ClickableObject.EVENT_CLICK, null)
+			emitevent click()
 			}
 		}
 	
@@ -69,6 +69,6 @@ component provides ColorButton(AdaptEvents) requires io.Output out, data.IntUtil
 	
 	void ColorButton:postRepaint()
 		{
-		emitevent graphicsEvents(GraphicsObject.EVENT_REPAINT, null)
+		emitevent repaint()
 		}
 	}

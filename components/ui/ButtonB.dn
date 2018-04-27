@@ -31,13 +31,13 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 		{
 		if (button == MouseButtons.BUTTON_LEFT)
 			{
-			emitevent clickEvents(ClickableObject.EVENT_CLICK, null)
+			emitevent click()
 			}
 		}
 	
 	void Button:postRepaint()
 		{
-		emitevent graphicsEvents(GraphicsObject.EVENT_REPAINT, null)
+		emitevent repaint()
 		}
 	
 	void Button:setText(char t[])

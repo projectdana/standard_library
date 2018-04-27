@@ -52,43 +52,41 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 	
 	eventsink Events(EventData ed)
 		{
-		//out.println(iu.intToString(e))
-		//out.println(iu.intToString(wed.button_id))
-		//out.println(iu.intToString(wed.x))
-		//out.println(iu.intToString(wed.y))
-		
 		if (ed.source === canvas && ed.details != null)
 			{
 			MouseEvent me = ed.details
 			
-			if (me.type == Canvas.EVENT_MOUSE_UP)
+			if (ed.type == Canvas.[mouseUp])
 				{
 				click(me.x - currentX, me.y - currentY, me.button)
 				mouseUp(me.x, me.y, me.button)
 				}
-				else if (me.type == Canvas.EVENT_MOUSE_DOWN)
+				else if (ed.type == Canvas.[mouseDown])
 				{
 				mouseDown(me.x, me.y, me.button)
 				}
-				else if (me.type == Canvas.EVENT_MOUSE_MOVE)
+				else if (ed.type == Canvas.[mouseMove])
 				{
 				mouseMove(me.x, me.y)
 				}
 			}
 			else if (ed.source === titleBar)
 			{
-			TitleEvent me = ed.details
-			
-			if (ed.type == TitleBar.EVENT_MOVE && me != null)
+			if (ed.type == TitleBar.[move])
+				{
+				TitleEvent me = ed.details
 				setPosition(me.x, me.y)
-				else if (ed.type == TitleBar.EVENT_CLOSE)
-				postEvent(Window.EVENT_CLOSE, null)
+				}
+				else if (ed.type == TitleBar.[close])
+				{
+				emitevent close()
+				}
 			}
 		}
 	
 	eventsink PaintEvents(EventData ed)
 		{
-		if (ed.type == GraphicsObject.EVENT_REPAINT)
+		if (ed.type == GraphicsObject.[repaint])
 			{
 			paint(null)
 			}
@@ -105,9 +103,9 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 		addMouseEventTarget(titleBar)
 		addClickTarget(titleBar)
 		
-		sinkevent Events(canvas.events)
-		sinkevent Events(titleBar.titleBarEvents)
-		sinkevent PaintEvents(titleBar.graphicsEvents)
+		sinkevent Events(canvas)
+		sinkevent Events(titleBar)
+		sinkevent PaintEvents(titleBar)
 		}
 	
 	void Window:setVisible(bool b)
@@ -141,7 +139,7 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 		if (go hastype ClickableObject)
 			addClickTarget(go)
 		
-		sinkevent PaintEvents(go.graphicsEvents)
+		sinkevent PaintEvents(go)
 		
 		paint(null)
 		}
@@ -297,11 +295,6 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 	Rect Window:getBounds()
 		{
 		return new Rect(0, 0, currentWidth, currentHeight)
-		}
-	
-	void postEvent(int type, Data edata)
-		{
-		emitevent windowEvents(type, edata)
 		}
 	
 	void Window:postRepaint()

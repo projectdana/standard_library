@@ -30,7 +30,7 @@ component provides App requires ui.Window, ui.Button, ui.FileBrowser, io.Output 
 		
 		main = this.thread
 		
-		sinkevent Events(window.windowEvents)
+		sinkevent Events(window)
 		
 		this.thread.wait()
 		

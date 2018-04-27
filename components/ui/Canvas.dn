@@ -5,7 +5,10 @@ data WindowEventData {
 }
 
 library interface UIPlaneLib{
-	const int EVENT_CLICK = 1
+	
+	const int EVENT_MOUSE_UP = 1
+	const int EVENT_MOUSE_DOWN = 2
+	const int EVENT_MOUSE_MOVE = 3
 	
 	int makeWindow()
 	
@@ -68,7 +71,19 @@ component provides Canvas(Destructor), Font(Destructor), Service requires Native
 		eventsink LibEvents(EventData ed)
 			{
 			WindowEventData wed = ed.details
-			emitevent events(ed.type, new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+			
+			if (ed.type == UIPlaneLib.EVENT_MOUSE_UP)
+				{
+				emitevent mouseUp(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.EVENT_MOUSE_DOWN)
+				{
+				emitevent mouseDown(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.EVENT_MOUSE_MOVE)
+				{
+				emitevent mouseMove(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+				}
 			}
 		
 		Canvas:Canvas()
