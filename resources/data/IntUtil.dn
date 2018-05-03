@@ -12,4 +12,14 @@ interface IntUtil{
 	 {"@description" : "Convert a string to an integer."}
 	*/
 	int intFromString(char s[])
+	
+	/*
+	 {"@description" : "Convert a big integer to a string."}
+	*/
+	char[] int512ToString(int512 i)
+	
+	/*
+	 {"@description" : "Convert a string to a big integer."}
+	*/
+	int512 int512FromString(char s[])
 	}

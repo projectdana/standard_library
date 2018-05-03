@@ -16,6 +16,16 @@ component provides UnitTest requires io.Output out, data.IntUtil iu, data.json.J
 		
 		if (parser.documentToString(element) != document) throw new Exception("Failure in test 5")
 		
+		document = "{ \"test\" : null, \"works\" : true }"
+		
+		element = parser.parseDocument(document)
+		
+		if (element == null) throw new Exception("Failure in test 5")
+		
+		document = "[{ \"test\" : null, \"works\" : true }]"
+		
+		if (element == null) throw new Exception("Failure in test 6")
+		
 		return true
 		}
 	}

@@ -529,6 +529,13 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 			
 			l.remove(t)
 			}
+			else if (t.type == TOKEN_TYPE_NULL)
+			{
+			nt.type = JSONElement.TYPE_NULL
+			nt.value = null
+			
+			l.remove(t)
+			}
 			else if (t.type == TOKEN_TYPE_TOKEN && t.token == "[")
 			{
 			nt.type = JSON_ELEMENT_ARRAY
@@ -586,6 +593,13 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 			{
 			nt.type = JSON_ELEMENT_BOOLEAN
 			nt.value = t.token
+			
+			l.remove(t)
+			}
+			else if (t.type == TOKEN_TYPE_NULL)
+			{
+			nt.type = JSONElement.TYPE_NULL
+			nt.value = null
 			
 			l.remove(t)
 			}
@@ -731,11 +745,23 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 	
 	JSONElement parseJSON(List tokens)
 		{
-		while (tokens.getLength() > 0)
+		Token t = tokens.getFirst()
+		
+		if (t.type == TOKEN_TYPE_TOKEN && t.token == "{")
 			{
 			List l = extractObject(tokens)
-			JSONElement t = parseObject(l)
-			return t
+			
+			return parseObject(l)
+			}
+			else if (t.type == TOKEN_TYPE_TOKEN && t.token == "[")
+			{
+			List l = extractArray(tokens)
+			
+			return parseArray(l, null)
+			}
+			else
+			{
+			throw new Exception("expected object or array as root element of document")
 			}
 		
 		return null
