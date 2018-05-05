@@ -10,6 +10,7 @@ const byte TYPE_STRING	= 2
 const byte TYPE_NUMBER	= 3
 const byte TYPE_BOOLEAN	= 4
 const byte TYPE_ARRAY	= 5
+const byte TYPE_NULL	= 6
 
 	int type
 	char name[]
