@@ -1,0 +1,15 @@
+data Field {
+	char name[]
+	char value[]
+}
+
+data Row {
+	Field fields[]
+}
+
+interface MySQL {
+	MySQL(char host[], int port, char user[], char pass[], char dbName[])
+	bool execute(char query[])
+	void close()
+	Row[] fetchAll()
+}
