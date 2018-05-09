@@ -1,0 +1,243 @@
+uses data.String
+
+const byte STRING  = 1
+const byte INTEGER = 2
+const byte DECIMAL = 3
+const byte ARRAY   = 4
+const byte CHAR    = 5
+const byte BOOLEAN = 6
+const byte DATA    = 7
+
+component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.json.JSONParser parser {
+	
+	dec[] getDECArray(Type t, JSONElement e) {
+		dec d[] = new dec[e.children.arrayLength]
+		for (int i = 0; i < e.children.arrayLength; i++) {
+			if (e.children[i].value != null) { d[i] = du.decFromString(e.children[i].value) }
+			else { d[i] = 0.0 }
+		}
+		return d
+	}
+
+	int[] getINTArray(Type t, JSONElement e) {
+		int d[] = new int[e.children.arrayLength]
+		for (int i = 0; i < e.children.arrayLength; i++) {
+			if (e.children[i].value != null) { d[i] = iu.intFromString(e.children[i].value) }
+			else { d[i] = 0 }
+		}
+		return d
+	}
+
+	bool[] getBOOLArray(Type t, JSONElement e) {
+		bool d[] = new bool[e.children.arrayLength]
+		for (int i = 0; i < e.children.arrayLength; i++) {
+			if ((e.children[i].value == null) || (e.children[i].value == "false")) { d[i] = false }
+			else { d[i] = true }
+		}
+		return d
+	}
+
+	Data[] getArray(Type t, JSONElement e) {
+		Data d[] = new Data[e.children.arrayLength] from (t.fields[0].type)
+		for (int i = 0; i < e.children.arrayLength; i++) {
+			d[i] = new Data() from (t.fields[0].type)
+			d[i] = getData(d[i], t.fields[0].type, e.children[i], true)
+		}
+		return d
+	}
+
+	char[] getValue(JSONElement e, char key[]) {
+		JSONElement eValue = parser.getValue(e, key)
+		if ((eValue == null) || ((eValue.value == "null") && 
+			(eValue.type != JSONElement.TYPE_STRING))) { return null }
+		return eValue.value
+	}
+
+	byte getFieldType(Field f) {
+		if (f.type.class == Type.ARRAY) {
+			if (f.type.fields[0] != null) {
+				if ((f.type.fields[0].type.class == Type.INTEGER) 
+					&& (f.type.fields[0].type.flags == Type.F_CHAR)) {
+					return STRING
+				} else { return ARRAY }
+			}
+		} else if (f.type.class == Type.INTEGER) {
+			if (f.type.flags == Type.F_BOOL) { return BOOLEAN }
+			else if (f.type.flags == Type.F_CHAR) { return CHAR }
+			else { return INTEGER }
+		} else if (f.type.class == Type.DECIMAL) {
+			return DECIMAL
+		} else if (f.type.class == Type.DATA) { return DATA }
+		return 0
+	}
+
+	Data getData(Data d, Type t, JSONElement e, bool array) {
+		Data result = d
+		if (t.class == Type.DATA) {
+			for (int i = 0; i < t.fields.arrayLength; i++) {
+				byte fieldType = getFieldType(t.fields[i])
+				TypeField tf = result.[t.fields[i].name]
+				char value[]
+				if (array) { value = e.value }
+				else { value = getValue(e, t.fields[i].name) }
+				if (fieldType == STRING) {
+					result:.tf = value
+				} else if (fieldType == DECIMAL) {
+					if (value != null) { result:.tf = du.decFromString(value) }
+					else { result:.tf = 0.0 }
+				} else if (fieldType == INTEGER) {
+					if (value != null) { result:.tf = iu.intFromString(value) }
+					else { result:.tf = 0 }
+				} else if (fieldType == BOOLEAN) {
+					if ((value == null) || (value == "false")) { result:.tf = false }
+					else { result:.tf = true }
+				} else if (fieldType == CHAR) {
+					if (value == null) { result:.tf = value }
+					else { result:.tf = value[0] }
+				} else if (fieldType == ARRAY) {
+					fieldType = getFieldType(t.fields[i].type.fields[0])
+					if (fieldType == DECIMAL) {
+						result:.tf = getDECArray(t.fields[i].type, parser.getValue(e, t.fields[i].name))
+					} else if (fieldType == INTEGER) {
+						result:.tf = getINTArray(t.fields[i].type, parser.getValue(e, t.fields[i].name))
+					} else if (fieldType == BOOLEAN) {
+						result:.tf = getBOOLArray(t.fields[i].type, parser.getValue(e, t.fields[i].name))
+					} else if (fieldType == DATA) {
+						result:.tf = getArray(t.fields[i].type, parser.getValue(e, t.fields[i].name))
+					}
+				} else if (fieldType == DATA) {
+					Data newD = new Data() from t.fields[i].type
+					result:.tf = getData(newD, t.fields[i].type, parser.getValue(e, t.fields[i].name), false)
+				}
+			}
+		}
+		return result
+	}
+
+	char[] setDECArray(dec d[]) {
+		char json[] = null
+		for (int i = 0; i < d.arrayLength; i++) {
+			if (i > 0) { json = new char[](json, ", ") }
+			json = new char[](json, du.decToString(d[i]))
+		}
+		return json
+	}
+
+	char[] setINTArray(int d[]) {
+		char json[] = null
+		for (int i = 0; i < d.arrayLength; i++) {
+			if (i > 0) { json = new char[](json, ", ") }
+			json = new char[](json, iu.intToString(d[i]))
+		}
+		return json
+	}
+
+	char[] setBOOLArray(bool d[]) {
+		char json[] = null
+		for (int i = 0; i < d.arrayLength; i++) {
+			if (i > 0) { json = new char[](json, ", ") }
+			if (d[i]) { json = new char[](json, "true") }
+			else { json = new char[](json, "false") }
+		}
+		return json
+	}
+
+	char[] setSTRINGArray(String d[]) {
+		char json[] = null
+		for (int i = 0; i < d.arrayLength; i++) {
+			if (i > 0) { json = new char[](json, ", ") }
+			json = new char[](json, "\"", d[i].string, "\"")
+		}
+		return json
+	}
+
+	char[] setArray(Data d[]) {
+		char json[] = null
+		for (int i = 0; i < d.arrayLength; i++) {
+			if (i > 0) { json = new char[](json, ", ") }
+			json = new char[](json, "{", setData(typeof(d[i]), d[i]), "}")
+		}
+		return json
+	}
+
+	char[] setData(Type t, Data d) {
+		char json[] = null
+		for (int i = 0; i < t.fields.arrayLength; i++) {
+			byte fieldType = getFieldType(t.fields[i])
+			TypeField tf = d.[t.fields[i].name]
+			if (i > 0) { json = new char[](json, ", ") }
+			if (fieldType == STRING) {
+				if (d:.tf != null) { json = new char[](json, "\"", t.fields[i].name, "\": \"", d:.tf, "\"") }
+				else { json = new char[](json, "\"", t.fields[i].name, "\": null") }
+			} else if (fieldType == DECIMAL) {
+				dec helper = d:.tf
+				if (helper != null) { json = new char[](json, "\"", t.fields[i].name, "\": ", du.decToString(helper)) }
+				else { json = new char[](json, "\"", t.fields[i].name, "\": 0.0") }
+			} else if (fieldType == INTEGER) {
+				int helper = d:.tf
+				if (helper != null) { json = new char[](json, "\"", t.fields[i].name, "\": ", iu.intToString(helper)) }
+				else { json = new char[](json, "\"", t.fields[i].name, "\": 0") }
+			} else if (fieldType == BOOLEAN) {
+				bool helper = d:.tf
+				if ((helper == null) || (helper == "false")) { json = new char[](json, "\"", t.fields[i].name, "\": false") }
+				else { json = new char[](json, "\"", t.fields[i].name, "\": true") }
+			} else if (fieldType == CHAR) {
+				char helper = d:.tf
+				if (helper != null) { json = new char[](json, "\"", t.fields[i].name, "\": \"", helper, "\"") }
+				else { json = new char[](json, "\"", t.fields[i].name, "\": null") }
+			} else if (fieldType == ARRAY) {
+				fieldType = getFieldType(t.fields[i].type.fields[0])
+				json = new char[](json, "\"", t.fields[i].name ,"\": ", "[")
+				if (fieldType == DECIMAL) {
+					json = new char[](json, setDECArray(d:.tf))
+				} else if (fieldType == INTEGER) {
+					json = new char[](json, setINTArray(d:.tf))
+				} else if (fieldType == BOOLEAN) {
+					json = new char[](json, setBOOLArray(d:.tf))
+				} else if (fieldType == DATA) {
+					if (d:.tf hastype String[]) { json = new char[](json, setSTRINGArray(d:.tf)) }
+					else { json = new char[](json, setArray(d:.tf)) }
+				}
+				json = new char[](json, "]")
+			} else if (fieldType == DATA) {
+				Data helper = d:.tf
+				json = new char[](json, "\"", t.fields[i].name, "\": {", setData(typeof(helper), helper), "}")
+			}	
+		}
+		return json
+	}
+
+	Data[] JSONEncoder:parseArrayFromJSON(char json[], Type t) {
+		if (t.class == Type.ARRAY) {
+			return getArray(t, parser.parseDocument(json))
+		} else { throw new Exception("JSON cannot be converted into the given data type.") }
+		return null
+	}
+
+	Data JSONEncoder:parseDataFromJSON(char json[], Type t) {
+		if (t.class == Type.DATA) {
+			Data d = new Data() from t
+			JSONElement e = parser.parseDocument(json)
+			return getData(d, t, e, false)
+		} else { throw new Exception("JSON cannot be converted into the given data type.") }
+		return null
+	}
+
+	char[] JSONEncoder:parseArrayToJSON(Data d[]) {
+		Type t = typeof(d)
+		char json[] = null
+		if (t.class == Type.ARRAY) {
+			json = new char[]("[", setArray(d), "]")
+		} else { throw new Exception("Data type cannot be converted into a JSON string.") }
+		return json
+	}
+
+	char[] JSONEncoder:parseDataToJSON(Data d) {
+		Type t = typeof(d)
+		char json[] = null
+		if (t.class == Type.DATA) {
+			json = new char[]("{", setData(t, d), "}") 
+		} else { throw new Exception("Data type cannot be converted into a JSON string.") }
+		return json
+	}
+}

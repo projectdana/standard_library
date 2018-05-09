@@ -1,0 +1,8 @@
+uses reflect.Type
+
+interface JSONEncoder {
+	Data[] parseArrayFromJSON(char json[], Type t)
+	Data JSONEncoder:parseDataFromJSON(char json[], Type t)
+	char[] JSONEncoder:parseArrayToJSON(Data d[])
+	char[] JSONEncoder:parseDataToJSON(Data d)
+}
