@@ -256,24 +256,26 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		s.disconnect()
 		}
 	
-	int App:main(AppParam params[])
-		{
+	int App:main(AppParam params[]) {
+		int listenPort = LISTEN_PORT
+		
+		if (params.arrayLength == 1) {
+			if (stringUtil.isNumeric(params[0].string)) {
+				listenPort = intUtil.intFromString(params[0].string)
+			} else { throw new Exception("Argument should be a port number.") }
+		} else { throw new Exception("Argument should be a port number.") }
+
 		TCPServerSocket s = new TCPServerSocket()
-		
-		if (!s.bind(TCPServerSocket.ANY_ADDRESS, LISTEN_PORT))
+		if (!s.bind(TCPServerSocket.ANY_ADDRESS, listenPort)) {
 			throw new Exception("Failed to bind master socket")
+		}
 		
-		while (true)
-			{
+		while (true) {
 			TCPSocket cs = new TCPSocket()
-			
-			if (cs.accept(s))
-				{
-				processStream(cs)
-				}
-			}
+			if (cs.accept(s)) { processStream(cs) }
+		}
 		
 		return 0
-		}
-	
 	}
+
+}
