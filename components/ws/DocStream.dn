@@ -14,8 +14,9 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 	bool firstWrite = true
 	bool autoChunked = false
 	bool streamEnded = false
+	bool autoClose = false
 	
-	DocStream:DocStream(TCPSocket s, Header headers[])
+	DocStream:DocStream(TCPSocket s, Header headers[], bool ac)
 		{
 		socket = s
 		requestHeaders = headers
@@ -35,6 +36,8 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 			{
 			sessionKeys[i].value = encoder.decode(sessionKeys[i].value)
 			}
+		
+		autoClose = ac
 		}
 	
 	Header[] getSubHeaders(char content[])
@@ -124,6 +127,9 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 			char hdrLine[] = new char[]("HTTP/1.1 ", intUtil.intToString(code), " ", reason, "\r\n")
 			socket.send(hdrLine)
 			
+			if (autoClose)
+				headers = new Header[](new Header("connection", "close"), headers)
+			
 			for (int i = 0; i < headers.arrayLength; i++)
 				{
 				socket.send(new char[](headers[i].key, ":", headers[i].value, "\r\n"))
@@ -202,6 +208,9 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 				{
 				writeStatus(200, "OK", new Header("content-length", "0"))
 				}
+			
+			if (autoClose)
+				socket.disconnect()
 			
 			streamEnded = true
 			}

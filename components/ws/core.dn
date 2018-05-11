@@ -225,7 +225,7 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 			}
 			else if ((handler = getHandler(resource)) != null)
 			{
-			DocStream ds = new DocStream(s, cmd.headers)
+			DocStream ds = new DocStream(s, cmd.headers, false)
 			
 			if (cmd.type == Command.GET)
 				{

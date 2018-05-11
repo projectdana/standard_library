@@ -1,0 +1,24 @@
+uses DocStream
+
+data WebCommand {
+	const int GET = 1
+	const int POST = 2
+	const int PUT = 3
+	const int DELETE = 4
+	
+	int type
+	
+	char resource[]
+	char payload[]
+	
+	DocStream stream
+	}
+
+interface Reactor {
+	
+	event request(WebCommand com)
+	
+	bool bind(char address[], int port)
+	void unbind()
+	
+	}
