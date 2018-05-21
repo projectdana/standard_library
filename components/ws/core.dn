@@ -255,6 +255,11 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		
 		s.disconnect()
 		}
+
+	// dana ws.core -p 203
+	// dana ws.core help
+	// ws core something something
+	// -p [port]
 	
 	int App:main(AppParam params[]) {
 		int listenPort = LISTEN_PORT
