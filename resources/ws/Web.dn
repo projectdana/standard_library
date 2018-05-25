@@ -1,41 +1,30 @@
 uses DocStream
+uses data.adt.HashTable
+uses data.String
 
 /*
  {"description" : "Interface for web app components."}
 */
-
 interface Web {
-	
 	/*
 	 {"@description" : "This function is called when a HTTP GET request is made."}
 	*/
-	bool get(char path[], DocStream stream)
-		{
-		return false
-		}
+	bool get(char path[], DocStream stream, HashTable params) { return false }
 	
 	/*
 	 {"@description" : "This function is called when a HTTP POST request is made."}
 	*/
-	bool post(char path[], char contentType[], byte content[], DocStream stream)
-		{
-		return false
-		}
+	bool post(char path[], char contentType[], byte content[], DocStream stream, HashTable params) { return false }
 	
 	/*
 	 {"@description" : "This function is called when a HTTP PUT request is made."}
 	*/
-	bool put(char path[], char contentType[], byte content[], DocStream stream)
-		{
-		return false
-		}
+	bool put(char path[], char contentType[], byte content[], DocStream stream, HashTable params) { return false }
 	
 	/*
 	 {"@description" : "This function is called when a HTTP DELETE request is made."}
 	*/
-	bool delete(char path[], char contentType[], byte content[], DocStream stream)
-		{
-		return false
-		}
-	
-	}
+	bool delete(char path[], char contentType[], byte content[], DocStream stream, HashTable params) { return false }
+
+	String[] urls() { return null }
+}

@@ -1,13 +1,15 @@
 /*
 This is a very simple web framework. Run ws.core in your web app directory.
-
 URLs for your website are mapped as follows:
-
 Anything on SWC_PATH is directly served as static web content.
 
-For any other URL (such as /my/resource) the URL is treated as a dotted file path and we search for a file with a corresponding name (starting at my.resource.o). If no such file exists, the URL is shortened by one level and we search for a file at this level (i.e., at my.o), continuing this search until we default to "/web.o".
+For any other URL (such as /my/resource) the URL is treated as a dotted file path and we search for a file with a 
+corresponding name (starting at my.resource.o). If no such file exists, the URL is shortened by one level and we search for a 
+file at this level (i.e., at my.o), continuing this search until we default to "/web.o".
 
-When the located web component is invoked, we pass into its "path" parameter any part of the URL that was removed. Using the example URL "/my/resource", if we locate the file "my.o" we pass in the path "resource"; if we default to "/web.o" the path is "my/resource".
+When the located web component is invoked, we pass into its "path" parameter any part of the URL that was removed. Using the 
+example URL "/my/resource", if we locate the file "my.o" we pass in the path "resource"; if we default to "/web.o" the path is 
+"my/resource".
 
 Invocations on web components are serialised, so no concurrency control is necessary to gain mutual exclusion.
 */
@@ -16,6 +18,9 @@ uses Web
 
 const char SWC_PATH[] = "/swc/"
 const int LISTEN_PORT = 2018
+// list of params
+const char PORT_NUM[] = "port_num"
+const char HELP[]     = "help"
 
 data Command {
 	const int GET = 1
@@ -26,261 +31,261 @@ data Command {
 	
 	char resource[]
 	Header headers[]
-	}
+}
 
 data PathMapping {
 	char path[]
 	char file[]
-	}
+}
 
-component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocket, data.StringUtil stringUtil, data.IntUtil intUtil, io.FileSystem fileSystem, io.File, ws.DocStream, composition.RecursiveLoader loader {
+data ParsedParam {
+	char type[]
+	char value[]
+	char raw[]
+}
+
+component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocket, data.StringUtil stringUtil,
+ data.IntUtil intUtil, io.FileSystem fileSystem, io.File, ws.DocStream, composition.RecursiveLoader loader, 
+ data.adt.HashTable {
 	
 	char web_root[] = "./"
+	int listenPort = 0
 	
-	Command readCommand(TCPSocket socket)
-		{
+	Command readCommand(TCPSocket socket) {
 		Command cmd = new Command()
-		
 		Header headers[]
-		
 		char buf[]
 		char last4[] = new char[4]
-		
-		while (last4 != "\r\n\r\n")
-			{
+		while (last4 != "\r\n\r\n") {
 			char b[] = socket.recv(1)
 			buf = new char[](buf, b)
 			last4[0] = last4[1]
 			last4[1] = last4[2]
 			last4[2] = last4[3]
 			last4[3] = b[0]
-			}
-		
+		}
 		String lines[] = stringUtil.explode(buf, "\r\n")
-		
 		String cmd_parts[] = stringUtil.explode(lines[0].string, " ")
-		
-		if (stringUtil.lowercase(cmd_parts[0].string) == "get")
-			cmd.type = Command.GET
-			else if (stringUtil.lowercase(cmd_parts[0].string) == "post")
-			cmd.type = Command.POST
-		
+		if (stringUtil.lowercase(cmd_parts[0].string) == "get") { cmd.type = Command.GET }
+		else if (stringUtil.lowercase(cmd_parts[0].string) == "post") { cmd.type = Command.POST }
 		cmd.resource = cmd_parts[1].string
-		
-		for (int i = 1; i < lines.arrayLength; i++)
-			{
+		for (int i = 1; i < lines.arrayLength; i++) {
 			int ndx = stringUtil.find(lines[i].string, ":") + 1
 			char key[] = stringUtil.subString(lines[i].string, 0, ndx - 1)
-			char value[] = stringUtil.trim(stringUtil.subString(lines[i].string, ndx, lines[i].string.arrayLength - ndx))
-			
+			char value[] = stringUtil.trim(stringUtil.subString(lines[i].string, 
+				ndx, lines[i].string.arrayLength - ndx))
 			headers = new Header[](headers, new Header(stringUtil.lowercase(key), value))
-			}
-		
-		cmd.headers = headers
-		
+		}
+		cmd.headers = headers	
 		return cmd
-		}
+	}
 	
-	char[] getHeaderValue(Command cmd, char key[])
-		{
+	char[] getHeaderValue(Command cmd, char key[]) {
 		key = stringUtil.lowercase(key)
-		
-		for (int i = 0; i < cmd.headers.arrayLength; i++)
-			{
-			if (stringUtil.lowercase(cmd.headers[i].key) == key)
-				{
+		for (int i = 0; i < cmd.headers.arrayLength; i++) {
+			if (stringUtil.lowercase(cmd.headers[i].key) == key) {
 				return cmd.headers[i].value
-				}
 			}
-		
-		return null
 		}
+		return null
+	}
 	
-	char[] getHandler(String resource)
-		{
+	char[] getHandler(String resource) {
 		//parse command into /'s and find the most detailed file, if any, by converting to each "/" to ".", and adding ".o"
 		char command[] = resource.string
 		char path[]
-		
 		resource.string = ""
-		
-		if (command[command.arrayLength-1] == "/" && command != "/")
-			{
+		if (command[command.arrayLength-1] == "/" && command != "/") {
 			command = stringUtil.subString(command, 0, command.arrayLength - 1)
 			path = new char[](web_root, stringUtil.implode(stringUtil.explode(command, "/"), "."), ".o")
-			}
-			else if (command == "/")
-			{
-			path = new char[](web_root, "web.o")
-			}
-			else
-			{
-			path = new char[](web_root, stringUtil.implode(stringUtil.explode(command, "/"), "."), ".o")
-			}
-		
-		if (fileSystem.exists(path))
-			return path
-		
-		while (stringUtil.find(command, "/") != StringUtil.NOT_FOUND)
-			{
+		} else if (command == "/") { path = new char[](web_root, "web.o") }
+		else { path = new char[](web_root, stringUtil.implode(stringUtil.explode(command, "/"), "."), ".o")	}
+		if (fileSystem.exists(path)) { return path }
+		while (stringUtil.find(command, "/") != StringUtil.NOT_FOUND) {
 			int offset = stringUtil.rfind(command, "/")
-			if (resource.string != null)
-				resource.string = new char[](stringUtil.subString(command, offset, command.arrayLength - offset), resource.string)
-				else
-				resource.string = stringUtil.subString(command, offset, command.arrayLength - offset)
-			
-			command = stringUtil.subString(command, 0, stringUtil.rfind(command, "/"))
-			
-			path = new char[](web_root, stringUtil.implode(stringUtil.explode(command, "/"), "."), ".o")
-			
-			if (fileSystem.exists(path))
-				return path
+			if (resource.string != null) {
+				resource.string = new char[](stringUtil.subString(command, offset,
+					command.arrayLength - offset), resource.string)
+			} else {
+				resource.string = stringUtil.subString(command, 
+					offset, command.arrayLength - offset)
 			}
-		
+			command = stringUtil.subString(command, 0, stringUtil.rfind(command, "/"))
+			path = new char[](web_root, stringUtil.implode(stringUtil.explode(command, "/"), "."), ".o")
+			if (fileSystem.exists(path)){ return path }
+		}
 		path = new char[](web_root, "web.o")
-		
-		if (fileSystem.exists("web.o"))
-			return path
-		
+		if (fileSystem.exists("web.o")) { return path }
 		return null
+	}
+
+	HashTable getParams(char resource[], char ex[]) {
+		HashTable result = new HashTable()
+		String dirs[] = stringUtil.explode(resource, "/")
+		String dirsEx[] = stringUtil.explode(ex, "/")
+		if (dirs.arrayLength != dirsEx.arrayLength) { return null }
+		for (int i = 0; i < dirs.arrayLength; i++) {
+			char key[] = stringUtil.subString(dirsEx[i].string, 1, dirsEx[i].string.arrayLength-2)
+			result.put(key, dirs[i])
 		}
+		return result
+	}
+
+	HashTable getURLMaps(char command[], String exprs[]) {
+		if (exprs == null) { return null }
+		else {
+			for (int count = 0; count < exprs.arrayLength; count++) {
+				HashTable table = getParams(command, exprs[count].string)
+				if (table != null) { return table }
+			}
+		}
+		return null
+	}
 	
-	bool serveFunction_GET(DocStream ds, char path[], char command[])
-		{
+	bool serveFunction_GET(DocStream ds, char path[], char command[]) {
 		IDC com = loader.load(path).mainComponent
-		
 		Web rh = new Web() from com :< Web
-		
-		return rh.get(command, ds)
-		}
+		return rh.get(command, ds, getURLMaps(command, rh.urls()))
+	}
 	
-	bool serveFunction_POST(DocStream ds, char path[], char command[], char ctype[], byte payload[])
-		{
+	bool serveFunction_POST(DocStream ds, char path[], char command[], char ctype[], byte payload[]) {
 		IDC com = loader.load(path).mainComponent
-		
 		Web rh = new Web() from com :< Web
-		
-		return rh.post(command, ctype, payload, ds)
-		}
+		return rh.post(command, ctype, payload, ds, getURLMaps(command, rh.urls()))
+	}
 	
-	bool serveFile(char command[], TCPSocket s)
-		{
+	bool serveFile(char command[], TCPSocket s) {
 		char path[] = new char[](web_root, command)
-		
-		if (fileSystem.exists(path))
-			{
+		if (fileSystem.exists(path)) {
 			File fd = new File(path, File.FILE_ACCESS_READ)
-			
 			byte dat[] = fd.read(fd.getSize())
-			
 			s.send("HTTP/1.1 200 OK\r\n")
 			s.send("Server: Dana Web Engine\r\n")
 			s.send("Connection: close\r\n")
 			s.send("Content-length: $(intUtil.intToString(fd.getSize()))\r\n")
 			s.send("\r\n")
-			
 			fd.close()
-			
 			s.send(dat)
-			
 			return true
-			}
-		
+		}	
 		return false
-		}
+	}
 	
-	bool staticFile(char command[])
-		{
-		if (command.arrayLength >= SWC_PATH.arrayLength && stringUtil.subString(command, 0, SWC_PATH.arrayLength) == SWC_PATH)
-			{
+	bool staticFile(char command[]) {
+		if ((command.arrayLength >= SWC_PATH.arrayLength) && 
+			(stringUtil.subString(command, 0, SWC_PATH.arrayLength) == SWC_PATH)) {
 			return true
-			}
-		
-		return false
 		}
+		return false
+	}
 	
-	void processStream(TCPSocket s)
-		{
+	void processStream(TCPSocket s) {
 		//parse headers, extract command
-		
 		//call function associated with command, return result (as HTTP response)
-		
 		Command cmd = readCommand(s)
-		
-		if (cmd == null)
-			{
+		if (cmd == null) {
 			//malformed / interrupted request
 			s.disconnect()
 			throw new Exception("malformed or interrupted request")
-			}
-		
+		}
 		String resource = new String(cmd.resource)
 		char handler[]
-		
 		bool success = false
-		
-		if (staticFile(cmd.resource))
-			{
-			success = serveFile(cmd.resource, s)
-			}
-			else if ((handler = getHandler(resource)) != null)
-			{
+		if (staticFile(cmd.resource)) { success = serveFile(cmd.resource, s) }
+		else if ((handler = getHandler(resource)) != null) {
 			DocStream ds = new DocStream(s, cmd.headers)
-			
-			if (cmd.type == Command.GET)
-				{
-				success = serveFunction_GET(ds, handler, resource.string)
-				}
-				else if (cmd.type == Command.POST)
-				{
+			if (cmd.type == Command.GET) { success = serveFunction_GET(ds, handler, resource.string) }
+			else if (cmd.type == Command.POST) {
 				//read the payload first
 				char ctype[] = getHeaderValue(cmd, "content-type")
 				int plen = intUtil.intFromString(getHeaderValue(cmd, "content-length"))
 				byte payload[] = s.recv(plen)
-				
 				success = serveFunction_POST(ds, handler, resource.string, ctype, payload)
-				}
-			
-			if (success) ds.endStream()
 			}
-		
-		if (!success)
-			{
+			if (success) { ds.endStream() }
+		}
+		if (!success) {
 			s.send("HTTP/1.1 404 Resource Not Found\r\n")
 			s.send("Server: Dana Web Engine\r\n")
 			s.send("Connection: close\r\n")
 			s.send("Content-length: 0\r\n")
 			s.send("\r\n")
-			}
-		
+		}
 		s.disconnect()
-		}
-
-	// dana ws.core -p 203
-	// dana ws.core help
-	// ws core something something
-	// -p [port]
+	}
 	
-	int App:main(AppParam params[]) {
-		int listenPort = LISTEN_PORT
-		
-		if (params.arrayLength == 1) {
-			if (stringUtil.isNumeric(params[0].string)) {
-				listenPort = intUtil.intFromString(params[0].string)
-			} else { throw new Exception("Argument should be a port number.") }
-		} else { throw new Exception("Argument should be a port number.") }
-
-		TCPServerSocket s = new TCPServerSocket()
-		if (!s.bind(TCPServerSocket.ANY_ADDRESS, listenPort)) {
-			throw new Exception("Failed to bind master socket")
-		}
-		
-		while (true) {
-			TCPSocket cs = new TCPSocket()
-			if (cs.accept(s)) { processStream(cs) }
-		}
-		
-		return 0
+	void help() {
+		out.println("Web Framework [version 100]")
+		out.println("\nUsage: dana ws.core")
+		out.println("\nOptions:")
+		out.println("-help      \t List commands that can be passed as parameter to the Web Framework core component.")
+		out.println("-p [number]\t Specify the port on which the server will be running.")
 	}
 
+	// add the alias mapping and do not forget to add composed args to the composedArg function
+	char[] getArg(char alias[]) {
+		if (alias == "-p") { return PORT_NUM }
+		else if (alias == "-help") { return HELP }
+		else { throw new Exception("$alias not a valid param.") }
+		return null
+	}
+
+	// verify if a param is composed, i.e. -p 232
+	bool composedArg(char arg[]) {
+		if (arg == PORT_NUM) { return true }
+		return false
+	}
+
+	ParsedParam[] parseParam(AppParam params[]) {
+		ParsedParam pParam[] = null
+		bool twoParts = false
+		for (int count = 0; count < params.arrayLength; count++) {
+			ParsedParam p
+			if (params[count].string[0] == "-") {
+				p = new ParsedParam()
+				p.type = getArg(params[count].string)
+				if (p.type == null) { return null }
+				if (composedArg(p.type)) {
+					p.value = params[count+1].string
+					if (p.value[0] == "-") { throw new Exception("$(params[count].string) requires a second argument.") }
+					p.raw = new char[](params[count].string, " ", params[count+1].string)
+					count++
+				} else { p.raw = params[count].string }
+				pParam = new ParsedParam[](pParam, p)
+			} else { out.println("Invalid param! For more information type: dana ws.core -help") }
+		}
+		return pParam
+	}
+
+	int processParams(AppParam params[]) {
+		if (params.arrayLength == 0) {return 1}
+		if (params.arrayLength > 0) {
+			ParsedParam pParam[] = parseParam(params)
+			if (pParam == null) { return 0 }
+			for (int count = 0; count < pParam.arrayLength; count++) {
+				if (pParam[count].type == PORT_NUM) {
+					listenPort = intUtil.intFromString(pParam[count].value)
+				} else if (pParam[count].type == HELP) {
+					help()
+					return 0
+				} else { throw new Exception("$(pParam[count].raw) is not a valid param.") }
+			}
+		}
+		return 1
+	}
+	
+	int App:main(AppParam params[]) {
+		listenPort = LISTEN_PORT
+		if (processParams(params) != 0) {
+			TCPServerSocket s = new TCPServerSocket()
+			if (!s.bind(TCPServerSocket.ANY_ADDRESS, listenPort)) {
+				throw new Exception("Failed to bind master socket")
+			}
+			while (true) {
+				TCPSocket cs = new TCPSocket()
+				if (cs.accept(s)) { processStream(cs) }
+			}
+		}
+		return 0
+	}
 }
