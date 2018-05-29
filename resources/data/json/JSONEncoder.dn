@@ -1,8 +1,13 @@
 uses reflect.Type
 
+data Map {
+	char jsonKey[]
+	char dataVar[]
+}
+
 interface JSONEncoder {
-	Data[] parseArrayFromJSON(char json[], Type t)
-	Data JSONEncoder:parseDataFromJSON(char json[], Type t)
-	char[] JSONEncoder:parseArrayToJSON(Data d[])
-	char[] JSONEncoder:parseDataToJSON(Data d)
+	Data[] jsonToArray(char json[], Type t, Map map[])
+	Data jsonToData(char json[], Type t, Map map[])
+	char[] jsonFromArray(Data d[], Map map[])
+	char[] jsonFromData(Data d, Map map[])
 }
