@@ -46,7 +46,7 @@ data ParsedParam {
 
 component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocket, data.StringUtil stringUtil,
  data.IntUtil intUtil, io.FileSystem fileSystem, io.File, ws.DocStream, composition.RecursiveLoader loader, 
- data.adt.HashTable {
+ data.adt.HashTable, encoding.Encoder:uri encoder {
 	
 	char web_root[] = "./"
 	int listenPort = 0
@@ -131,6 +131,21 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		return result
 	}
 
+	HashTable getQueryString(HashTable table, char path[]) {
+		String queryString[] = stringUtil.explode(path, "?")
+		if (queryString.arrayLength > 1) {
+			if (table == null) { table = new HashTable() }
+			String helper[] = stringUtil.explode(queryString[1].string, "&")
+			String keyValue[]
+			for (int count = 0; count < helper.arrayLength; count++) {
+				keyValue = stringUtil.explode(helper[count].string, "=")
+				table.put(keyValue[0].string, 
+					new String(encoder.decode(keyValue[1].string)))
+			}	
+		}
+		return table
+	}
+
 	HashTable getURLMaps(char command[], String exprs[]) {
 		if (exprs == null) { return null }
 		else {
@@ -145,7 +160,7 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 	bool serveFunction_GET(DocStream ds, char path[], char command[]) {
 		IDC com = loader.load(path).mainComponent
 		Web rh = new Web() from com :< Web
-		return rh.get(command, ds, getURLMaps(command, rh.urls()))
+		return rh.get(command, ds, getQueryString(getURLMaps(command, rh.urls()), command))
 	}
 	
 	bool serveFunction_POST(DocStream ds, char path[], char command[], char ctype[], byte payload[]) {
