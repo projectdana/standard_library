@@ -8,7 +8,7 @@ const byte CHAR    = 5
 const byte BOOLEAN = 6
 const byte DATA    = 7
 
-component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.json.JSONParser parser {
+component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.DecUtil du, data.json.JSONParser parser {
 	
 	dec[] getDECArray(Type t, JSONElement e) {
 		dec d[] = new dec[e.children.arrayLength]
@@ -75,6 +75,7 @@ component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.j
 		} else if (f.type.class == Type.DECIMAL) {
 			return DECIMAL
 		} else if (f.type.class == Type.DATA) { return DATA }
+		//else if (f.type.class == Type.OBJECT) { out.println("WOOW") }
 		return 0
 	}
 
@@ -193,22 +194,30 @@ component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.j
 				if (helper != null) { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": \"", helper, "\"") }
 				else { json = new char[](json, "\"", t.fields[i].name, "\": null") }
 			} else if (fieldType == ARRAY) {
-				fieldType = getFieldType(t.fields[i].type.fields[0])
-				json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map) ,"\": ", "[")
-				if (fieldType == DECIMAL) {
-					json = new char[](json, setDECArray(d:.tf))
-				} else if (fieldType == INTEGER) {
-					json = new char[](json, setINTArray(d:.tf))
-				} else if (fieldType == BOOLEAN) {
-					json = new char[](json, setBOOLArray(d:.tf))
-				} else if (fieldType == DATA) {
-					if (d:.tf hastype String[]) { json = new char[](json, setSTRINGArray(d:.tf)) }
-					else { json = new char[](json, setArray(d:.tf, map)) }
+				if (d:.tf == null) {
+					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map) ,"\": null")
+				} else {
+					fieldType = getFieldType(t.fields[i].type.fields[0])
+					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map) ,"\": ", "[")
+					if (fieldType == DECIMAL) {
+						json = new char[](json, setDECArray(d:.tf))
+					} else if (fieldType == INTEGER) {
+						json = new char[](json, setINTArray(d:.tf))
+					} else if (fieldType == BOOLEAN) {
+						json = new char[](json, setBOOLArray(d:.tf))
+					} else if (fieldType == DATA) {
+						if (d:.tf hastype String[]) { json = new char[](json, setSTRINGArray(d:.tf)) }
+						else { json = new char[](json, setArray(d:.tf, map)) }
+					}
+					json = new char[](json, "]")	
 				}
-				json = new char[](json, "]")
 			} else if (fieldType == DATA) {
-				Data helper = d:.tf
-				json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": {", setData(typeof(helper), helper, map), "}")
+				if (d:.tf == null) {
+					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": null")
+				} else {
+					Data helper = d:.tf
+					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": {", setData(typeof(helper), helper, map), "}")	
+				}
 			}	
 		}
 		return json
