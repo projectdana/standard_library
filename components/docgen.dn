@@ -3,6 +3,8 @@ data PrimaryType{
 	char htmlFile[]
 	}
 
+const char OUTPUT_DIR[] = "_docs"
+
 component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo {
 	
 	char[] getHTMLFileFor(char sourceFile[], char type[])
@@ -107,7 +109,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		
 		//replace the start of the path (i.e. "resources") with "doc"
 		String tokens[] = clone stringUtil.explode(path, "/")
-		tokens[0] = new String("doc")
+		tokens[0] = new String(OUTPUT_DIR)
 		path = stringUtil.implode(tokens, "/")
 		
 		//get the "include" package
@@ -123,7 +125,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 				{
 				InterfaceDef id = sf.types[i]
 				
-				char tpath[] = new char[]("doc/files/", getHTMLFileFor(sf.path, id.name))
+				char tpath[] = new char[]("$OUTPUT_DIR/files/", getHTMLFileFor(sf.path, id.name))
 				
 				if (fileSystem.exists(tpath))
 					fileSystem.delete(tpath)
@@ -435,7 +437,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 				{
 				DataDef td = sf.types[i]
 				
-				char tpath[] = new char[]("doc/files/", getHTMLFileFor(sf.path, td.name))
+				char tpath[] = new char[]("$OUTPUT_DIR/files/", getHTMLFileFor(sf.path, td.name))
 				
 				if (fileSystem.exists(tpath))
 					fileSystem.delete(tpath)
@@ -582,11 +584,11 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 	
 	void writeDocs(ParsedFiles p, bool writeIndex)
 		{
-		if (!fileSystem.exists("doc"))
-			fileSystem.createDirectory("doc")
+		if (!fileSystem.exists(OUTPUT_DIR))
+			fileSystem.createDirectory(OUTPUT_DIR)
 		
-		if (!fileSystem.exists("doc/files"))
-			fileSystem.createDirectory("doc/files")
+		if (!fileSystem.exists("$OUTPUT_DIR/files"))
+			fileSystem.createDirectory("$OUTPUT_DIR/files")
 		
 		//generate a set of HTML files for p.primaryFiles
 		for (int i = 0; i < p.primaryFiles.arrayLength; i++)
@@ -598,11 +600,11 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 			{
 			out.println("Generating index page")
 			
-			if (fileSystem.exists("doc/index.html"))
-				fileSystem.delete("doc/index.html")
+			if (fileSystem.exists("$OUTPUT_DIR/index.html"))
+				fileSystem.delete("$OUTPUT_DIR/index.html")
 			
 			//generate the index HTML file
-			File fd = new File("doc/index.html", File.FILE_ACCESS_WRITE)
+			File fd = new File("$OUTPUT_DIR/index.html", File.FILE_ACCESS_WRITE)
 			
 			if (fd != null)
 				{
@@ -644,13 +646,13 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 				fd.close()
 				
 				//copy in the CSS file
-				fd = new File("doc/doc.css", File.FILE_ACCESS_WRITE)
+				fd = new File("$OUTPUT_DIR/doc.css", File.FILE_ACCESS_WRITE)
 				ref = new File("$dana_home/resources-ext/doc/doc.css", File.FILE_ACCESS_READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()
 				fd.close()
 				
-				fd = new File("doc/files/doc.css", File.FILE_ACCESS_WRITE)
+				fd = new File("$OUTPUT_DIR/files/doc.css", File.FILE_ACCESS_WRITE)
 				ref = new File("$dana_home/resources-ext/doc/doc.css", File.FILE_ACCESS_READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()

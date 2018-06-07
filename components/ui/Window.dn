@@ -86,10 +86,7 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 	
 	eventsink PaintEvents(EventData ed)
 		{
-		if (ed.type == GraphicsObject.[repaint])
-			{
-			paint(null)
-			}
+		paint(null)
 		}
 	
 	Window:Window(char title[])
@@ -100,12 +97,11 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 		
 		titleBar = new TitleBar(title)
 		
+		addObject(titleBar)
 		addMouseEventTarget(titleBar)
-		addClickTarget(titleBar)
 		
 		sinkevent Events(canvas)
 		sinkevent Events(titleBar)
-		sinkevent PaintEvents(titleBar)
 		}
 	
 	void Window:setVisible(bool b)
