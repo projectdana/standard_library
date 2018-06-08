@@ -10,7 +10,7 @@ interface DocStream {
 	/*
 	 {"@description" : "Construct a new doc stream. This is done automatically by a web framework."}
 	*/
-	DocStream(TCPSocket s, Header headers[])
+	DocStream(TCPSocket s, Header headers[], bool autoCloseSocket)
 	
 	/*
 	 {"@description" : "Get the list of request headers send by the client."}
@@ -39,7 +39,7 @@ interface DocStream {
 	void write(char str[])
 	
 	/*
-	 {"@description" : "Set status code of the request, set all headers (such as 'content-type' and 'content-length') and send them to the client. This function is only effective the first time that it use used per request."}
+	 {"@description" : "Set status code of the request, set all headers (such as 'content-type' and 'content-length') and send them to the client. This function is only effective the first time that it is used per request."}
 	*/
 	void writeStatus(int code, char reason[], Header headers[])
 	

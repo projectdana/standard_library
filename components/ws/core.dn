@@ -208,7 +208,7 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		bool success = false
 		if (staticFile(cmd.resource)) { success = serveFile(cmd.resource, s) }
 		else if ((handler = getHandler(resource)) != null) {
-			DocStream ds = new DocStream(s, cmd.headers)
+			DocStream ds = new DocStream(s, cmd.headers, false)
 			if (cmd.type == Command.GET) { success = serveFunction_GET(ds, handler, resource.string) }
 			else if (cmd.type == Command.POST) {
 				//read the payload first

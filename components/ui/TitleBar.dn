@@ -42,9 +42,7 @@ component provides TitleBar(AdaptEvents) requires Panel, Label, io.Output out, d
 		closeButton.setSize(new WH(20, 18))
 		closeButton.setColor(new Color(204, 96, 96, 255))
 		
-		addObject(closeButton) // <-- this line causes a segfault when this function exits (seems to have corrupted this stack frame)
-		// - note that this call *causes* an exception, so the function will not be terminating in a usual way
-		// - first, why does the "incompatible types" exception happen, and second, why does throwing this exception cause memory corruption when the function exits???
+		addObject(closeButton)
 		
 		sinkevent Buttons(closeButton)
 		

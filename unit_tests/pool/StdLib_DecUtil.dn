@@ -361,6 +361,22 @@ component provides UnitTest requires io.Output out, data.DecUtil decUtil {
 		
 		if (!negativeTestND()) throw new Exception("Failure in test 22")
 		
+		//arithmetic-comparator tests
+		r = 1.0
+		c = 0.5
+		
+		if (!(r > c + 0.2)) throw new Exception("Failure in test 23")
+		
+		r = 1.0
+		c = 0.5
+		
+		if (!(r > c / 2.0)) throw new Exception("Failure in test 24")
+		
+		r = 1.0
+		c = 0.5
+		
+		if (!(r > c * 0.2)) throw new Exception("Failure in test 25")
+		
 		return true
 		}
 	

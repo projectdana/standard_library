@@ -1,0 +1,40 @@
+data Second {
+	int m
+	}
+
+data Person {
+	char name[]
+	int age
+	dec weight
+	Data content
+	Object object
+	Thread thread
+	IDC com
+	}
+
+data Persons {
+	char name[]
+	Data contents[]
+	Object objects[]
+	}
+
+uses reflect.Type
+
+component provides UnitTest requires io.Output out {
+	
+	bool UnitTest:runTest()
+		{
+		Type t = typeof(Person)
+		
+		if (t.fields[0].name != "name") throw new Exception("Failure in test 1")
+		
+		Person p = new Person()
+		
+		t = typeof(Person)
+		
+		if (t.fields[1].name != "age") throw new Exception("Failure in test 2")
+		
+		return true
+		}
+	
+	}
