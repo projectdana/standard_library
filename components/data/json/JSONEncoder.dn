@@ -210,27 +210,34 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map) ,"\": null")
 				} else {
 					fieldType = getFieldType(t.fields[i].type.fields[0])
-					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map) ,"\": ", "[")
-					if (fieldType == DECIMAL) {
-						json = new char[](json, setDECArray(d:.tf))
-					} else if (fieldType == INTEGER) {
-						json = new char[](json, setINTArray(d:.tf))
-					} else if (fieldType == BOOLEAN) {
-						json = new char[](json, setBOOLArray(d:.tf))
-					} else if (fieldType == DATA) {
-						//TODO: STRING IS NOT WORKING
-						if (d:.tf hastype String[]) { json = new char[](json, setSTRINGArray(d:.tf)) }
-						else { json = new char[](json, setArray(d:.tf, map)) }
+					if (fieldType != OBJECT) {
+						json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map) ,"\": ", "[")
+						if (fieldType == DECIMAL) {
+							json = new char[](json, setDECArray(d:.tf))
+						} else if (fieldType == INTEGER) {
+							json = new char[](json, setINTArray(d:.tf))
+						} else if (fieldType == BOOLEAN) {
+							json = new char[](json, setBOOLArray(d:.tf))
+						} else if (fieldType == DATA) {
+							if (Field.FLAG_RECURSION != t.fields[i].flags) {
+								if (d:.tf hastype String[]) { json = new char[](json, setSTRINGArray(d:.tf)) }
+								else { json = new char[](json, setArray(d:.tf, map)) }
+							} else {out.println("STOPPED array $(t.fields[i].name)")}
+						}
+						json = new char[](json, "]")
+					} else {
+						json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map) ,"\": null")
 					}
-					json = new char[](json, "]")	
 				}
 			} else if (fieldType == DATA) {
-				if (d:.tf == null) {
-					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": null")
-				} else {
-					Data helper = d:.tf
-					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": {", setData(typeof(helper), helper, map), "}")	
-				}
+				if (Field.FLAG_RECURSION != t.fields[i].flags) {
+					if (d:.tf == null) {
+						json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": null")
+					} else {
+						Data helper = d:.tf
+						json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": {", setData(typeof(helper), helper, map), "}")	
+					}
+				} else {out.println("STOPPED data $(t.fields[i].name)") }
 			} else if (fieldType == OBJECT) {
 				if (d:.tf == null) {
 					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": null")
