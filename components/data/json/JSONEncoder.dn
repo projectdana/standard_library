@@ -7,10 +7,12 @@ const byte ARRAY   = 4
 const byte CHAR    = 5
 const byte BOOLEAN = 6
 const byte DATA    = 7
+const byte OBJECT  = 8
 
 component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.DecUtil du, data.json.JSONParser parser {
 	
 	dec[] getDECArray(Type t, JSONElement e) {
+		if (e == null) { return null }
 		dec d[] = new dec[e.children.arrayLength]
 		for (int i = 0; i < e.children.arrayLength; i++) {
 			if (e.children[i].value != null) { d[i] = du.decFromString(e.children[i].value) }
@@ -20,6 +22,7 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 	}
 
 	int[] getINTArray(Type t, JSONElement e) {
+		if (e == null) { return null }
 		int d[] = new int[e.children.arrayLength]
 		for (int i = 0; i < e.children.arrayLength; i++) {
 			if (e.children[i].value != null) { d[i] = iu.intFromString(e.children[i].value) }
@@ -29,6 +32,7 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 	}
 
 	bool[] getBOOLArray(Type t, JSONElement e) {
+		if (e == null) { return null }
 		bool d[] = new bool[e.children.arrayLength]
 		for (int i = 0; i < e.children.arrayLength; i++) {
 			if ((e.children[i].value == null) || (e.children[i].value == "false")) { d[i] = false }
@@ -38,10 +42,15 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 	}
 
 	Data[] getArray(Type t, JSONElement e, Map map[]) {
+		if (e == null) { return null }
 		Data d[] = new Data[e.children.arrayLength] from (t.fields[0].type)
 		for (int i = 0; i < e.children.arrayLength; i++) {
 			d[i] = new Data() from (t.fields[0].type)
-			d[i] = getData(d[i], t.fields[0].type, e.children[i], true, map)
+			if (e.children[i].type == JSONElement.TYPE_OBJECT) {
+				d[i] = getData(d[i], t.fields[0].type, e.children[i], false, map)
+			} else {
+				d[i] = getData(d[i], t.fields[0].type, e.children[i], true, map)
+			}
 		}
 		return d
 	}
@@ -75,7 +84,7 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 		} else if (f.type.class == Type.DECIMAL) {
 			return DECIMAL
 		} else if (f.type.class == Type.DATA) { return DATA }
-		//else if (f.type.class == Type.OBJECT) { out.println("WOOW") }
+		else if (f.type.class == Type.OBJECT) { return OBJECT }
 		return 0
 	}
 
@@ -104,6 +113,7 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 					else { result:.tf = value[0] }
 				} else if (fieldType == ARRAY) {
 					fieldType = getFieldType(t.fields[i].type.fields[0])
+					//TODO: STRING IS NOT WORKING
 					if (fieldType == DECIMAL) {
 						result:.tf = getDECArray(t.fields[i].type, parser.getValue(e, dataVarToJsonKey(t.fields[i].name, map)))
 					} else if (fieldType == INTEGER) {
@@ -116,6 +126,8 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 				} else if (fieldType == DATA) {
 					Data newD = new Data() from t.fields[i].type
 					result:.tf = getData(newD, t.fields[i].type, parser.getValue(e, dataVarToJsonKey(t.fields[i].name, map)), false, map)
+				} else if (fieldType == OBJECT) {
+					result:.tf = null
 				}
 			}
 		}
@@ -206,6 +218,7 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 					} else if (fieldType == BOOLEAN) {
 						json = new char[](json, setBOOLArray(d:.tf))
 					} else if (fieldType == DATA) {
+						//TODO: STRING IS NOT WORKING
 						if (d:.tf hastype String[]) { json = new char[](json, setSTRINGArray(d:.tf)) }
 						else { json = new char[](json, setArray(d:.tf, map)) }
 					}
@@ -218,7 +231,13 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 					Data helper = d:.tf
 					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": {", setData(typeof(helper), helper, map), "}")	
 				}
-			}	
+			} else if (fieldType == OBJECT) {
+				if (d:.tf == null) {
+					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": null")
+				} else {
+					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": \"OBJECT\"")
+				}
+			}
 		}
 		return json
 	}
