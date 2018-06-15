@@ -113,7 +113,6 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 					else { result:.tf = value[0] }
 				} else if (fieldType == ARRAY) {
 					fieldType = getFieldType(t.fields[i].type.fields[0])
-					//TODO: STRING IS NOT WORKING
 					if (fieldType == DECIMAL) {
 						result:.tf = getDECArray(t.fields[i].type, parser.getValue(e, dataVarToJsonKey(t.fields[i].name, map)))
 					} else if (fieldType == INTEGER) {
@@ -180,6 +179,33 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 		return json
 	}
 
+	bool equalTypes(Type t, Type t2) {
+		if ((t.class == t2.class) && (t.flags == t2.flags) && (t.size == t2.size)) {
+			if (t.fields.arrayLength == t2.fields.arrayLength) {
+				for (int i = 0; i < t.fields.arrayLength; i++) {
+					if (t.fields[i].flags == t2.fields[i].flags) {
+						if (Field.FLAG_RECURSION != t.fields[i].flags) {
+							return equalTypes(t.fields[i].type, t2.fields[i].type)
+						}
+					} else { return false }
+				}
+			} else { return false }
+		} else { return false }
+		return true
+	}
+
+	void printInfo(Type t, char tabs[]) {
+		out.println("$(tabs) class: $(iu.intToString(t.class))")
+		out.println("$(tabs) flags: $(iu.intToString(t.flags))")
+		out.println("$(tabs) size: $(iu.intToString(t.size))")
+		tabs = new char[](tabs, "\t")
+		for (int i = 0; i < t.fields.arrayLength; i++) {
+			out.println("$(tabs) name: $(t.fields[i].name)")
+			out.println("$(tabs) flags: $(iu.intToString(t.fields[i].flags))")
+			if (Field.FLAG_RECURSION != t.fields[i].flags) { printInfo(t.fields[i].type, tabs) }
+		}
+	}
+
 	char[] setData(Type t, Data d, Map map[]) {
 		char json[] = null
 		for (int i = 0; i < t.fields.arrayLength; i++) {
@@ -219,25 +245,32 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 						} else if (fieldType == BOOLEAN) {
 							json = new char[](json, setBOOLArray(d:.tf))
 						} else if (fieldType == DATA) {
-							if (Field.FLAG_RECURSION != t.fields[i].flags) {
-								if (d:.tf hastype String[]) { json = new char[](json, setSTRINGArray(d:.tf)) }
-								else { json = new char[](json, setArray(d:.tf, map)) }
-							} else {out.println("STOPPED array $(t.fields[i].name)")}
+							if (t.fields[i].name == "capabilities") {
+								out.println("$(iu.intToString(i)) -- $(iu.intToString(tf))")
+								out.println("d:tf:")
+								printInfo(typeof(d:.tf), "")
+								out.println("t:fields:")
+								printInfo(t.fields[i].type, "")
+								out.println("String:")
+								printInfo(typeof(new String[]()), "")
+							}
+							if (equalTypes(t.fields[i].type, typeof(new String[]()))) {
+								 if (t.fields[i].name == "capabilities") { out.println("WORKED!") }
+								json = new char[](json, setSTRINGArray(d:.tf)) }
+							else { json = new char[](json, setArray(d:.tf, map)) }
 						}
 						json = new char[](json, "]")
 					} else {
-						json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map) ,"\": null")
+						json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map) ,"\": \"OBJECT[]\"")
 					}
 				}
 			} else if (fieldType == DATA) {
-				if (Field.FLAG_RECURSION != t.fields[i].flags) {
-					if (d:.tf == null) {
-						json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": null")
-					} else {
-						Data helper = d:.tf
-						json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": {", setData(typeof(helper), helper, map), "}")	
-					}
-				} else {out.println("STOPPED data $(t.fields[i].name)") }
+				if (d:.tf == null) {
+					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": null")
+				} else {
+					Data helper = d:.tf
+					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": {", setData(typeof(helper), helper, map), "}")	
+				}
 			} else if (fieldType == OBJECT) {
 				if (d:.tf == null) {
 					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": null")
