@@ -18,7 +18,7 @@ data ClickableItem{
 
 uses events.EventData
 
-component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil iu {
+component provides Window requires Canvas, io.Output out, data.IntUtil iu {
 	
 	GraphicsItem buffer
 	GraphicsItem bufferEnd
@@ -29,8 +29,6 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 	Mutex mouseListenerLock = new Mutex()
 	XYListener mouseListeners
 	XYListener mouseListenersEnd
-	
-	TitleBar titleBar
 	
 	int currentX = 100
 	int currentY = 80
@@ -52,35 +50,30 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 	
 	eventsink Events(EventData ed)
 		{
-		if (ed.source === canvas && ed.details != null)
+		if (ed.type == Canvas.[mouseUp])
 			{
 			MouseEvent me = ed.details
-			
-			if (ed.type == Canvas.[mouseUp])
-				{
-				click(me.x - currentX, me.y - currentY, me.button)
-				mouseUp(me.x, me.y, me.button)
-				}
-				else if (ed.type == Canvas.[mouseDown])
-				{
-				mouseDown(me.x, me.y, me.button)
-				}
-				else if (ed.type == Canvas.[mouseMove])
-				{
-				mouseMove(me.x, me.y)
-				}
+			click(me.x, me.y, me.button)
+			mouseUp(me.x, me.y, me.button)
 			}
-			else if (ed.source === titleBar)
+			else if (ed.type == Canvas.[mouseDown])
 			{
-			if (ed.type == TitleBar.[move])
-				{
-				TitleEvent me = ed.details
-				setPosition(me.x, me.y)
-				}
-				else if (ed.type == TitleBar.[close])
-				{
-				emitevent close()
-				}
+			MouseEvent me = ed.details
+			mouseDown(me.x, me.y, me.button)
+			}
+			else if (ed.type == Canvas.[mouseMove])
+			{
+			MouseEvent me = ed.details
+			mouseMove(me.x, me.y)
+			}
+			else if (ed.type == Canvas.[resizeWindow])
+			{
+			WH wh = ed.details
+			setSize(wh.width, wh.height)
+			}
+			else if (ed.type == Canvas.[closeWindow])
+			{
+			emitevent close()
 			}
 		}
 	
@@ -95,13 +88,7 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 		
 		canvas.setTitle(title)
 		
-		titleBar = new TitleBar(title)
-		
-		addObject(titleBar)
-		addMouseEventTarget(titleBar)
-		
 		sinkevent Events(canvas)
-		sinkevent Events(titleBar)
 		}
 	
 	void Window:setVisible(bool b)
@@ -109,10 +96,19 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 		canvas.setVisible(b)
 		}
 	
+	void Window:setResizable(bool b)
+		{
+		canvas.setResizable(b)
+		}
+	
+	void Window:setFullScreen(bool b)
+		{
+		canvas.setFullScreen(b)
+		}
+	
 	void Window:setTitle(char title[])
 		{
 		canvas.setTitle(title)
-		titleBar.setTitle(title)
 		}
 	
 	void Window:close()
@@ -231,7 +227,6 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 		currentX = x
 		currentY = y
 		canvas.setPosition(x, y)
-		titleBar.setWindowRect(getRect())
 		}
 	
 	void Window:setSize(int x, int y)
@@ -239,7 +234,6 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 		currentWidth = x
 		currentHeight = y
 		canvas.setSize(x, y)
-		titleBar.setWindowRect(getRect())
 		
 		paint(null)
 		}
@@ -271,8 +265,6 @@ component provides Window requires Canvas, TitleBar, io.Output out, data.IntUtil
 	
 	void Window:paint(Canvas c)
 		{
-		titleBar.paint(canvas)
-		
 		for (GraphicsItem bi = buffer; bi != null; bi = bi.next)
 			{
 			bi.object.paint(canvas)
