@@ -51,24 +51,21 @@ component provides net.TCPServerSocket, net.TCPSocket, Service requires NativeLo
 					connected = false
 					}
 				
-				mutex(server.accessLock)
+				if (server.connected)
 					{
-					if (server.connected)
-						{
-						int clientHandle = lib.accept(server.platformSocket)
-						
-						if (clientHandle == 0)
-							return false
-						
-						platformSocket = clientHandle
-						connected = true
-						
-						return true
-						}
-						else
-						{
-						throw new Exception("Server socket is not bound for accept")
-						}
+					int clientHandle = lib.accept(server.platformSocket)
+					
+					if (clientHandle == 0)
+						return false
+					
+					platformSocket = clientHandle
+					connected = true
+					
+					return true
+					}
+					else
+					{
+					throw new Exception("Server socket is not bound for accept")
 					}
 				}
 			}
