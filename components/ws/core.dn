@@ -38,6 +38,7 @@ data PathMapping {
 	char file[]
 }
 
+
 data ParsedParam {
 	char type[]
 	char value[]
@@ -45,8 +46,8 @@ data ParsedParam {
 }
 
 component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocket, data.StringUtil stringUtil,
- data.IntUtil intUtil, io.FileSystem fileSystem, io.File, ws.DocStream, composition.RecursiveLoader loader, 
- data.adt.HashTable, encoding.Encoder:uri encoder {
+ data.IntUtil intUtil, io.FileSystem fileSystem, io.File, ws.DocStream, ws.Web rh, data.adt.HashTable,
+ encoding.Encoder:uri encoder {
 	
 	char web_root[] = "./"
 	int listenPort = 0
@@ -89,35 +90,6 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		}
 		return null
 	}
-	
-	char[] getHandler(String resource) {
-		//parse command into /'s and find the most detailed file, if any, by converting to each "/" to ".", and adding ".o"
-		char command[] = resource.string
-		char path[]
-		resource.string = ""
-		if (command[command.arrayLength-1] == "/" && command != "/") {
-			command = stringUtil.subString(command, 0, command.arrayLength - 1)
-			path = new char[](web_root, stringUtil.implode(stringUtil.explode(command, "/"), "."), ".o")
-		} else if (command == "/") { path = new char[](web_root, "web.o") }
-		else { path = new char[](web_root, stringUtil.implode(stringUtil.explode(command, "/"), "."), ".o")	}
-		if (fileSystem.exists(path)) { return path }
-		while (stringUtil.find(command, "/") != StringUtil.NOT_FOUND) {
-			int offset = stringUtil.rfind(command, "/")
-			if (resource.string != null) {
-				resource.string = new char[](stringUtil.subString(command, offset,
-					command.arrayLength - offset), resource.string)
-			} else {
-				resource.string = stringUtil.subString(command, 
-					offset, command.arrayLength - offset)
-			}
-			command = stringUtil.subString(command, 0, stringUtil.rfind(command, "/"))
-			path = new char[](web_root, stringUtil.implode(stringUtil.explode(command, "/"), "."), ".o")
-			if (fileSystem.exists(path)){ return path }
-		}
-		path = new char[](web_root, "web.o")
-		if (fileSystem.exists("web.o")) { return path }
-		return null
-	}
 
 	HashTable getParams(char resource[], char ex[]) {
 		HashTable result = new HashTable()
@@ -158,14 +130,10 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 	}
 	
 	bool serveFunction_GET(DocStream ds, char path[], char command[]) {
-		IDC com = loader.load(path).mainComponent
-		Web rh = new Web() from com :< Web
 		return rh.get(command, ds, getQueryString(getURLMaps(command, rh.urls()), command))
 	}
 	
 	bool serveFunction_POST(DocStream ds, char path[], char command[], char ctype[], byte payload[]) {
-		IDC com = loader.load(path).mainComponent
-		Web rh = new Web() from com :< Web
 		return rh.post(command, ctype, payload, ds, getURLMaps(command, rh.urls()))
 	}
 	
@@ -207,7 +175,7 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		char handler[]
 		bool success = false
 		if (staticFile(cmd.resource)) { success = serveFile(cmd.resource, s) }
-		else if ((handler = getHandler(resource)) != null) {
+		else {
 			DocStream ds = new DocStream(s, cmd.headers, false)
 			if (cmd.type == Command.GET) { success = serveFunction_GET(ds, handler, resource.string) }
 			else if (cmd.type == Command.POST) {
