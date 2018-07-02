@@ -10,7 +10,7 @@ library interface IOTCPLib{
 	void getRemoteAddress(int hnd, NetworkEndpoint ha)
 	}
 
-component provides net.TCPServerSocket, net.TCPSocket, Service requires NativeLoader inl, io.Output out {
+component provides net.TCPServerSocket, net.TCPSocket, Service requires NativeLoader inl, io.Output out, data.IntUtil iu {
 	static library IOTCPLib lib
 	
 	implementation TCPSocket{
