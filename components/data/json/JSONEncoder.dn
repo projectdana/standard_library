@@ -215,7 +215,7 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 				else { json = new char[](json, "\"", t.fields[i].name, "\": 0") }
 			} else if (fieldType == BOOLEAN) {
 				bool helper = d:.tf
-				if ((helper == null) || (helper == "false")) { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": false") }
+				if (!helper) { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": false") }
 				else { json = new char[](json, "\"", t.fields[i].name, "\": true") }
 			} else if (fieldType == CHAR) {
 				char helper = d:.tf
@@ -235,7 +235,6 @@ component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.Dec
 						} else if (fieldType == BOOLEAN) {
 							json = new char[](json, setBOOLArray(d:.tf))
 						} else if (fieldType == DATA) {
-							//TODO: suggestion instead of tpeof(new String[]()) do only String[]?
 							if (equalTypes(t.fields[i].type, typeof(new String[]()))) {
 								json = new char[](json, setSTRINGArray(d:.tf))
 							} else { json = new char[](json, setArray(d:.tf, map)) }
