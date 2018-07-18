@@ -1,10 +1,10 @@
-data Field {
+data MySQLField {
 	char name[]
 	char value[]
 }
 
 data Row {
-	Field fields[]
+	MySQLField fields[]
 }
 
 interface MySQL {

@@ -44,9 +44,9 @@ component provides data.mysql.MySQL, Service requires NativeLoader loader {
 			//get field values
 			int row
 			while ((row = mySQLLib.fetchRow(result)) != 0) {
-				Field fields[] = null
+				MySQLField fields[] = null
 				for (i = 0; i < numFields; i++) {
-					fields = new Field[](fields, new Field(fieldNames[i].string, 
+					fields = new MySQLField[](fields, new MySQLField(fieldNames[i].string, 
 						mySQLLib.getField(row, i)))
 				}
 				rows = new Row[](rows, new Row(fields))
