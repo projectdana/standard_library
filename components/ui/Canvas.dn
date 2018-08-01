@@ -9,6 +9,9 @@ library interface UIPlaneLib{
 	const int EVENT_MOUSE_UP = 1
 	const int EVENT_MOUSE_DOWN = 2
 	const int EVENT_MOUSE_MOVE = 3
+	const int EVENT_RESIZE = 4
+	const int EVENT_MOVE = 5
+	const int EVENT_CLOSE = 6
 	
 	int makeWindow()
 	
@@ -34,6 +37,10 @@ library interface UIPlaneLib{
 	void setPosition(int phandle, int x, int y)
 	
 	void setVisible(int phandle, bool b)
+	
+	void setResizable(int phandle, bool b)
+	
+	void setFullScreen(int phandle, bool b)
 	
 	void setTitle(int phandle, char t[])
 	
@@ -70,19 +77,29 @@ component provides Canvas(Destructor), Font(Destructor), Service requires Native
 		
 		eventsink LibEvents(EventData ed)
 			{
-			WindowEventData wed = ed.details
-			
 			if (ed.type == UIPlaneLib.EVENT_MOUSE_UP)
 				{
+				WindowEventData wed = ed.details
 				emitevent mouseUp(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
 				}
 				else if (ed.type == UIPlaneLib.EVENT_MOUSE_DOWN)
 				{
+				WindowEventData wed = ed.details
 				emitevent mouseDown(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
 				}
 				else if (ed.type == UIPlaneLib.EVENT_MOUSE_MOVE)
 				{
+				WindowEventData wed = ed.details
 				emitevent mouseMove(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.EVENT_RESIZE)
+				{
+				WindowEventData wed = ed.details
+				emitevent resizeWindow(new WH(wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.EVENT_CLOSE)
+				{
+				emitevent closeWindow()
 				}
 			}
 		
@@ -97,6 +114,22 @@ component provides Canvas(Destructor), Font(Destructor), Service requires Native
 			mutex(windowStateLock)
 				{
 				lib.setVisible(platformHandle, b)
+				}
+			}
+		
+		void Canvas:setResizable(bool v)
+			{
+			mutex(windowStateLock)
+				{
+				lib.setResizable(platformHandle, v)
+				}
+			}
+		
+		void Canvas:setFullScreen(bool v)
+			{
+			mutex(windowStateLock)
+				{
+				lib.setFullScreen(platformHandle, v)
 				}
 			}
 		

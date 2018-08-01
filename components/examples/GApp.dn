@@ -27,14 +27,14 @@ component provides App requires ui.Window, ui.Button, io.Output out {
 	int App:main(AppParam params[])
 		{
 		window = new Window("MyWindow")
-		window.setSize(200, 200)
+		window.setSize(250, 250)
 		window.setVisible(true)
 		
 		b1 = new Button("One")
 		b2 = new Button("Two")
 		
-		b1.setPosition(10, 40)
-		b2.setPosition(70, 40)
+		b1.setPosition(10, 30)
+		b2.setPosition(70, 30)
 		
 		window.addObject(b1)
 		window.addObject(b2)

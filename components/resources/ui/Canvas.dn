@@ -5,6 +5,8 @@ uses Point2D
 uses Bitmap
 uses Font
 uses Rect
+uses WH
+uses Point
 
 data MouseEvent	{
 	int type
@@ -23,10 +25,15 @@ interface Canvas {
 	event mouseUp(MouseEvent m)
 	event mouseDown(MouseEvent m)
 	event mouseMove(MouseEvent m)
+	event resizeWindow(WH size)
+	event moveWindow(Point position)
+	event closeWindow()
 	
 	Canvas()
 	
 	void setVisible(bool v)
+	void setResizable(bool v)
+	void setFullScreen(bool v)
 	void setTitle(char title[])
 	void setPosition(int x, int y)
 	void setSize(int w, int h)

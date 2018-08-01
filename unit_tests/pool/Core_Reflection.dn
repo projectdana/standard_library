@@ -22,6 +22,11 @@ uses reflect.Type
 
 component provides UnitTest requires io.Output out {
 	
+	char[] getNull()
+		{
+		return null
+		}
+	
 	bool UnitTest:runTest()
 		{
 		Type t = typeof(Person)
@@ -33,6 +38,10 @@ component provides UnitTest requires io.Output out {
 		t = typeof(Person)
 		
 		if (t.fields[1].name != "age") throw new Exception("Failure in test 2")
+		
+		p:.0 = null
+		
+		p:.0 = getNull()
 		
 		return true
 		}
