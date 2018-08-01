@@ -3,7 +3,7 @@ data MySQLField {
 	char value[]
 }
 
-data Row {
+data MySQLRow {
 	MySQLField fields[]
 }
 
@@ -11,5 +11,5 @@ interface MySQL {
 	MySQL(char host[], int port, char user[], char pass[], char dbName[])
 	bool execute(char query[])
 	void close()
-	Row[] fetchAll()
+	MySQLRow[] fetchAll()
 }
