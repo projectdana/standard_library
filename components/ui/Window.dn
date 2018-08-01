@@ -71,6 +71,12 @@ component provides Window requires Canvas, io.Output out, data.IntUtil iu {
 			WH wh = ed.details
 			setSize(wh.width, wh.height)
 			}
+			else if (ed.type == Canvas.[moveWindow])
+			{
+			Point xy = ed.details
+			currentX = xy.x
+			currentY = xy.y
+			}
 			else if (ed.type == Canvas.[closeWindow])
 			{
 			emitevent close()

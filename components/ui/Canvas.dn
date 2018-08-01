@@ -10,7 +10,8 @@ library interface UIPlaneLib{
 	const int EVENT_MOUSE_DOWN = 2
 	const int EVENT_MOUSE_MOVE = 3
 	const int EVENT_RESIZE = 4
-	const int EVENT_CLOSE = 5
+	const int EVENT_MOVE = 5
+	const int EVENT_CLOSE = 6
 	
 	int makeWindow()
 	

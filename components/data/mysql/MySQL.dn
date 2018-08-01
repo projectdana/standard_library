@@ -1,0 +1,71 @@
+uses data.String
+
+library interface MySQLLib {
+	int connect(char host[], int port, char user[], char pass[], char dbName[])
+	int executeQuery(int con, char query[])
+	int fetchRow(int result)//returns row
+	int numFields(int result)
+	char[] getField(int row, int field)
+	char[] getFieldName(int result)
+	void close(int con, int result)
+}
+
+component provides data.mysql.MySQL, Service requires NativeLoader loader {
+	static library MySQLLib mySQLLib
+
+	implementation MySQL {
+		int connection
+		int result
+
+		MySQL:MySQL(char host[], int port, char user[], char pass[], char dbName[]) {
+			connection = mySQLLib.connect(host, port, user, pass, dbName)
+			if (connection == 0) { throw new Exception("Connection failed.") }
+		}
+		
+		bool MySQL:execute(char query[]) {
+			if (connection == 0) { throw new Exception("Connection not established.") }
+			result = mySQLLib.executeQuery(connection, query)
+			if (result == 0) {
+				return false
+			}
+			return true
+		}
+
+		Row[] MySQL:fetchAll() {
+			if (result == 0) { return null }
+			Row rows[] = null
+			int i = 0
+			int numFields = mySQLLib.numFields(result)
+			//get field names
+			String fieldNames[]
+			for (i = 0; i < numFields; i++) {
+				fieldNames = new String[](fieldNames, new String(mySQLLib.getFieldName(result)))
+			}
+			//get field values
+			int row
+			while ((row = mySQLLib.fetchRow(result)) != 0) {
+				MySQLField fields[] = null
+				for (i = 0; i < numFields; i++) {
+					fields = new MySQLField[](fields, new MySQLField(fieldNames[i].string, 
+						mySQLLib.getField(row, i)))
+				}
+				rows = new Row[](rows, new Row(fields))
+			}
+			return rows
+		}
+
+		void MySQL:close() {
+			mySQLLib.close(connection, result)
+		}
+	}
+
+	implementation Service {
+		void Service:start() {
+			mySQLLib = new MySQLLib() from loader.load("mysqllib") :< MySQLLib
+		}
+
+		void Service:stop() {
+			// something?
+		}
+	}
+}
