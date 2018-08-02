@@ -3,13 +3,36 @@ data MySQLField {
 	char value[]
 }
 
-data Row {
+data MySQLRow {
 	MySQLField fields[]
 }
 
+/*
+{ "description" : "MySQL database driver."}
+*/
 interface MySQL {
+	/*
+	 {"@description" : "Create a new MySQL connection.",
+			"host" : "The host ip address where the database is running.",
+			"port" : "The port number.",
+			"user" : "The user name to connect to the database.",
+			"pass" : "The password to connect to the database.",
+			"dbName": "The database name. This can be left blank, in case the database name will be provided later on."}
+	*/
 	MySQL(char host[], int port, char user[], char pass[], char dbName[])
+
+	/*
+	 {"@description" : "Executes a query to the database, returning true if the query is successfully executed, and false otherwise."}
+	*/
 	bool execute(char query[])
+
+	/*
+	 {"@description" : "After executing a query that return results (e.g. SELECT * FROM <table>), this function returns the query data result."}
+	*/
+	MySQLRow[] fetchAll()
+
+	/*
+	 {"@description" : "Closes the database connection. Very important to avoid \"too many connections\" exception."}
+	*/
 	void close()
-	Row[] fetchAll()
 }

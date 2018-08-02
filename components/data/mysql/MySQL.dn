@@ -25,15 +25,12 @@ component provides data.mysql.MySQL, Service requires NativeLoader loader {
 		bool MySQL:execute(char query[]) {
 			if (connection == 0) { throw new Exception("Connection not established.") }
 			result = mySQLLib.executeQuery(connection, query)
-			if (result == 0) {
-				return false
-			}
 			return true
 		}
 
-		Row[] MySQL:fetchAll() {
+		MySQLRow[] MySQL:fetchAll() {
 			if (result == 0) { return null }
-			Row rows[] = null
+			MySQLRow rows[] = null
 			int i = 0
 			int numFields = mySQLLib.numFields(result)
 			//get field names
@@ -49,7 +46,7 @@ component provides data.mysql.MySQL, Service requires NativeLoader loader {
 					fields = new MySQLField[](fields, new MySQLField(fieldNames[i].string, 
 						mySQLLib.getField(row, i)))
 				}
-				rows = new Row[](rows, new Row(fields))
+				rows = new MySQLRow[](rows, new MySQLRow(fields))
 			}
 			return rows
 		}

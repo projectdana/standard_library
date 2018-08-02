@@ -106,16 +106,19 @@ component provides Encoder:uri {
 		{
 		//detect the new content length
 		int len = 0
+		bool plus = false
 		for (int i = 0; i < x.arrayLength; i++)
 			{
-			if (x[i] == "%")
+			if (x[i] == "%") 
 				i += 2
+			else if (x[i] == "+")
+				plus = true
 			
 			len ++
 			}
 		
-		if (len == x.arrayLength) return x
-		
+		if ((len == x.arrayLength) && (!plus)) return x
+				
 		//perform the decoding
 		char result[] = new char[len]
 		char dch[] = new char[2]
