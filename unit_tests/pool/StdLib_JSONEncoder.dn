@@ -1,0 +1,135 @@
+uses data.String
+
+data ResponseToApplication { 
+    ResourcesByCapability resources[] 
+} 
+ 
+data ResourcesByCapability { 
+    char uuid[] 
+    char description[] 
+    String capabilities[] 
+    char status[] 
+    dec lat 
+    dec lon 
+}
+
+component provides UnitTest requires data.StringUtil strUtil, data.json.JSONEncoder encoder {
+	
+	bool UnitTest:runTest() {
+		char jsonDocument1[] = new char[]("{", 
+                    "\"resources\": [", 
+                        "{ \"uuid\": \"45b7d363-86fd-4f81-8681-663140b318d4\",", 
+                          "\"description\": \"Measure the luminosity of the environment\",", 
+                            "\"capabilities\": [\"temperature\", \"environment_monitoring\", \"illuminate\"],", 
+                            "\"status\": \"active\",", 
+                            "\"lat\": -23.559615,", 
+                            "\"lon\": -46.731385", 
+                      "},", 
+                        "{ \"uuid\": \"89v8d363-86fd-4f81-8681-663140b314t5\",", 
+                          "\"description\": \"Measure the temperature of the environment\",", 
+                            "\"capabilities\": [\"temperature\", \"environment_monitoring\"],", 
+                            "\"status\": \"active\",", 
+                            "\"lat\": -23.559615,", 
+                            "\"lon\": -46.731385", 
+                      "}", 
+                  "]", 
+              "}")
+
+		ResponseToApplication test = encoder.jsonToData(jsonDocument1, typeof(ResponseToApplication), null)
+		if (test.resources[0].uuid != "45b7d363-86fd-4f81-8681-663140b318d4") {
+			throw new Exception("Failure in test 1")
+		}
+		if (test.resources[0].description != "Measure the luminosity of the environment") {
+			throw new Exception("Failure in test 1")
+		}
+		if (test.resources[0].capabilities.arrayLength != 3) {
+			throw new Exception("Failure in test 1")
+		}
+		if (test.resources[0].capabilities[0].string != "temperature") {
+			throw new Exception("Failure in test 1")
+		}
+		if (test.resources[0].capabilities[1].string != "environment_monitoring") {
+			throw new Exception("Failure in test 1")
+		}
+		if (test.resources[0].capabilities[2].string != "illuminate") {
+			throw new Exception("Failure in test 1")
+		}
+		if (test.resources[0].status != "active") {
+			throw new Exception("Failure in test 1")
+		}
+		if (test.resources[0].lat != -23.559615) {
+			throw new Exception("Failure in test 1")
+		}
+		if (test.resources[0].lon != -46.731385) {
+			throw new Exception("Failure in test 1")
+		}
+
+		char jsonDocument2[] = new char[]("[",
+                        "{ \"uuid\": \"45b7d363-86fd-4f81-8681-663140b318d4\",", 
+                          "\"description\": \"Measure the luminosity of the environment\",", 
+                            "\"capabilities\": [\"temperature\", \"environment_monitoring\", \"illuminate\"],", 
+                            "\"status\": \"active\",", 
+                            "\"lat\": -23.559615,", 
+                            "\"lon\": -46.731385", 
+                      "},", 
+                        "{ \"uuid\": \"89v8d363-86fd-4f81-8681-663140b314t5\",", 
+                          "\"description\": \"Measure the temperature of the environment\",", 
+                            "\"capabilities\": [\"temperature\", \"environment_monitoring\"],", 
+                            "\"status\": \"active\",", 
+                            "\"lat\": -23.559615,", 
+                            "\"lon\": -46.731385", 
+                      "}", 
+                  "]")		
+
+		
+		ResourcesByCapability test2[] = encoder.jsonToArray(jsonDocument2, typeof(test2), null)
+		if (test2[1].uuid != "89v8d363-86fd-4f81-8681-663140b314t5") {
+			throw new Exception("Failure in test 2")
+		}
+		if (test2[1].description != "Measure the temperature of the environment") {
+			throw new Exception("Failure in test 2")
+		}
+		if (test2[1].capabilities.arrayLength != 2) {
+			throw new Exception("Failure in test 2")
+		}
+		if (test2[1].capabilities[0].string != "temperature") {
+			throw new Exception("Failure in test 2")
+		}
+		if (test2[1].capabilities[1].string != "environment_monitoring") {
+			throw new Exception("Failure in test 2")
+		}
+		if (test2[1].status != "active") {
+			throw new Exception("Failure in test 2")
+		}
+		if (test2[1].lat != -23.559615) {
+			throw new Exception("Failure in test 2")
+		}
+		if (test2[1].lon != -46.731385) {
+			throw new Exception("Failure in test 2")
+		}
+
+		char jsonTest1[] = encoder.jsonFromArray(test2, null)
+		String helper[] = strUtil.explode(jsonTest1, " ")
+		jsonTest1 = strUtil.implode(helper, "")
+
+		helper = strUtil.explode(jsonDocument2, " ")
+		jsonDocument2 = strUtil.implode(helper, "")
+
+		if (jsonTest1 != jsonDocument2) {
+			throw new Exception("Failure in test 3")	
+		}
+
+		char jsonTest2[] = encoder.jsonFromData(test, null)
+
+		helper = strUtil.explode(jsonTest2, " ")
+		jsonTest2 = strUtil.implode(helper, "")
+		helper = strUtil.explode(jsonDocument1, " ")
+		jsonDocument1 = strUtil.implode(helper, "")
+
+		if (jsonTest2 != jsonDocument1) {
+			throw new Exception("Failure in test 4")		
+		}
+
+		return true
+	}
+}

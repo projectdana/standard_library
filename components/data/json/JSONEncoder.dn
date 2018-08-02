@@ -9,7 +9,7 @@ const byte BOOLEAN = 6
 const byte DATA    = 7
 const byte OBJECT  = 8
 
-component provides JSONEncoder requires io.Output out, data.IntUtil iu, data.DecUtil du, data.json.JSONParser parser {
+component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.json.JSONParser parser {
 	
 	dec[] getDECArray(Type t, JSONElement e) {
 		if (e == null) { return null }
