@@ -1,0 +1,109 @@
+component provides UnitTest requires data.mysql.MySQL {
+
+	bool UnitTest:runTest() {
+		MySQL mysql = new MySQL("localhost", 0, "root", "root", "")
+
+		if (mysql == null) {
+			throw new Exception(new char[]("Error while trying to establish a connection to the database.",
+				" Please, check to see if the database is installed and properly configured."))
+		}
+
+		/* queries */
+		char dropDBQuery[] = new char[]("DROP DATABASE IF EXISTS mysql_comp_test;")
+		char createDBQuery[] = new char[]("CREATE DATABASE mysql_comp_test;")
+		char useDBQuery[] = new char[]("USE mysql_comp_test;")
+		char createUSERSQuery[] = new char[]("CREATE TABLE `users` (",
+		  "`id_user` int(11) NOT NULL AUTO_INCREMENT,",
+		  "`login` varchar(100) DEFAULT NULL,",
+		  "`email` varchar(100) DEFAULT NULL,",
+		  "`pass_hash` varchar(512) DEFAULT NULL,",
+		  "PRIMARY KEY (`id_user`)",
+		") ENGINE=InnoDB DEFAULT CHARSET=latin1;")
+		char createTEXTSQuery[] = new char[]("CREATE TABLE `texts` (",
+		  "`id_text` int(11) NOT NULL AUTO_INCREMENT,",
+		  "`id_article` int(11) DEFAULT NULL,",
+		  "`text` TEXT DEFAULT NULL,",
+		  "`current` tinyint(4) DEFAULT NULL,",
+		  "`saved_date` timestamp NULL DEFAULT NULL,",
+		  "PRIMARY KEY (`id_text`),",
+		  "KEY `fk_article_idx` (`id_article`)",
+		") ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=latin1;")
+		char createARTICLESQuery[] = new char[]("CREATE TABLE `articles` (",
+		  "`id_article` int(11) NOT NULL AUTO_INCREMENT,",
+		  "`title` varchar(100) DEFAULT NULL,",
+		  "`id_text` int(11) DEFAULT NULL,",
+		  "`id_user` int(11) DEFAULT NULL,",
+		  "PRIMARY KEY (`id_article`),",
+		  "KEY `fk_text_idx` (`id_text`),",
+		  "KEY `fk_user_idx` (`id_user`),",
+		  "CONSTRAINT `fk_text` FOREIGN KEY (`id_text`) REFERENCES `texts` (`id_text`) ON DELETE NO ACTION ON UPDATE NO ACTION,",
+		  "CONSTRAINT `fk_user` FOREIGN KEY (`id_user`) REFERENCES `users` (`id_user`) ON DELETE NO ACTION ON UPDATE NO ACTION",
+		") ENGINE=InnoDB AUTO_INCREMENT=0 DEFAULT CHARSET=latin1;")
+		char alterTEXTSQuery[] = new char[]("ALTER TABLE `texts`ADD CONSTRAINT `fk_article` FOREIGN KEY (`id_article`) REFERENCES",
+		  " `articles` (`id_article`) ON DELETE NO ACTION ON UPDATE NO ACTION;")
+
+		/* queries execution ... */
+		if (!mysql.execute(dropDBQuery)) {
+			throw new Exception("Error while dropping database: $(dropDBQuery)")
+		}
+		if (!mysql.execute(createDBQuery)) {
+			throw new Exception("Error while creating database: $(createDBQuery)")
+		}
+		if (!mysql.execute(useDBQuery)) {
+			throw new Exception("Error when attempting to use database: $(useDBQuery)")
+		}
+		if (!mysql.execute(createUSERSQuery)) {
+			throw new Exception("Error while creating table: $(createUSERSQuery)")
+		}
+		if (!mysql.execute(createTEXTSQuery)) {
+			throw new Exception("Error while creating table: $(createTEXTSQuery)")
+		}
+		if (!mysql.execute(createARTICLESQuery)) {
+			throw new Exception("Error while creating table: $(createARTICLESQuery)")
+		}
+		if (!mysql.execute(alterTEXTSQuery)) {
+			throw new Exception("Error while altering table: $(alterTEXTSQuery)")
+		}
+		
+		/* data insertion - queries */
+		char mcCannText[] = new char[]("Lieutenant Colonel William Francis James McCann, CMG, DSO, OBE, MC & Bar, JP",
+		" (19 April 1892 - 14 December 1957) was a decorated soldier of World War I, a barrister, and a prominent figure",
+		" in the military and ex-service community of South Australia during the interwar period. Born and raised in Adelaide,",
+		" he worked as a teacher before the war. He enlisted in the Australian Imperial Force as a private in 1914, and rose",
+		" through the ranks to be commissioned during the Gallipoli campaign of 1915. In 1916–1918 he fought on the Western Front",
+		" in France and Belgium, was wounded twice, and rose to the rank of major. For his gallantry during the war, he was",
+		" made a Companion of the Distinguished Service Order and twice awarded the Military Cross. After the war, he served",
+		" as commanding officer of the 10th Battalion until its disbandment in 1919. Returning home, McCann became a barrister",
+		" and formed a legal partnership with Victoria Cross recipient Arthur Blackburn. McCann was active in returned",
+		" servicemen's organisations, as president of the South Australian branch of the Returned Sailors' and Soldiers'",
+		" Imperial League from 1924 to 1931, and as a state vice-president from 1938 to 1949. He was a foundation member of the",
+		" Legacy Club of Adelaide, looking after the dependents of deceased servicemen. His service in the part-time Citizen",
+		" Military Forces saw him reach the rank of lieutenant colonel and command the 43rd Battalion between 1927 and 1930.",
+		" Appointed as state prices commissioner and deputy Commonwealth prices commissioner from 1938 to 1954; in 1946 an arson",
+		" attack on his home was linked to his anti–black marketeering work in those roles. In recognition of his work with the",
+		" ex-service community, McCann was appointed an Officer of the Order of the British Empire in 1935, and a Companion of",
+		" the Order of St Michael and St George in 1956.")
+		char idUser[] = new char[]("SELECT id_user FROM users WHERE login = 'roberto'")
+		char idText[] = new char[]("SELECT id_text FROM texts WHERE text LIKE \"%$(mcCannText)%\"")
+		char idArticle[] = new char[]("SELECT id_article FROM articles WHERE title='Bill McCann'")
+
+		/* data insertion - execution */
+		if (!mysql.execute("INSERT INTO users (login, email, pass_hash) VALUES ('roberto', 'r.rodriguesfilho@lancaster.ac.uk', 'fa78f744-965c-11e8-9eb6-529269fb1459');")) {
+			throw new Exception("Error while inserting data")
+		}
+		if (!mysql.execute("INSERT INTO texts (text, current, saved_date) VALUES (\"$(mcCannText)\", TRUE, NOW());")) {
+			throw new Exception("Error while inserting data")
+		}
+		if (!mysql.execute("INSERT INTO articles (title, id_text, id_user) VALUES ('Bill McCann', ($(idUser)), ($(idText)));")) {
+			throw new Exception("Error while inserting data")
+		}
+		if (!mysql.execute("UPDATE texts SET id_article = ($(idArticle));")) {
+			throw new Exception("Error while updating data")
+		}
+
+		/* closing... */
+		mysql.close()
+		
+		return true
+	}
+}
