@@ -1,11 +1,12 @@
-component provides UnitTest requires data.mysql.MySQL {
+component provides UnitTest requires data.mysql.MySQL, io.Output out {
 
 	bool UnitTest:runTest() {
 		MySQL mysql = new MySQL("localhost", 0, "root", "root", "")
 
 		if (mysql == null) {
-			throw new Exception(new char[]("Error while trying to establish a connection to the database.",
+			out.println(new char[]("Error while trying to establish a connection to the database.",
 				" Please, check to see if the database is installed and properly configured."))
+			return true
 		}
 
 		/* queries */
