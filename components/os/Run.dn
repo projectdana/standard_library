@@ -2,35 +2,20 @@ data VC{
 	int result
 	}
 
-library interface RunLib{
+interface RunLib{
 	bool execute(char name[], VC result)
 	}
 
-component provides Service, os.Run requires NativeLoader inl {
+component provides os.Run requires native RunLib lib {
 	
-	static library RunLib lib
-	
-	implementation Run{
-		RunStatus Run:execute(char name[])
-			{
-			RunStatus result = new RunStatus()
-			
-			VC res = new VC()
-			result.executed = lib.execute(name, res)
-			result.result = res.result
-			
-			return result
-			}
-		}
-	
-	implementation Service{
-		void Service:start()
-			{
-			lib = new RunLib() from inl.load("run") :< RunLib
-			}
+	RunStatus Run:execute(char name[])
+		{
+		RunStatus result = new RunStatus()
 		
-		void Service:stop()
-			{
-			}
+		VC res = new VC()
+		result.executed = lib.execute(name, res)
+		result.result = res.result
+		
+		return result
 		}
 	}

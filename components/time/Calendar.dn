@@ -1,33 +1,16 @@
 uses time.DateTime
 
-library interface ICalLib{
+interface CalendarLib {
 	void getLocalTime(DateTime d)
 	}
 
-component provides Service, time.Calendar requires NativeLoader inl, io.Output out
+component provides time.Calendar requires native CalendarLib lib
 	{
-	static library ICalLib lib
-	
-	implementation Calendar{
-	
-		DateTime Calendar:getTime()
-			{
-			DateTime t = new DateTime()
-			lib.getLocalTime(t)
-			
-			return t
-			}
-		}
-	
-	implementation Service{
+	DateTime Calendar:getTime()
+		{
+		DateTime t = new DateTime()
+		lib.getLocalTime(t)
 		
-		void Service:start()
-			{
-			lib = new ICalLib() from inl.load("calendar") :< ICalLib
-			}
-		
-		void Service:stop()
-			{
-			}
+		return t
 		}
 	}

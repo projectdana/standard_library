@@ -1,26 +1,11 @@
-library interface DNSLib{
+interface DNSLib{
 	char[] getHostIP(char hostname[])
 	}
 
-component provides Service, DNS requires NativeLoader inl
+component provides DNS requires native DNSLib lib
 	{
-	static library DNSLib lib
-
-	implementation DNS{
-		char[] DNS:getHostIP(char hostname[])
-			{
-			return lib.getHostIP(hostname)
-			}
-	}
-
-	implementation Service{
-		void Service:start()
+	char[] DNS:getHostIP(char hostname[])
 		{
-			lib = new DNSLib() from inl.load("dns") :< DNSLib
-		}
-
-		void Service:stop()
-			{
-			}
+		return lib.getHostIP(hostname)
 		}
 	}

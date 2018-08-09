@@ -9,7 +9,7 @@ data Dependency{
 	char sourcePath[]
 	}
 
-component provides App requires io.Output out, io.FileSystem fileSystem, io.File, Loader loader, composition.ObjectReader, data.json.JSONParser parser, data.StringUtil stringUtil, os.SystemInfo systemInfo, System system {
+component provides App requires io.Output out, io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, composition.ObjectReader, data.json.JSONParser parser, data.StringUtil stringUtil, os.SystemInfo systemInfo, System system {
 	
 	//this function takes a "base" path from which to check for a manifest (may be an empty string) and a "pkg" path which is expected to be in a dotted form, i.e. net.TCPSocket
 	char[] checkManifest(char base[], char pkg[])
@@ -174,10 +174,14 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 				JSONElement ri = requiredInterfaces.children[i]
 				char package[] = parser.getValue(ri, "package").value
 				char alias[] = parser.getValue(ri, "alias").value
+				bool isNative = false
+				
+				if (parser.getValue(ri, "native") != null && parser.getValue(ri, "native").value == "true")
+					isNative = true
 				
 				//out.println("Required interface: $package / $alias");
 				
-				if (!isAutoBinding(package))
+				if (!isNative && !isAutoBinding(package))
 					{
 					IDC newCom
 					
@@ -201,6 +205,11 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 						}
 					
 					dana.rewire(com :> alias, newCom :< alias)
+					}
+					else if (isNative)
+					{
+					IDC ncom = nLoader.load(alias)
+					dana.rewire(com :> alias, ncom :< alias)
 					}
 				}
 			}

@@ -1,4 +1,4 @@
-library interface IOTCPLib{
+interface TCPLib{
 	int connect(char address[], int port)
 	void disconnect(int hnd)
 	int send(int hnd, byte content[])
@@ -10,8 +10,7 @@ library interface IOTCPLib{
 	void getRemoteAddress(int hnd, NetworkEndpoint ha)
 	}
 
-component provides net.TCPServerSocket, net.TCPSocket, Service requires NativeLoader inl, io.Output out {
-	static library IOTCPLib lib
+component provides net.TCPServerSocket, net.TCPSocket requires native TCPLib lib, io.Output out {
 	
 	implementation TCPSocket{
 		bool connected
@@ -175,17 +174,6 @@ component provides net.TCPServerSocket, net.TCPSocket, Service requires NativeLo
 					connected = false
 					}
 				}
-			}
-		}
-	
-	implementation Service{
-		void Service:start()
-			{
-			lib = new IOTCPLib() from inl.load("io_tcp") :< IOTCPLib
-			}
-		
-		void Service:stop()
-			{
 			}
 		}
 	}

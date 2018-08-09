@@ -28,6 +28,7 @@ data Component {
 data ReqIntf {
 	char package[]
 	char alias[]
+	bool isNative
 	}
 
 data Binding{
@@ -51,7 +52,7 @@ data OptionsCache {
 	String options[]
 	}
 
-component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Loader loader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, composition.Adapter adapter, os.SystemInfo systemInfo {
+component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, composition.Adapter adapter, os.SystemInfo systemInfo {
 	
 	App myApp
 	bool appStarted
@@ -100,8 +101,9 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 				JSONElement ri = requiredInterfaces.children[i]
 				char package[] = parser.getValue(ri, "package").value
 				char alias[] = parser.getValue(ri, "alias").value
+				bool isNative = parser.getValue(ri, "native") != null && parser.getValue(ri, "native").value == "true"
 				
-				result = new ReqIntf[](result, new ReqIntf(package, alias))
+				result = new ReqIntf[](result, new ReqIntf(package, alias, isNative))
 				}
 			}
 		
@@ -213,7 +215,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		
 		for (int i = 0; i < ris.arrayLength; i++)
 			{
-			if (!isAutoBinding(ris[i].package))
+			if (!isAutoBinding(ris[i].package) && !ris[i].isNative)
 				{
 				ric ++
 				}
@@ -292,7 +294,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			{
 			for (int i = 0; i < ris.arrayLength; i++)
 				{
-				if (!isAutoBinding(ris[i].package))
+				if (!ris[i].isNative && !isAutoBinding(ris[i].package))
 					{
 					if (containsBinding(current, com, ris[i].alias))
 						{
@@ -407,6 +409,13 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			
 			if (isAutoBinding(ris[i].package))
 				c.completeWirings ++
+			
+			if (ris[i].isNative)
+				{
+				IDC ncom = nLoader.load(ris[i].alias)
+				dana.rewire(c.class :> ris[i].alias, ncom :< ris[i].alias)
+				c.completeWirings ++
+				}
 			
 			if (ris[i].package == "pal.Perception")
 				dana.rewire(c.class :> "Perception", perception :< "Perception")

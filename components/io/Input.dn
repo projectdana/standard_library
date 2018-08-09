@@ -1,27 +1,12 @@
-library interface ICmdLib{
+interface CmdLib{
 	char[] getLine()
 	}
 
-component provides Service, io.Input requires NativeLoader inl{
+component provides io.Input requires native CmdLib lib {
 	
-	static library ICmdLib lib
-	
-	implementation Input{
-		char[] Input:readln()
-			{
-			return lib.getLine()
-			}
-		}
-	
-	implementation Service{
-		void Service:start()
-			{
-			lib = new ICmdLib() from inl.load("cmdln") :< ICmdLib
-			}
-		
-		void Service:stop()
-			{
-			}
+	char[] Input:readln()
+		{
+		return lib.getLine()
 		}
 	
 	}

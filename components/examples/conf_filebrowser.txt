@@ -2,7 +2,6 @@ conf/appfb.txt
 conf/canvas.txt
 conf/sys_info.txt
 conf/window.txt
-conf/title.txt
 conf/colorbutton.txt
 conf/button.txt
 conf/browser.txt

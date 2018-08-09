@@ -1,4 +1,4 @@
-library interface IIOFileLib{
+interface FileLib{
 	int open(char file[], byte mode)
 	int write(int fd, byte content[])
 	byte[] read(int fd, int length)
@@ -23,9 +23,7 @@ data DCQ{
 	FileEntry entries[]
 	}
 
-component provides Service, io.File, io.FileSystem requires NativeLoader inl, io.Output out {
-	
-	static library IIOFileLib lib
+component provides io.File, io.FileSystem requires native FileLib lib, io.Output out {
 	
 	implementation File {
 		int platformHandle
@@ -227,17 +225,6 @@ component provides Service, io.File, io.FileSystem requires NativeLoader inl, io
 		bool FileSystem:deleteDirectory(char path[])
 			{
 			return lib.deleteDirectory(path)
-			}
-		}
-	
-	implementation Service {
-		void Service:start()
-			{
-			lib = new IIOFileLib() from inl.load("io_file") :< IIOFileLib
-			}
-		
-		void Service:stop()
-			{
 			}
 		}
 	
