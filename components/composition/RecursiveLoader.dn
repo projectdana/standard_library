@@ -97,7 +97,7 @@ component provides composition.RecursiveLoader requires composition.Search searc
 				{
 				resolveDependency(lc, comIndex, ri[i].package, ri[i].alias)
 				}
-				else if (ri[i].isNative)
+				else if (ri[i].isNative && !dana.isConnected(com :> ri[i].alias))
 				{
 				IDC ncom = nLoader.load(ri[i].alias)
 				dana.rewire(com :> ri[i].alias, ncom :< ri[i].alias)
