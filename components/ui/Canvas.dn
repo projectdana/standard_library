@@ -4,7 +4,7 @@ data WindowEventData {
 	int y
 }
 
-library interface UIPlaneLib{
+interface UIPlaneLib{
 	
 	const int EVENT_MOUSE_UP = 1
 	const int EVENT_MOUSE_DOWN = 2
@@ -67,10 +67,8 @@ library interface UIPlaneLib{
 
 uses events.EventData
 
-component provides Canvas(Destructor), Font(Destructor), Service requires NativeLoader inl, io.Output out, data.IntUtil iu
+component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneLib lib, io.Output out, data.IntUtil iu
 	{
-	static library UIPlaneLib lib
-	
 	implementation Canvas {
 		int platformHandle
 		Mutex windowStateLock = new Mutex()
@@ -304,17 +302,6 @@ component provides Canvas(Destructor), Font(Destructor), Service requires Native
 		void Destructor:destroy()
 			{
 			lib.unloadFont(platformHandle)
-			}
-		}
-	
-	implementation Service{
-		void Service:start()
-			{
-			lib = new UIPlaneLib() from inl.load("uiplane") :< UIPlaneLib
-			}
-		
-		void Service:stop()
-			{
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-library interface SystemLib{
+interface SystemLib{
 	char[] getPlatformName()
 	char[] getPlatformVersion()
 	char[] getChipName()
@@ -7,50 +7,35 @@ library interface SystemLib{
 	char[] getSystemFont(bool monospaced)
 	}
 
-component provides Service, os.SystemInfo requires NativeLoader inl
+component provides os.SystemInfo requires native SystemLib lib
 	{
-	static library SystemLib lib
-	
-	implementation SystemInfo{
-		char[] SystemInfo:getVariable(char name[])
-			{
-			return lib.getVar(name)
-			}
-		
-		char[] SystemInfo:getHostName()
-			{
-			return lib.getHostName()
-			}
-		
-		char[] SystemInfo:getPlatformName()
-			{
-			return lib.getPlatformName()
-			}
-		
-		char[] SystemInfo:getPlatformVersion()
-			{
-			return lib.getPlatformVersion()
-			}
-		
-		char[] SystemInfo:getChipName()
-			{
-			return lib.getChipName()
-			}
-		
-		char[] SystemInfo:getSystemFont(bool monospaced)
-			{
-			return lib.getSystemFont(monospaced)
-			}
+	char[] SystemInfo:getVariable(char name[])
+		{
+		return lib.getVar(name)
 		}
 	
-	implementation Service{
-		void Service:start()
-			{
-			lib = new SystemLib() from inl.load("sysinfo") :< SystemLib
-			}
-		
-		void Service:stop()
-			{
-			}
+	char[] SystemInfo:getHostName()
+		{
+		return lib.getHostName()
+		}
+	
+	char[] SystemInfo:getPlatformName()
+		{
+		return lib.getPlatformName()
+		}
+	
+	char[] SystemInfo:getPlatformVersion()
+		{
+		return lib.getPlatformVersion()
+		}
+	
+	char[] SystemInfo:getChipName()
+		{
+		return lib.getChipName()
+		}
+	
+	char[] SystemInfo:getSystemFont(bool monospaced)
+		{
+		return lib.getSystemFont(monospaced)
 		}
 	}

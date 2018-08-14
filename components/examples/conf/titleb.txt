@@ -1,5 +1,0 @@
-BSTitle=ui.TitleBarB.o
-ColorButton->ColorButton
-SystemInfo->SystemInfo
-Panel->Panel
-Label->UILabel

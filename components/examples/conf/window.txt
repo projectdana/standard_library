@@ -1,3 +1,2 @@
 UIPlane=ui.Window
-TitleBar->BSTitle
 Canvas->Canvas

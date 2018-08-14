@@ -2,26 +2,10 @@
 Timer component
 */
 
-component provides time.Timer, Service requires NativeLoader inl
+component provides time.Timer requires native time.Timer lib
 	{
-	static library Timer lib
-	
-	implementation Timer{
-		void Timer:sleep(int sms)
-			{
-			lib.sleep(sms)
-			}
-		}
-	
-	implementation Service{
-		void Service:start()
-			{
-			lib = new Timer() from inl.load("timer") :< Timer
-			}
-		
-		void Service:stop()
-			{
-			
-			}
+	void Timer:sleep(int sms)
+		{
+		lib.sleep(sms)
 		}
 	}

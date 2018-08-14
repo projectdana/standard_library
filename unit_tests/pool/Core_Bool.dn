@@ -1,0 +1,20 @@
+component provides UnitTest {
+	
+	bool UnitTest:runTest()
+		{
+		bool a = true
+		
+		bool b = true
+		
+		bool n = a && b
+		
+		if (n == false) throw new Exception("Failure in test 1")
+		
+		n = a && b && a
+		
+		if (n == false) throw new Exception("Failure in test 2")
+		
+		return true
+		}
+	
+	}

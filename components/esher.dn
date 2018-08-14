@@ -21,7 +21,7 @@ data Role{
 	Role next
 	}
 
-component provides App requires io.Output out, io.Input stdin, io.TextFile, Loader loader, data.StringUtil stringUtil, data.IntUtil iu, os.SystemInfo systemInfo, io.FileSystem fileSystem, composition.Adapter adapter {
+component provides App requires io.Output out, io.Input stdin, io.TextFile, Loader loader, NativeLoader nLoader, composition.ObjectWriter, data.json.JSONParser parser, data.StringUtil stringUtil, data.IntUtil iu, os.SystemInfo systemInfo, io.FileSystem fileSystem, composition.Adapter adapter {
 	
 	char manifest[]
 	Role roles
@@ -339,6 +339,33 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 		return source
 		}
 	
+	void connectNative(char path[], IDC com)
+		{
+		ObjectWriter reader = new ObjectWriter(path)
+		InfoSection section = reader.getInfoSection("DNIL", "json")
+		
+		JSONElement document = parser.parseDocument(section.content)
+		
+		JSONElement requiredInterfaces = parser.getValue(document, "requiredInterfaces")
+		
+		if (requiredInterfaces != null)
+			{
+			for (int i = 0; i < requiredInterfaces.children.arrayLength; i++)
+				{
+				JSONElement ri = requiredInterfaces.children[i]
+				char package[] = parser.getValue(ri, "package").value
+				char alias[] = parser.getValue(ri, "alias").value
+				bool isNative = parser.getValue(ri, "native") != null && parser.getValue(ri, "native").value == "true"
+				
+				if (isNative)
+					{
+					IDC ncom = nLoader.load(alias)
+					dana.rewire(com :> alias, ncom :< alias)
+					}
+				}
+			}
+		}
+	
 	void addRole(char path[])
 		{
 		Role rx
@@ -348,6 +375,8 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 			char objectFilePath[] = findObjectFile(rx.source)
 			
 			rx.class = loader.load(objectFilePath)
+			
+			connectNative(objectFilePath, rx.class)
 			
 			if (rx.class :< Service != null)
 				{

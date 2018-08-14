@@ -3,9 +3,10 @@ uses Service
 data ReqIntf {
 	char package[]
 	char alias[]
+	bool isNative
 	}
 
-component provides composition.RecursiveLoader requires composition.Search search, Loader loader, data.json.JSONParser parser, composition.ObjectWriter, System system, data.IntUtil iu {
+component provides composition.RecursiveLoader requires composition.Search search, Loader loader, NativeLoader nLoader, data.json.JSONParser parser, composition.ObjectWriter, System system, data.IntUtil iu {
 	
 	ReqIntf[] getRequiredInterfaces(char com[])
 		{
@@ -25,8 +26,9 @@ component provides composition.RecursiveLoader requires composition.Search searc
 				JSONElement ri = requiredInterfaces.children[i]
 				char package[] = parser.getValue(ri, "package").value
 				char alias[] = parser.getValue(ri, "alias").value
+				bool isNative = parser.getValue(ri, "native") != null && parser.getValue(ri, "native").value == "true"
 				
-				result = new ReqIntf[](result, new ReqIntf(package, alias))
+				result = new ReqIntf[](result, new ReqIntf(package, alias, isNative))
 				}
 			}
 		
@@ -91,9 +93,14 @@ component provides composition.RecursiveLoader requires composition.Search searc
 		
 		for (int i = 0; i < ri.arrayLength; i++)
 			{
-			if (!isAutoBinding(ri[i].package))
+			if (!ri[i].isNative && !isAutoBinding(ri[i].package))
 				{
 				resolveDependency(lc, comIndex, ri[i].package, ri[i].alias)
+				}
+				else if (ri[i].isNative && !dana.isConnected(com :> ri[i].alias))
+				{
+				IDC ncom = nLoader.load(ri[i].alias)
+				dana.rewire(com :> ri[i].alias, ncom :< ri[i].alias)
 				}
 			}
 		
