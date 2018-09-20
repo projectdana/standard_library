@@ -1,16 +1,22 @@
+const int TEXT_MARGIN = 3
+const int TEXT_PAD = 6
+
 component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, Font, os.SystemInfo sysInfo {
 	
 	Font labelFont
+	int width
 	
 	Button:Button(char myLabel[])
 		{
 		text = myLabel
 		labelFont = new Font(sysInfo.getSystemFont(false), 15)
+		width = labelFont.getTextWidth(text) + TEXT_PAD
 		}
 	
 	void AdaptEvents:active()
 		{
 		labelFont = new Font(sysInfo.getSystemFont(false), 15)
+		width = labelFont.getTextWidth(text) + TEXT_PAD
 		postRepaint()
 		}
 	
@@ -22,8 +28,8 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 	
 	void Button:paint(Canvas c)
 		{
-		c.drawRect(new Rect2D(xPosition, yPosition, 40, 20, new Color(157, 188, 220, 255)))
-		c.drawText(new Point2D(xPosition+3, yPosition+1, new Color(0, 0, 0, 255)), labelFont, text)
+		c.drawRect(new Rect2D(xPosition, yPosition, width, 20, new Color(157, 188, 220, 255)))
+		c.drawText(new Point2D(xPosition+TEXT_MARGIN, yPosition+1, new Color(0, 0, 0, 255)), labelFont, text)
 		}
 	
 	void Button:click(int x, int y, int button)
@@ -42,6 +48,7 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 	void Button:setText(char t[])
 		{
 		text = t
+		width = labelFont.getTextWidth(text) + TEXT_PAD
 		}
 	
 	char[] Button:getText()
@@ -51,12 +58,12 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 	
 	Rect Button:getBounds()
 		{
-		return new Rect(xPosition, yPosition, 40, 20)
+		return new Rect(xPosition, yPosition, width, 20)
 		}
 	
 	WH Button:getPreferredSize()
 		{
-		return new WH(40, 20)
+		return new WH(width, 20)
 		}
 	
 	Point Button:getPosition()

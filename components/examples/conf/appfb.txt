@@ -1,4 +1,4 @@
 App=GAppFiles.o
-Window->UIPlane
-Button->BSButton
-FileBrowser->FileBrowser
+ui.Window->UIPlane
+ui.Button->BSButton
+ui.FileBrowser->FileBrowser

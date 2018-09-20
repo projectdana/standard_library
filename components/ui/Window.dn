@@ -30,6 +30,8 @@ component provides Window requires Canvas, io.Output out, data.IntUtil iu {
 	XYListener mouseListeners
 	XYListener mouseListenersEnd
 	
+	KeyEventObject keyboardFocus
+	
 	int currentX = 100
 	int currentY = 80
 	
@@ -66,6 +68,16 @@ component provides Window requires Canvas, io.Output out, data.IntUtil iu {
 			MouseEvent me = ed.details
 			mouseMove(me.x, me.y)
 			}
+			else if (ed.type == Canvas.[keyDown])
+			{
+			KeyEvent ke = ed.details
+			keyDown(ke.keyCode)
+			}
+			else if (ed.type == Canvas.[keyUp])
+			{
+			KeyEvent ke = ed.details
+			keyUp(ke.keyCode)
+			}
 			else if (ed.type == Canvas.[resizeWindow])
 			{
 			WH wh = ed.details
@@ -86,6 +98,15 @@ component provides Window requires Canvas, io.Output out, data.IntUtil iu {
 	eventsink PaintEvents(EventData ed)
 		{
 		paint(null)
+		}
+	
+	eventsink FocusEvents(EventData ed)
+		{
+		if (ed.type == KeyEventObject.[requestFocus])
+			{
+			keyboardFocus = ed.source
+			emitevent requestFocus()
+			}
 		}
 	
 	Window:Window(char title[])
@@ -136,6 +157,12 @@ component provides Window requires Canvas, io.Output out, data.IntUtil iu {
 		
 		if (go hastype ClickableObject)
 			addClickTarget(go)
+		
+		if (go hastype KeyEventObject)
+			{
+			KeyEventObject ko = go
+			sinkevent FocusEvents(ko)
+			}
 		
 		sinkevent PaintEvents(go)
 		
@@ -305,6 +332,12 @@ component provides Window requires Canvas, io.Output out, data.IntUtil iu {
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
 				ci.object.click(x - r.x, y - r.y, button)
+				
+				if (ci.object hastype KeyEventObject)
+					{
+					keyboardFocus = ci.object
+					}
+				
 				break
 				}
 			}
@@ -332,5 +365,28 @@ component provides Window requires Canvas, io.Output out, data.IntUtil iu {
 			{
 			ci.object.mouseMove(x, y)
 			}
+		}
+	
+	void Window:keyDown(int keyCode)
+		{
+		//get the "keyboard focus" item, if any, and dispatch a key event to it
+		// (note this might be a panel, which in turn has a sub-item with keyboard focus)
+		
+		if (keyboardFocus != null)
+			{
+			keyboardFocus.keyDown(keyCode)
+			}
+		}
+	
+	void Window:keyUp(int keyCode)
+		{
+		if (keyboardFocus != null)
+			{
+			keyboardFocus.keyUp(keyCode)
+			}
+		}
+	
+	void Window:setFocus()
+		{
 		}
 	}

@@ -13,6 +13,9 @@ interface UIPlaneLib{
 	const int EVENT_MOVE = 5
 	const int EVENT_CLOSE = 6
 	
+	const int EVENT_KEY_DOWN = 7
+	const int EVENT_KEY_UP = 8
+	
 	int makeWindow()
 	
 	void startPoly()
@@ -89,6 +92,16 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				{
 				WindowEventData wed = ed.details
 				emitevent mouseMove(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.EVENT_KEY_DOWN)
+				{
+				WindowEventData wed = ed.details
+				emitevent keyDown(new KeyEvent(wed.button_id))
+				}
+				else if (ed.type == UIPlaneLib.EVENT_KEY_UP)
+				{
+				WindowEventData wed = ed.details
+				emitevent keyUp(new KeyEvent(wed.button_id))
 				}
 				else if (ed.type == UIPlaneLib.EVENT_RESIZE)
 				{

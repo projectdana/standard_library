@@ -1,2 +1,2 @@
 UIPlane=ui.Window
-Canvas->Canvas
+ui.Canvas->Canvas
