@@ -32,7 +32,7 @@ interface UIPlaneLib{
 	void addText(int phandle, int x, int y, char text[], byte r, byte g, byte b, byte a)
 	void addTextWith(int phandle, int fontHandle, int x, int y, char text[], byte r, byte g, byte b, byte a)
 	
-	void pushSurface(int phandle, int x, int y, int w, int h, int sx, int sy)
+	void pushSurface(int phandle, int x, int y, int w, int h, int sx, int sy, byte a)
 	void popSurface(int phandle)
 	
 	void setSize(int phandle, int x, int y)
@@ -227,11 +227,11 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:pushSurface(Rect rect, int xscr, int yscr)
+		void Canvas:pushSurface(Rect rect, int xscr, int yscr, byte alpha)
 			{
 			mutex(windowStateLock)
 				{
-				lib.pushSurface(platformHandle, rect.x, rect.y, rect.width, rect.height, xscr, yscr)
+				lib.pushSurface(platformHandle, rect.x, rect.y, rect.width, rect.height, xscr, yscr, alpha)
 				}
 			}
 		

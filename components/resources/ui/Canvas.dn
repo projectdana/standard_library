@@ -51,7 +51,7 @@ interface Canvas {
 	void drawPoint(Point2D point)
 	void drawBitmap(Bitmap map, int x, int y)
 	void drawText(Point2D position, Font f, char text[])
-	void pushSurface(Rect rect, int xscr, int yscr)
+	void pushSurface(Rect rect, int xscr, int yscr, byte alpha)
 	void popSurface()
 	void paint()
 	

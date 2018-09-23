@@ -203,8 +203,6 @@ component provides FileBrowser(AdaptEvents) requires Panel, io.FileSystem fileSy
 		{
 		super(c)
 		
-		c.pushSurface(new Rect(getPosition().x, getPosition().y, getSize().width, getSize().height), 0, 0)
-		
 		int myWidth = getSize().width
 		
 		int cx = 0

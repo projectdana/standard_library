@@ -21,7 +21,7 @@ component provides Panel requires io.Output out {
 	ClickableItem lastClickObject
 	
 	bool backgroundSet
-	Color backgroundColor
+	Color backgroundColor = new Color(190, 190, 200, 255)
 	
 	KeyEventObject keyboardFocus
 	
@@ -64,11 +64,11 @@ component provides Panel requires io.Output out {
 	
 	void Panel:paint(Canvas c)
 		{
-		//background
-		if (backgroundSet) c.drawRect(new Rect2D(xPosition, yPosition, width, height, backgroundColor))
-		
 		//occlude contents at panel boundary
-		c.pushSurface(new Rect(xPosition, yPosition, width, height), 0, 0)
+		c.pushSurface(new Rect(xPosition, yPosition, width, height), 0, 0, 255)
+		
+		//background
+		c.drawRect(new Rect2D(0, 0, width, height, backgroundColor))
 		
 		for (GraphicsItem gi = objects; gi != null; gi = gi.next)
 			{
