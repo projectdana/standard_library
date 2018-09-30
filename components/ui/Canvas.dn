@@ -13,6 +13,9 @@ interface UIPlaneLib{
 	const int EVENT_MOVE = 5
 	const int EVENT_CLOSE = 6
 	
+	const int EVENT_KEY_DOWN = 7
+	const int EVENT_KEY_UP = 8
+	
 	int makeWindow()
 	
 	void startPoly()
@@ -29,7 +32,7 @@ interface UIPlaneLib{
 	void addText(int phandle, int x, int y, char text[], byte r, byte g, byte b, byte a)
 	void addTextWith(int phandle, int fontHandle, int x, int y, char text[], byte r, byte g, byte b, byte a)
 	
-	void pushSurface(int phandle, int x, int y, int w, int h, int sx, int sy)
+	void pushSurface(int phandle, int x, int y, int w, int h, int sx, int sy, byte a)
 	void popSurface(int phandle)
 	
 	void setSize(int phandle, int x, int y)
@@ -89,6 +92,16 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				{
 				WindowEventData wed = ed.details
 				emitevent mouseMove(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.EVENT_KEY_DOWN)
+				{
+				WindowEventData wed = ed.details
+				emitevent keyDown(new KeyEvent(wed.button_id))
+				}
+				else if (ed.type == UIPlaneLib.EVENT_KEY_UP)
+				{
+				WindowEventData wed = ed.details
+				emitevent keyUp(new KeyEvent(wed.button_id))
 				}
 				else if (ed.type == UIPlaneLib.EVENT_RESIZE)
 				{
@@ -214,11 +227,11 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:pushSurface(Rect rect, int xscr, int yscr)
+		void Canvas:pushSurface(Rect rect, int xscr, int yscr, byte alpha)
 			{
 			mutex(windowStateLock)
 				{
-				lib.pushSurface(platformHandle, rect.x, rect.y, rect.width, rect.height, xscr, yscr)
+				lib.pushSurface(platformHandle, rect.x, rect.y, rect.width, rect.height, xscr, yscr, alpha)
 				}
 			}
 		

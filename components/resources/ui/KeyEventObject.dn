@@ -1,0 +1,14 @@
+/*
+* XYMouseListener interface
+* A callback interface for objects that want to be notified of detailed mouse events with x/y coordinates and a button type (see MouseButtons).
+*/
+
+
+interface KeyEventObject extends XYMouseObject {
+	event requestFocus()
+	
+	void setFocus()
+	
+	void keyDown(int keyID)
+	void keyUp(int keyID)
+	}

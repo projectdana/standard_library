@@ -1,5 +1,5 @@
 FileGO=ui\FileObject.o
-FileSystem->FileSystem
-SystemInfo->SystemInfo
-Font->Canvas
-StringUtil->StringUtil
+io.FileSystem->FileSystem
+os.SystemInfo->SystemInfo
+ui.Font->Canvas
+data.StringUtil->StringUtil

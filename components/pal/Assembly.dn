@@ -418,7 +418,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 				}
 			
 			if (ris[i].package == "pal.Perception")
-				dana.rewire(c.class :> "Perception", perception :< "Perception")
+				dana.rewire(c.class :> "pal.Perception", perception :< "pal.Perception")
 			}
 		
 		if (c.completeWirings == c.interfaces.arrayLength)

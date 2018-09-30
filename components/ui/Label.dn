@@ -49,5 +49,8 @@ component provides Label requires Font {
 		return new WH(font.getTextWidth(text), font.getFontMetrics().height)
 		}
 	
-	void Label:postRepaint(){}
+	void Label:postRepaint()
+		{
+		emitevent repaint()
+		}
 	}

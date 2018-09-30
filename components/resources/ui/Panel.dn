@@ -10,7 +10,7 @@ data GraphicsObjectItem{
  {"description" : "Panel objects host other graphical objects. A Panel is itself a GraphicsObject, so panels can be nested."}
 */
 
-interface Panel extends XYMouseObject {
+interface Panel extends KeyEventObject {
 	transfer int width
 	transfer int height
 	

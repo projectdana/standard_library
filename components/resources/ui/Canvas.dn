@@ -16,6 +16,10 @@ data MouseEvent	{
 	int y
 	}
 
+data KeyEvent {
+	int keyCode
+	}
+
 /*
  {"description" : "Canvas defines a fundamental drawing API, typically used by a Window and offered as a painting surface to any objects on the window."}
 */
@@ -25,6 +29,8 @@ interface Canvas {
 	event mouseUp(MouseEvent m)
 	event mouseDown(MouseEvent m)
 	event mouseMove(MouseEvent m)
+	event keyUp(KeyEvent k)
+	event keyDown(KeyEvent k)
 	event resizeWindow(WH size)
 	event moveWindow(Point position)
 	event closeWindow()
@@ -45,7 +51,7 @@ interface Canvas {
 	void drawPoint(Point2D point)
 	void drawBitmap(Bitmap map, int x, int y)
 	void drawText(Point2D position, Font f, char text[])
-	void pushSurface(Rect rect, int xscr, int yscr)
+	void pushSurface(Rect rect, int xscr, int yscr, byte alpha)
 	void popSurface()
 	void paint()
 	
