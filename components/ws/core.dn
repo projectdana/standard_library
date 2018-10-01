@@ -266,7 +266,7 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 			}
 			while (true) {
 				TCPSocket cs = new TCPSocket()
-				if (cs.accept(s)) { processStream(cs) }
+				if (cs.accept(s)) { asynch::processStream(cs) }
 			}
 		}
 		return 0
