@@ -1,4 +1,5 @@
 uses Rect
+uses PixelMap
 
 /*
  {"description" : "This allows the programmer to create new graphical windows on the screen."}
@@ -14,8 +15,11 @@ interface Window extends Panel {
 	void setFullScreen(bool b)
 	
 	void setTitle(char title[])
+	void setIcon(PixelMap p)
 	
 	Rect getRect()
 	
 	void close()
+	
+	void waitForClose()
 	}

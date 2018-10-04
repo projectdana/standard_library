@@ -2,7 +2,7 @@
 { "description" : "This is an API that allows the creation of font instances for use with other graphical objects. Note that Dana comes with standard fonts within the resources-ext directory so that the programmer can rely on at least these fonts always being available. See also the SystemInfo API which reports on the default system fonts." }
 */
 
-uses Bitmap
+uses PixelMap
 
 interface Font{
 	/*
@@ -33,7 +33,7 @@ interface Font{
 	/*
 	{ "@description" : "Get a piece of text, rendered with this font on a single line, as a bitmap." }
 	*/
-	Bitmap getBitmap(char text[], Color textColor)
+	PixelMap getPixels(char text[], Color textColor)
 	}
 
 /*

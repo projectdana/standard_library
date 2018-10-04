@@ -18,7 +18,9 @@ data ClickableItem{
 
 uses events.EventData
 
-component provides Window requires Canvas, io.Output out, data.IntUtil iu {
+component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu {
+	
+	Thread waitThread
 	
 	GraphicsItem buffer
 	GraphicsItem bufferEnd
@@ -48,48 +50,48 @@ component provides Window requires Canvas, io.Output out, data.IntUtil iu {
 	
 	Color borderColor = new Color(190, 190, 200, 255)
 	
-	Canvas canvas
+	WindowCanvas canvas
 	
 	eventsink Events(EventData ed)
 		{
-		if (ed.type == Canvas.[mouseUp])
+		if (ed.type == WindowCanvas.[mouseUp])
 			{
 			MouseEvent me = ed.details
 			click(me.x, me.y, me.button)
 			mouseUp(me.x, me.y, me.button)
 			}
-			else if (ed.type == Canvas.[mouseDown])
+			else if (ed.type == WindowCanvas.[mouseDown])
 			{
 			MouseEvent me = ed.details
 			mouseDown(me.x, me.y, me.button)
 			}
-			else if (ed.type == Canvas.[mouseMove])
+			else if (ed.type == WindowCanvas.[mouseMove])
 			{
 			MouseEvent me = ed.details
 			mouseMove(me.x, me.y)
 			}
-			else if (ed.type == Canvas.[keyDown])
+			else if (ed.type == WindowCanvas.[keyDown])
 			{
 			KeyEvent ke = ed.details
 			keyDown(ke.keyCode)
 			}
-			else if (ed.type == Canvas.[keyUp])
+			else if (ed.type == WindowCanvas.[keyUp])
 			{
 			KeyEvent ke = ed.details
 			keyUp(ke.keyCode)
 			}
-			else if (ed.type == Canvas.[resizeWindow])
+			else if (ed.type == WindowCanvas.[resizeWindow])
 			{
 			WH wh = ed.details
 			setSize(wh.width, wh.height)
 			}
-			else if (ed.type == Canvas.[moveWindow])
+			else if (ed.type == WindowCanvas.[moveWindow])
 			{
 			Point xy = ed.details
 			currentX = xy.x
 			currentY = xy.y
 			}
-			else if (ed.type == Canvas.[closeWindow])
+			else if (ed.type == WindowCanvas.[closeWindow])
 			{
 			emitevent close()
 			}
@@ -111,7 +113,7 @@ component provides Window requires Canvas, io.Output out, data.IntUtil iu {
 	
 	Window:Window(char title[])
 		{
-		canvas = new Canvas()
+		canvas = new WindowCanvas()
 		
 		canvas.setTitle(title)
 		
@@ -138,9 +140,25 @@ component provides Window requires Canvas, io.Output out, data.IntUtil iu {
 		canvas.setTitle(title)
 		}
 	
+	void Window:setIcon(PixelMap p)
+		{
+		canvas.setIcon(p)
+		}
+	
 	void Window:close()
 		{
 		canvas.close()
+		
+		if (waitThread != null)
+			{
+			waitThread.signal()
+			}
+		}
+	
+	void Window:waitForClose()
+		{
+		waitThread = this.thread
+		this.thread.wait()
 		}
 	
 	void Window:addObject(GraphicsObject go)

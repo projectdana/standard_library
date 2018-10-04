@@ -27,7 +27,7 @@ interface UIPlaneLib{
 	void addLine(int phandle, int sx, int sy, int ex, int ey, byte r, byte g, byte b, byte a)
 	
 	void addPoint(int phandle, int x, int y, byte r, byte g, byte b, byte a)
-	void addBitmap(int phandle, Bitmap pixels, int x, int y)
+	void addBitmap(int phandle, PixelMap pixels, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
 	
 	void addText(int phandle, int x, int y, char text[], byte r, byte g, byte b, byte a)
 	void addTextWith(int phandle, int fontHandle, int x, int y, char text[], byte r, byte g, byte b, byte a)
@@ -47,6 +47,8 @@ interface UIPlaneLib{
 	
 	void setTitle(int phandle, char t[])
 	
+	void setIcon(int phandle, PixelMap p)
+	
 	void commitBuffer(int phandle)
 	
 	void setBackgroundColor(int phandle, byte r, byte g, byte b, byte a)
@@ -64,15 +66,15 @@ interface UIPlaneLib{
 	void getFontMetrics(int phandle, FontMetrics metrics)
 	char[] getFontName(int phandle)
 	bool isFontFixedWidth(int phandle)
-	void getTextBitmapWith(int phandle, char text[], Bitmap pixels, byte r, byte g, byte b, byte a)
+	void getTextBitmapWith(int phandle, char text[], PixelMap pixels, byte r, byte g, byte b, byte a)
 	void unloadFont(int fd)
 	}
 
 uses events.EventData
 
-component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneLib lib, io.Output out, data.IntUtil iu
+component provides WindowCanvas(Destructor), Font(Destructor) requires native UIPlaneLib lib, io.Output out, data.IntUtil iu
 	{
-	implementation Canvas {
+	implementation WindowCanvas {
 		int platformHandle
 		Mutex windowStateLock = new Mutex()
 		
@@ -114,13 +116,13 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		Canvas:Canvas()
+		WindowCanvas:WindowCanvas()
 			{
 			platformHandle = lib.makeWindow()
 			if (platformHandle == 0) throw new Exception("Platform window creation failed")
 			}
 		
-		void Canvas:setVisible(bool b)
+		void WindowCanvas:setVisible(bool b)
 			{
 			mutex(windowStateLock)
 				{
@@ -128,7 +130,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:setResizable(bool v)
+		void WindowCanvas:setResizable(bool v)
 			{
 			mutex(windowStateLock)
 				{
@@ -136,7 +138,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:setFullScreen(bool v)
+		void WindowCanvas:setFullScreen(bool v)
 			{
 			mutex(windowStateLock)
 				{
@@ -144,7 +146,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:setTitle(char title[])
+		void WindowCanvas:setTitle(char title[])
 			{
 			mutex(windowStateLock)
 				{
@@ -152,7 +154,15 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:close()
+		void WindowCanvas:setIcon(PixelMap p)
+			{
+			mutex(windowStateLock)
+				{
+				lib.setIcon(platformHandle, p)
+				}
+			}
+		
+		void WindowCanvas:close()
 			{
 			mutex(windowStateLock)
 				{
@@ -164,7 +174,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:paint()
+		void WindowCanvas:paint()
 			{
 			mutex(windowStateLock)
 				{
@@ -172,7 +182,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:drawRect(Rect2D r)
+		void WindowCanvas:drawRect(Rect2D r)
 			{
 			mutex(windowStateLock)
 				{
@@ -180,7 +190,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:drawRectOutline(Rect2D r)
+		void WindowCanvas:drawRectOutline(Rect2D r)
 			{
 			drawLine(new Line2D(r.x, r.y, (r.x + r.width) - 1, r.y, r.color))
 			
@@ -191,7 +201,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 			drawLine(new Line2D(r.x, (r.y + r.height) - 1, (r.x + r.width) - 1, (r.y + r.height) - 1, r.color))
 			}
 		
-		void Canvas:drawLine(Line2D l)
+		void WindowCanvas:drawLine(Line2D l)
 			{
 			mutex(windowStateLock)
 				{
@@ -199,7 +209,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:drawPoint(Point2D p)
+		void WindowCanvas:drawPoint(Point2D p)
 			{
 			mutex(windowStateLock)
 				{
@@ -207,27 +217,40 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:drawBitmap(Bitmap map, int x, int y)
+		void WindowCanvas:drawPixels(PixelMap map, int x, int y, int rotation)
 			{
 			mutex(windowStateLock)
 				{
-				lib.addBitmap(platformHandle, map, x, y)
+				lib.addBitmap(platformHandle, map, null, x, y, map.size.width, map.size.height, rotation)
 				}
 			}
 		
-		void Canvas:drawText(Point2D origin, Font f, char text[])
+		void WindowCanvas:drawPixelsX(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
+			{
+			mutex(windowStateLock)
+				{
+				lib.addBitmap(platformHandle, map, subRect, x, y, scaledWidth, scaledHeight, rotation)
+				}
+			}
+		
+		void WindowCanvas:drawText(Point2D origin, Font f, char text[])
 			{
 			//check if f is implemented by this component and if so we use its internal font handle; otherwise we fall back on Font.getBitmap() (which is slow)
 			mutex(windowStateLock)
 				{
 				if (implements f)
+					{
 					lib.addTextWith(platformHandle, f.platformHandle, origin.x, origin.y, text, origin.color.r, origin.color.g, origin.color.b, origin.color.a)
+					}
 					else
-					lib.addBitmap(platformHandle, f.getBitmap(text, origin.color), origin.x, origin.y)
+					{
+					PixelMap px = f.getPixels(text, origin.color)
+					lib.addBitmap(platformHandle, px, null, origin.x, origin.y, px.size.width, px.size.height, 0)
+					}
 				}
 			}
 		
-		void Canvas:pushSurface(Rect rect, int xscr, int yscr, byte alpha)
+		void WindowCanvas:pushSurface(Rect rect, int xscr, int yscr, byte alpha)
 			{
 			mutex(windowStateLock)
 				{
@@ -235,7 +258,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:popSurface()
+		void WindowCanvas:popSurface()
 			{
 			mutex(windowStateLock)
 				{
@@ -243,7 +266,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:setPosition(int x, int y)
+		void WindowCanvas:setPosition(int x, int y)
 			{
 			mutex(windowStateLock)
 				{
@@ -251,7 +274,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:setSize(int x, int y)
+		void WindowCanvas:setSize(int x, int y)
 			{
 			mutex(windowStateLock)
 				{
@@ -259,7 +282,7 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 				}
 			}
 		
-		void Canvas:setBackground(Color c)
+		void WindowCanvas:setBackground(Color c)
 			{
 			mutex(windowStateLock)
 				{
@@ -305,9 +328,9 @@ component provides Canvas(Destructor), Font(Destructor) requires native UIPlaneL
 			return lib.getTextWidth(platformHandle, text)
 			}
 		
-		Bitmap Font:getBitmap(char string[], Color textColor)
+		PixelMap Font:getPixels(char string[], Color textColor)
 			{
-			Bitmap result = new Bitmap(new WH())
+			PixelMap result = new PixelMap(new WH())
 			lib.getTextBitmapWith(platformHandle, string, result, textColor.r, textColor.g, textColor.b, textColor.a)
 			return result
 			}
