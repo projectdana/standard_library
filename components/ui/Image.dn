@@ -1,0 +1,153 @@
+component provides Image {
+	
+	PixelMap pixels
+	dec imageAspectRatio
+	
+	bool frameSet
+	int frameWidth
+	int frameHeight
+	
+	Rect subRect
+	
+	int renderWidth
+	int renderHeight
+	int renderOffsetX
+	int renderOffsetY
+	
+	int rotation
+	
+	Image:Image(PixelMap pm)
+		{
+		setPixels(pm)
+		}
+	
+	void Image:setPixels(PixelMap b)
+		{
+		pixels = b
+		
+		if (!frameSet)
+			{
+			renderWidth = b.size.width
+			renderHeight = b.size.height
+			}
+		
+		dec hd = pixels.size.width
+		dec wd = pixels.size.height
+		dec hratio = hd / wd
+		
+		if (hd > wd)
+			imageAspectRatio = wd / hd
+			else
+			imageAspectRatio = hd / wd
+		}
+	
+	void Image:setFrameSize(int w, int h)
+		{
+		frameWidth = w
+		frameHeight = h
+		
+		frameSet = true
+		}
+	
+	void Image:setFrameFit(int mode)
+		{
+		if (mode == Image.FIT_SCALE)
+			{
+			// - find out which edge (if any) is the bigger of the two (horizontal or vertical) on the picture and the frame
+			//  - if the picture is bigger horizontally, we make the image the same h-size as the frame, and find the correct v-size
+			
+			if (pixels.size.width > frameWidth || pixels.size.height > frameHeight)
+				{
+				if (pixels.size.width > pixels.size.height)
+					{
+					int scaledWidth = frameWidth
+					dec newHeight = imageAspectRatio * scaledWidth
+					int scaledHeight = newHeight
+					
+					renderWidth = scaledWidth
+					renderHeight = scaledHeight
+					}
+					else
+					{
+					int scaledHeight = frameHeight
+					dec newWidth = imageAspectRatio * scaledHeight
+					int scaledWidth = newWidth
+					
+					renderWidth = scaledWidth
+					renderHeight = scaledHeight
+					}
+				}
+				else
+				{
+				renderWidth = pixels.size.width
+				renderHeight = pixels.size.height
+				}
+			
+			//we now have an image that will fit into the frame; next we just need to alter either its x or y position to center it
+			if (renderWidth < frameWidth)
+				{
+				renderOffsetX = (frameWidth - renderWidth) / 2
+				}
+			
+			if (renderHeight < frameHeight)
+				{
+				renderOffsetY = (frameHeight - renderHeight) / 2
+				}
+			
+			subRect = null
+			}
+			else if (mode == Image.FIT_FILL)
+			{
+			if (pixels.size.width > frameWidth || pixels.size.height > frameHeight)
+				{
+				//TODO: here we never "zoom in" on the image; we scale it down and potentially clip it
+				}
+				else
+				{
+				renderWidth = pixels.size.width
+				renderHeight = pixels.size.height
+				}
+			
+			//renderOffsetX = 0
+			}
+			else if (mode == Image.FIT_STRETCH)
+			{
+			renderWidth = frameWidth
+			renderHeight = frameHeight
+			
+			subRect = null
+			}
+		}
+	
+	void Image:setRotation(int degrees)
+		{
+		rotation = degrees
+		}
+	
+	void Image:paint(Canvas c)
+		{
+		c.drawPixelsX(pixels, subRect, xPosition+renderOffsetX, yPosition+renderOffsetY, renderWidth, renderHeight, rotation)
+		}
+	
+	void Image:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	void Image:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+	
+	Point Image:getPosition()
+		{
+		return null
+		}
+	
+	WH Image:getPreferredSize()
+		{
+		return null
+		}
+	
+	}

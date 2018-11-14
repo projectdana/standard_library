@@ -2,10 +2,10 @@ uses Rect2D
 uses Line2D
 uses Color
 uses Point2D
-uses PixelMap
+uses media.PixelMap
+uses media.WH
 uses Font
 uses Rect
-uses WH
 uses Point
 
 data MouseEvent	{

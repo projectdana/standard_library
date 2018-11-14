@@ -1,0 +1,7 @@
+interface Clipboard {
+	
+	void setContent(char content[])
+	
+	char[] getContent()
+	
+	}

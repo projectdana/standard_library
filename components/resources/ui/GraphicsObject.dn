@@ -4,13 +4,12 @@
 */
 
 uses Window
-uses WH
+uses media.WH
 uses Point
 uses Panel
 uses Canvas
 
 interface GraphicsObject{
-	transfer Panel myPanel
 	transfer int xPosition
 	transfer int yPosition
 	

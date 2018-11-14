@@ -1,6 +1,6 @@
 uses GraphicsObject
 uses Color
-uses WH
+uses media.WH
 
 data GraphicsObjectItem{
 	GraphicsObject object

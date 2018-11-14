@@ -9,4 +9,7 @@ interface XYMouseObject extends ClickableObject {
 	void mouseDown(int x, int y, int button){}
 	void mouseUp(int x, int y, int button){}
 	void mouseMove(int x, int y){}
+	
+	void mouseOver(){}
+	void mouseOut(){}
 	}

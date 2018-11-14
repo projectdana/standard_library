@@ -10,6 +10,12 @@ data ClickableItem{
 	ClickableItem prev
 	}
 
+data XYListener{
+	XYMouseObject object
+	XYListener next
+	XYListener prev
+	}
+
 uses events.EventData
 
 component provides Panel requires io.Output out {
@@ -20,10 +26,17 @@ component provides Panel requires io.Output out {
 	ClickableItem clickObjects
 	ClickableItem lastClickObject
 	
+	XYListener mouseListeners
+	XYListener mouseListenersEnd
+	
+	XYMouseObject mouseOver
+	
 	bool backgroundSet
 	Color backgroundColor = new Color(190, 190, 200, 255)
 	
 	KeyEventObject keyboardFocus
+	
+	GraphicsObject contextItem
 	
 	eventsink Events(EventData ed)
 		{
@@ -37,8 +50,19 @@ component provides Panel requires io.Output out {
 		{
 		if (ed.type == KeyEventObject.[requestFocus])
 			{
-			keyboardFocus = ed.source
+			changeFocusTo(ed.source)
 			emitevent requestFocus()
+			}
+			else if (ed.type == ClickableObject.[contextItemOn])
+			{
+			ClickableObject co = ed.source
+			contextItem = co.getContextItem()
+			emitevent contextItemOn()
+			}
+			else if (ed.type == ClickableObject.[contextItemOff])
+			{
+			emitevent contextItemOff()
+			contextItem = null
 			}
 		}
 	
@@ -49,6 +73,18 @@ component provides Panel requires io.Output out {
 	void Panel:setFocus()
 		{
 		emitevent requestFocus()
+		}
+	
+	void Panel:recvFocus()
+		{
+		if (keyboardFocus != null)
+			keyboardFocus.recvFocus()
+		}
+	
+	void Panel:loseFocus()
+		{
+		if (keyboardFocus != null)
+			keyboardFocus.loseFocus()
 		}
 	
 	void Panel:setPosition(int x, int y)
@@ -93,6 +129,9 @@ component provides Panel requires io.Output out {
 		if (go hastype ClickableObject)
 			addClickTarget(go)
 		
+		if (go hastype XYMouseObject)
+			addMouseEventTarget(go)
+		
 		if (go hastype KeyEventObject)
 			{
 			KeyEventObject ko = go
@@ -128,6 +167,9 @@ component provides Panel requires io.Output out {
 		
 		if (go hastype ClickableObject)
 			remClickTarget(go)
+		
+		if (go hastype XYMouseObject)
+			remMouseEventTarget(go)
 		
 		postRepaint()
 		}
@@ -205,6 +247,17 @@ component provides Panel requires io.Output out {
 		return new WH(width, height)
 		}
 	
+	void changeFocusTo(KeyEventObject ko)
+		{
+		if (keyboardFocus !== ko)
+			{
+			if (keyboardFocus != null) keyboardFocus.loseFocus()
+			ko.recvFocus()
+			}
+		
+		keyboardFocus = ko
+		}
+	
 	void Panel:click(int x, int y, int button)
 		{
 		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
@@ -216,7 +269,9 @@ component provides Panel requires io.Output out {
 				ci.object.click(x - r.x, y - r.y, button)
 				
 				if (ci.object hastype KeyEventObject)
-					keyboardFocus = ci.object
+					{
+					changeFocusTo(ci.object)
+					}
 				
 				break
 				}
@@ -259,6 +314,47 @@ component provides Panel requires io.Output out {
 			}
 		}
 	
+	void addMouseEventTarget(XYMouseObject m)
+		{
+		XYListener nci = new XYListener(m)
+		
+		if (mouseListeners == null)
+			mouseListeners = nci
+			else
+			mouseListenersEnd.next = nci
+		
+		nci.prev = mouseListenersEnd
+		mouseListenersEnd = nci
+		}
+	
+	void remMouseEventTarget(XYMouseObject m)
+		{
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+			{
+			if (ci.object === m)
+				{
+				XYListener td = ci
+				
+				if (td.prev == null)
+					mouseListeners = td.next
+					else
+					td.prev.next = td.next
+				
+				if (td.next == null)
+					mouseListenersEnd = td.prev
+					else
+					td.next.prev = td.prev
+				
+				break
+				}
+			}
+		}
+	
+	GraphicsObject Panel:getContextItem()
+		{
+		return contextItem
+		}
+	
 	void Panel:keyDown(int keyID)
 		{
 		if (keyboardFocus != null)
@@ -275,10 +371,77 @@ component provides Panel requires io.Output out {
 			}
 		}
 	
-	/*
-	void Panel:mouseDown(int x, int y, int button){}
-	void Panel:mouseUp(int x, int y, int button){}
-	void Panel:mouseMove(int x, int y){}
-	*/
+	void Panel:mouseDown(int x, int y, int button)
+		{
+		int relX = x - xPosition
+		int relY = y - xPosition
+		
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+			{
+			Rect r = ci.object.getBounds()
+			
+			if (relX >= r.x && relX <= r.x + r.width && relY >= r.y && relY <= r.y + r.height)
+				{
+				ci.object.mouseDown(relX, relY, button)
+				break
+				}
+			}
+		}
+	
+	void Panel:mouseUp(int x, int y, int button)
+		{
+		int relX = x - xPosition
+		int relY = y - xPosition
+		
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+			{
+			Rect r = ci.object.getBounds()
+			
+			if (relX >= r.x && relX <= r.x + r.width && relY >= r.y && relY <= r.y + r.height)
+				{
+				ci.object.mouseUp(relX, relY, button)
+				break
+				}
+			}
+		}
+	
+	void Panel:mouseMove(int x, int y)
+		{
+		bool overSomething
+		
+		int relX = x - xPosition
+		int relY = y - xPosition
+		
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+			{
+			Rect r = ci.object.getBounds()
+			
+			if (relX >= r.x && relX <= r.x + r.width && relY >= r.y && relY <= r.y + r.height)
+				{
+				if (mouseOver !== ci.object)
+					{
+					if (mouseOver != null)
+						{
+						mouseOver.mouseOut()
+						}
+					
+					mouseOver = ci.object
+					mouseOver.mouseOver()
+					}
+				
+				overSomething = true
+				
+				ci.object.mouseMove(relX, relY)
+				
+				break
+				}
+			}
+		
+		if (!overSomething && mouseOver != null)
+			{
+			mouseOver.mouseOut()
+			mouseOver = null
+			}
+		}
 	
 	}

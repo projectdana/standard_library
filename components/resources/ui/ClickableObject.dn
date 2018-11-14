@@ -9,6 +9,11 @@ interface ClickableObject extends GraphicsObject{
 	
 	event click()
 	
+	event contextItemOn()
+	event contextItemOff()
+	
 	Rect getBounds()
 	void click(int x, int y, int button)
+	
+	GraphicsObject getContextItem(){return null}
 	}

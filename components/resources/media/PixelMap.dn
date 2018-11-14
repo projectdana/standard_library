@@ -2,7 +2,6 @@
 { "description" : "This describes a 'pixel map' which can be drawn to the screen. It is simply a rectangle of Pixel values, each with a red, green, blue and alpha (opacity) value. It is implied that pixels.arrayLength must be equal to size.width * size.height."}
 */
 
-uses Color
 uses WH
 
 data PixelMap{

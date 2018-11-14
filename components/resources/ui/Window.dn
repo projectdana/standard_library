@@ -1,5 +1,5 @@
 uses Rect
-uses PixelMap
+uses media.PixelMap
 
 /*
  {"description" : "This allows the programmer to create new graphical windows on the screen."}

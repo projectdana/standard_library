@@ -1,0 +1,41 @@
+interface PNGLib {
+	bool loadImage(char path[], PixelMap b)
+	bool saveImage(char path[], PixelMap b)
+	}
+
+component provides ImageEncoder:png requires native PNGLib lib {
+	
+	PixelMap map
+	
+	ImageEncoder:ImageEncoder()
+		{
+		}
+	
+	PixelMap ImageEncoder:getPixels()
+		{
+		return map
+		}
+	
+	void ImageEncoder:setPixels(PixelMap pm)
+		{
+		map = pm
+		}
+	
+	bool ImageEncoder:loadImage(char path[])
+		{
+		map = new PixelMap(new WH())
+		if (!lib.loadImage(path, map))
+			throw new Exception("failed to load PNG '$path'")
+		
+		return true
+		}
+	
+	bool ImageEncoder:saveImage(char path[])
+		{
+		if (!lib.saveImage(path, map))
+			throw new Exception("failed to save PNG '$path'")
+		
+		return true
+		}
+	
+	}

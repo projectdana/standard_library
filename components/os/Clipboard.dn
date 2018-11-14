@@ -1,0 +1,13 @@
+component provides Clipboard requires native Clipboard lib {
+	
+	void Clipboard:setContent(char content[])
+		{
+		lib.setContent(content)
+		}
+	
+	char[] Clipboard:getContent()
+		{
+		return lib.getContent()
+		}
+	
+	}

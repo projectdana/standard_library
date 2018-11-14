@@ -1,11 +1,23 @@
-/*
-{ "description" : "This is an API that loads an image and returns it as a bitmap of pixels, which can then rendered to the screen using other APIs." }
-*/
+uses media.PixelMap
 
-uses Color
-uses Bitmap
-
-interface Image{
-	Image(char path[])
-	Bitmap getBitmap()
+interface Image extends GraphicsObject {
+	
+	Image(PixelMap pm)
+	
+	void setPixels(PixelMap b)
+	
+	void setFrameSize(int w, int h)
+	
+	/* no frame, just draw the entire image */
+	const int FIT_NONE = 0
+	/* stretch to fit the frame */
+	const int FIT_STRETCH = 1
+	/* scale to fit the frame and center */
+	const int FIT_SCALE = 2
+	/* scale to fit the frame, center, and clip to avoid empty frame space if the source image was bigger than the frame */
+	const int FIT_FILL = 3
+	void setFrameFit(int mode)
+	
+	void setRotation(int degrees)
+	
 	}

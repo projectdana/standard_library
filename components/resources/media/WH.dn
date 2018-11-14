@@ -1,0 +1,9 @@
+/*
+* WH type
+* A utility type to describe the width and height of something.
+*/
+
+data WH{
+	int width
+	int height
+	}

@@ -1,0 +1,11 @@
+uses media.PixelMap
+
+interface ImageEncoder {
+	ImageEncoder()
+	
+	bool loadImage(char path[])
+	bool saveImage(char path[])
+	
+	PixelMap getPixels()
+	void setPixels(PixelMap pm)
+	}
