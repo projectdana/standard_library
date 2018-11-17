@@ -20,18 +20,23 @@ component provides Label requires Font {
 	void Label:setText(char txt[])
 		{
 		text = txt
+		
 		postRepaint()
 		}
 	
 	void Label:setColor(Color c)
 		{
 		color = c
+		
+		postRepaint()
 		}
 	
 	void Label:setPosition(int x, int y)
 		{
 		xPosition = x
 		yPosition = y
+		
+		postRepaint()
 		}
 	
 	Point Label:getPosition()

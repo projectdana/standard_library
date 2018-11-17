@@ -192,3 +192,13 @@ a.doc_type_link:hover {
 	margin-bottom: 20px;
 	font-size: 1.15em;
 }
+
+.typelist a:link {
+	text-decoration: none;
+	color: blue;
+}
+
+.typelist a:visited {
+	text-decoration: none;
+	color: blue;
+}

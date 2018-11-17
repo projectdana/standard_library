@@ -635,7 +635,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 				for (int i = 0; i < types.arrayLength; i++)
 					{
 					fd.write("<div>")
-					fd.write("<span class = \"jslink\" onclick=\"javascript:loadContent('files/$(types[i].htmlFile)');\">$(types[i].type)</span>")
+					fd.write("<a href = \"files/$(types[i].htmlFile)\" target = \"_core\">$(types[i].type)</a>")
 					fd.write("</div>")
 					}
 				
