@@ -56,6 +56,8 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 	int restoredX
 	int restoredY
 	
+	bool fullScreen
+	
 	Color borderColor = new Color(190, 190, 200, 255)
 	
 	WindowCanvas canvas
@@ -154,6 +156,11 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 	void Window:setFullScreen(bool b)
 		{
 		canvas.setFullScreen(b)
+		fullScreen = b
+		
+		WH sz = canvas.getResolution()
+		currentWidth = sz.width
+		currentHeight = sz.height
 		}
 	
 	void Window:setTitle(char title[])
@@ -339,9 +346,18 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 	
 	void Window:setSize(int x, int y)
 		{
-		currentWidth = x
-		currentHeight = y
-		canvas.setSize(x, y)
+		if (!fullScreen)
+			{
+			currentWidth = x
+			currentHeight = y
+			canvas.setSize(x, y)
+			}
+			else
+			{
+			WH sz = canvas.getResolution()
+			currentWidth = sz.width
+			currentHeight = sz.height
+			}
 		
 		paint(null)
 		}

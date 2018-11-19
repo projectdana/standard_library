@@ -51,6 +51,8 @@ interface UIPlaneLib{
 	
 	void commitBuffer(int phandle)
 	
+	void getResolution(int phandle, WH wh)
+	
 	void setBackgroundColor(int phandle, byte r, byte g, byte b, byte a)
 	
 	void maximiseWindow(int phandle)
@@ -143,6 +145,17 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 			mutex(windowStateLock)
 				{
 				lib.setFullScreen(platformHandle, v)
+				}
+			}
+		
+		WH WindowCanvas:getResolution()
+			{
+			mutex(windowStateLock)
+				{
+				WH wh = new WH()
+				lib.getResolution(platformHandle, wh)
+				
+				return wh
 				}
 			}
 		

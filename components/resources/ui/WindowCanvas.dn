@@ -45,6 +45,7 @@ interface WindowCanvas extends Canvas {
 	void setPosition(int x, int y)
 	void setSize(int w, int h)
 	void setBackground(Color c)
+	WH getResolution()
 	
 	void paint()
 	
