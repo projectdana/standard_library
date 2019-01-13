@@ -1,0 +1,106 @@
+data KeyCode {
+	
+	const byte UNKNOWN = 0
+	
+	const byte A = 1
+	const byte B = 2
+	const byte C = 3
+	const byte D = 4
+	const byte E = 5
+	const byte F = 6
+	const byte G = 7
+	const byte H = 8
+	const byte I = 9
+	const byte J = 10
+	const byte K = 11
+	const byte L = 12
+	const byte M = 13
+	const byte N = 14
+	const byte O = 15
+	const byte P = 16
+	const byte Q = 17
+	const byte R = 18
+	const byte S = 19
+	const byte T = 20
+	const byte U = 21
+	const byte V = 22
+	const byte W = 23
+	const byte X = 24
+	const byte Y = 25
+	const byte Z = 26
+	
+	const byte NUM_0 = 27
+	const byte NUM_1 = 28
+	const byte NUM_2 = 29
+	const byte NUM_3 = 30
+	const byte NUM_4 = 31
+	const byte NUM_5 = 32
+	const byte NUM_6 = 33
+	const byte NUM_7 = 34
+	const byte NUM_8 = 35
+	const byte NUM_9 = 36
+	
+	const byte NUMPAD_0 = 37
+	const byte NUMPAD_1 = 38
+	const byte NUMPAD_2 = 39
+	const byte NUMPAD_3 = 40
+	const byte NUMPAD_4 = 41
+	const byte NUMPAD_5 = 42
+	const byte NUMPAD_6 = 43
+	const byte NUMPAD_7 = 44
+	const byte NUMPAD_8 = 45
+	const byte NUMPAD_9 = 46
+	
+	const byte NUMPAD_DIV = 47
+	const byte NUMPAD_MUL = 48
+	const byte NUMPAD_SUB = 49
+	const byte NUMPAD_ADD = 50
+	
+	const byte NUMPAD_DOT = 51
+	
+	const byte NUMPAD_RETURN = 52
+	
+	const byte RETURN = 53
+	const byte BACKSPACE = 54
+	const byte DELETE = 55
+	const byte INSERT = 56
+	const byte HOME = 57
+	const byte END = 58
+	const byte ESCAPE = 59
+	
+	const byte SHIFT_LEFT = 60
+	const byte SHIFT_RIGHT = 61
+	const byte CTRL_LEFT = 62
+	const byte CTRL_RIGHT = 63
+	const byte ALT_LEFT = 64
+	const byte ALT_RIGHT = 65
+	
+	const byte TAB = 66
+	
+	const byte PAGE_UP = 67
+	const byte PAGE_DOWN = 68
+	
+	const byte ARROW_UP = 69
+	const byte ARROW_DOWN = 70
+	const byte ARROW_LEFT = 71
+	const byte ARROW_RIGHT = 72
+	
+	const byte CAPLOCK = 73
+	const byte NUMLOCK = 74
+	
+	const byte CMD = 75
+	
+	const byte F1 = 76
+	const byte F2 = 77
+	const byte F3 = 78
+	const byte F4 = 79
+	const byte F5 = 80
+	const byte F6 = 81
+	const byte F7 = 82
+	const byte F8 = 83
+	const byte F9 = 84
+	const byte F10 = 85
+	const byte F11 = 86
+	const byte F12 = 87
+	
+	}

@@ -3,6 +3,7 @@
 */
 
 uses media.PixelMap
+uses ui.Color
 
 interface Font{
 	/*

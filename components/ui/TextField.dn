@@ -1,0 +1,691 @@
+uses events.EventData
+
+//this is the horizontal border between the textual contents of the TextField, and the outer edge of its background
+const int TEXT_BORDER_H = 3
+
+//and the vertical border
+const int TEXT_BORDER_V = 1
+
+const int CURSOR_WIDTH = 1
+
+component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, os.SystemInfo sysInfo, ui.ContextMenu, os.Clipboard clipboard, locale.KeyMapping keyMapping {
+	
+	bool passwordMask
+	
+	char currentText[]
+	char maskedText[]
+	Font textFont
+	
+	int width = 40
+	int height = 20
+	bool matchFontHeight
+	
+	int cursorPosition
+	int selectStartPos
+	
+	bool focus
+	
+	int hScroll
+	
+	bool shiftDown
+	
+	byte keyState
+	
+	ClickableObject clickTarget
+	
+	ContextMenu menu
+	
+	Color bgColor = new Color(200, 200, 220, 255)
+	Color borderColor = new Color(180, 180, 190, 255)
+	Color highlightColor = new Color(160, 160, 200, 255)
+	Color textColor = new Color(0, 0, 0, 255)
+	
+	TextField:TextField()
+		{
+		textFont = new Font(sysInfo.getSystemFont(false), 15)
+		
+		menu = new ContextMenu()
+		menu.addItem("Cut", KeyCode.X, KeyState.KEY_CTRL)
+		menu.addItem("Copy", KeyCode.C, KeyState.KEY_CTRL)
+		menu.addItem("Paste", KeyCode.V, KeyState.KEY_CTRL)
+		menu.addItem("Select All", KeyCode.A, KeyState.KEY_CTRL)
+		
+		height = textFont.getFontMetrics().height + (TEXT_BORDER_V*2)
+		
+		sinkevent MenuEvents(menu)
+		}
+	
+	void TextField:setBackground(Color c)
+		{
+		bgColor = c
+		
+		postRepaint()
+		}
+	
+	void TextField:setBorder(Color c)
+		{
+		borderColor = c
+		
+		postRepaint()
+		}
+	
+	void TextField:setHighlight(Color c)
+		{
+		highlightColor = c
+		
+		postRepaint()
+		}
+	
+	void TextField:setTextColor(Color c)
+		{
+		textColor = c
+		
+		postRepaint()
+		}
+	
+	void TextField:setFont(Font f)
+		{
+		textFont = f
+		
+		height = textFont.getFontMetrics().height + (TEXT_BORDER_V*2)
+		
+		postRepaint()
+		}
+	
+	char[] getSelectedText()
+		{
+		int s
+		int e
+		
+		if (selectStartPos < cursorPosition)
+			{
+			s = selectStartPos
+			e = cursorPosition
+			}
+			else
+			{
+			e = selectStartPos
+			s = cursorPosition
+			}
+		
+		char result[] = new char[e-s]
+		
+		int j = 0
+		for (int i = s; i < e; i++)
+			{
+			result[j] = currentText[i]
+			j ++
+			}
+		
+		return result
+		}
+	
+	char[] getMask(int len)
+		{
+		char result[] = new char[len]
+		
+		for (int i = 0; i < len; i++)
+			{
+			result[i] = "*"
+			}
+		
+		return result
+		}
+	
+	void deleteText(int s, int e)
+		{
+		char newText[] = new char[currentText.arrayLength - (e - s)]
+		
+		int j = 0
+		for (int i = 0; i < currentText.arrayLength; i++)
+			{
+			if (i < s || i >= e)
+				{
+				newText[j] = currentText[i]
+				j ++
+				}
+			}
+		
+		currentText = newText
+		maskedText = getMask(currentText.arrayLength)
+		}
+	
+	void deleteSelection()
+		{
+		int s
+		int e
+		
+		if (selectStartPos < cursorPosition)
+			{
+			s = selectStartPos
+			e = cursorPosition
+			}
+			else
+			{
+			e = selectStartPos
+			s = cursorPosition
+			}
+		
+		if (s != e)
+			{
+			deleteText(s, e)
+			emitevent textChanged()
+			}
+		}
+	
+	void insertText(char text[])
+		{
+		char ntext[]
+		
+		if (cursorPosition == currentText.arrayLength)
+			{
+			ntext = new char[](currentText, text)
+			}
+			else
+			{
+			for (int i = 0; i < currentText.arrayLength; i++)
+				{
+				if (i == cursorPosition) ntext = new char[](ntext, text)
+				ntext = new char[](ntext, currentText[i])
+				}
+			}
+		
+		currentText = ntext
+		maskedText = getMask(currentText.arrayLength)
+		
+		cursorPosition += text.arrayLength
+		selectStartPos = cursorPosition
+		
+		emitevent textChanged()
+		}
+	
+	eventsink MenuEvents(EventData ed)
+		{
+		if (ed.type == ContextMenu.[menuClick])
+			{
+			MenuItem mi = ed.details
+			
+			if (mi.name == "Copy")
+				{
+				clipboard.setContent(getSelectedText())
+				}
+				else if (mi.name == "Cut")
+				{
+				clipboard.setContent(getSelectedText())
+				deleteSelection()
+				if (selectStartPos > cursorPosition)
+					selectStartPos = cursorPosition
+					else
+					cursorPosition = selectStartPos
+				
+				updateCursorPosition()
+				}
+				else if (mi.name == "Paste")
+				{
+				char itext[] = clipboard.getContent()
+				deleteSelection()
+				if (selectStartPos > cursorPosition)
+					selectStartPos = cursorPosition
+					else
+					cursorPosition = selectStartPos
+				insertText(itext)
+				
+				updateCursorPosition()
+				}
+				else if (mi.name == "Select All")
+				{
+				selectStartPos = 0
+				cursorPosition = currentText.arrayLength
+				
+				updateCursorPosition()
+				}
+			
+			emitevent contextItemOff()
+			}
+		}
+	
+	void TextField:keyDown(int keyCode)
+		{
+		//out.println("keycode: $(iu.intToString(keyCode))")
+		
+		//if the ctrl key is being held down we direct the key press to the context menu
+		
+		if ((keyState & KeyState.KEY_CTRL) == KeyState.KEY_CTRL)
+			{
+			menu.keyPress(keyMapping.getKeyCode(keyCode), keyState)
+			return
+			}
+		
+		//here we check if the key press was a printable character and if so insert it, else handle other key strokes
+		
+		char ch[] = keyMapping.getCharacter(keyCode, keyState)
+		byte kCode
+		
+		if (ch != null)
+			{
+			char ntext[]
+			
+			if (selectStartPos != cursorPosition)
+				{
+				deleteSelection()
+				if (selectStartPos > cursorPosition)
+					selectStartPos = cursorPosition
+					else
+					cursorPosition = selectStartPos
+				}
+			
+			if (cursorPosition == currentText.arrayLength)
+				{
+				ntext = new char[](currentText, ch)
+				}
+				else
+				{
+				for (int i = 0; i < currentText.arrayLength; i++)
+					{
+					if (i == cursorPosition) ntext = new char[](ntext, ch)
+					ntext = new char[](ntext, currentText[i])
+					}
+				}
+			
+			currentText = ntext //new char[](currentText, ch)
+			maskedText = new char[](maskedText, "*")
+			
+			cursorPosition ++
+			selectStartPos = cursorPosition
+			
+			updateCursorPosition()
+			
+			emitevent textChanged()
+			
+			postRepaint()
+			}
+			else if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.UNKNOWN)
+			{
+			if (kCode == KeyCode.SHIFT_LEFT || kCode == KeyCode.SHIFT_RIGHT)
+				{
+				keyState |= KeyState.KEY_SHIFT
+				shiftDown = true
+				return
+				}
+			
+			if (kCode == KeyCode.CTRL_LEFT || kCode == KeyCode.CTRL_RIGHT)
+				{
+				keyState |= KeyState.KEY_CTRL
+				return
+				}
+			
+			if (kCode == KeyCode.ALT_LEFT)
+				{
+				keyState |= KeyState.KEY_ALT
+				return
+				}
+			
+			if (kCode == KeyCode.CMD)
+				{
+				keyState |= KeyState.KEY_CMD
+				return
+				}
+			
+			if (kCode == KeyCode.DELETE)
+				{
+				if (currentText.arrayLength > 0)
+					{
+					if (cursorPosition == selectStartPos && cursorPosition < currentText.arrayLength)
+						{
+						selectStartPos = cursorPosition + 1
+						deleteSelection()
+						selectStartPos --
+						}
+						else
+						{
+						deleteSelection()
+						
+						if (cursorPosition > selectStartPos)
+							{
+							cursorPosition = selectStartPos
+							}
+							else
+							{
+							selectStartPos = cursorPosition
+							}
+						}
+					
+					updateCursorPosition()
+					}
+				}
+			
+			if (kCode == KeyCode.BACKSPACE)
+				{
+				if (currentText.arrayLength > 0)
+					{
+					if (cursorPosition == selectStartPos && cursorPosition > 0)
+						{
+						selectStartPos = cursorPosition - 1
+						deleteSelection()
+						cursorPosition --
+						}
+						else
+						{
+						deleteSelection()
+						
+						if (cursorPosition > selectStartPos)
+							{
+							cursorPosition = selectStartPos
+							}
+							else
+							{
+							selectStartPos = cursorPosition
+							}
+						}
+					
+					updateCursorPosition()
+					}
+				}
+			
+			if (kCode == KeyCode.RETURN)
+				{
+				if (clickTarget != null)
+					clickTarget.click(0, 0, MouseButtons.BUTTON_LEFT)
+				}
+			
+			if (kCode == KeyCode.ARROW_LEFT)
+				{
+				if (cursorPosition > 0)
+					{
+					cursorPosition --
+					
+					if (!shiftDown)
+						selectStartPos = cursorPosition
+					
+					updateCursorPosition()
+					}
+				}
+			
+			if (kCode == KeyCode.ARROW_RIGHT)
+				{
+				if (cursorPosition < currentText.arrayLength)
+					{
+					cursorPosition ++
+					
+					if (!shiftDown)
+						selectStartPos = cursorPosition
+					
+					updateCursorPosition()
+					}
+				}
+			
+			if (kCode == KeyCode.END)
+				{
+				cursorPosition = currentText.arrayLength
+				
+				if (!shiftDown)
+					selectStartPos = cursorPosition
+				
+				updateCursorPosition()
+				}
+			
+			if (kCode == KeyCode.HOME)
+				{
+				cursorPosition = 0
+				
+				if (!shiftDown)
+					selectStartPos = cursorPosition
+				
+				updateCursorPosition()
+				}
+			
+			postRepaint()
+			}
+		}
+	
+	void TextField:keyUp(int keyCode)
+		{
+		byte kCode
+		
+		if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.UNKNOWN)
+			{
+			if (kCode == KeyCode.SHIFT_LEFT || kCode == KeyCode.SHIFT_RIGHT)
+				{
+				keyState &= ~KeyState.KEY_SHIFT
+				shiftDown = false
+				return
+				}
+			
+			if (kCode == KeyCode.CTRL_LEFT || kCode == KeyCode.CTRL_RIGHT)
+				{
+				keyState &= ~KeyState.KEY_CTRL
+				return
+				}
+			
+			if (kCode == KeyCode.ALT_LEFT)
+				{
+				keyState &= ~KeyState.KEY_ALT
+				}
+			
+			if (kCode == KeyCode.CMD)
+				{
+				keyState &= ~KeyState.KEY_CMD
+				}
+			}
+		}
+	
+	Rect TextField:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, height)
+		}
+	
+	int getCursorPos(int x)
+		{
+		char test[]
+		for (int i = 0; i < currentText.arrayLength; i++)
+			{
+			if (passwordMask)
+				test = new char[](test, maskedText[i])
+				else
+				test = new char[](test, currentText[i])
+			
+			int text_xp = textFont.getTextWidth(test)
+			
+			if (text_xp >= x) return i
+			}
+		
+		return currentText.arrayLength
+		}
+	
+	void TextField:click(int x, int y, int button)
+		{
+		focus = true
+		if (button == MouseButtons.BUTTON_LEFT)
+			{
+			//locate this position in the text, and set the cursor there
+			cursorPosition = getCursorPos(x)
+			selectStartPos = cursorPosition
+			postRepaint()
+			}
+			else if (button == MouseButtons.BUTTON_RIGHT)
+			{
+			emitevent contextItemOn()
+			}
+		}
+	
+	void TextField:mouseUp(int x, int y, int button)
+		{
+		
+		}
+	
+	void TextField:mouseDown(int x, int y, int button)
+		{
+		
+		}
+
+	char[] TextField:getText()
+		{
+		return currentText
+		}
+	
+	
+	void TextField:setText(char text[])
+		{
+		currentText = text
+		char k[] = clone text
+		for (int i = 0; i < k.arrayLength; i++)
+			{
+			k [i] = "*"
+			}
+		maskedText = k
+		postRepaint()
+		}
+	
+	void TextField:setPasswordMask(bool t)
+		{
+		passwordMask = t
+		postRepaint()
+		}
+	
+	int getX(int pos)
+		{
+		char mt[] = new char[pos]
+		
+		if (passwordMask)
+			mt =[] maskedText
+			else
+			mt =[] currentText
+		
+		return textFont.getTextWidth(mt)
+		}
+	
+	void drawCursor(Canvas c, int pos)
+		{
+		int xp = getX(pos)
+		
+		c.drawLine(new Line2D(xp, 0, xp, height, new Color(0, 0, 0, 255)))
+		}
+	
+	void drawSelectionBox(Canvas c)
+		{
+		if (selectStartPos != cursorPosition)
+			{
+			int startPos = 0
+			int endPos = 0
+			
+			if (selectStartPos < cursorPosition)
+				{
+				startPos = selectStartPos
+				endPos = cursorPosition
+				}
+				else
+				{
+				startPos = cursorPosition
+				endPos = selectStartPos
+				}
+			
+			int selectStartX = getX(startPos)
+			int selectEndX = getX(endPos)
+			
+			c.drawRect(new Rect2D(selectStartX, 0, selectEndX - selectStartX, height, highlightColor))
+			}
+		}
+	
+	//this function is called whenever the cursor moves; it updates (if needed) the scroll position of the text relative to the cursor
+	void updateCursorPosition()
+		{
+		int efx = getX(cursorPosition)
+		
+		if (efx > (hScroll + (width-(TEXT_BORDER_H*2))))
+			{
+			hScroll = (efx - width) + (TEXT_BORDER_H*2) + CURSOR_WIDTH
+			}
+			else if (efx < hScroll)
+			{
+			hScroll = efx
+			}
+		
+		//test if the total text width has become less than the scroll width (i.e., there's empty space and hScroll is not 0)
+		int qfx = getX(currentText.arrayLength)
+		
+		if ((hScroll != 0) && (qfx + CURSOR_WIDTH < (hScroll + (width-(TEXT_BORDER_H*2)))))
+			{
+			if (qfx > (width-(TEXT_BORDER_H*2)))
+				hScroll = (qfx - width) + (TEXT_BORDER_H*2) + CURSOR_WIDTH
+				else
+				hScroll = 0
+			}
+		}
+	
+	void TextField:paint(Canvas c)
+		{
+		c.drawRect(new Rect2D(xPosition, yPosition, width, height, bgColor))
+		
+		c.pushSurface(new Rect(xPosition + TEXT_BORDER_H, yPosition, width - (TEXT_BORDER_H*2), height), hScroll, 0, 255)
+		
+		c.drawRect(new Rect2D(hScroll, 0, width, height, bgColor))
+		
+		drawSelectionBox(c)
+		
+		if (passwordMask)
+			c.drawText(new Point2D(0, TEXT_BORDER_V, textColor), textFont, maskedText)
+			else
+			c.drawText(new Point2D(0, TEXT_BORDER_V, textColor), textFont, currentText)
+		
+		if (focus)
+			{
+			drawCursor(c, cursorPosition)
+			}
+		
+		c.popSurface()
+		
+		c.drawRectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
+		}
+	
+	void TextField:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	void TextField:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+	
+	Point TextField:getPosition()
+		{
+		return null
+		}
+	
+	WH TextField:getPreferredSize()
+		{
+		return new WH(width, height)
+		}
+	
+	void TextField:setFocus()
+		{
+		emitevent requestFocus()
+		}
+	
+	void TextField:recvFocus()
+		{
+		focus = true
+		}
+	
+	void TextField:loseFocus()
+		{
+		focus = false
+		selectStartPos = cursorPosition
+		}
+	
+	GraphicsObject TextField:getContextItem()
+		{
+		return menu
+		}
+	
+	void TextField:setWidth(int w)
+		{
+		width = w
+		}
+	
+	void TextField:setClickTarget(ClickableObject o)
+		{
+		clickTarget = o
+		}
+	}

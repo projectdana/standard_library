@@ -1,5 +1,5 @@
 /*
-{ "description" : "This describes a 'pixel map' which can be drawn to the screen. It is simply a rectangle of Pixel values, each with a red, green, blue and alpha (opacity) value. It is implied that pixels.arrayLength must be equal to size.width * size.height."}
+{ "description" : "This describes a 'pixel map' which can be drawn to the screen. It is a rectangle of Pixel values, each with a red, green, blue and alpha (opacity) value. Pixels are laid out in a one-dimensional array, where the first (size.width * 4) bytes are the first (top-most) row of pixels in the image such that the first pixel is the top left one, the next (size.width * 4 bytes) are the second row of pixels, etc, up to the number of rows indicated by size.height. The total length of the pixels array must therefore be (size.width*4) * size.height."}
 */
 
 uses WH

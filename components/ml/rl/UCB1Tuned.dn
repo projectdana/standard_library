@@ -1,0 +1,119 @@
+data CoreRLData {
+	dec rewards[]
+	dec counts[]
+	dec totalCount
+	}
+
+component provides RL requires io.Output out, data.IntUtil iu, data.DecUtil du, data.query.Search search, util.Math math {
+	
+	int bestCount = 3
+	
+	dec explorationPen = 1.0
+	dec envTolerance = 0.6
+	
+	CoreRLData learningData = new CoreRLData()
+	
+	String actions[]
+	int currentState
+	int currentAction
+	
+	void RL:setExplorationPenalty(dec ep)
+		{
+		explorationPen = ep
+		}
+	
+	void RL:setActions(String actionList[])
+		{
+		//TODO: if "actions" is not null we need to re-map all rewards and counts for all states based on the incoming list compared against the existing action list
+		
+		actions = actionList
+		}
+	
+	void updateTable(dec reward, int action)
+		{
+		learningData.counts[action] += 1.0
+		
+		dec n = learningData.counts[action]
+		
+		dec value = learningData.rewards[action]
+		dec newValue = ((n - 1.0) / n) * value + (1.0 / n) * reward
+		
+		learningData.rewards[action] = newValue
+		}
+	
+	int selectAction()
+		{
+		for (int i = 0; i < learningData.counts.arrayLength; i++)
+			{
+			if (learningData.counts[i] == 0.0)
+				return i
+			}
+		
+		dec maxVal = 0.0
+		int maxInd = 0
+		
+		for (int i = 0; i < learningData.counts.arrayLength; i++)
+			{
+			// UCB1-tuned (with no variance term)
+			dec bonus = math.sqrt((math.natlog(learningData.totalCount) / learningData.counts[i]) * (0.25 * ((2.0 * math.natlog(learningData.totalCount)) / learningData.counts[i])))
+			
+			//add a "penalty" for exploration, to converge more quickly, since our expected variance is very small
+			bonus = bonus / explorationPen
+			
+			dec val = learningData.rewards[i] + bonus
+			
+			if (val > maxVal)
+				{
+				maxVal = val
+				maxInd = i
+				}
+			}
+		
+		return maxInd
+		}
+	
+	void RL:consumeData(dec reward)
+		{
+		//compute the next action to take for currentState, based on reward and confidence
+		updateTable(reward, currentAction)
+		currentAction = selectAction()
+		}
+	
+	int RL:getAction()
+		{
+		return currentAction
+		}
+	
+	int[] RL:getTopActions(int n)
+		{
+		dec cval[]
+		
+		if (learningData.rewards != null)
+			cval = clone learningData.rewards
+			else
+			cval = new dec[actions.arrayLength]
+		
+		int q[] = new int[n]
+		
+		for (int j = 0; j < n; j++)
+			{
+			dec highVal = -1.0
+			int highInd = 0
+			
+			for (int i = 0; i < cval.arrayLength; i++)
+				{
+				if (cval[i] > highVal)
+					{
+					highVal = cval[i]
+					highInd = i
+					}
+				}
+			
+			q[j] = highInd
+			cval[highInd] = -1.0
+			}
+		
+		return q
+		}
+	
+	}

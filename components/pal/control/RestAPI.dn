@@ -1,4 +1,4 @@
-component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONParser parser, data.IntUtil iu, data.StringUtil stringUtil {
+component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONParser parser, data.IntUtil iu, data.StringUtil stringUtil, io.Output out {
 	
 	char serverIP[]
 	int serverPort
@@ -146,7 +146,7 @@ component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONPar
 		{
 		DateTime result = new DateTime()
 		
-		String tokens[] = stringUtil.explode(str, "-:")
+		String tokens[] = stringUtil.explode(str, "-: ")
 		
 		result.year = iu.intFromString(tokens[0].string)
 		result.month = iu.intFromString(tokens[1].string)

@@ -1,0 +1,157 @@
+const int ITEM_SEP = 5
+const int FONT_HEIGHT = 15
+
+const int PAD_LEFT = 3
+const int PAD_RIGHT = 3
+
+data ListItem {
+	char string[]
+	int keyCode
+	byte keyState
+	}
+
+component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Output out {
+	
+	Font labelFont
+	
+	int width = 2
+	int height = 2
+	
+	ListItem items[]
+	
+	Color borderColor = new Color(190, 190, 200, 255)
+	
+	int hoverIndex = INT_MAX
+	
+	ContextMenu:ContextMenu()
+		{
+		labelFont = new Font(sysInfo.getSystemFont(false), FONT_HEIGHT)
+		}
+	
+	void ContextMenu:paint(Canvas c)
+		{
+		c.drawRect(new Rect2D(xPosition, yPosition, width, height, new Color(170, 178, 170, 255)))
+		
+		int ryPos = yPosition
+		for (int i = 0; i < items.arrayLength; i++)
+			{
+			if (i == hoverIndex)
+				{
+				c.drawRect(new Rect2D(xPosition, ryPos, width, FONT_HEIGHT + ITEM_SEP, new Color(180, 188, 180, 255)))
+				}
+			
+			c.drawText(new Point2D(xPosition+PAD_LEFT, ryPos, new Color(0, 0, 0, 255)), labelFont, items[i].string)
+			ryPos += FONT_HEIGHT + ITEM_SEP
+			}
+		
+		c.drawRectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
+		}
+	
+	void ContextMenu:addItem(char name[], int keyCode, byte keyState)
+		{
+		items = new ListItem[](items, new ListItem(name, keyCode, keyState))
+		height += FONT_HEIGHT + ITEM_SEP
+		
+		int textWidth = labelFont.getTextWidth(name)
+		
+		if ((textWidth + PAD_LEFT + PAD_RIGHT) > width)
+			{
+			width = textWidth + PAD_LEFT + PAD_RIGHT
+			}
+		}
+	
+	void ContextMenu:remItem(char name[])
+		{
+		
+		}
+	
+	bool ContextMenu:keyPress(int keyCode, byte keyState)
+		{
+		for (int i = 0; i < items.arrayLength; i++)
+			{
+			if (items[i].keyCode == keyCode && items[i].keyState == keyState)
+				{
+				emitevent menuClick(new MenuItem(items[i].string))
+				
+				return true
+				}
+			}
+		
+		return false
+		}
+	
+	void ContextMenu:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+	
+	void ContextMenu:click(int x, int y, int button)
+		{
+		if (button == MouseButtons.BUTTON_LEFT)
+			{
+			int ryPos = 0
+			for (int i = 0; i < items.arrayLength; i++)
+				{
+				if (y > ryPos && y < ryPos + FONT_HEIGHT)
+					{
+					emitevent menuClick(new MenuItem(items[i].string))
+					
+					break
+					}
+				
+				ryPos += FONT_HEIGHT + ITEM_SEP
+				}
+			}
+		}
+	
+	void ContextMenu:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	Rect ContextMenu:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, height)
+		}
+	
+	WH ContextMenu:getPreferredSize()
+		{
+		return new WH(width, height)
+		}
+	
+	Point ContextMenu:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+	
+	void ContextMenu:mouseMove(int x, int y)
+		{
+		int ryPos = 0
+		x -= xPosition
+		y -= yPosition
+		
+		for (int i = 0; i < items.arrayLength; i++)
+			{
+			if (y > ryPos && y < ryPos + FONT_HEIGHT)
+				{
+				if (i != hoverIndex)
+					{
+					hoverIndex = i
+					postRepaint()
+					}
+				
+				break
+				}
+			
+			ryPos += FONT_HEIGHT + ITEM_SEP
+			}
+		}
+	
+	void ContextMenu:mouseOut()
+		{
+		hoverIndex = INT_MAX
+		postRepaint()
+		}
+	
+	}

@@ -1,0 +1,10 @@
+data KeyState {
+	
+	const byte KEY_SHIFT = 0x1
+	const byte KEY_CTRL = 0x2
+	const byte KEY_ALT = 0x4
+	const byte KEY_ALTGR = 0x8
+	const byte KEY_CMD = 0x10
+	const byte KEY_CAPLOCK = 0x20
+	
+	}

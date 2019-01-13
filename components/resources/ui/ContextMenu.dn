@@ -1,0 +1,22 @@
+/*
+ {"description" : "A context menu, for example triggered from a right-click."}
+*/
+
+uses os.KeyState
+
+data MenuItem {
+	char name[]
+	}
+
+interface ContextMenu extends XYMouseObject {
+	
+	event menuClick(MenuItem mi)
+	
+	ContextMenu()
+	
+	void addItem(char name[], int keyCode, byte keyStatus)
+	void remItem(char name[])
+	
+	bool keyPress(int keyCode, byte keyStatus)
+	
+	}

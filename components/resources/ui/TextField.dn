@@ -1,0 +1,25 @@
+uses Color
+uses Font
+
+interface TextField extends KeyEventObject {
+	
+	event textChanged()
+	
+	TextField()
+	
+	char[] getText()
+	void setText(char text[])
+	
+	void setWidth(int w)
+	
+	void setPasswordMask(bool t)
+	
+	void setClickTarget(ClickableObject o)
+	
+	void setBackground(Color c)
+	void setBorder(Color c)
+	void setHighlight(Color c)
+	void setTextColor(Color c)
+	
+	void setFont(Font f)
+	}

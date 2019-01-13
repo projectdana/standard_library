@@ -1,3 +1,5 @@
+// https://docs.mongodb.com/manual/reference/mongodb-wire-protocol/
+
 uses data.String
 uses data.bson.BSON
 
@@ -242,7 +244,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
     ri.setSeed(rand_seed)
 
     //validate connection
-    if(!connect()){ throw new Exception("Unable to connect to the database.") }
+    if(!connect()){ throw new Exception("Unable to connect to the database") }
     disconnect()
   }
 
@@ -250,7 +252,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
     if (client.connect(HOSTIP, HOSTPORT))
       return true
     else
-      throw new Exception("No database instance is running at: $(HOSTIP):$(iu.intToString(HOSTPORT)).")
+      throw new Exception("No database instance is running at: $(HOSTIP):$(iu.intToString(HOSTPORT))")
   }
 
   void disconnect(){
@@ -294,7 +296,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
 
       MongoInsert ins = new MongoInsert(0, collection, documents[i])
 
-      if(!connect()){ throw new Exception("Unable to connect to the database.") }
+      if(!connect()){ throw new Exception("Unable to connect to the database") }
       send(serialiseMongoHeader(mh), serialiseMongoInsert(ins))
       disconnect()
     }
@@ -323,7 +325,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
 
     MongoQuery query = new MongoQuery(0, collection, 0, numberToReturn, bsonQuery)
 
-    if(!connect()){ throw new Exception("Unable to connect to the database.") }
+    if(!connect()){ throw new Exception("Unable to connect to the database") }
 
     send(serialiseMongoHeader(mh), serialiseMongoQuery(query))
 
@@ -366,7 +368,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
 
     MongoQueryRF queryRF = new MongoQueryRF(0, collection, 0, numberToReturn, bsonQuery, bsonModifier)
 
-    if(!connect()){ throw new Exception("Unable to connect to the database.") }
+    if(!connect()){ throw new Exception("Unable to connect to the database") }
 
     send(serialiseMongoHeader(mh), serialiseMongoQueryRF(queryRF))
 
@@ -407,7 +409,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
 
     MongoUpdate update = new MongoUpdate(0, collection, 0, selector, bsonUpdate)
 
-    if(!connect()){ throw new Exception("Unable to connect to the database.") }
+    if(!connect()){ throw new Exception("Unable to connect to the database") }
 
     send(serialiseMongoHeader(mh),serialiseMongoUpdate(update))
 
@@ -434,7 +436,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
 
     MongoDelete delete = new MongoDelete(0, collection, 0, selector)
 
-    if(!connect()){ throw new Exception("Unable to connect to the database.") }
+    if(!connect()){ throw new Exception("Unable to connect to the database") }
 
     send(serialiseMongoHeader(mh), serialiseMongoDelete(delete))
 

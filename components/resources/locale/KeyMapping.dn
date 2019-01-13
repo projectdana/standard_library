@@ -1,0 +1,12 @@
+//this API converts hardware key codes into the corresponding character (which may yield multiple bytes for UTF-8)
+
+uses os.KeyState
+uses os.KeyCode
+
+interface KeyMapping {
+	
+	char[] getCharacter(int keyCode, byte keyState)
+	
+	byte getKeyCode(int keyCode)
+	
+	}

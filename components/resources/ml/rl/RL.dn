@@ -1,0 +1,32 @@
+uses data.String
+
+/*
+{"description" : "A reinforcement learning algorithm. To begin with, setActions must be used to provide a uniquely-identified set of possible actions. Following this, getAction and consumeData are called continuously, in a loop, to drive the learning algorithm. The index returned by getAction is an index into the list of actions supplied to setActions, after which the calling entity waits for some amount of time before calling consumeData with the reward level observed from the system."}
+*/
+
+interface RL {
+	
+	//parameters for the algorithm
+	
+	/*
+	{ "@description" : "Set the exploration penalty of the algorithm, to balance the tradeoff of explore/exploit. The default is 1.0, indicating no penalty, with higher values increasing the penalty.",
+		"penalty" : "Penalty to apply."}
+	*/
+	
+	void setExplorationPenalty(dec penalty)
+	
+	//the list of available actions
+	
+	void setActions(String actions[])
+	
+	//the state machine: getAction, consumeData, getAction, etc.
+	
+	int getAction()
+	
+	void consumeData(dec reward)
+	
+	//information functions
+	
+	int[] getTopActions(int n)
+	
+	}

@@ -1,0 +1,35 @@
+data ClusterPoint {
+	Data element
+	dec values[]
+	}
+
+data Cluster {
+	ClusterPoint members[]
+	dec mean[]
+	}
+
+/*
+{"description" : "A clustering algorithm."}
+*/
+interface Clustering {
+	
+	/*
+	{"@description" : "Initialise clustering algorithm for a coordinate space of the given dimensionality",
+		"dimensions" : "The number of dimensions of the coordinate space that you will use for clustering (e.g. 2 for an x/y space)"}
+	*/
+	Clustering(int dimensions)
+	
+	/*
+	{"@description" : "Add a value to the set from which clusters will be formed",
+		"values" : "The numeric values of this coordinate, which must be of length 'dimensions'",
+		"el" : "A data element to associate with this value"}
+	*/
+	void addValue(dec values[], Data el)
+	
+	/*
+	{"@description" : "Run the clustering algorithm on the accumulated values",
+		"k" : "The number of clusters to create",
+		"@return" : "The set of clusters"}
+	*/
+	Cluster[] cluster(int k)
+	}

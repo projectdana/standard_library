@@ -1,0 +1,182 @@
+/*
+This is an implementation of "Lloyd's algorithm" for k-means clustering, using "Forgy" initial cluster values
+ - it finds a local optimal but is not guaranteed to converge to a global optimal
+ - https://en.wikipedia.org/wiki/K-means_clustering
+ - http://home.deib.polimi.it/matteucc/Clustering/tutorial_html/kmeans.html
+*/
+
+component provides Clustering requires util.RandomInt randomInt, time.Calendar calendar, util.Math math, io.Output out, data.IntUtil iu, data.DecUtil du {
+	
+	ClusterPoint values[]
+	int dimensions
+	
+	Clustering:Clustering(int d)
+		{
+		dimensions = d
+		}
+	
+	void Clustering:addValue(dec points[], Data el)
+		{
+		if (points.arrayLength != dimensions) throw new Exception("Array of points does not match number of dimensions")
+		values = new ClusterPoint[](values, new ClusterPoint(el, points))
+		
+		ClusterPoint p = values[values.arrayLength-1]
+		}
+	
+	Cluster findMeanCluster(Cluster set[], dec mean[])
+		{
+		for (int i = 0; i < set.arrayLength; i++)
+			{
+			if (set[i].mean == mean)
+				return set[i]
+			}
+		
+		return null
+		}
+	
+	bool compareClusterPoints(Cluster a, Cluster b)
+		{
+		if (a.members.arrayLength != b.members.arrayLength)
+			return false
+		
+		for (int i = 0; i < a.members.arrayLength; i++)
+			{
+			if (a.members[i] !== b.members[i])
+				return false
+			}
+		
+		return true
+		}
+	
+	//this function checks if two cluster lists are identical
+	// - it assumes that both the order of clusters and the order of points within a cluster will be the same
+	bool converged(Cluster a[], Cluster b[])
+		{
+		if (a.arrayLength != b.arrayLength)
+			return false
+		
+		for (int i = 0; i < a.arrayLength; i++)
+			{
+			if (a[i].mean != b[i].mean)
+				return false
+			
+			if (!compareClusterPoints(a[i], b[i]))
+				return false
+			}
+		
+		return true
+		}
+	
+	dec diff(dec a, dec b)
+		{
+		if (a > b)
+			return a - b
+			else
+			return b - a
+		}
+	
+	dec sq(dec a)
+		{
+		return a * a
+		}
+	
+	dec distance(dec pointA[], dec pointB[])
+		{
+		//calculate the Euclidean distance between A and B
+		// - https://en.wikipedia.org/wiki/Euclidean_distance
+		dec acc
+		
+		for (int i = 0; i < pointA.arrayLength; i++)
+			{
+			dec sqr = sq(diff(pointA[i], pointB[i]))
+			acc += sqr
+			}
+		
+		return math.sqrt(acc)
+		}
+	
+	Cluster getBestCluster(Cluster set[], dec vals[])
+		{
+		Cluster best = set[0]
+		for (int i = 1; i < set.arrayLength; i++)
+			{
+			if (distance(vals, set[i].mean) < distance(vals, best.mean))
+				best = set[i]
+			}
+		
+		return best
+		}
+	
+	void updateClusterMean(Cluster c)
+		{
+		//calculate the centroid of c from all of its members and use this as its new mean
+		dec centroid[] = new dec[dimensions]
+		
+		if (c.members.arrayLength > 0)
+			{
+			for (int j = 0; j < dimensions; j++)
+				{
+				for (int i = 0; i < c.members.arrayLength; i++)
+					{
+					centroid[j] += c.members[i].values[j]
+					}
+				}
+			
+			for (int j = 0; j < dimensions; j++)
+				{
+				centroid[j] = centroid[j] / c.members.arrayLength
+				}
+			}
+		
+		c.mean = centroid
+		}
+	
+	Cluster[] Clustering:cluster(int k)
+		{
+		//initialise clusters - here we use the "Forgy" method, which randomly samples from the initial data set
+		randomInt.setSeed(calendar.getTime().millisecond)
+		
+		Cluster clusters[] = new Cluster[k]
+		for (int i = 0; i < k; i++)
+			{
+			clusters[i] = new Cluster()
+			clusters[i].mean = values[randomInt.get(values.arrayLength)].values
+			}
+		
+		//iteratively:
+		// - assign points to clusters (using least within-cluster sum of squares)
+		// - update cluster means (to equal the centroids of the points within each cluster)
+		//until the above results in the same clustering result occuring twice
+		Cluster previousClusters[]
+		
+		while (!converged(clusters, previousClusters))
+			{
+			previousClusters = clusters
+			
+			clusters = new Cluster[k]
+			for (int i = 0; i < k; i++)
+				{
+				clusters[i] = new Cluster()
+				clusters[i].mean = clone previousClusters[i].mean
+				}
+			
+			// - assignment:
+			for (int i = 0; i < values.arrayLength; i++)
+				{
+				//find the cluster that has the least within-cluster sum of squares for this value
+				Cluster c = getBestCluster(clusters, values[i].values)
+				
+				c.members = new ClusterPoint[](c.members, values[i])
+				}
+			
+			// - updating:
+			for (int i = 0; i < clusters.arrayLength; i++)
+				{
+				updateClusterMean(clusters[i])
+				}
+			}
+		
+		return clusters
+		}
+	
+	}

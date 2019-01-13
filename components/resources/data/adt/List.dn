@@ -10,17 +10,17 @@ interface List{
 	transfer int iteratorIndex
 	
 	/*
-	 {"@description" : "Add a new item to the list."}
+	 {"@description" : "Add a new item to the list; this function adds a reference (shallow copy) of the given item onto the list."}
 	*/
 	void add(Data item)
 	
 	/*
-	 {"@description" : "Remove an item from the list."}
+	 {"@description" : "Remove an item from the list; this function locates the given item using a reference (===) check."}
 	*/
 	void remove(Data item)
 	
 	/*
-	 {"@description" : "Update an existing list item to a new version."}
+	 {"@description" : "Update an existing list item to a new version. This locates the given item using a reference (===) check, then replaces that reference with the reference to newVersion."}
 	*/
 	void update(Data item, Data newVersion)
 	
@@ -37,7 +37,7 @@ interface List{
 	Data getNext()
 	
 	/*
-	 {"@description" : "Iterator: call this function to check if we've reached the end of the list.",
+	 {"@description" : "Iterator: call this function to check if we've reached the end of the list, such that calling getNext() again would return null as there are no more items.",
 			"@return" : "True if the end of the list has been reached; false otherwise."}
 	*/
 	bool isEnd()

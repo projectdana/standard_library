@@ -19,7 +19,7 @@ interface Assembly {
 	String[] getConfigs()
 	
 	/*
-	{ "@description" : "Changes the current assembly.",
+	{ "@description" : "Changes the current assembly. The 'main' method of the assembled program is called the first time setConfig is called.",
 		"conf" : "Identifier of the assembly to adapt to, which must be one previously returned by getConfigs()",
 		"@return" : "Returns true if adaptation was successful, false otherwise." }
 	*/
