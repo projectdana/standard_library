@@ -1,5 +1,41 @@
 component provides UnitTest {
 	
+	dec dec_testA()
+		{
+		dec a = 1.1
+		
+		dec b = -0.5
+		
+		return a * b
+		}
+	
+	dec dec_testB()
+		{
+		dec a = -1.1
+		
+		dec b = -1.1
+		
+		return a * b
+		}
+	
+	dec dec_testC()
+		{
+		dec a = -1.1
+		
+		dec b = 1.1
+		
+		return a * b
+		}
+	
+	dec dec_testD()
+		{
+		dec a = 1.1
+		
+		dec b = 1.1
+		
+		return a * b
+		}
+	
 	bool UnitTest:runTest()
 		{
 		int a = 2 + 2
@@ -25,6 +61,14 @@ component provides UnitTest {
 		q = q / INT_MAX
 		
 		if (q != INT_MAX) throw new Exception("Failure in test 5")
+		
+		if (dec_testA() != -0.55) throw new Exception("Failure in test 6")
+		
+		if (dec_testB() != 1.21) throw new Exception("Failure in test 7")
+		
+		if (dec_testC() != -1.21) throw new Exception("Failure in test 8")
+		
+		if (dec_testD() != 1.21) throw new Exception("Failure in test 9")
 		
 		return true
 		}
