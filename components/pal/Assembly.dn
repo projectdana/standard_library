@@ -1,5 +1,5 @@
 /*
-This is an extremely simple assembly module. See http://rex.projectdana.com for the full research project version, including visualisation tools.
+This is a very simple assembly module.
 */
 
 uses Service
@@ -28,6 +28,7 @@ data Component {
 data ReqIntf {
 	char package[]
 	char alias[]
+	char semantic[]
 	bool isNative
 	}
 
@@ -101,9 +102,12 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 				JSONElement ri = requiredInterfaces.children[i]
 				char package[] = parser.getValue(ri, "package").value
 				char alias[] = parser.getValue(ri, "alias").value
+				char semantic[]
+				if (parser.getValue(ri, "semantic") != null)
+					semantic = parser.getValue(ri, "semantic").value
 				bool isNative = parser.getValue(ri, "native") != null && parser.getValue(ri, "native").value == "true"
 				
-				result = new ReqIntf[](result, new ReqIntf(package, alias, isNative))
+				result = new ReqIntf[](result, new ReqIntf(package, alias, semantic, isNative))
 				}
 			}
 		
@@ -224,8 +228,11 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		return ric != 0
 		}
 	
-	String[] getComponentsIn(char package[])
+	String[] getComponentsIn(char package[], char semantic[])
 		{
+		if (semantic.arrayLength != 0)
+			package = new char[](package, ":", semantic)
+		
 		//check the cache
 		for (int i = 0; i < optionsCache.arrayLength; i++)
 			{
@@ -282,6 +289,14 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		return null
 		}
 	
+	char[] getInterfaceID(ReqIntf ri)
+		{
+		char result[] = ri.alias
+		if (ri.semantic.arrayLength != 0)
+			result = new char[](result, "!", ri.semantic)
+		return result
+		}
+	
 	//NOTE: this function is designed to handle cycles in the dependency graph by using the already-chosen component for each cyclical re-use of a dependency in this branch -- i.e. the implementing component already chosen for the branch in which the cycle appears
 	// - the "current" parameter to this function, and all use of it within the function, is purely to detect cycles
 	ConfigBuilder[] loadSystem(char com[], ConfigBuilder current)
@@ -296,14 +311,14 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 				{
 				if (!ris[i].isNative && !isAutoBinding(ris[i].package))
 					{
-					if (containsBinding(current, com, ris[i].alias))
+					if (containsBinding(current, com, getInterfaceID(ris[i])))
 						{
 						//halt recursion by pretending this component is fully wired up (which we know it must be earlier in the recursion)
 						result = new ConfigBuilder[](result, new ConfigBuilder(new String(com)))
 						}
 						else
 						{
-						String options[] = getComponentsIn(ris[i].package)
+						String options[] = getComponentsIn(ris[i].package, ris[i].semantic)
 						
 						if (options.arrayLength == 0)
 							throw new Exception("No components found to satisfy '$(ris[i].package)' of '$com'")
@@ -319,7 +334,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 								{
 								ConfigBuilder newCurrent = cloneConfigBuilder(current)
 								newCurrent.components = new String[](newCurrent.components, new String(options[j].string))
-								addCBDependencyT(newCurrent, com, ris[i].alias, options[j].string)
+								addCBDependencyT(newCurrent, com, getInterfaceID(ris[i]), options[j].string)
 								
 								ConfigBuilder subResults[] = loadSystem(options[j].string, newCurrent)
 								
@@ -328,7 +343,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 									{
 									for (int m = 0; m < prevResult.arrayLength; m++)
 										{
-										result = new ConfigBuilder[](result, expandCB(prevResult[m], subResults[n], com, ris[i].alias, options[j].string))
+										result = new ConfigBuilder[](result, expandCB(prevResult[m], subResults[n], com, getInterfaceID(ris[i]), options[j].string))
 										}
 									}
 								}
@@ -339,13 +354,13 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 								{
 								ConfigBuilder newCurrent = current
 								newCurrent.components = new String[](newCurrent.components, new String(options[j].string))
-								addCBDependencyT(newCurrent, com, ris[i].alias, options[j].string)
+								addCBDependencyT(newCurrent, com, getInterfaceID(ris[i]), options[j].string)
 								
 								ConfigBuilder subResults[] = loadSystem(options[j].string, newCurrent)
 								
 								for (int n = 0; n < subResults.arrayLength; n++)
 									{
-									result = new ConfigBuilder[](result, addCBDependency(subResults[n], com, ris[i].alias, options[j].string))
+									result = new ConfigBuilder[](result, addCBDependency(subResults[n], com, getInterfaceID(ris[i]), options[j].string))
 									}
 								}
 							}
@@ -405,7 +420,8 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		ReqIntf ris[] = getRequiredInterfaces(comp)
 		for (int i = 0; i < ris.arrayLength; i++)
 			{
-			c.interfaces = new Interface[](c.interfaces, new Interface(ris[i].alias))
+			Interface iq = new Interface(getInterfaceID(ris[i]))
+			c.interfaces = new Interface[](c.interfaces, iq)
 			
 			if (isAutoBinding(ris[i].package))
 				c.completeWirings ++
@@ -600,6 +616,8 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		if (iq.currentWiring == null)
 			{
 			//it's new, so just connect it
+			intfName = stringUtil.implode(stringUtil.explode(intfName, "!"), ":")
+			
 			dana.rewire(fromComponent.class :> intfName, toComponent.class :< intfName)
 			fromComponent.completeWirings ++
 			

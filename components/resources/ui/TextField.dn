@@ -1,19 +1,42 @@
+/*
+ {"description" : "A text entry field for a single line of text."}
+*/
+
 uses Color
 uses Font
 
 interface TextField extends KeyEventObject {
 	
+	/*
+	 {"@description" : "An event which reports whenever the content of the text field is changed (which could be by entering new text, cutting or pasting, deleting text, etc.)."}
+	*/
 	event textChanged()
 	
 	TextField()
 	
+	/*
+	 {"@description" : "Get the current text in the field."}
+	*/
 	char[] getText()
+	
+	/*
+	 {"@description" : "Set the current text in the field."}
+	*/
 	void setText(char text[])
 	
+	/*
+	 {"@description" : "Set the width of the field in pixels (note that its height is calculated automatically from the font)."}
+	*/
 	void setWidth(int w)
 	
+	/*
+	 {"@description" : "Set whether or not text is obscured by password mask characters (default is false)."}
+	*/
 	void setPasswordMask(bool t)
 	
+	/*
+	 {"@description" : "Set a clickable object (such as a button) to send a 'click' notification to when the user presses the return key."}
+	*/
 	void setClickTarget(ClickableObject o)
 	
 	void setBackground(Color c)
