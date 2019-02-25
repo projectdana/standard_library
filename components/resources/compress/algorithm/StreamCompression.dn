@@ -1,0 +1,15 @@
+interface StreamCompression {
+	
+	void compressInit()
+	byte[] compress(byte chunk[], bool lastChunk)
+	void compressEnd()
+
+const byte DS_CONTINUE = 0x0
+const byte DS_END = 0x1
+const byte DS_ERROR = 0x2
+	
+	void decompressInit()
+	byte[] decompress(byte chunk[])
+	byte decompressStatus()
+	int decompressEnd()
+	}

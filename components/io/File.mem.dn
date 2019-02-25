@@ -1,0 +1,195 @@
+const int BLOCK_SIZE = 3
+
+data FileBlock {
+	byte content[]
+	int length
+	int pos
+	
+	FileBlock next
+	}
+
+component provides io.File:mem requires data.IntUtil iu, io.Output out {
+	
+	int size
+	int pos
+	Mutex rwLock = new Mutex()
+	
+	int blockCount
+	FileBlock blocks
+	FileBlock curBlock
+	
+	File:File(char path[], byte mode)
+		{
+		pos = 0
+		
+		blocks = new FileBlock(new byte[BLOCK_SIZE])
+		curBlock = blocks
+		
+		blockCount = 1
+		}
+	
+	void copyArray(byte into[], int intoOffset, byte source[], int sourceOffset, int copyAmount)
+		{
+		for (int i = 0; i < copyAmount; i++)
+			{
+			into[intoOffset] = source[sourceOffset]
+			intoOffset ++
+			sourceOffset ++
+			}
+		}
+	
+	int File:write(byte content[])
+		{
+		mutex(rwLock)
+			{
+			int rlen = content.arrayLength
+			int cpos = 0
+			
+			while (rlen > 0)
+				{
+				if (curBlock.pos == curBlock.content.arrayLength)
+					{
+					if (curBlock.next != null)
+						{
+						curBlock = curBlock.next
+						curBlock.pos = 0
+						}
+						else
+						{
+						curBlock.next = new FileBlock(new byte[BLOCK_SIZE])
+						curBlock = curBlock.next
+						
+						blockCount ++
+						}
+					}
+				
+				int blockRemainder = curBlock.content.arrayLength - curBlock.pos
+				
+				int copyAmount = content.arrayLength - cpos
+				
+				if (copyAmount > blockRemainder)
+					{
+					copyAmount = blockRemainder
+					}
+				
+				copyArray(curBlock.content, curBlock.pos, content, cpos, copyAmount)
+				curBlock.pos += copyAmount
+				cpos += copyAmount
+				rlen -= copyAmount
+				
+				pos += copyAmount
+				
+				if (curBlock.next == null)
+					{
+					int ns = (BLOCK_SIZE * blockCount-1) + curBlock.pos
+					if (ns > size) size = ns
+					}
+				}
+			
+			return content.arrayLength
+			}
+		}
+	
+	byte[] File:read(int length)
+		{
+		mutex(rwLock)
+			{
+			if (length > (size - pos))
+				length = size - pos
+			
+			byte content[] = new byte[length]
+			int rlen = length
+			int cpos = 0
+			
+			while (rlen > 0 && curBlock != null)
+				{
+				if (curBlock.pos == curBlock.content.arrayLength)
+					{
+					if (curBlock.next != null)
+						{
+						curBlock = curBlock.next
+						curBlock.pos = 0
+						}
+						else
+						{
+						break
+						}
+					}
+				
+				int blockRemainder = curBlock.content.arrayLength - curBlock.pos
+				
+				int copyAmount = length - cpos
+				
+				if (copyAmount > blockRemainder)
+					{
+					copyAmount = blockRemainder
+					}
+				
+				copyArray(content, cpos, curBlock.content, curBlock.pos, copyAmount)
+				curBlock.pos += copyAmount
+				cpos += copyAmount
+				rlen -= copyAmount
+				
+				pos += copyAmount
+				}
+			
+			return content
+			}
+		}
+	
+	bool File:eof()
+		{
+		mutex(rwLock)
+			{
+			return pos == size
+			}
+		}
+	
+	bool File:setPos(int p)
+		{
+		mutex(rwLock)
+			{
+			if (p <= size)
+				{
+				pos = p
+				
+				FileBlock bw = blocks
+				while (bw != null && p > bw.content.arrayLength)
+					{
+					p -= bw.content.arrayLength
+					bw = bw.next
+					}
+				
+				curBlock = bw
+				curBlock.pos = p
+				
+				return true
+				}
+				else
+				{
+				return false
+				}
+			}
+		}
+	
+	int File:getPos()
+		{
+		return pos
+		}
+	
+	int File:getSize()
+		{
+		mutex(rwLock)
+			{
+			return size
+			}
+		}
+	
+	void File:close()
+		{
+		mutex(rwLock)
+			{
+			
+			}
+		}
+	}

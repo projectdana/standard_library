@@ -1,0 +1,54 @@
+interface ZLib {
+	
+	int deflateInit()
+	byte[] deflate(int stream, byte content[], bool lastChunk)
+	void deflateEnd(int stream)
+	
+	int inflateInit()
+	byte[] inflate(int stream, byte content[])
+	byte inflateStatus(int stream)
+	int inflateEnd(int stream)
+	
+	}
+
+component provides StreamCompression:deflate requires native ZLib zl {
+	
+	int cstreamID
+	int dstreamID
+	
+	void StreamCompression:compressInit()
+		{
+		cstreamID = zl.deflateInit()
+		}
+	
+	byte[] StreamCompression:compress(byte chunk[], bool lastChunk)
+		{
+		return zl.deflate(cstreamID, chunk, lastChunk)
+		}
+	
+	void StreamCompression:compressEnd()
+		{
+		zl.deflateEnd(cstreamID)
+		}
+
+	void StreamCompression:decompressInit()
+		{
+		dstreamID = zl.inflateInit()
+		}
+	
+	byte[] StreamCompression:decompress(byte chunk[])
+		{
+		return zl.inflate(dstreamID, chunk)
+		}
+	
+	byte StreamCompression:decompressStatus()
+		{
+		return zl.inflateStatus(dstreamID)
+		}
+	
+	int StreamCompression:decompressEnd()
+		{
+		return zl.inflateEnd(dstreamID)
+		}
+	
+	}

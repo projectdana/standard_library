@@ -1,0 +1,9 @@
+uses io.File
+
+interface Compressor {
+	
+	bool compress(File ifd, File ofd)
+	
+	bool decompress(File ifd, File ofd)
+	
+	}

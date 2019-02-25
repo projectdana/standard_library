@@ -1,0 +1,5 @@
+interface CRC32 {
+	
+	int4 makeCRC(int4 crc, byte buf[])
+	
+	}
