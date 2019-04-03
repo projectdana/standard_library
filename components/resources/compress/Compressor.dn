@@ -1,9 +1,28 @@
+/*
+ {"description" : "Compression API to compress data into a particular file format."
+	}
+*/
+
 uses io.File
 
 interface Compressor {
 	
+	/*
+	 {"@description" : "Reads all data from ifd, starting from the current read position, and compresses it into ofd. The compressed data will include a file header and other meta-data, according to the compression format being used.",
+	 	"ifd" : "The file from which input data (usually uncompressed) is read.",
+		"ofd" : "The file to which compressed data (including file headers and meta-data) is written.",
+	 	"@return" : "True if successful, false otherwise."
+		}
+	*/
 	bool compress(File ifd, File ofd)
 	
+	/*
+	 {"@description" : "Reads compressed data from ifd, starting from the current read position, and decompresses it into ofd.",
+	 	"ifd" : "The file from which compressed input data is read.",
+		"ofd" : "The file to which uncompressed data is written.",
+	 	"@return" : "True if successful, false otherwise."
+		}
+	*/
 	bool decompress(File ifd, File ofd)
 	
 	}

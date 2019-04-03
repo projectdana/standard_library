@@ -18,7 +18,9 @@ component provides io.File:mem requires data.IntUtil iu, io.Output out {
 	FileBlock blocks
 	FileBlock curBlock
 	
-	File:File(char path[], byte mode)
+	byte mode
+	
+	File:File(char path[], byte m)
 		{
 		pos = 0
 		
@@ -26,6 +28,8 @@ component provides io.File:mem requires data.IntUtil iu, io.Output out {
 		curBlock = blocks
 		
 		blockCount = 1
+		
+		mode = m
 		}
 	
 	void copyArray(byte into[], int intoOffset, byte source[], int sourceOffset, int copyAmount)
@@ -42,6 +46,11 @@ component provides io.File:mem requires data.IntUtil iu, io.Output out {
 		{
 		mutex(rwLock)
 			{
+			if (mode != File.FILE_ACCESS_WRITE)
+				{
+				throw new Exception("File is not open for write")
+				}
+			
 			int rlen = content.arrayLength
 			int cpos = 0
 			
@@ -167,6 +176,7 @@ component provides io.File:mem requires data.IntUtil iu, io.Output out {
 				}
 				else
 				{
+				throw new Exception("attempt to seek past end of file")
 				return false
 				}
 			}

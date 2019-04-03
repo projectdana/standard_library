@@ -5,7 +5,7 @@ data PrimaryType{
 
 const char OUTPUT_DIR[] = "_docs"
 
-component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo {
+component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo, composition.Search csearch, composition.ObjectWriter, data.query.Search dsearch {
 	
 	char[] getHTMLFileFor(char sourceFile[], char type[])
 		{
@@ -100,6 +100,43 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		return result
 		}
 	
+	String[] getSemanticVariants(String components[], char searchPackage[])
+		{
+		String result[]
+		
+		//read each component, and check for which variant of package it implements (if not default)
+		for (int i = 0; i < components.arrayLength; i++)
+			{
+			ObjectWriter ow = new ObjectWriter(components[i].string)
+			
+			char intfData[] = ow.getInfoSection("DNIL", "json").content
+			
+			JSONElement doc = parser.parseDocument(intfData)
+			
+			JSONElement providedInterfaces = parser.getValue(doc, "providedInterfaces")
+			
+			for (int k = 0; k < providedInterfaces.children.arrayLength; k++)
+				{
+				JSONElement pi = providedInterfaces.children[k]
+				char package[] = parser.getValue(pi, "package").value
+				
+				if (package == searchPackage)
+					{
+					char semantic[] = "&lt;default&gt;"
+					if (parser.getValue(pi, "semantic") != null)
+						semantic = parser.getValue(pi, "semantic").value
+					
+					if (dsearch.search(result, String.[string], new String(semantic)) == null)
+						{
+						result = new String[](result, new String(semantic))
+						}
+					}
+				}
+			}
+		
+		return result
+		}
+	
 	void writeFile(SourceFile sf)
 		{
 		//put "html" on the end
@@ -153,6 +190,26 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 						fd.write("<div class = \"doc_include_line\">")
 						fd.write("<span class = \"doc_include_text\"> --- extends:</span>")
 						fd.write(formatType(sf, id.extendsType.name))
+						fd.write("</div>")
+						}
+					
+					//semantic variants?
+					String implementations[] = new String[](csearch.getComponents(stringUtil.trim(includePackage)), csearch.getComponents("$(stringUtil.trim(includePackage)):*"))
+					String svars[] = getSemanticVariants(implementations, stringUtil.trim(includePackage))
+					
+					if (svars.arrayLength > 1 || (svars.arrayLength == 1 && svars[0].string != "&lt;default&gt;"))
+						{
+						fd.write("<div class = \"doc_semantic_line\">")
+						fd.write("<span class = \"doc_semantic_text\"> --- semantic variants:</span>")
+						
+						for (int j = 0; j < svars.arrayLength; j++)
+							{
+							if (j > 0) fd.write(",")
+							
+							fd.write(" ")
+							fd.write(svars[j].string)
+							}
+						
 						fd.write("</div>")
 						}
 					
@@ -589,6 +646,8 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		
 		if (!fileSystem.exists("$OUTPUT_DIR/files"))
 			fileSystem.createDirectory("$OUTPUT_DIR/files")
+		
+		out.println("Scanning components and generating pages")
 		
 		//generate a set of HTML files for p.primaryFiles
 		for (int i = 0; i < p.primaryFiles.arrayLength; i++)

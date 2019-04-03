@@ -1,0 +1,50 @@
+data Row {
+	dec values[]
+	}
+
+component provides UnitTest requires io.Output out, data.IntUtil iu, ml.rl.RL ucb, io.File, data.json.JSONEncoder encoder {
+	
+	dec RANGE_BOTTOM = 0.0
+	dec RANGE_TOP = 15.0
+	
+	dec normaliseReward(dec r)
+		{
+		if (r > RANGE_TOP)
+			r = RANGE_TOP
+		
+		if (r < RANGE_BOTTOM)
+			r = RANGE_BOTTOM
+		
+		return r / RANGE_TOP
+		}
+	
+	bool UnitTest:runTest()
+		{
+		File fd = new File("ext-files/rl_test_data.txt", File.FILE_ACCESS_READ)
+		Row rows[] = encoder.jsonToArray(fd.read(fd.getSize()), typeof(Row[]), null)
+		
+		String actions[]
+		for (int i = 0; i < rows[0].values.arrayLength; i++)
+			actions = new String[](actions, new String("a" + i))
+		
+		ucb.setActions(actions)
+		
+		int distribution[] = new int[rows[0].values.arrayLength]
+		
+		for (int i = 0; i < rows.arrayLength; i++)
+			{
+			int a = ucb.getAction()
+			ucb.consumeData(normaliseReward(rows[i].values[a]))
+			
+			distribution[a] ++
+			}
+		
+		//out.println("distributions: $(iu.intToString(distribution[0])) $(iu.intToString(distribution[1])) $(iu.intToString(distribution[2]))")
+		
+		if (distribution[0] != 134 || distribution[1] != 29 || distribution[2] != 43)
+			throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

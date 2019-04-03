@@ -26,8 +26,88 @@ interface MathLib {
 	}
 
 component provides util.Math requires native MathLib lib, io.Output out, data.DecUtil decUtil {
+
+	dec Math:floor(dec val)
+		{
+		char k[] = clone decUtil.decToString(val)
+		
+		if (val >= 0.0)
+			{
+			bool dotOn = false
+			for (int i = 0; i < k.arrayLength; i++)
+				{
+				if (dotOn)
+					k[i] = "0"
+				
+				if (k[i] == ".")
+					dotOn = true
+				}
+			
+			return decUtil.decFromString(k)
+			}
+			else
+			{
+			bool higher = false
+			bool dotOn = false
+			for (int i = 0; i < k.arrayLength; i++)
+				{
+				if (dotOn)
+					{
+					if (k[i] != "0") higher = true
+					k[i] = "0"
+					}
+				
+				if (k[i] == ".")
+					dotOn = true
+				}
+			
+			dec res = decUtil.decFromString(k)
+			if (higher) res -= 1.0
+			return res
+			}
+		}
 	
-	//NOTE: the below functions are all implemented using the C math library via double types
+	dec Math:ceil(dec val)
+		{
+		char k[] = clone decUtil.decToString(val)
+		
+		if (val >= 0.0)
+			{
+			bool dotOn = false
+			bool higher = false
+			for (int i = 0; i < k.arrayLength; i++)
+				{
+				if (dotOn)
+					{
+					if (k[i] != "0") higher = true
+					k[i] = "0"
+					}
+				
+				if (k[i] == ".")
+					dotOn = true
+				}
+			
+			dec res = decUtil.decFromString(k)
+			if (higher) res += 1.0
+			return res
+			}
+			else
+			{
+			bool dotOn = false
+			for (int i = 0; i < k.arrayLength; i++)
+				{
+				if (dotOn)
+					k[i] = "0"
+				
+				if (k[i] == ".")
+					dotOn = true
+				}
+			
+			return decUtil.decFromString(k)
+			}
+		}
+	
+	//NOTE: the below functions are all implemented using the C math library via double types, with associated precision differences
 	
 	dec Math:sqrt(dec n)
 		{

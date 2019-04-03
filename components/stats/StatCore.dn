@@ -1,0 +1,315 @@
+component provides StatCore requires util.Math math {
+	
+	dec StatCore:mean(dec values[])
+		{
+		dec total
+		
+		for (int i = 0; i < values.arrayLength; i++)
+			{
+			total += values[i]
+			}
+		
+		return total / values.arrayLength
+		}
+	
+	dec StatCore:gmean(dec values[])
+		{
+		dec total = values[0]
+		dec len = values.arrayLength
+		
+		for (int i = 1; i < values.arrayLength; i++)
+			{
+			total = total * values[i]
+			}
+		
+		return math.rootn(total, len)
+		}
+	
+	dec StatCore:hmean(dec values[])
+		{
+		dec total
+		dec len = values.arrayLength
+		
+		for (int i = 0; i < values.arrayLength; i++)
+			{
+			total += (1.0 / values[i])
+			}
+		
+		return len / total
+		}
+	
+	dec StatCore:pmean(dec values[], dec p)
+		{
+		dec total
+		dec len = values.arrayLength
+		
+		for (int i = 0; i < values.arrayLength; i++)
+			{
+			total += math.power(values[i], p)
+			}
+		
+		total = total / len
+		
+		return math.rootn(total, p)
+		}
+	
+	dec[] sort(dec values[])
+		{
+		//a basic bubble sort...
+		
+		values = clone values
+		
+		bool swap = true
+		
+		while (swap)
+			{
+			swap = false
+			
+			for (int i = 0; i < values.arrayLength - 1; i++)
+				{
+				if (values[i] > values[i+1])
+					{
+					dec tmp = values[i]
+					
+					values[i] = values[i+1]
+					values[i+1] = tmp
+					
+					swap = true
+					}
+				}
+			}
+		
+		return values
+		}
+	
+	dec StatCore:median(dec values[])
+		{
+		values = sort(values)
+		
+		if (values.arrayLength % 2 == 0)
+			{
+			//even number of values - return the average of the middle two
+			int mid = values.arrayLength / 2
+			return (values[mid-1] + values[mid]) / 2.0
+			}
+			else
+			{
+			//odd number of values - return the middle one
+			int mid = values.arrayLength / 2
+			return values[mid]
+			}
+		}
+	
+	dec StatCore:min(dec values[])
+		{
+		dec mv = values[0]
+		for (int i = 1; i < values.arrayLength; i++)
+			{
+			if (values[i] < mv)
+				mv = values[i]
+			}
+		
+		return mv
+		}
+	
+	dec StatCore:max(dec values[])
+		{
+		dec mv = values[0]
+		for (int i = 1; i < values.arrayLength; i++)
+			{
+			if (values[i] > mv)
+				mv = values[i]
+			}
+		
+		return mv
+		}
+	
+	dec dist(dec a, dec b)
+		{
+		if (a > b)
+			return a - b
+			else
+			return b - a
+		}
+	
+	dec square(dec a)
+		{
+		return a * a
+		}
+	
+	dec StatCore:variance(dec values[])
+		{
+		dec avg = mean(values)
+		
+		dec total
+		
+		for (int i = 0; i < values.arrayLength; i++)
+			{
+			total += square(dist(values[i], avg))
+			}
+		
+		return total / values.arrayLength
+		}
+	
+	dec StatCore:stdDev(dec values[])
+		{
+		return math.sqrt(variance(values))
+		}
+	
+	dec StatCore:stdErr(dec values[])
+		{
+		dec len = values.arrayLength
+		
+		return stdDev(values) / math.rootn(len, 2.0)
+		}
+	
+	dec StatCore:covariance(dec x[], dec y[])
+		{
+		if (x.arrayLength != y.arrayLength)
+			throw new Exception("input arrays must be of equal length for valid covariance calculation")
+		
+		dec mx = mean(x)
+		dec my = mean(y)
+		
+		dec total
+		
+		for (int i = 0; i < x.arrayLength; i++)
+			{
+			total += ((x[i] - mx) * (y[i] - my))
+			}
+		
+		return total / (x.arrayLength-1)
+		}
+	
+	dec corrStdDev(dec values[])
+		{
+		dec avg = mean(values)
+		
+		dec total
+		
+		for (int i = 0; i < values.arrayLength; i++)
+			{
+			total += square(dist(values[i], avg))
+			}
+		
+		return math.sqrt(total / (values.arrayLength-1))
+		}
+	
+	dec StatCore:pearsoncc(dec x[], dec y[])
+		{
+		if (x.arrayLength != y.arrayLength)
+			throw new Exception("input arrays must be of equal length for valid coefficient calculation")
+		
+		return covariance(x, y) / (corrStdDev(x) * corrStdDev(y))
+		}
+	
+	dec median_in(dec values[], int start, int len)
+		{
+		if (len % 2 == 0)
+			{
+			//even number of values - return the average of the middle two
+			int mid = len / 2
+			return (values[start+(mid-1)] + values[start+mid]) / 2.0
+			}
+			else
+			{
+			//odd number of values - return the middle one
+			int mid = len / 2
+			return values[start+(mid)]
+			}
+		}
+	
+	//five number summary (useful for generating box and whisker plots)
+	// - the result is (min, Q1, Q2, Q3, max) where Q2 is the same as median
+	dec[] StatCore:fiveNum(dec values[])
+		{
+		//TODO: what do we do if values[] has fewer than 4 samples?
+		
+		//sort the numbers to find the midpoint
+		values = sort(values)
+		
+		bool even = values.arrayLength % 2 == 0
+		
+		int mid = values.arrayLength / 2
+		
+		dec median = median_in(values, 0, values.arrayLength)
+		dec start = values[0]
+		dec end = values[values.arrayLength-1]
+		
+		//find the median of the two halves left/right of the midpoint
+		// - we exclude the middle value for median_in if it's an odd length, otherwise split the array in two even halves
+		
+		dec q1
+		dec q3
+		
+		q1 = median_in(values, 0, mid)
+		
+		if (!even)
+			q3 = median_in(values, mid+1, values.arrayLength-(mid+1))
+			else
+			q3 = median_in(values, mid, values.arrayLength-mid)
+		
+		return new dec[](start, q1, median, q3, end)
+		}
+	
+	dec StatCore:interquartileRange(dec values[])
+		{
+		dec num[] = fiveNum(values)
+		
+		return num[3] - num[1]
+		}
+	
+	dec floor(dec v)
+		{
+		int n = v
+		dec o = n
+		
+		return o
+		}
+	
+	dec getFraction(dec v)
+		{
+		return v - floor(v)
+		}
+	
+	dec[] StatCore:getPercentiles(dec values[], dec percentiles[])
+		{
+		//NOTE: this function will NOT return the same thing as fiveNum when values[] is of odd length
+		// - it does NOT therefore return correct quartiles as used in a IQR, regardless of interpolation method
+		// - by comparison, IQR uses recursive splitting of the data by the median, which for odd array lengths would remove the median value
+		
+		dec len = values.arrayLength
+		dec result[] = new dec[percentiles.arrayLength]
+		
+		values = sort(values)
+		
+		for (int i = 0; i < percentiles.arrayLength; i++)
+			{
+			dec newVal = 0.0
+			
+			if (percentiles[i] < 0.0 || percentiles[i] > 100.0)
+				throw new Exception("percentiles must be in the range 0..100")
+			
+			//resolve the given percentile to an array index, plus a "distance" between the two array indexes if it's not an exact index
+			// - then either return the exact index value, or interpolate if it's between two
+			// - there are a couple ways we could do interpolation, for example always take the midpoint as an average, or use a linear interpolation relative to the distance between the two
+			// - this version uses the midpoint approach (other approaches are linear, nearest, lower, higher)...
+			
+			dec indexPercent = (len - 1) * (0.01 * percentiles[i])
+			dec indexFraction = getFraction(indexPercent)
+			
+			int indexInt = indexPercent
+			
+			newVal = values[indexInt]
+			
+			//lock fraction to midpoint (this is one interpolation option; we can leave indexFraction as-is for linear interpolation)
+			if (indexFraction != 0) indexFraction = 0.5
+			if (indexInt+1 < values.arrayLength) newVal += (values[indexInt+1] - values[indexInt]) * indexFraction
+			
+			result[i] = newVal
+			}
+		
+		return result
+		}
+	
+	}

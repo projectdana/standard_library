@@ -1,0 +1,132 @@
+/*
+ {"description" : "A collection of basic statistical functions."
+	}
+*/
+
+interface StatCore {
+	
+	/*
+	 {"@description" : "Returns the smallest value in the input array.",
+	 	"values" : "Array from which to locate the value.",
+	 	"@return" : "The smallest value."
+		}
+	*/
+	dec min(dec values[])
+	
+	/*
+	 {"@description" : "Returns the largest value in the input array.",
+	 	"values" : "Array from which to locate the value.",
+	 	"@return" : "The largest value."
+		}
+	*/
+	dec max(dec values[])
+	
+	/*
+	 {"@description" : "Returns the arithmetic mean of the values in the input array.",
+	 	"values" : "Array from which to calculate the mean.",
+	 	"@return" : "The arithmetic mean."
+		}
+	*/
+	dec mean(dec values[])
+	
+	/*
+	 {"@description" : "Returns the geometric mean of the values in the input array.",
+	 	"values" : "Array from which to calculate the mean.",
+	 	"@return" : "The geometric mean."
+		}
+	*/
+	dec gmean(dec values[])
+	
+	/*
+	 {"@description" : "Returns the harmonic mean of the values in the input array.",
+	 	"values" : "Array from which to calculate the mean.",
+	 	"@return" : "The harmonic mean."
+		}
+	*/
+	dec hmean(dec values[])
+	
+	/*
+	 {"@description" : "Returns the power (or generalised) mean of the values in the input array.",
+	 	"values" : "Array from which to calculate the mean.",
+		"p" : "The power to use for each value, and the root to use for the final average.",
+	 	"@return" : "The power mean."
+		}
+	*/
+	dec pmean(dec values[], dec p)
+	
+	/*
+	 {"@description" : "Returns the median of the values in the input array. For an array with an odd number of values, this is the middle value; otherwise it's the arithmetic mean of the middle two values.",
+	 	"values" : "Array from which to calculate the median.",
+	 	"@return" : "The median."
+		}
+	*/
+	dec median(dec values[])
+	
+	/*
+	 {"@description" : "Returns the standard deviation of the values in the input array.",
+	 	"values" : "Array from which to calculate the standard deviation.",
+	 	"@return" : "The standard deviation."
+		}
+	*/
+	dec stdDev(dec values[])
+	
+	/*
+	 {"@description" : "Returns the standard error of the values in the input array.",
+	 	"values" : "Array from which to calculate the standard error.",
+	 	"@return" : "The standard error."
+		}
+	*/
+	dec stdErr(dec values[])
+	
+	/*
+	 {"@description" : "Returns the variance of the values in the input array.",
+	 	"values" : "Array from which to calculate the variance.",
+	 	"@return" : "The variance."
+		}
+	*/
+	dec variance(dec values[])
+	
+	/*
+	 {"@description" : "Returns the covariance of the two sets of input values, which must be arrays of equal length.",
+	 	"x" : "The first set of values.",
+		"y" : "The second set of values.",
+	 	"@return" : "The covariance between the values in x and y."
+		}
+	*/
+	dec covariance(dec x[], dec y[])
+	
+	/*
+	 {"@description" : "Returns the Pearson correlation coefficient (a number between -1.0 and 1.0 inclusive) of the two sets of input values, which must be arrays of equal length.",
+	 	"x" : "The first set of values.",
+		"y" : "The second set of values.",
+	 	"@return" : "The Pearson correlation coefficient between the values in x and y."
+		}
+	*/
+	dec pearsoncc(dec x[], dec y[])
+	
+	/*
+	 {"@description" : "Returns the five number summary of the values in the input array, also known as the quartiles and median. The quartiles are calculated using recursive application of a median operation. Q2 is equivalent to the overall median, and causes the array to be divided into two halves, above and below the median. The two halves then have a median calculated, which become Q1 and Q3. Min and max are equivalent to the values returned by the min() and max() functions in this interface.",
+	 	"values" : "Array from which to calculate the summary.",
+	 	"@return" : "An array with [min, Q1, Q2, Q3, max]."
+		}
+	*/
+	dec[] fiveNum(dec values[])
+	
+	/*
+	 {"@description" : "This is a utility function which is equivalent to the calculation Q3-Q1 using the result from fiveNum().",
+	 	"values" : "Array from which to calculate the IQR.",
+	 	"@return" : "The interquartile range."
+		}
+	*/
+	dec interquartileRange(dec values[])
+	
+	/*
+	 {"@description" : "Returns the requested percentiles of the values in the first input parameter. Midpoint interpolation is used if the percentiles do not exactly map to a number in the values array. Note that requesting the 0, 25, 50, 75 and 100 percentiles is a slightly different calculation to that used by fiveNum() because getPercentiles() does not split the array around the median (specifically, the 25 and 75 percentiles will be different to fiveNum()'s Q1 and Q3 if the input values array is of odd length).",
+	 	"values" : "Array from which to calculate the percentiles.",
+		"percentiles" : "The percentiles to calculate, in the range 0..100, where 10.0 is taken to mean ten percent.",
+	 	"@return" : "The requested percentiles."
+		}
+	*/
+	dec[] getPercentiles(dec values[], dec percentiles[])
+	
+	}

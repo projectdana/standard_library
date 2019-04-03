@@ -117,6 +117,14 @@ body{
 	background-color: #EEE;
 }
 
+.doc_semantic_text{
+	font-weight: bold;
+}
+
+.doc_semantic_line{
+	background-color: #FFE;
+}
+
 .doc_function_description{
 	margin-top: 10px;
 	margin-bottom: 30px;

@@ -170,37 +170,43 @@ component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONPar
 		
 		JSONElement metrics = parser.getValue(doc, "metrics")
 		
-		for (int i = 0; i < metrics.children.arrayLength; i++)
+		if (metrics != null)
 			{
-			JSONElement jmetric = metrics.children[i]
-			
-			Metric metric = new Metric()
-			metric.name = parser.getValue(jmetric, "name").value
-			metric.sourceComponent = parser.getValue(jmetric, "source").value
-			metric.totalValue = iu.intFromString(parser.getValue(jmetric, "value").value)
-			metric.totalCount = iu.intFromString(parser.getValue(jmetric, "count").value)
-			metric.preferHigh = parser.getValue(jmetric, "preferHigh").value == "true"
-			metric.timeFirst = dateFromString(parser.getValue(jmetric, "startTime").value)
-			metric.timeLast = dateFromString(parser.getValue(jmetric, "endTime").value)
-			
-			pd.metrics = new Metric[](pd.metrics, metric)
+			for (int i = 0; i < metrics.children.arrayLength; i++)
+				{
+				JSONElement jmetric = metrics.children[i]
+				
+				Metric metric = new Metric()
+				metric.name = parser.getValue(jmetric, "name").value
+				metric.sourceComponent = parser.getValue(jmetric, "source").value
+				metric.totalValue = iu.intFromString(parser.getValue(jmetric, "value").value)
+				metric.totalCount = iu.intFromString(parser.getValue(jmetric, "count").value)
+				metric.preferHigh = parser.getValue(jmetric, "preferHigh").value == "true"
+				metric.timeFirst = dateFromString(parser.getValue(jmetric, "startTime").value)
+				metric.timeLast = dateFromString(parser.getValue(jmetric, "endTime").value)
+				
+				pd.metrics = new Metric[](pd.metrics, metric)
+				}
 			}
 		
 		JSONElement events = parser.getValue(doc, "events")
 		
-		for (int i = 0; i < events.children.arrayLength; i++)
+		if (events != null)
 			{
-			JSONElement jevent = events.children[i]
-			
-			Event e = new Event()
-			e.name = parser.getValue(jevent, "name").value
-			e.sourceComponent = parser.getValue(jevent, "source").value
-			e.totalValue = iu.intFromString(parser.getValue(jevent, "value").value)
-			e.totalCount = iu.intFromString(parser.getValue(jevent, "count").value)
-			e.timeFirst = dateFromString(parser.getValue(jevent, "startTime").value)
-			e.timeLast = dateFromString(parser.getValue(jevent, "endTime").value)
-			
-			pd.events = new Event[](pd.events, e)
+			for (int i = 0; i < events.children.arrayLength; i++)
+				{
+				JSONElement jevent = events.children[i]
+				
+				Event e = new Event()
+				e.name = parser.getValue(jevent, "name").value
+				e.sourceComponent = parser.getValue(jevent, "source").value
+				e.totalValue = iu.intFromString(parser.getValue(jevent, "value").value)
+				e.totalCount = iu.intFromString(parser.getValue(jevent, "count").value)
+				e.timeFirst = dateFromString(parser.getValue(jevent, "startTime").value)
+				e.timeLast = dateFromString(parser.getValue(jevent, "endTime").value)
+				
+				pd.events = new Event[](pd.events, e)
+				}
 			}
 		
 		return pd

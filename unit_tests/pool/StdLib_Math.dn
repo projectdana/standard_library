@@ -6,6 +6,18 @@ component provides UnitTest requires util.Math math, io.Output out {
 		
 		if (rd != 4.0) throw new Exception("Failure in test 1")
 		
+		if (math.floor(1.9) != 1.0) throw new Exception("Failure in test 2")
+		
+		if (math.ceil(1.9) != 2.0) throw new Exception("Failure in test 3")
+		
+		if (math.floor(-1.9) != -2.0) throw new Exception("Failure in test 4")
+		
+		if (math.ceil(-1.9) != -1.0) throw new Exception("Failure in test 5")
+		
+		if (math.floor(0.0) != 0.0) throw new Exception("Failure in test 6")
+		
+		if (math.ceil(0.0) != 0.0) throw new Exception("Failure in test 7")
+		
 		return true
 		}
 	

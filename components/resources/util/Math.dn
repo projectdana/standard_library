@@ -3,6 +3,17 @@
 */
 
 interface Math {
+	
+	/*
+	 {"@description" : "Returns the largest integer that is not larger than val."}
+	*/
+	dec floor(dec val)
+	
+	/*
+	 {"@description" : "Returns the smallest integer that is not smaller than val."}
+	*/
+	dec ceil(dec val)
+	
 	/*
 	 {"@description" : "Returns the square root of a decimal value."}
 	*/

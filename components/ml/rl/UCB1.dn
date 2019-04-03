@@ -27,6 +27,8 @@ component provides RL requires io.Output out, data.IntUtil iu, data.DecUtil du, 
 		//TODO: if "actions" is not null we need to re-map all rewards and counts for all states based on the incoming list compared against the existing action list
 		
 		actions = actionList
+		learningData.rewards = new dec[actionList.arrayLength]
+		learningData.counts = new dec[actionList.arrayLength]
 		}
 	
 	void updateTable(dec reward, int action)
@@ -75,6 +77,7 @@ component provides RL requires io.Output out, data.IntUtil iu, data.DecUtil du, 
 	void RL:consumeData(dec reward)
 		{
 		//compute the next action to take for currentState, based on reward and confidence
+		learningData.totalCount = learningData.totalCount + 1.0
 		updateTable(reward, currentAction)
 		currentAction = selectAction()
 		}
