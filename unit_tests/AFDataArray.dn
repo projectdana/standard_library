@@ -1,0 +1,8 @@
+component provides AFDataArray {
+	
+	char[] AFDataArray:afunction(Data v[])
+		{
+		return "Lovelace"
+		}
+	
+	}

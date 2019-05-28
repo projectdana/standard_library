@@ -89,7 +89,7 @@ component provides App requires io.Output out, data.IntUtil iu, net.TCPSocket, n
 		
 		NetworkEndpoint ne = s.getRemoteEndpoint()
 		
-		out.println("client address: $(ne.address):$(iu.intToString(ne.port))")
+		out.println("client address: $(ne.address):$(ne.port)")
 		
 		char cmd[] = getParam(command, 0)
 		char resource[] = getParam(command, 1)
@@ -112,7 +112,7 @@ component provides App requires io.Output out, data.IntUtil iu, net.TCPSocket, n
 				s.send("HTTP/1.0 200 OK\r\n")
 				s.send("Server: $server_name\r\n")
 				s.send("Content-Type: $mt\r\n")
-				s.send("Content-Length: $(iu.intToString(fd.getSize()))\r\n")
+				s.send("Content-Length: $(fd.getSize())\r\n")
 				s.send("Content-Encoding: binary\r\n")
 				s.send("Connection: close\r\n")
 				s.send("\r\n")

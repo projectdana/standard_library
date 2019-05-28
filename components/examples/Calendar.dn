@@ -4,7 +4,7 @@ component provides App requires io.Output out, data.IntUtil iu, time.Calendar ic
 		{
 		DateTime t = ic.getTime()
 		
-		out.println("date/time: $(iu.intToString(t.year))-$(iu.intToString(t.month))-$(iu.intToString(t.day)) $(iu.intToString(t.hour)):$(iu.intToString(t.minute)):$(iu.intToString(t.second)).$(iu.intToString(t.millisecond))")
+		out.println("date/time: $(t.year)-$(t.month)-$(t.day) $(t.hour):$(t.minute):$(t.second).$(t.millisecond)")
 		
 		return 0
 		}

@@ -391,7 +391,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		
 		for (int i = 0; i < cb.bindings.arrayLength; i++)
 			{
-			result = new char[](result, cb.bindings[i].wiringName, ":", iu.intToString(cb.bindings[i].fromIndex), ":", iu.intToString(cb.bindings[i].toIndex))
+			result = new char[](result, cb.bindings[i].wiringName, ":", iu.makeString(cb.bindings[i].fromIndex), ":", iu.makeString(cb.bindings[i].toIndex))
 			
 			if (i + 1 < cb.bindings.arrayLength) result = new char[](result, ",")
 			}

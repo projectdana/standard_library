@@ -59,7 +59,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		
 		socket.send("HTTP/1.0 200 OK\r\n")
 		socket.send("Server: PAL\r\n")
-		socket.send("Content-length: $(iu.intToString(len))\r\n")
+		socket.send("Content-length: $len\r\n")
 		socket.send("Content-type: $contentType\r\n")
 		socket.send("Connection: close\r\n")
 		socket.send("\r\n")
@@ -73,7 +73,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		
 		socket.send("HTTP/1.0 500 Internal server error\r\n")
 		socket.send("Server: PAL\r\n")
-		socket.send("Content-length: $(iu.intToString(len))\r\n")
+		socket.send("Content-length: $len\r\n")
 		socket.send("Content-type: $contentType\r\n")
 		socket.send("Connection: close\r\n")
 		socket.send("\r\n")
@@ -85,16 +85,16 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		{
 		char year[] = iu.intToString(dt.year)
 		while (year.arrayLength < 4) year = new char[]("0", year)
-		char month[] = iu.intToString(dt.month)
+		char month[] = iu.makeString(dt.month)
 		if (month.arrayLength < 2) month = new char[]("0", month)
-		char day[] = iu.intToString(dt.day)
+		char day[] = iu.makeString(dt.day)
 		if (day.arrayLength < 2) day = new char[]("0", day)
 		
-		char hour[] = iu.intToString(dt.hour)
+		char hour[] = iu.makeString(dt.hour)
 		if (hour.arrayLength < 2) hour = new char[]("0", hour)
-		char minute[] = iu.intToString(dt.minute)
+		char minute[] = iu.makeString(dt.minute)
 		if (minute.arrayLength < 2) minute = new char[]("0", minute)
-		char second[] = iu.intToString(dt.second)
+		char second[] = iu.makeString(dt.second)
 		if (second.arrayLength < 2) second = new char[]("0", second)
 		
 		return "$year-$month-$day $hour:$minute:$second"
@@ -113,7 +113,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				
 				if (pd.metrics[i].preferHigh) preferHigh = "true"
 				
-				content = new char[](content, "{\"name\" : \"$(pd.metrics[i].name)\", \"source\" : \"$(pd.metrics[i].sourceComponent)\", \"value\" : $(iu.intToString(pd.metrics[i].totalValue)), \"count\" : $(iu.intToString(pd.metrics[i].totalCount)), \"preferHigh\" : $preferHigh, \"startTime\" : \"$(dateToString(pd.metrics[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.metrics[i].timeLast))\"}")
+				content = new char[](content, "{\"name\" : \"$(pd.metrics[i].name)\", \"source\" : \"$(pd.metrics[i].sourceComponent)\", \"value\" : $(iu.intToString(pd.metrics[i].totalValue)), \"count\" : $(iu.makeString(pd.metrics[i].totalCount)), \"preferHigh\" : $preferHigh, \"startTime\" : \"$(dateToString(pd.metrics[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.metrics[i].timeLast))\"}")
 				if (i + 1 < pd.metrics.arrayLength) content = new char[](content, ",")
 				}
 			content = new char[](content, "], ")
@@ -121,7 +121,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			content = new char[](content, "\"events\" : [")
 			for (int i = 0; i < pd.events.arrayLength; i++)
 				{
-				content = new char[](content, "{\"name\" : \"$(pd.events[i].name)\", \"source\" : \"$(pd.events[i].sourceComponent)\", \"value\" : $(iu.intToString(pd.events[i].totalValue)), \"count\" : $(iu.intToString(pd.events[i].totalCount)), \"startTime\" : \"$(dateToString(pd.events[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.events[i].timeLast))\"}")
+				content = new char[](content, "{\"name\" : \"$(pd.events[i].name)\", \"source\" : \"$(pd.events[i].sourceComponent)\", \"value\" : $(iu.intToString(pd.events[i].totalValue)), \"count\" : $(iu.makeString(pd.events[i].totalCount)), \"startTime\" : \"$(dateToString(pd.events[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.events[i].timeLast))\"}")
 				if (i + 1 < pd.events.arrayLength) content = new char[](content, ",")
 				}
 			content = new char[](content, "]")
@@ -284,7 +284,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		
 		if (server.bind(TCPServerSocket.ANY_ADDRESS, HOST_POST))
 			{
-			out.println("[REST service started, visit http://localhost:$(iu.intToString(HOST_POST))/meta/ for API details]")
+			out.println("[REST service started, visit http://localhost:$HOST_POST/meta/ for API details]")
 			
 			while (running)
 				{

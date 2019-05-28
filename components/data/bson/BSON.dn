@@ -292,7 +292,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
       for(int i = 0; i < element.children.arrayLength; i++){
 
-        JSONElement newParent = new JSONElement(element.children[i].type, iu.intToString(i), element.children[i].value, element.children[i].children)
+        JSONElement newParent = new JSONElement(element.children[i].type, iu.makeString(i), element.children[i].value, element.children[i].children)
 
         BSONDocument newChild = digestJSONElement(newParent)
 
@@ -424,9 +424,9 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
         count += 4
 
         if(isInArray)
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_NUMBER, "", iu.intToString(value), new JSONElement()))
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_NUMBER, "", iu.makeString(value), new JSONElement()))
         else
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_NUMBER, name, iu.intToString(value), new JSONElement()))
+          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_NUMBER, name, iu.makeString(value), new JSONElement()))
       }
 
       if(type == BSON_BOOL){

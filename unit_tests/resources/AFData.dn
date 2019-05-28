@@ -1,0 +1,5 @@
+interface AFData {
+	
+	char[] afunction(Data d)
+	
+	}

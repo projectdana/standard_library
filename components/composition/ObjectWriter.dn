@@ -168,12 +168,12 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 			relativePath = getDirectoryOf(relativePath)
 		
 		int tn = 1
-		char path[] = new char[](relativePath, iu.intToString(tn), ".tmp")
+		char path[] = new char[](relativePath, iu.makeString(tn), ".tmp")
 		
 		while (fileSystem.exists(path))
 			{
 			tn ++
-			path = new char[](relativePath, iu.intToString(tn), ".tmp")
+			path = new char[](relativePath, iu.makeString(tn), ".tmp")
 			}
 		
 		return path

@@ -79,7 +79,7 @@ component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONPar
 		{
 		char request[] = "POST $resource HTTP/1.0\r\n"
 		request = new char[](request, "content-type: $contentType\r\n")
-		request = new char[](request, "content-length: $(iu.intToString(content.arrayLength))\r\n")
+		request = new char[](request, "content-length: $(content.arrayLength)\r\n")
 		request = new char[](request, "\r\n")
 		
 		TCPSocket s = new TCPSocket()

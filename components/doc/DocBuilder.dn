@@ -1218,7 +1218,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			/*
 			for (int i = 0; i < tokens.arrayLength; i++)
 				{
-				out.println("<$(iu.intToString(tokens[i].type))>token: $(tokens[i].content)")
+				out.println("<$(iu.makeString(tokens[i].type))>token: $(tokens[i].content)")
 				}
 			*/
 			

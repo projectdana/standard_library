@@ -124,7 +124,7 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 		
 		if (firstWrite)
 			{
-			char hdrLine[] = new char[]("HTTP/1.1 ", intUtil.intToString(code), " ", reason, "\r\n")
+			char hdrLine[] = new char[]("HTTP/1.1 ", intUtil.makeString(code), " ", reason, "\r\n")
 			socket.send(hdrLine)
 			
 			if (autoClose)

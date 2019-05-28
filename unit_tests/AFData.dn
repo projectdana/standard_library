@@ -1,0 +1,8 @@
+component provides AFData {
+	
+	char[] AFData:afunction(Data v)
+		{
+		return "Lamport"
+		}
+	
+	}

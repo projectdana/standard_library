@@ -5,7 +5,7 @@ component provides App requires io.Output out, data.IntUtil iu, time.Timer it {
 		for (int i = 1; i < 5; i++)
 			{
 			it.sleep(1000)
-			out.println("$(iu.intToString(i)) seconds")
+			out.println("$i seconds")
 			}
 		
 		return 0

@@ -299,7 +299,20 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 					
 					for (int j = 0; j < id.functions.arrayLength; j++)
 						{
-						fd.write("<div class = \"doc_function_list_item\">")
+						bool deprecated = false
+						
+						if (id.functions[j].doc_description != null)
+							{
+							JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
+							
+							if (parser.getValue(doc, "@deprecated") != null && parser.getValue(doc, "@deprecated").value == "true")
+								deprecated = true
+							}
+						
+						if (deprecated)
+							fd.write("<div class = \"doc_function_list_item_deprecated\">")
+							else
+							fd.write("<div class = \"doc_function_list_item\">")
 						fd.write(formatFunctionHeader(sf, id.functions[j]))
 						fd.write("</div>")
 						}
@@ -407,7 +420,21 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 					//the list of functions in detail, with parameter descriptions etc.
 					for (int j = 0; j < id.functions.arrayLength; j++)
 						{
-						fd.write("<div class = \"doc_function_description\">")
+						bool deprecated = false
+						
+						if (id.functions[j].doc_description != null)
+							{
+							JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
+							
+							if (parser.getValue(doc, "@deprecated") != null && parser.getValue(doc, "@deprecated").value == "true")
+								deprecated = true
+							}
+						
+						if (deprecated)
+							fd.write("<div class = \"doc_function_description_deprecated\">")
+							else
+							fd.write("<div class = \"doc_function_description\">")
+						
 							fd.write("<div class = \"doc_function_description_heading\">")
 							fd.write(formatFunctionHeader(sf, id.functions[j]))
 							fd.write("</div>")

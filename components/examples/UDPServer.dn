@@ -10,7 +10,7 @@ component provides App requires io.Output out, data.IntUtil iu, net.UDPServer ud
 			Datagram dg = host.recv()
 			
 			out.print("data: $(dg.content)")
-			out.println("from: $(dg.address):$(iu.intToString(dg.port))")
+			out.println("from: $(dg.address):$(dg.port)")
 			}
 		
 		return 0

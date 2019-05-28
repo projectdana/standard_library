@@ -136,7 +136,7 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 		int i = 0
 		for (Role r = roles; r != null; r = r.next)
 			{
-			out.print("[$(iu.intToString(i))]: $(r.name) ($(r.source))")
+			out.print("[$i]: $(r.name) ($(r.source))")
 			
 			if (r.app != null && r.appComplete) out.print(" [finished]")
 			

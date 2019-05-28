@@ -246,7 +246,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	
 	void TextField:keyDown(int keyCode)
 		{
-		//out.println("keycode: $(iu.intToString(keyCode))")
+		//out.println("keycode: $(iu.makeString(keyCode))")
 		
 		//if the ctrl key is being held down we direct the key press to the context menu
 		

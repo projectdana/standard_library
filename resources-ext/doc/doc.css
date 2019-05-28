@@ -46,6 +46,14 @@ body{
 	font-family: monospace;
 }
 
+.doc_function_list_item_deprecated{
+	padding: 2px;
+	margin-top: 4px;
+	margin-bottom: 4px;
+	font-family: monospace;
+	display: none;
+}
+
 .doc_eventsource_list{
 	padding: 2px;
 	background-color: #FEC;
@@ -128,6 +136,13 @@ body{
 .doc_function_description{
 	margin-top: 10px;
 	margin-bottom: 30px;
+}
+
+.doc_function_description_deprecated{
+	margin-top: 10px;
+	margin-bottom: 30px;
+	visibility: hidden;
+	display: none;
 }
 
 .doc_function_description_heading{

@@ -19,49 +19,49 @@ data ClickableItem{
 uses events.EventData
 
 component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu {
-	
+
 	Thread waitThread
-	
+
 	GraphicsItem buffer
 	GraphicsItem bufferEnd
-	
+
 	GraphicsObject contextItem
-	
+
 	ClickableItem clickItems
 	ClickableItem clickItemsEnd
-	
+
 	XYListener mouseListeners
 	XYListener mouseListenersEnd
-	
+
 	Mutex paintLock = new Mutex()
-	
+
 	KeyEventObject keyboardFocus
-	
+
 	XYMouseObject mouseOver
-	
+
 	int mouseX = 0
 	int mouseY = 0
-	
+
 	int currentX = 100
 	int currentY = 80
-	
+
 	int currentWidth = 500
 	int currentHeight = 500
-	
+
 	int platformHandle
-	
+
 	bool isMaximised
 	int restoredWidth
 	int restoredHeight
 	int restoredX
 	int restoredY
-	
+
 	bool fullScreen
-	
+
 	Color borderColor = new Color(190, 190, 200, 255)
-	
+
 	WindowCanvas canvas
-	
+
 	eventsink Events(EventData ed)
 		{
 		if (ed.type == WindowCanvas.[mouseUp])
@@ -106,12 +106,12 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 			emitevent close()
 			}
 		}
-	
+
 	eventsink PaintEvents(EventData ed)
 		{
 		paint(null)
 		}
-	
+
 	eventsink FocusEvents(EventData ed)
 		{
 		if (ed.type == KeyEventObject.[requestFocus])
@@ -133,95 +133,95 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 			postRepaint()
 			}
 		}
-	
+
 	Window:Window(char title[])
 		{
 		canvas = new WindowCanvas()
-		
+
 		canvas.setTitle(title)
-		
+
 		sinkevent Events(canvas)
 		}
-	
+
 	void Window:setVisible(bool b)
 		{
 		canvas.setVisible(b)
 		}
-	
+
 	void Window:setResizable(bool b)
 		{
 		canvas.setResizable(b)
 		}
-	
+
 	void Window:setFullScreen(bool b)
 		{
 		canvas.setFullScreen(b)
 		fullScreen = b
-		
+
 		WH sz = canvas.getResolution()
 		currentWidth = sz.width
 		currentHeight = sz.height
 		}
-	
+
 	void Window:setTitle(char title[])
 		{
 		canvas.setTitle(title)
 		}
-	
+
 	void Window:setIcon(PixelMap p)
 		{
 		canvas.setIcon(p)
 		}
-	
+
 	void Window:close()
 		{
 		canvas.close()
-		
+
 		if (waitThread != null)
 			{
 			waitThread.signal()
 			}
 		}
-	
+
 	void Window:waitForClose()
 		{
 		waitThread = this.thread
 		this.thread.wait()
 		}
-	
+
 	void Window:addObject(GraphicsObject go)
 		{
 		GraphicsItem newItem = new GraphicsItem(go)
-		
+
 		if (buffer == null)
 			buffer = newItem
 			else
 			bufferEnd.next = newItem
-		
+
 		newItem.prev = bufferEnd
 		bufferEnd = newItem
-		
+
 		if (go hastype ClickableObject)
 			{
 			addClickTarget(go)
 			}
-		
+
 		if (go hastype XYMouseObject)
 			{
 			addMouseEventTarget(go)
 			}
-		
+
 		if (go hastype KeyEventObject)
 			{
 			KeyEventObject ko = go
 			sinkevent FocusEvents(ko)
 			}
-		
+
 		sinkevent PaintEvents(go)
-		
+
 		paint(null)
 		}
-	
+
 	void Window:remObject(GraphicsObject go)
 		{
 		for (GraphicsItem bi = buffer; bi != null; bi = bi.next)
@@ -229,55 +229,55 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 			if (bi.object === go)
 				{
 				GraphicsItem td = bi
-				
+
 				stopevent PaintEvents(go)
-				
+
 				if (td.prev == null)
 					buffer = td.next
 					else
 					td.prev.next = td.next
-				
+
 				if (td.next == null)
 					bufferEnd = td.prev
 					else
 					td.next.prev = td.prev
-				
+
 				if (go hastype ClickableObject)
 					remClickTarget(go)
-				
+
 				if (go hastype XYMouseObject)
 					remMouseEventTarget(go)
-				
+
 				break
 				}
 			}
-		
+
 		paint(null)
 		}
-	
+
 	GraphicsObjectItem[] Window:getObjects()
 		{
 		return null
 		}
-	
+
 	void Window:clearObjects()
 		{
-		
+
 		}
-	
+
 	void addClickTarget(ClickableObject co)
 		{
 		ClickableItem nci = new ClickableItem(co)
-		
+
 		if (clickItems == null)
 			clickItems = nci
 			else
 			clickItemsEnd.next = nci
-		
+
 		nci.prev = clickItemsEnd
 		clickItemsEnd = nci
 		}
-	
+
 	void remClickTarget(ClickableObject o)
 		{
 		for (ClickableItem ci = clickItems; ci != null; ci = ci.next)
@@ -285,35 +285,35 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 			if (ci.object === o)
 				{
 				ClickableItem td = ci
-				
+
 				if (td.prev == null)
 					clickItems = td.next
 					else
 					td.prev.next = td.next
-				
+
 				if (td.next == null)
 					clickItemsEnd = td.prev
 					else
 					td.next.prev = td.prev
-				
+
 				break
 				}
 			}
 		}
-	
+
 	void addMouseEventTarget(XYMouseObject m)
 		{
 		XYListener nci = new XYListener(m)
-		
+
 		if (mouseListeners == null)
 			mouseListeners = nci
 			else
 			mouseListenersEnd.next = nci
-		
+
 		nci.prev = mouseListenersEnd
 		mouseListenersEnd = nci
 		}
-	
+
 	void remMouseEventTarget(XYMouseObject m)
 		{
 		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
@@ -321,29 +321,29 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 			if (ci.object === m)
 				{
 				XYListener td = ci
-				
+
 				if (td.prev == null)
 					mouseListeners = td.next
 					else
 					td.prev.next = td.next
-				
+
 				if (td.next == null)
 					mouseListenersEnd = td.prev
 					else
 					td.next.prev = td.prev
-				
+
 				break
 				}
 			}
 		}
-	
+
 	void Window:setPosition(int x, int y)
 		{
 		currentX = x
 		currentY = y
 		canvas.setPosition(x, y)
 		}
-	
+
 	void Window:setSize(int x, int y)
 		{
 		if (!fullScreen)
@@ -358,35 +358,35 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 			currentWidth = sz.width
 			currentHeight = sz.height
 			}
-		
+
 		paint(null)
 		}
-	
+
 	WH Window:getSize()
 		{
 		return new WH(currentWidth, currentHeight)
 		}
-	
+
 	Rect Window:getRect()
 		{
 		return new Rect(currentX, currentY, currentWidth, currentHeight)
 		}
-	
+
 	Point Window:getPosition()
 		{
 		return new Point(currentX, currentY)
 		}
-	
+
 	void Window:setBackground(Color c)
 		{
 		canvas.setBackground(c)
 		}
-	
+
 	Color Window:getBackground()
 		{
 		return null
 		}
-	
+
 	void Window:paint(Canvas c)
 		{
 		mutex(paintLock)
@@ -395,33 +395,33 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 				{
 				bi.object.paint(canvas)
 				}
-			
+
 			canvas.drawRectOutline(new Rect2D(0, 0, currentWidth, currentHeight, borderColor))
-			
+
 			if (contextItem != null)
 				{
 				contextItem.paint(canvas)
 				}
-			
+
 			canvas.paint()
 			}
 		}
-	
+
 	WH Window:getPreferredSize()
 		{
 		return new WH(currentWidth, currentHeight)
 		}
-	
+
 	Rect Window:getBounds()
 		{
 		return new Rect(0, 0, currentWidth, currentHeight)
 		}
-	
+
 	void Window:postRepaint()
 		{
 		paint(null)
 		}
-	
+
 	void changeFocusTo(KeyEventObject ko)
 		{
 		if (keyboardFocus !== ko)
@@ -429,28 +429,28 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 			if (keyboardFocus != null) keyboardFocus.loseFocus()
 			ko.recvFocus()
 			}
-		
+
 		keyboardFocus = ko
 		}
-	
+
 	void Window:click(int x, int y, int button)
 		{
 		if (contextItem != null && contextItem hastype ClickableObject)
 			{
 			ClickableObject ci = contextItem
 			Rect r = ci.getBounds()
-			
+
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
 				ci.click(x - r.x, y - r.y, button)
 				return
 				}
 			}
-		
+
 		for (ClickableItem ci = clickItems; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
-			
+
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
 				if (contextItem != null)
@@ -459,59 +459,59 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 					contextItem = null
 					postRepaint()
 					}
-				
+
 				ci.object.click(x - r.x, y - r.y, button)
-				
+
 				if (ci.object hastype KeyEventObject)
 					{
 					changeFocusTo(ci.object)
 					}
-				
+
 				break
 				}
 			}
 		}
-	
+
 	void Window:mouseDown(int x, int y, int button)
 		{
 		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
-			
+
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				ci.object.mouseDown(x, y, button)
+				ci.object.mouseDown(x - r.x, y - r.y, button)
 				break
 				}
 			}
 		}
-	
+
 	void Window:mouseUp(int x, int y, int button)
 		{
 		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
-			
+
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				ci.object.mouseUp(x, y, button)
+				ci.object.mouseUp(x - r.x, y - r.y, button)
 				break
 				}
 			}
 		}
-	
+
 	void Window:mouseMove(int x, int y)
 		{
 		mouseX = x
 		mouseY = y
-		
+
 		bool overSomething
-		
+
 		if (contextItem != null && contextItem hastype XYMouseObject)
 			{
 			XYMouseObject ci = contextItem
 			Rect r = ci.getBounds()
-			
+
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
 				if (mouseOver !== ci)
@@ -520,29 +520,29 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 						{
 						mouseOver.mouseOut()
 						}
-					
+
 					mouseOver = ci
 					mouseOver.mouseOver()
 					}
-				
+
 				overSomething = true
-				
-				ci.mouseMove(x, y)
+
+				ci.mouseMove(x - r.x, y - r.y)
 				}
-			
+
 			if (!overSomething && mouseOver != null)
 				{
 				mouseOver.mouseOut()
 				mouseOver = null
 				}
-			
+
 			return
 			}
-		
+
 		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
-			
+
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
 				if (mouseOver !== ci.object)
@@ -551,37 +551,37 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 						{
 						mouseOver.mouseOut()
 						}
-					
+
 					mouseOver = ci.object
 					mouseOver.mouseOver()
 					}
-					
+
 				overSomething = true
-				
+
 				ci.object.mouseMove(x, y)
-				
+
 				break
 				}
 			}
-		
+
 		if (!overSomething && mouseOver != null)
 			{
 			mouseOver.mouseOut()
 			mouseOver = null
 			}
 		}
-	
+
 	void Window:keyDown(int keyCode)
 		{
 		//get the "keyboard focus" item, if any, and dispatch a key event to it
 		// (note this might be a panel, which in turn has a sub-item with keyboard focus)
-		
+
 		if (keyboardFocus != null)
 			{
 			keyboardFocus.keyDown(keyCode)
 			}
 		}
-	
+
 	void Window:keyUp(int keyCode)
 		{
 		if (keyboardFocus != null)
@@ -589,19 +589,19 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 			keyboardFocus.keyUp(keyCode)
 			}
 		}
-	
+
 	void Window:setFocus()
 		{
 		}
-	
+
 	void Window:recvFocus()
 		{
-		
+
 		}
-	
+
 	void Window:loseFocus()
 		{
-		
+
 		}
-	
+
 	}

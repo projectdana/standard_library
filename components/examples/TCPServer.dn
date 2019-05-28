@@ -10,8 +10,8 @@ component provides App requires io.Output out, net.TCPSocket, net.TCPServerSocke
 		while ((buf = s.recv(64)).arrayLength > 0)
 			out.print("$buf")
 		
-		out.println("remote: $(remoteEP.address)::$(iu.intToString(remoteEP.port))")
-		out.println("local: $(localEP.address)::$(iu.intToString(localEP.port))")
+		out.println("remote: $(remoteEP.address)::$(remoteEP.port)")
+		out.println("local: $(localEP.address)::$(localEP.port)")
 		
 		s.disconnect()
 		}

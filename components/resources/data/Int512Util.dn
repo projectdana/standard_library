@@ -1,0 +1,16 @@
+/*
+ {"description" : "Convert between integers and strings."}
+*/
+
+interface Int512Util{
+	
+	/*
+	 {"@description" : "Convert an integer to a string."}
+	*/
+	char[] makeString(int512 i)
+	
+	/*
+	 {"@description" : "Convert a string to a big integer."}
+	*/
+	int512 int512FromString(char s[])
+	}

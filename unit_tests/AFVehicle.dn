@@ -1,0 +1,8 @@
+component provides AFVehicle {
+	
+	char[] AFVehicle:avfunction(Vehicle v)
+		{
+		return "Hopper"
+		}
+	
+	}

@@ -252,7 +252,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
     if (client.connect(HOSTIP, HOSTPORT))
       return true
     else
-      throw new Exception("No database instance is running at: $(HOSTIP):$(iu.intToString(HOSTPORT))")
+      throw new Exception("No database instance is running at: $HOSTIP:$HOSTPORT")
   }
 
   void disconnect(){

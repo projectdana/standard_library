@@ -1,0 +1,9 @@
+data Vehicle {
+	int wheels
+	}
+
+interface AFVehicle {
+	
+	char[] avfunction(Vehicle d)
+	
+	}
