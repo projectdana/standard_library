@@ -1,0 +1,66 @@
+data VersionData {
+	int number
+	char date[]
+}
+
+data UpdateStatus {
+	char lastCheck[]
+	char lastReminder[]
+	}
+
+component provides App requires io.Output out, data.IntUtil iu, System sys, net.http.HTTPRequest req, data.json.JSONEncoder encoder, os.SystemInfo osi, io.FileSystem fileSystem, io.File, time.Calendar cal {
+
+	int App:main(AppParam params[])
+		{
+		// -- check for a new version --
+		
+		HTTPResponse r = req.get("http://www.projectdana.com/dana/version", null)
+
+		if (r == null)
+			{
+			out.println("[failed to connect to server]")
+			return 1
+			}
+
+		if (r.responseCode != "200")
+			{
+			out.println("[failed to connect to server (HTTP error $(r.responseCode))]")
+			return 1
+			}
+
+		VersionData vd = encoder.jsonToData(r.content, typeof(VersionData), null)
+
+		if (vd == null)
+			{
+			out.println("[response format mismatch from server; please check manually for a new version at http://www.projectdana.com]")
+			return 1
+			}
+
+		if (vd.number != sys.getVersion().intFromString())
+			{
+			out.println("New version available: $(vd.number)")
+			out.println("Release date: $(vd.date)")
+			out.println("Visit http://www.projectdana.com to download for your platform")
+			}
+			else
+			{
+			out.println("[your version of Dana is up to date]")
+			}
+		
+		// -- update status on when the most recent check was made --
+		
+		DateTime today = cal.getTime()
+		UpdateStatus ustatus = new UpdateStatus("$(today.year)/$(today.month)/$(today.day)", "$(today.year)/$(today.month)/$(today.day)")
+		
+		char home[] = osi.getVariable("DANA_HOME")
+		if (!fileSystem.exists("$home/resources-ext/update/"))
+			fileSystem.createDirectory("$home/resources-ext/update/")
+		
+		File fd = new File("$home/resources-ext/update/status.json", File.CREATE)
+		fd.write(encoder.jsonFromData(ustatus, null))
+		fd.close()
+
+		return 0
+		}
+
+}

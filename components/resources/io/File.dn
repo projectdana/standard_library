@@ -3,18 +3,39 @@
 */
 
 interface File{
+	
 	/*
-	 {"@description" : "Flag to open a file in read mode. The file will not be opened if it does not exists."}
+	 {"@description" : "Flag to open a file in read mode, with the read head positioned at the start of the file. The file will not be opened if it does not exist."}
+	*/
+	const int READ = 0
+	
+	/*
+	 {"@description" : "Synonym for READ, for backwards compatibility.", "@deprecated" : true}
 	*/
 	const int FILE_ACCESS_READ = 0
 	
 	/*
-	 {"@description" : "Flag to open a file in write-append mode. The file will be created if it does not exist; if it does exist its contents will be unchanged by the act of opening the file."}
+	 {"@description" : "Flag to open a file in write-append mode, with the read/write head positioned at the start of the file. The file will be created if it does not exist; if it does exist its contents will be unchanged by the act of opening the file."}
+	*/
+	const int WRITE = 1
+	
+	/*
+	 {"@description" : "Synonym for WRITE, for backwards compatibility.", "@deprecated" : true}
 	*/
 	const int FILE_ACCESS_WRITE = 1
 	
 	/*
-	 {"@description" : "Open a file in a chosen mode, using one of FILE_ACCESS_READ or FILE_ACCESS_WRITE."}
+	 {"@description" : "Flag to open a file in write mode. The file will be created if it does not exist; if it does exist its contents will be erased."}
+	*/
+	const int CREATE = 2
+	
+	/*
+	 {"@description" : "Synonym for CREATE, for backwards compatibility.", "@deprecated" : true}
+	*/
+	const int FILE_CREATE = 2
+	
+	/*
+	 {"@description" : "Open a file in a chosen mode, one of the file mode constants such as READ or WRITE."}
 	*/
 	File(char fn[], byte accessType)
 	

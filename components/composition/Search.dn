@@ -4,7 +4,7 @@ component provides Search requires data.StringUtil stringUtil, io.FileSystem fil
 	
 	bool Search:isDanaComponent(char path[])
 		{
-		File fd = new File(path, File.FILE_ACCESS_READ)
+		File fd = new File(path, File.READ)
 		
 		if (fd != null)
 			{
@@ -186,7 +186,7 @@ component provides Search requires data.StringUtil stringUtil, io.FileSystem fil
 		if (fileSystem.exists(path))
 			{
 			//parse the file into JSON
-			File fd = new File(path, File.FILE_ACCESS_READ)
+			File fd = new File(path, File.READ)
 			char buf[] = fd.read(fd.getSize())
 			fd.close()
 			

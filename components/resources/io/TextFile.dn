@@ -7,7 +7,7 @@ uses File
 interface TextFile extends File{
 	
 	/*
-	 {"@description" : "Open a file in a chosen mode, using one of File.FILE_ACCESS_READ or File.FILE_ACCESS_WRITE."}
+	 {"@description" : "Open a file in a chosen mode, using one of File.READ or File.WRITE."}
 	*/
 	TextFile(char path[], byte accessType)
 	

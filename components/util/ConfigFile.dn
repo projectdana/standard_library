@@ -8,7 +8,7 @@ component provides util.ConfigFile requires io.TextFile, data.StringUtil strUtil
 	HashTable tableInfo
 	
 	ConfigFile:ConfigFile(char configFile[]) {
-		TextFile file = new TextFile(configFile, File.FILE_ACCESS_READ)
+		TextFile file = new TextFile(configFile, File.READ)
 		
 		if (file == null) {
 			throw new Exception("File '$configFile' not found")

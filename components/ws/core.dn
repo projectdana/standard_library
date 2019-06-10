@@ -118,7 +118,7 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		
 		if (fileSystem.exists(path))
 			{
-			File fd = new File(path, File.FILE_ACCESS_READ)
+			File fd = new File(path, File.READ)
 			
 			byte dat[] = fd.read(fd.getSize())
 			

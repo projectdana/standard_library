@@ -33,7 +33,7 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 		if (fileSystem.exists(path))
 			{
 			//parse the file into JSON
-			File fd = new File(path, File.FILE_ACCESS_READ)
+			File fd = new File(path, File.READ)
 			char buf[] = fd.read(fd.getSize())
 			fd.close()
 			

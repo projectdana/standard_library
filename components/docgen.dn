@@ -137,6 +137,19 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		return result
 		}
 	
+	bool isDeprecated(char str[])
+		{
+		if (str != null)
+			{
+			JSONElement doc = parser.parseDocument(str)
+			
+			if (parser.getValue(doc, "@deprecated") != null && parser.getValue(doc, "@deprecated").value == "true")
+				return true
+			}
+		
+		return false
+		}
+	
 	void writeFile(SourceFile sf)
 		{
 		//put "html" on the end
@@ -167,7 +180,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 				if (fileSystem.exists(tpath))
 					fileSystem.delete(tpath)
 				
-				File fd = new File(tpath, File.FILE_ACCESS_WRITE)
+				File fd = new File(tpath, File.WRITE)
 				
 				if (fd != null)
 					{
@@ -236,7 +249,11 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 						
 						for (int j = 0; j < id.constants.arrayLength; j++)
 							{
-							fd.write("<div class = \"doc_const_list_item\">")
+							if (isDeprecated(id.constants[j].doc_description))
+								fd.write("<div class = \"doc_const_list_item_deprecated\">")
+								else
+								fd.write("<div class = \"doc_const_list_item\">")
+							
 							fd.write(formatType(sf, id.constants[j].type))
 							fd.write(" ")
 							fd.write(id.constants[j].displayName)
@@ -299,15 +316,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 					
 					for (int j = 0; j < id.functions.arrayLength; j++)
 						{
-						bool deprecated = false
-						
-						if (id.functions[j].doc_description != null)
-							{
-							JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
-							
-							if (parser.getValue(doc, "@deprecated") != null && parser.getValue(doc, "@deprecated").value == "true")
-								deprecated = true
-							}
+						bool deprecated = isDeprecated(id.functions[j].doc_description)
 						
 						if (deprecated)
 							fd.write("<div class = \"doc_function_list_item_deprecated\">")
@@ -341,7 +350,10 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 									desc = parser.getValue(doc, "@description").value
 								}
 							
-							fd.write("<div class = \"doc_transfer_field\">")
+							if (isDeprecated(id.constants[j].doc_description))
+								fd.write("<div class = \"doc_constant_desc_deprecated\">")
+								else
+								fd.write("<div class = \"doc_constant_desc\">")
 							fd.write("<span class = \"doc_function_description_param_name\">$(id.constants[j].name)</span> ")
 							fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
 							fd.write("</div>")
@@ -420,15 +432,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 					//the list of functions in detail, with parameter descriptions etc.
 					for (int j = 0; j < id.functions.arrayLength; j++)
 						{
-						bool deprecated = false
-						
-						if (id.functions[j].doc_description != null)
-							{
-							JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
-							
-							if (parser.getValue(doc, "@deprecated") != null && parser.getValue(doc, "@deprecated").value == "true")
-								deprecated = true
-							}
+						bool deprecated = isDeprecated(id.functions[j].doc_description)
 						
 						if (deprecated)
 							fd.write("<div class = \"doc_function_description_deprecated\">")
@@ -526,7 +530,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 				if (fileSystem.exists(tpath))
 					fileSystem.delete(tpath)
 				
-				File fd = new File(tpath, File.FILE_ACCESS_WRITE)
+				File fd = new File(tpath, File.WRITE)
 				
 				if (fd != null)
 					{
@@ -690,7 +694,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 				fileSystem.delete("$OUTPUT_DIR/index.html")
 			
 			//generate the index HTML file
-			File fd = new File("$OUTPUT_DIR/index.html", File.FILE_ACCESS_WRITE)
+			File fd = new File("$OUTPUT_DIR/index.html", File.WRITE)
 			
 			if (fd != null)
 				{
@@ -714,7 +718,7 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 				
 				char dana_home[] = systemInfo.getVariable("DANA_HOME")
 				
-				File ref = new File("$dana_home/resources-ext/doc/index_a.html", File.FILE_ACCESS_READ)
+				File ref = new File("$dana_home/resources-ext/doc/index_a.html", File.READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()
 				
@@ -725,21 +729,21 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 					fd.write("</div>")
 					}
 				
-				ref = new File("$dana_home/resources-ext/doc/index_b.html", File.FILE_ACCESS_READ)
+				ref = new File("$dana_home/resources-ext/doc/index_b.html", File.READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()
 				
 				fd.close()
 				
 				//copy in the CSS file
-				fd = new File("$OUTPUT_DIR/doc.css", File.FILE_ACCESS_WRITE)
-				ref = new File("$dana_home/resources-ext/doc/doc.css", File.FILE_ACCESS_READ)
+				fd = new File("$OUTPUT_DIR/doc.css", File.WRITE)
+				ref = new File("$dana_home/resources-ext/doc/doc.css", File.READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()
 				fd.close()
 				
-				fd = new File("$OUTPUT_DIR/files/doc.css", File.FILE_ACCESS_WRITE)
-				ref = new File("$dana_home/resources-ext/doc/doc.css", File.FILE_ACCESS_READ)
+				fd = new File("$OUTPUT_DIR/files/doc.css", File.WRITE)
+				ref = new File("$dana_home/resources-ext/doc/doc.css", File.READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()
 				fd.close()

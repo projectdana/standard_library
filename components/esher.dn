@@ -42,7 +42,7 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 	
 	Role readRole(char path[])
 		{
-		TextFile fd = new TextFile(path, File.FILE_ACCESS_READ)
+		TextFile fd = new TextFile(path, File.READ)
 		
 		if (fd != null)
 			{
@@ -97,7 +97,7 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 		{
 		manifest = path
 		
-		TextFile fd = new TextFile(path, File.FILE_ACCESS_READ)
+		TextFile fd = new TextFile(path, File.READ)
 		
 		//read list of roles & dependencies
 		

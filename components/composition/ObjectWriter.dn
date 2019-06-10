@@ -38,7 +38,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 	
 	ObjectWriter:ObjectWriter(char path[])
 		{
-		File fd = new File(path, File.FILE_ACCESS_READ)
+		File fd = new File(path, File.READ)
 		
 		if (fd == null)
 			throw new Exception("File not found")
@@ -87,7 +87,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 		{
 		InfoSection result[]
 		
-		File fd = new File(objectPath, File.FILE_ACCESS_READ)
+		File fd = new File(objectPath, File.READ)
 		
 		if (fd == null)
 			{
@@ -115,7 +115,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 	
 	InfoSection ObjectWriter:getInfoSection(char type[], char cType[])
 		{
-		File fd = new File(objectPath, File.FILE_ACCESS_READ)
+		File fd = new File(objectPath, File.READ)
 		
 		if (fd == null)
 			{
@@ -187,8 +187,8 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 		char tmp[] = getTmpFile(objectPath)
 		
 		//write the existing file with an updated header, and the new infosection at the end
-		File output = new File(tmp, File.FILE_ACCESS_WRITE)
-		File input = new File(objectPath, File.FILE_ACCESS_WRITE)
+		File output = new File(tmp, File.WRITE)
+		File input = new File(objectPath, File.WRITE)
 		
 		// - write an updated header (editing the count and size of infosections)
 		SourceHeader hdr = new SourceHeader()
@@ -252,8 +252,8 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 		char tmp[] = getTmpFile(objectPath)
 		
 		//write the existing file with an updated header, and exclude the selected infosection from that
-		File output = new File(tmp, File.FILE_ACCESS_WRITE)
-		File input = new File(objectPath, File.FILE_ACCESS_WRITE)
+		File output = new File(tmp, File.WRITE)
+		File input = new File(objectPath, File.WRITE)
 		
 		// - write an updated header (editing the count and size of infosections)
 		SourceHeader hdr = new SourceHeader()

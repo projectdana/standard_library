@@ -18,23 +18,25 @@ component provides UnitTest requires data.IntUtil iu, data.DecUtil du, AFVehicle
 		
 		if ("$v" != "199") throw new Exception("Failure in test 1")
 		
-		if ("$vd" != "2.98") throw new Exception("Failure in test 2")
+		if ("$(qda.arrayLength)" != "2") throw new Exception("Failure in test 2")
 		
-		if (xveh.avfunction() != "Hopper") throw new Exception("Failure in test 3")
+		if ("$vd" != "2.98") throw new Exception("Failure in test 3")
 		
-		if (xveh.afunction() != "Lamport") throw new Exception("Failure in test 4")
+		if (xveh.avfunction() != "Hopper") throw new Exception("Failure in test 4")
 		
-		if (qda.afunction() != "Lovelace") throw new Exception("Failure in test 5")
+		if (xveh.afunction() != "Lamport") throw new Exception("Failure in test 5")
+		
+		if (qda.afunction() != "Lovelace") throw new Exception("Failure in test 6")
 		
 		QDat xda[] = qda.sort(QDat.[num], false)
 		
-		if (xda[0].num != 90) throw new Exception("Failure in test 6")
+		if (xda[0].num != 90) throw new Exception("Failure in test 7")
 		
 		DateTime st = new DateTime()
 		DateTime et = new DateTime()
 		et.millisecond = 50
 		
-		if (st.diff(et).toMilliseconds() != 50) throw new Exception("Failure in test 7")
+		if (st.diff(et).toMilliseconds() != 50) throw new Exception("Failure in test 8")
 		
 		return true
 		}

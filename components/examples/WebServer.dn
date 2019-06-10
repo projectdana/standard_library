@@ -105,7 +105,7 @@ component provides App requires io.Output out, data.IntUtil iu, net.TCPSocket, n
 			{
 			if (fileSystem.exists(resource))
 				{
-				File fd = new File(resource, File.FILE_ACCESS_READ)
+				File fd = new File(resource, File.READ)
 				
 				char mt[] = getMIMEType(resource)
 				

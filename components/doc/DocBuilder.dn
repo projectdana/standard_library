@@ -1120,7 +1120,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 				
 				if (q == null)
 					{
-					File fd = new File(path, File.FILE_ACCESS_READ)
+					File fd = new File(path, File.READ)
 					
 					if (fd != null)
 						{
@@ -1207,7 +1207,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	
 	bool DocBuilder:parseFile(char path[])
 		{
-		File fd = new File(path, File.FILE_ACCESS_READ)
+		File fd = new File(path, File.READ)
 		
 		if (fd != null)
 			{

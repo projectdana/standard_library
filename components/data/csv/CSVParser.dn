@@ -73,7 +73,7 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 		
 		Type type = typeof(template)
 		
-		TextFile fd = new TextFile(path, File.FILE_ACCESS_READ)
+		TextFile fd = new TextFile(path, File.READ)
 		
 		if (fd != null)
 			{

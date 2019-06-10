@@ -39,7 +39,7 @@ component provides ObjectReader requires io.File, System system {
 	
 	ObjectReader:ObjectReader(char path[])
 		{
-		File fd = new File(path, File.FILE_ACCESS_READ)
+		File fd = new File(path, File.READ)
 		
 		if (fd == null)
 			throw new Exception("File not found")
@@ -86,7 +86,7 @@ component provides ObjectReader requires io.File, System system {
 	
 	InfoSection ObjectReader:getNextSection()
 		{
-		File fd = new File(objectPath, File.FILE_ACCESS_READ)
+		File fd = new File(objectPath, File.READ)
 		
 		if (fd == null)
 			{
@@ -133,7 +133,7 @@ component provides ObjectReader requires io.File, System system {
 	
 	InfoSection ObjectReader:getInfoSection(char type[])
 		{
-		File fd = new File(objectPath, File.FILE_ACCESS_READ)
+		File fd = new File(objectPath, File.READ)
 		
 		if (fd == null)
 			{
