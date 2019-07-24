@@ -29,7 +29,7 @@ component provides UnitTest {
 		
 		if (!(355 hastype int2)) throw new Exception("Failure in test 8")
 		
-		Thread t
+		Thread t = this.thread
 		
 		if (!(t hastype Thread)) throw new Exception("Failure in test 9")
 		

@@ -16,8 +16,6 @@ data XYListener{
 	XYListener prev
 	}
 
-uses events.EventData
-
 component provides Panel requires io.Output out {
 
 	GraphicsItem objects

@@ -1,0 +1,21 @@
+/*
+ {"description" : "This type represents a thread (for example returned via an asynch:: function call)."}
+*/
+
+interface Thread {
+	
+	/*
+	 {"@description" : "Block until this thread is signalled via signal()."}
+	*/
+	void wait()
+	
+	/*
+	 {"@description" : "Signal a thread, which may cause it to unblock from a call to wait()."}
+	*/
+	void signal()
+	
+	/*
+	 {"@description" : "Block until this thread exits."}
+	*/
+	void join()
+	}

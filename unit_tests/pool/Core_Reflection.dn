@@ -18,8 +18,6 @@ data Persons {
 	Object objects[]
 	}
 
-uses reflect.Type
-
 component provides UnitTest requires io.Output out {
 	
 	char[] getNull()
@@ -42,6 +40,9 @@ component provides UnitTest requires io.Output out {
 		p:.0 = null
 		
 		p:.0 = getNull()
+		
+		Data dx = new Data() from t
+		p = dx
 		
 		return true
 		}

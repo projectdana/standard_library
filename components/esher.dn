@@ -165,17 +165,17 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 					{
 					if (d.toRole == r.name)
 						{
-						if (rx.class :> d.interfaceType == null)
+						if (!rx.class.hasRequires(d.interfaceType))
 							{
 							throw new Exception("Component $(rx.source) claims to require $(d.interfaceType) but does not")
 							}
 						
-						if (r.class :< d.interfaceType == null)
+						if (!r.class.hasProvides(d.interfaceType))
 							{
 							throw new Exception("Component $(r.source) claims to provide $(d.interfaceType) but does not")
 							}
 						
-						dana.rewire(rx.class :> d.interfaceType, r.class :< d.interfaceType)
+						rx.class.wire(d.interfaceType, r.class, d.interfaceType)
 						d.connected = true
 						break
 						}
@@ -194,17 +194,17 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 				{
 				if (d.toRole == rx.name && !d.connected)
 					{
-					if (rx.class :< d.interfaceType == null)
+					if (!rx.class.hasProvides(d.interfaceType))
 						{
 						throw new Exception("Component $(rx.source) claims to provide $(d.interfaceType) but does not")
 						}
 					
-					if (r.class :> d.interfaceType == null)
+					if (!r.class.hasRequires(d.interfaceType))
 						{
 						throw new Exception("Component $(r.source) claims to require $(d.interfaceType) but does not")
 						}
 					
-					dana.rewire(r.class :> d.interfaceType, rx.class :< d.interfaceType)
+					r.class.wire(d.interfaceType, rx.class, d.interfaceType)
 					d.connected = true
 					}
 				}
@@ -360,7 +360,7 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 				if (isNative)
 					{
 					IDC ncom = nLoader.load(alias)
-					dana.rewire(com :> alias, ncom :< alias)
+					com.wire(alias, ncom, alias)
 					}
 				}
 			}
@@ -378,18 +378,18 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 			
 			connectNative(objectFilePath, rx.class)
 			
-			if (rx.class :< Service != null)
+			if (rx.class.hasProvides("Service"))
 				{
-				rx.svc = new Service() from rx.class :< Service
+				rx.svc = new Service() from rx.class
 				rx.svc.start()
 				}
 			
 			connectServers(rx) //things needed by rx
 			connectClients(rx) //things that use rx
 			
-			if (rx.class :< App != null)
+			if (rx.class.hasProvides("App"))
 				{
-				rx.app = new App() from rx.class :< App
+				rx.app = new App() from rx.class
 				asynch::runApp(rx, rx.app)
 				}
 			}

@@ -29,4 +29,9 @@ interface System {
 	{"@description" : "Get the list of required interfaces (including package paths) that the virtual machine will automatically bind (to itself)."}
 	*/
 	String[] getAutoBindings()
+	
+	/*
+	{"@description" : "Set whether or not the VM will automatically bind the required interfaces returned by getAutoBindings() (default is true/on)."}
+	*/
+	void setAutoBind(bool on)
 	}

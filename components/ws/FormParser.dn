@@ -12,9 +12,9 @@ component provides FormParser requires io.Output out, composition.Search search,
 			{
 			IDC com = loader.load(candidates[i].string).mainComponent
 			
-			if (com :< Parser != null)
+			if (com.hasProvides("Parser"))
 				{
-				Parser p = new Parser() from com :< Parser
+				Parser p = new Parser() from com
 				
 				if (p.canParse(contentType))
 					{

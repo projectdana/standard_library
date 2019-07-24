@@ -1,5 +1,3 @@
-uses events.EventData
-
 //this is the horizontal border between the textual contents of the TextField, and the outer edge of its background
 const int TEXT_BORDER_H = 3
 

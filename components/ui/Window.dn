@@ -16,8 +16,6 @@ data ClickableItem{
 	ClickableItem prev
 	}
 
-uses events.EventData
-
 component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu {
 
 	Thread waitThread
@@ -29,6 +27,9 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 
 	ClickableItem clickItems
 	ClickableItem clickItemsEnd
+	
+	//we store the item on which a mouse button was pressed down, to know if the button is release on the same item (triggering a click)
+	GraphicsObject clickDown
 
 	XYListener mouseListeners
 	XYListener mouseListenersEnd
@@ -57,6 +58,10 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 	int restoredY
 
 	bool fullScreen
+	
+	bool closed
+	
+	Mutex closeLock = new Mutex()
 
 	Color borderColor = new Color(190, 190, 200, 255)
 
@@ -67,7 +72,6 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 		if (ed.type == WindowCanvas.[mouseUp])
 			{
 			MouseEvent me = ed.details
-			click(me.x, me.y, me.button)
 			mouseUp(me.x, me.y, me.button)
 			}
 			else if (ed.type == WindowCanvas.[mouseDown])
@@ -176,16 +180,26 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 	void Window:close()
 		{
 		canvas.close()
-
-		if (waitThread != null)
+		
+		mutex(closeLock)
 			{
-			waitThread.signal()
+			if (waitThread != null)
+				{
+				waitThread.signal()
+				}
+			
+			closed = true
 			}
 		}
 
 	void Window:waitForClose()
 		{
-		waitThread = this.thread
+		mutex(closeLock)
+			{
+			if (closed) return
+			waitThread = this.thread
+			}
+		
 		this.thread.wait()
 		}
 
@@ -440,7 +454,7 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 			ClickableObject ci = contextItem
 			Rect r = ci.getBounds()
 
-			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+			if (clickDown === ci && x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
 				ci.click(x - r.x, y - r.y, button)
 				return
@@ -451,7 +465,7 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 			{
 			Rect r = ci.object.getBounds()
 
-			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+			if (clickDown === ci.object && x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
 				if (contextItem != null)
 					{
@@ -474,12 +488,43 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 
 	void Window:mouseDown(int x, int y, int button)
 		{
+		//first register what the mouse was pressed down on, for click handling
+		clickDown = null
+		
+		if (contextItem != null && contextItem hastype ClickableObject)
+			{
+			ClickableObject ci = contextItem
+			Rect r = ci.getBounds()
+
+			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+				{
+				clickDown = ci
+				}
+			}
+		
+		if (clickDown == null)
+			{
+			for (ClickableItem ci = clickItems; ci != null; ci = ci.next)
+				{
+				Rect r = ci.object.getBounds()
+
+				if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+					{
+					clickDown = ci.object
+					break
+					}
+				}
+			}
+		
+		//now fire the actual mouse down event
+		
 		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
 
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
+				clickDown = ci.object
 				ci.object.mouseDown(x - r.x, y - r.y, button)
 				break
 				}
@@ -498,6 +543,10 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 				break
 				}
 			}
+		
+		click(x, y, button)
+		
+		clickDown = null
 		}
 
 	void Window:mouseMove(int x, int y)

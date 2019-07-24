@@ -1,5 +1,3 @@
-uses events.EventData
-
 component provides App requires ui.Window, ui.Button, io.Output out {
 	
 	Window window

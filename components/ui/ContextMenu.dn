@@ -128,8 +128,6 @@ component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Outpu
 	void ContextMenu:mouseMove(int x, int y)
 		{
 		int ryPos = 0
-		x -= xPosition
-		y -= yPosition
 		
 		for (int i = 0; i < items.arrayLength; i++)
 			{

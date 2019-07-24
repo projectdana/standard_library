@@ -1,5 +1,3 @@
-uses reflect.Type
-
 data Map {
 	char jsonKey[]
 	char dataVar[]

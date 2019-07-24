@@ -8,8 +8,6 @@ data FileItem{
 	FileItem next
 	}
 
-uses events.EventData
-
 component provides FileBrowser(AdaptEvents) requires Panel, FileObject, GraphicsListView, io.FileSystem fileSystem, Button, data.StringUtil stringUtil, io.Output out{
 	FileItem fileObjects
 	FileItem fileObjectsEnd

@@ -12,6 +12,16 @@ interface Font{
 	Font(char path[], int size)
 	
 	/*
+	{ "@description" : "Get the font size." }
+	*/
+	int getSize()
+	
+	/*
+	{ "@description" : "Get the path of the font." }
+	*/
+	char[] getSource()
+	
+	/*
 	{ "@description" : "Get the FontMetrics of this font." }
 	*/
 	FontMetrics getFontMetrics()

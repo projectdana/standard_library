@@ -29,8 +29,7 @@ interface UIPlaneLib{
 	void addPoint(int phandle, int x, int y, byte r, byte g, byte b, byte a)
 	void addBitmap(int phandle, PixelMap pixels, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
 	
-	void addText(int phandle, int x, int y, char text[], byte r, byte g, byte b, byte a)
-	void addTextWith(int phandle, int fontHandle, int x, int y, char text[], byte r, byte g, byte b, byte a)
+	void addTextWith(int phandle, int fontHandle, int x, int y, int rotation, char text[], byte r, byte g, byte b, byte a)
 	
 	void pushSurface(int phandle, int x, int y, int w, int h, int sx, int sy, byte a)
 	void popSurface(int phandle)
@@ -71,8 +70,6 @@ interface UIPlaneLib{
 	void getTextBitmapWith(int phandle, char text[], PixelMap pixels, byte r, byte g, byte b, byte a)
 	void unloadFont(int fd)
 	}
-
-uses events.EventData
 
 component provides WindowCanvas(Destructor), Font(Destructor) requires native UIPlaneLib lib, io.Output out, data.IntUtil iu
 	{
@@ -238,7 +235,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:drawPixelsX(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
+		void WindowCanvas:drawPixelsEx(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
 			{
 			mutex(windowStateLock)
 				{
@@ -253,12 +250,29 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				{
 				if (implements f)
 					{
-					lib.addTextWith(platformHandle, f.platformHandle, origin.x, origin.y, text, origin.color.r, origin.color.g, origin.color.b, origin.color.a)
+					lib.addTextWith(platformHandle, f.platformHandle, origin.x, origin.y, 0, text, origin.color.r, origin.color.g, origin.color.b, origin.color.a)
 					}
 					else
 					{
 					PixelMap px = f.getPixels(text, origin.color)
 					lib.addBitmap(platformHandle, px, null, origin.x, origin.y, px.size.width, px.size.height, 0)
+					}
+				}
+			}
+		
+		void WindowCanvas:drawTextEx(Point2D origin, Font f, char text[], int rotation)
+			{
+			//check if f is implemented by this component and if so we use its internal font handle; otherwise we fall back on Font.getBitmap() (which is slow)
+			mutex(windowStateLock)
+				{
+				if (implements f)
+					{
+					lib.addTextWith(platformHandle, f.platformHandle, origin.x, origin.y, rotation, text, origin.color.r, origin.color.g, origin.color.b, origin.color.a)
+					}
+					else
+					{
+					PixelMap px = f.getPixels(text, origin.color)
+					lib.addBitmap(platformHandle, px, null, origin.x, origin.y, px.size.width, px.size.height, rotation)
 					}
 				}
 			}
@@ -311,12 +325,26 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 	
 	implementation Font{
 		int platformHandle
+		int fontSize
+		char source[]
 		
 		Font:Font(char path[], int size)
 			{
+			fontSize = size
+			source = path
 			platformHandle = lib.loadFont(path, size)
 			
 			if (platformHandle == 0) throw new Exception("Failed to load font $path")
+			}
+		
+		int Font:getSize()
+			{
+			return fontSize
+			}
+		
+		char[] Font:getSource()
+			{
+			return source
 			}
 		
 		FontMetrics Font:getFontMetrics()

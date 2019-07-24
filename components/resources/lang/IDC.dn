@@ -1,0 +1,92 @@
+/*
+ {"description" : "This type represents a component's interface."}
+*/
+
+data InterfaceSpec {
+	char alias[]
+	char package[]
+	char variant[]
+	Type type
+	}
+
+/*
+ {"description" : "This type represents a loaded component."}
+*/
+
+interface IDC {
+	
+	/*
+	 {"@description" : "Wire on of the required interfaces on this component to a provided interface on another component."}
+	*/
+	bool wire(char reqIntf[], IDC com, char proIntf[])
+	
+	/*
+	 {"@description" : "Get the list of provided interfaces on this component."}
+	*/
+	InterfaceSpec[] getProvides()
+	
+	/*
+	 {"@description" : "Get the list of required interfaces on this component."}
+	*/
+	InterfaceSpec[] getRequires()
+	
+	/*
+	 {"@description" : "Check if a given interface is provided by this component."}
+	*/
+	bool hasProvides(char proIntf[])
+	
+	/*
+	 {"@description" : "Check if a given interface is required by this component."}
+	*/
+	bool hasRequires(char reqIntf[])
+	
+	/*
+	 {"@description" : "Check if a given required interface is connected to another component (i.e., the dependency is satisfied)."}
+	*/
+	bool isConnected(char reqIntf[])
+	
+	/*
+	 {"@description" : "Get the component to which a given required interface is connected."}
+	*/
+	IDC getComponent(char reqIntf[])
+	
+	/*
+	 {"@description" : "Pause a given required interface (used as part of runtime adaptation)."}
+	*/
+	bool pause(char reqIntf[])
+	
+	/*
+	 {"@description" : "Resume a given required interface (used as part of runtime adaptation)."}
+	*/
+	bool resume(char reqIntf[])
+	
+	/*
+	 {"@description" : "Get the set of objects that have been instantiated over a given required interface (used as part of runtime adaptation)."}
+	*/
+	Object[] getObjects(char reqIntf[])
+	
+	/*
+	 {"@description" : "Create a new object from a given required interface, but do not call its constructor (used as part of runtime adaptation)."}
+	*/
+	Object initObject(char reqIntf[])
+	
+	/*
+	 {"@description" : "Get a secondary interface of an object."}
+	*/
+	Object getInterface(Object o, char typeName[], Type type)
+	
+	/*
+	 {"@description" : "Check if the given object has transfer state."}
+	*/
+	bool hasTransferState(Object o)
+	
+	/*
+	 {"@description" : "Get the transfer state of the given object."}
+	*/
+	Data getTransferState(Object o)
+	
+	/*
+	 {"@description" : "Set the transfer state of the given object."}
+	*/
+	bool setTransferState(Object o, Data d)
+	}

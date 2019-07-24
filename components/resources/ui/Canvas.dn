@@ -15,13 +15,23 @@ uses Point
 interface Canvas {
 	
 	void drawRect(Rect2D rect)
+	
 	void drawRectOutline(Rect2D rect)
+	
 	void drawLine(Line2D line)
+	
 	void drawPoint(Point2D point)
+	
 	void drawPixels(PixelMap map, int x, int y, int rotation)
-	void drawPixelsX(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
+	
+	void drawPixelsEx(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
+	
 	void drawText(Point2D position, Font f, char text[])
+	
+	void drawTextEx(Point2D position, Font f, char text[], int rotation)
+	
 	void pushSurface(Rect rect, int xscr, int yscr, byte alpha)
+	
 	void popSurface()
 	
 	}

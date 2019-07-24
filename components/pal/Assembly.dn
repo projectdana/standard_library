@@ -429,21 +429,21 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			if (ris[i].isNative)
 				{
 				IDC ncom = nLoader.load(ris[i].alias)
-				dana.rewire(c.class :> ris[i].alias, ncom :< ris[i].alias)
+				c.class.wire(ris[i].alias, ncom, ris[i].alias)
 				c.completeWirings ++
 				}
 			
 			if (ris[i].package == "pal.Perception")
-				dana.rewire(c.class :> "pal.Perception", perception :< "pal.Perception")
+				c.class.wire("pal.Perception", perception, "pal.Perception")
 			}
 		
 		if (c.completeWirings == c.interfaces.arrayLength)
 			{
 			//service start?
-			if (c.class :< Service != null)
+			if (c.class.hasProvides("Service"))
 				{
 				//out.println(" -- starting service on '$(c.path)'")
-				Service svc = new Service() from c.class :< Service
+				Service svc = new Service() from c.class
 				svc.start()
 				}
 			}
@@ -618,7 +618,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			//it's new, so just connect it
 			intfName = stringUtil.implode(stringUtil.explode(intfName, "!"), ":")
 			
-			dana.rewire(fromComponent.class :> intfName, toComponent.class :< intfName)
+			fromComponent.class.wire(intfName, toComponent.class, intfName)
 			fromComponent.completeWirings ++
 			
 			if (verbose) out.println(" -- wiring $(fromComponent.path) :: $intfName >> $(toComponent.path)")
@@ -628,10 +628,10 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			if (fromComponent.completeWirings == fromComponent.interfaces.arrayLength)
 				{
 				//service start?
-				if (fromComponent.class :< Service != null)
+				if (fromComponent.class.hasProvides("Service"))
 					{
 					//out.println(" -- starting service on '$(fromComponent.path)'")
-					Service svc = new Service() from fromComponent.class :< Service
+					Service svc = new Service() from fromComponent.class
 					svc.start()
 					}
 				}
@@ -656,7 +656,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 	
 	void launchMain(IDC class)
 		{
-		myApp = new App() from class :< App
+		myApp = new App() from class
 		exitCode = myApp.main(null)
 		appFinished = true
 		}

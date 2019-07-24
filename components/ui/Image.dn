@@ -126,7 +126,7 @@ component provides Image {
 	
 	void Image:paint(Canvas c)
 		{
-		c.drawPixelsX(pixels, subRect, xPosition+renderOffsetX, yPosition+renderOffsetY, renderWidth, renderHeight, rotation)
+		c.drawPixelsEx(pixels, subRect, xPosition+renderOffsetX, yPosition+renderOffsetY, renderWidth, renderHeight, rotation)
 		}
 	
 	void Image:postRepaint()

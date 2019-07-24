@@ -25,8 +25,6 @@ data ClickableItem{
 	ClickableItem prev
 	}
 
-uses events.EventData
-
 component provides FileBrowser(AdaptEvents) requires Panel, io.FileSystem fileSystem, Button, data.StringUtil stringUtil, io.Output out, Font, os.SystemInfo sysInfo, data.IntUtil iu{
 
 	FileCategory categories

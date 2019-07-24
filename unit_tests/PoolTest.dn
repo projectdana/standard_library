@@ -196,9 +196,9 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 						{
 						newCom = loader.load(newPath)
 						
-						if (newCom :< Service != null)
+						if (newCom.hasProvides("Service"))
 							{
-							Service svc = new Service() from newCom :< Service
+							Service svc = new Service() from newCom
 							svc.start()
 							}
 						
@@ -210,12 +210,12 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 					char pname[] = alias
 					if (semantic != null) pname = "$alias:$semantic"
 					
-					dana.rewire(com :> pname, newCom :< pname)
+					com.wire(pname, newCom, pname)
 					}
 					else if (isNative)
 					{
 					IDC ncom = nLoader.load(alias)
-					dana.rewire(com :> alias, ncom :< alias)
+					com.wire(alias, ncom, alias)
 					}
 				}
 			}
@@ -227,9 +227,9 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 		{
 		for (int i = 0; i < dependencies.arrayLength; i++)
 			{
-			if (dependencies[i].com :< Service != null)
+			if (dependencies[i].com.hasProvides("Service"))
 				{
-				Service svc = new Service() from dependencies[i].com :< Service
+				Service svc = new Service() from dependencies[i].com
 				svc.stop()
 				svc = null
 				}

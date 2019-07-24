@@ -13,7 +13,7 @@ component provides UnitTest requires Loader loader, time.Timer timer, io.Output 
 		{
 		IDC com = loader.load("ObjectA.o")
 	
-		ObjectA a = new ObjectA() from com :< ObjectA
+		ObjectA a = new ObjectA() from com
 	
 		asynch::stop(com, a)
 		

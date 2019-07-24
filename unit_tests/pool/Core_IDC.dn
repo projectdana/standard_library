@@ -6,7 +6,10 @@ component provides UnitTest {
 		{
 		IDC com = dana.getIDC()
 		
-		Output o = new Output() from com :< Output
+		Output o = new Output() from com
+		
+		if (!com.hasProvides("data.IntUtil"))
+			return false
 		
 		return true
 		}
