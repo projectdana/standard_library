@@ -140,9 +140,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 									new String("dec128"),
 									new String("dec256"),
 									new String("dec512"),
-									new String("Data"),
-									new String("Object"),
-									new String("IDC")
+									new String("Data")
 									)
 		}
 	
@@ -215,7 +213,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	bool isTypeDefinition(ParseToken tokens[], int start)
 		{
 		if (tokens[start].type == ParseToken.TYPE_PARTICLE &&
-			(tokens[start].content == "data" || tokens[start].content == "interface" || tokens[start].content == "record"))
+			(tokens[start].content == "data" || tokens[start].content == "interface"))
 			{
 			start ++
 			
@@ -299,7 +297,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			
 			sf.types = new TypeDef[](sf.types, nid)
 			}
-			else if (type == "data" || type == "record")
+			else if (type == "data")
 			{
 			DataDef tid = new DataDef(TypeDef.DATA, name)
 			tid.doc_description = docComment
@@ -373,7 +371,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	
 	bool isTypeQualifier(char str[])
 		{
-		return str == "const" || str == "transfer" || str == "copy"
+		return str == "const" || str == "transfer"
 		}
 	
 	bool isReturnTypeQualifier(char str[])
@@ -927,7 +925,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 					}
 				}
 			}
-			else if (tokens[start].content == "data" || tokens[start].content == "record")
+			else if (tokens[start].content == "data")
 			{
 			DataDef td = getDataDef(sf, tokens[start+1].content)
 			
@@ -1161,6 +1159,11 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		int start = 0
 		
 		IncludeList incList = new IncludeList()
+		
+		incList.list = new String[](incList.list, new String("lang.Type"))
+		incList.list = new String[](incList.list, new String("lang.IDC"))
+		incList.list = new String[](incList.list, new String("lang.Object"))
+		incList.list = new String[](incList.list, new String("lang.Thread"))
 		
 		char lastDocComment[]
 		

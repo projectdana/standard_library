@@ -1,4 +1,5 @@
 data Field {
+const int NOT_FOUND = INT_MAX
 	Type type
 	char name[]
 const int FLAG_RECURSION = 0x1
@@ -15,8 +16,8 @@ const byte ARRAY		= 5
 
 const byte F_BOOL		= 0x1
 const byte F_CHAR		= 0x2
-const byte F_FUNCTION	= 0x4
-const byte F_EVENT		= 0x8
+const byte F_FUNCTION	= 0x1
+const byte F_EVENT		= 0x2
 	byte flags
 
 	int size
