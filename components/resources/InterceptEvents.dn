@@ -1,0 +1,16 @@
+/*
+ {"description" : "This interface can be provided as a secondary interface of an object, allowing it to then receive notifications of adaptation events."}
+*/
+
+interface InterceptEvents {
+	
+	/*
+	 { "@description" : "This function is called to access the interceptor's internal reference to its required object (e.g. of type lang.Morph)." }
+	*/
+	Object getTarget()
+	
+	/*
+	 { "@description" : "This function is called when the interceptor's internal reference has been updated with an adapted version." }
+	*/
+	void setTarget(Object o)
+	}

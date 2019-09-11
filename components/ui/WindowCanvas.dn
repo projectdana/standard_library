@@ -4,17 +4,15 @@ data WindowEventData {
 	int y
 }
 
-interface UIPlaneLib{
+interface UIPlaneLib {
 	
-	const int EVENT_MOUSE_UP = 1
-	const int EVENT_MOUSE_DOWN = 2
-	const int EVENT_MOUSE_MOVE = 3
-	const int EVENT_RESIZE = 4
-	const int EVENT_MOVE = 5
-	const int EVENT_CLOSE = 6
-	
-	const int EVENT_KEY_DOWN = 7
-	const int EVENT_KEY_UP = 8
+	event mouseUp(WindowEventData wed)
+	event mouseDown(WindowEventData wed)
+	event mouseMove(WindowEventData wed)
+	event keyDown(WindowEventData wed)
+	event keyUp(WindowEventData wed)
+	event resize(WindowEventData wed)
+	event close()
 	
 	int makeWindow()
 	
@@ -79,37 +77,37 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 		
 		eventsink LibEvents(EventData ed)
 			{
-			if (ed.type == UIPlaneLib.EVENT_MOUSE_UP)
+			if (ed.type == UIPlaneLib.[mouseUp])
 				{
 				WindowEventData wed = ed.details
 				emitevent mouseUp(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
 				}
-				else if (ed.type == UIPlaneLib.EVENT_MOUSE_DOWN)
+				else if (ed.type == UIPlaneLib.[mouseDown])
 				{
 				WindowEventData wed = ed.details
 				emitevent mouseDown(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
 				}
-				else if (ed.type == UIPlaneLib.EVENT_MOUSE_MOVE)
+				else if (ed.type == UIPlaneLib.[mouseMove])
 				{
 				WindowEventData wed = ed.details
 				emitevent mouseMove(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
 				}
-				else if (ed.type == UIPlaneLib.EVENT_KEY_DOWN)
+				else if (ed.type == UIPlaneLib.[keyDown])
 				{
 				WindowEventData wed = ed.details
 				emitevent keyDown(new KeyEvent(wed.button_id))
 				}
-				else if (ed.type == UIPlaneLib.EVENT_KEY_UP)
+				else if (ed.type == UIPlaneLib.[keyUp])
 				{
 				WindowEventData wed = ed.details
 				emitevent keyUp(new KeyEvent(wed.button_id))
 				}
-				else if (ed.type == UIPlaneLib.EVENT_RESIZE)
+				else if (ed.type == UIPlaneLib.[resize])
 				{
 				WindowEventData wed = ed.details
 				emitevent resizeWindow(new WH(wed.x, wed.y))
 				}
-				else if (ed.type == UIPlaneLib.EVENT_CLOSE)
+				else if (ed.type == UIPlaneLib.[close])
 				{
 				emitevent closeWindow()
 				}
@@ -119,6 +117,8 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 			{
 			platformHandle = lib.makeWindow()
 			if (platformHandle == 0) throw new Exception("Platform window creation failed")
+			
+			sinkevent LibEvents(lib)
 			}
 		
 		void WindowCanvas:setVisible(bool b)

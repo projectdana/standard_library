@@ -2,28 +2,6 @@ uses AdaptEvents
 
 component provides Adapter requires io.Output out {
 	
-	void adaptStatelessObject(IDC ofComponent, Object object, IDC source, char type[])
-		{
-		AdaptEvents ae
-		if (dana.pauseObject(ofComponent, object))
-			{
-			// - initialise a new object, without calling its constructor
-			Object a = source.initObject(type)
-			// - notify the object that it's now the "inactive" copy
-			if ((ae = ofComponent.getInterface(object, "AdaptEvents", typeof(AdaptEvents))) != null) ae.inactive()
-			// - rewire live object so calls now go to the new one (a becomes null)
-			Object b = dana.rewireObject(object, a)
-			// - notify the object that it's now the "active" copy
-			if ((ae = source.getInterface(object, "AdaptEvents", typeof(AdaptEvents))) != null) ae.active()
-			// - allow new calls to proceed in the new object
-			dana.resumeObject(object)
-			// - wait for all in-progress calls to finish in the old object
-			dana.waitForObject(b)
-			// - wait for any in-progress asynchronous threads to finish
-			dana.waitForObjectThreads(b)
-			}
-		}
-	
 	void adaptStatefulObject(IDC ofComponent, Object object, IDC source, char type[])
 		{
 		AdaptEvents ae
@@ -45,6 +23,28 @@ component provides Adapter requires io.Output out {
 			if ((ae = source.getInterface(object, "AdaptEvents", typeof(AdaptEvents))) != null) ae.active()
 			// - allow new calls to proceed in the new object
 			dana.resumeObject(object)
+			// - wait for any in-progress asynchronous threads to finish
+			dana.waitForObjectThreads(b)
+			}
+		}
+	
+	void adaptStatelessObject(IDC ofComponent, Object object, IDC source, char type[])
+		{
+		AdaptEvents ae
+		if (dana.pauseObject(ofComponent, object))
+			{
+			// - initialise a new object, without calling its constructor
+			Object a = source.initObject(type)
+			// - notify the object that it's now the "inactive" copy
+			if ((ae = ofComponent.getInterface(object, "AdaptEvents", typeof(AdaptEvents))) != null) ae.inactive()
+			// - rewire live object so calls now go to the new one (a becomes null)
+			Object b = dana.rewireObject(object, a)
+			// - notify the object that it's now the "active" copy
+			if ((ae = source.getInterface(object, "AdaptEvents", typeof(AdaptEvents))) != null) ae.active()
+			// - allow new calls to proceed in the new object
+			dana.resumeObject(object)
+			// - wait for all in-progress calls to finish in the old object
+			dana.waitForObject(b)
 			// - wait for any in-progress asynchronous threads to finish
 			dana.waitForObjectThreads(b)
 			}

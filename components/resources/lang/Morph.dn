@@ -1,0 +1,13 @@
+/*
+This interface does not have a constructor; when a Morph object is instantiated, it is only "initialised" (everything is done except calling its constructor). It is then up to you to call a constructor afterwards, if you want to, and interpret the (boolean) return value of the constructor in determining what to do next with the object.
+*/
+
+interface Morph {
+	
+	//we can listen to this general event, and every event fired by the real type will be received here
+	event multiEvent()
+	
+	//this interface has the following "function" at every index, but the return type is morphed to the actual call type:
+	void function(Data p)
+	
+	}

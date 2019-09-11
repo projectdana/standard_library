@@ -1,0 +1,16 @@
+data FunctionCall {
+	char name[]
+	int index
+	
+	Type type
+	
+	Data params
+	}
+
+interface Proxy {
+	
+	void construct(FunctionCall callData, Data returnValue)
+	
+	void function(FunctionCall callData, Data returnValue)
+	
+	}

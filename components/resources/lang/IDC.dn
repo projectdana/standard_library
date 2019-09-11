@@ -89,4 +89,9 @@ interface IDC {
 	 {"@description" : "Set the transfer state of the given object."}
 	*/
 	bool setTransferState(Object o, Data d)
+	
+	/*
+	 {"@description" : "Adopt the given object as if instantiated via the given required interface."}
+	*/
+	bool adoptObject(char reqIntf[], Object o)
 	}

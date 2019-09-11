@@ -409,6 +409,8 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 		{
 		Token t = new Token(TOKEN_TYPE_TOKEN, string[start])
 		
+		int os = start
+		
 		for (int i = start+1; i < string.arrayLength; i++)
 			{
 			if (!isWhitespace(string[i]) && !isTokenStart(string[i]) && !isValidToken(t.token) && !isValidLiteral(t.token))
@@ -423,7 +425,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 		
 		if (!isValidToken(t.token) && !isValidLiteral(t.token))
 			{
-			throw new Exception("Invalid token '$(t.token)'")
+			throw new Exception("Invalid token at $os-$start '$(t.token)'")
 			}
 		
 		//sort out what kind of token it is (boolean etc.)
