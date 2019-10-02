@@ -87,4 +87,31 @@ component provides Adapter requires io.Output out {
 		return true
 		}
 	
+	bool Adapter:adaptRequiredInterfaceTo(IDC ofComponent, char interfaceName[], IDC toComponent, char toInterfaceName[])
+		{
+		if (ofComponent.hasRequires(interfaceName))
+			{
+			IDC oldTarget = ofComponent.getComponent(interfaceName)
+			
+			//temporarily prevent new object instances being created or destroyed, and snapshot the current set of objects
+			ofComponent.pause(interfaceName)
+			//switch the binding from this role to the new component (all new objects will be sourced from the new component)
+			ofComponent.wire(interfaceName, toComponent, toInterfaceName)
+			Object objects[] = ofComponent.getObjects(interfaceName)
+			ofComponent.resume(interfaceName)
+			
+			//switch all existing objects to the new class
+			for (int i = 0; i < objects.arrayLength; i++)
+				{
+				adaptObject(oldTarget, objects[i], toComponent, toInterfaceName)
+				}
+			}
+			else
+			{
+			throw new Exception("No bindport of type '$interfaceName' found on component")
+			}
+		
+		return true
+		}
+	
 	}

@@ -1,3 +1,7 @@
+/*
+ {"description" : "This data type is passed in to the functions of Proxy. It is populated with the name of the function call, its relative index into the interface type on which it was called, the type of the function (including its return type and parameter types), and the parameter values with which the function was called."}
+*/
+
 data FunctionCall {
 	char name[]
 	int index
@@ -7,9 +11,21 @@ data FunctionCall {
 	Data params
 	}
 
+/*
+ {"description" : "A component can provide this interface, and any required interface can then be wired to it. Along with lang.Morph, this can be used to create a dynamic proxy, among other things."}
+*/
+
 interface Proxy {
 	
+	/*
+	 {"@description" : "This function is called whenever a constructor is called against the required interface wired to this provided interface. Constructors return a boolean value which indicates whether or not the object could be successfully constructed; this return value is set within the returnValue instance, which has a single field of the type returned by the actual function call. If you do not set this value to true, construction will always fail. Note that this function is only called for interfaces which explicitly have a constructor declared; for interfaces with no explicit function the proxy does not receive a notification for the act of instantiation."}
+	*/
+	
 	void construct(FunctionCall callData, Data returnValue)
+	
+	/*
+	 {"@description" : "This function is called whenever a regular function is called against the required interface wired to this provided interface. Constructors return a boolean value which indicates whether or not the object could be successfully constructed; this return value is set within the returnValue instance, which has a single field of the type returned by the actual function call."}
+	*/
 	
 	void function(FunctionCall callData, Data returnValue)
 	

@@ -1,13 +1,17 @@
 /*
-This interface does not have a constructor; when a Morph object is instantiated, it is only "initialised" (everything is done except calling its constructor). It is then up to you to call a constructor afterwards, if you want to, and interpret the (boolean) return value of the constructor in determining what to do next with the object.
+ {"description" : "A component can use this type as a required interface, and that required interface can then be wired to a provided interface of any type. Along with lang.Proxy, this can be used to create a dynamic proxy, among other things. This interface does not have a constructor; when a Morph object is instantiated, it is only "initialised" (everything is done except calling its constructor, if it has one). It is then up to you to call a constructor afterwards, if you want to, and interpret the (boolean) return value of the constructor in determining what to do next with the object."}
 */
 
 interface Morph {
 	
-	//we can listen to this general event, and every event fired by the real type will be received here
+	/*
+	 {"@description" : "This is a pseudo-event which is mapped onto every event emitted by the interface to which Morph is wired. By listening to events from multiEvent, you receive every event from the actual provided interface to which you're connected."}
+	*/
 	event multiEvent()
 	
-	//this interface has the following "function" at every index, but the return type is morphed to the actual call type:
+	/*
+	 {"@description" : "This is a pseudo-function, and is only a place-holder for documentation. In reality, dynamic function calls should always be used against a Morph instance. A dynamic function call takes a single parameter, which is a data instance containing all of the prameters for the function call, and returns whatever the actual return type of the function being called is."}
+	*/
 	void function(Data p)
 	
 	}

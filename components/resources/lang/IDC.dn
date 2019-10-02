@@ -16,7 +16,7 @@ data InterfaceSpec {
 interface IDC {
 	
 	/*
-	 {"@description" : "Wire on of the required interfaces on this component to a provided interface on another component."}
+	 {"@description" : "Wire one of the required interfaces on this component to a provided interface on another component."}
 	*/
 	bool wire(char reqIntf[], IDC com, char proIntf[])
 	

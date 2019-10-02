@@ -108,10 +108,10 @@ component provides Intercepter {
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			
+			source.setTransferState(object, transferState)
+			
 			// - allow new calls to proceed in the new object
 			dana.resumeObject(object)
-			
-			source.setTransferState(object, transferState)
 			}
 		}
 	
