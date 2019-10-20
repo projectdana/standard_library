@@ -9,8 +9,55 @@ const byte BOOLEAN = 6
 const byte DATA    = 7
 const byte OBJECT  = 8
 
-component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.json.JSONParser parser {
+component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, 
+	data.json.JSONParser parser, data.StringUtil strUtil, io.Output out {
 	
+	Type getTypeInt() {	return clone typeof(int) }
+
+	Type getTypeChar() { return clone typeof(char) }
+
+	Type getTypeBoolean() {	return clone typeof(bool) }
+
+	Type getTypeDecimal() {	return clone typeof(dec) }
+
+	Type getTypeData() { return clone typeof(Data) }
+
+	Type getTypeArrayChar() { return clone typeof(char[]) }
+
+	Type getTypeArrayInt() { return clone typeof(int[]) }
+
+	Type getTypeArrayBoolean() { return clone typeof(bool[]) }
+
+	Type getTypeArrayDecimal() { return clone typeof(dec[]) }
+
+	Type getTypeArrayData() { return clone typeof(Data[]) }
+
+	Type getTypeFromJSONElement(JSONElement e) {
+		if (e.type == JSONElement.TYPE_OBJECT) { return getTypeData() }
+		if (e.type == JSONElement.TYPE_STRING) { return getTypeArrayChar() }
+		if (e.type == JSONElement.TYPE_NUMBER) {
+			if (strUtil.isNumeric(e.value)) { return getTypeInt() }
+			else { return getTypeDecimal() }
+		}
+		if (e.type == JSONElement.TYPE_BOOLEAN) { return getTypeBoolean() }
+		if (e.type == JSONElement.TYPE_ARRAY) { return getTypeArrayData() }
+		if (e.type == JSONElement.TYPE_NULL) { return getTypeData() }
+		return null
+	}
+
+	Type typeFromJSONElement(JSONElement e, Map map[]) {
+		Type t = getTypeFromJSONElement(e)
+		if (e.children.arrayLength > 0) {
+			t.fields = new Field[e.children.arrayLength]
+			for (int count = 0; count < e.children.arrayLength; count++) {
+				t.fields[count] = new Field()
+				t.fields[count].type = typeFromJSONElement(e.children[count], map)
+				t.fields[count].name = jsonKeyToDataVar(e.children[count].name, map)
+			}	
+		}
+		return t
+	}
+
 	dec[] getDECArray(Type t, JSONElement e) {
 		if (e == null) { return null }
 		dec d[] = new dec[e.children.arrayLength]
@@ -62,6 +109,13 @@ component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.j
 		return key
 	}
 
+	char[] jsonKeyToDataVar(char key[], Map map[]) {
+		for (int i = 0; i < map.arrayLength; i++) {
+			if (key == map[i].jsonKey) { return map[i].dataVar }
+		}
+		return key	
+	}
+
 	char[] getValue(JSONElement e, char key[], Map map[]) {
 		JSONElement eValue = parser.getValue(e, dataVarToJsonKey(key, map))
 		if ((eValue == null) || ((eValue.value == "null") && 
@@ -81,9 +135,8 @@ component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.j
 			if (f.type.flags == Type.F_BOOL) { return BOOLEAN }
 			else if (f.type.flags == Type.F_CHAR) { return CHAR }
 			else { return INTEGER }
-		} else if (f.type.class == Type.DECIMAL) {
-			return DECIMAL
-		} else if (f.type.class == Type.DATA) { return DATA }
+		} else if (f.type.class == Type.DECIMAL) { return DECIMAL }
+		else if (f.type.class == Type.DATA) { return DATA }
 		else if (f.type.class == Type.OBJECT) { return OBJECT }
 		return 0
 	}
@@ -262,14 +315,16 @@ component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.j
 		return json
 	}
 
-	Data[] JSONEncoder:jsonToArray(char json[], Type t, Map map[]) {
+	Data[] JSONEncoder:jsonToArray(char json[], Map map[]) {
+		Type t = typeFromJSONElement(parser.parseDocument(json), map)
 		if (t.class == Type.ARRAY) {
 			return getArray(t, parser.parseDocument(json), map)
 		} else { throw new Exception("JSON cannot be converted into the given data type.") }
 		return null
 	}
 
-	Data JSONEncoder:jsonToData(char json[], Type t, Map map[]) {
+	Data JSONEncoder:jsonToData(char json[], Map map[]) {
+		Type t = typeFromJSONElement(parser.parseDocument(json), map)
 		if (t.class == Type.DATA) {
 			Data d = new Data() from t
 			JSONElement e = parser.parseDocument(json)

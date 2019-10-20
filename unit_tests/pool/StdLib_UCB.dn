@@ -21,7 +21,7 @@ component provides UnitTest requires io.Output out, data.IntUtil iu, ml.rl.RL uc
 	bool UnitTest:runTest()
 		{
 		File fd = new File("ext-files/rl_test_data.txt", File.FILE_ACCESS_READ)
-		Row rows[] = encoder.jsonToArray(fd.read(fd.getSize()), typeof(Row[]), null)
+		Row rows[] = encoder.jsonToArray(fd.read(fd.getSize()), null)
 		
 		String actions[]
 		for (int i = 0; i < rows[0].values.arrayLength; i++)

@@ -87,7 +87,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 	
 	ChangeLog[] getChangeLog(int version)
 		{
-		ChangeLog result[] = encoder.jsonToArray(req.get("http://www.projectdana.com/dana/timeline/$version", null).content, typeof(ChangeLog[]), null)
+		ChangeLog result[] = encoder.jsonToArray(req.get("http://www.projectdana.com/dana/timeline/$version", null).content, null)
 		
 		return result
 		}
@@ -110,7 +110,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 			return 1
 			}
 
-		VersionData vd = encoder.jsonToData(r.content, typeof(VersionData), null)
+		VersionData vd = encoder.jsonToData(r.content, null)
 
 		if (vd == null)
 			{
