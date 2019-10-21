@@ -30,13 +30,16 @@ data Second {
 	dec decimal
 }
 
-/* test how it behaves with all that */
 data JustChar {
 	char justChar[]
 }
 
 data ArrayString {
 	String myArrayString[]
+}
+
+data ConflictingName {
+	bool aComponent
 }
 
 component provides UnitTest requires data.StringUtil strUtil, data.json.JSONEncoder encoder,
@@ -189,6 +192,50 @@ component provides UnitTest requires data.StringUtil strUtil, data.json.JSONEnco
 		if (s.decimal != sec.decimal) {
 			throw new Exception("Failure in test 9")
 		}
+
+		JustChar test4 = new JustChar()
+		test4.justChar = "testing"
+		char test4Json[] = encoder.jsonFromData(test4, null)
+		char test4HandMadeJson[] = "{\"justChar\": \"testing\"}"
+		if (test4Json != test4HandMadeJson) {
+			throw new Exception("Failure in test 10")
+		}
+		JustChar test5 = encoder.jsonToData(test4Json, null)
+		if (test5.justChar != test4.justChar) {
+			throw new Exception("Failure in test 11")
+		}
+
+		ArrayString test6 = new ArrayString()
+		test6.myArrayString = new String[2]
+		test6.myArrayString[0] = new String("test string 1")
+		test6.myArrayString[1] = new String("test string 2")
+		char test6Json[] = encoder.jsonFromData(test6, null)
+		char test6HandMadeJson[] =  "{\"myArrayString\": [\"test string 1\", \"test string 2\"]}"
+		if (test6Json != test6HandMadeJson) {
+			throw new Exception("Failure in test 12")	
+		}
+		ArrayString test7 = encoder.jsonToData(test6Json, null)
+		for (int count = 0; count < test6.myArrayString.arrayLength; count++) {
+			if (test6.myArrayString[count].string != test7.myArrayString[count].string) {
+				throw new Exception("Failure in test 13")
+			}
+		}
+		ConflictingName test8 = new ConflictingName()
+		test8.aComponent = true
+		Map testMap[] = new Map[1]
+		testMap[0] = new Map()
+		testMap[0].jsonKey = "component"
+		testMap[0].dataVar = "aComponent"
+		char test8Json[] = encoder.jsonFromData(test8, testMap)
+		char test8HandMadeJson[] = "{\"component\": true}"
+		if (test8Json != test8HandMadeJson) {
+			throw new Exception("Failure in test 14")
+		}
+		ConflictingName test9 = encoder.jsonToData(test8Json, testMap)
+		if (test8.aComponent != test9.aComponent) {
+			throw new Exception("Failure in test 15")
+		}
+
 		return true
 	}
 

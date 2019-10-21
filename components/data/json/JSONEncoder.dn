@@ -268,23 +268,23 @@ component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.j
 			if (i > 0) { json = new char[](json, ", ") }
 			if (fieldType == STRING) {
 				if (d:.tf != null) { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": \"", d:.tf, "\"") }
-				else { json = new char[](json, "\"", t.fields[i].name, "\": null") }
+				else { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": null") }
 			} else if (fieldType == DECIMAL) {
 				dec helper = d:.tf
 				if (helper != null) { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": ", du.decToString(helper)) }
-				else { json = new char[](json, "\"", t.fields[i].name, "\": 0.0") }
+				else { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": 0.0") }
 			} else if (fieldType == INTEGER) {
 				int helper = d:.tf
 				if (helper != null) { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": ", iu.makeString(helper)) }
-				else { json = new char[](json, "\"", t.fields[i].name, "\": 0") }
+				else { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": 0") }
 			} else if (fieldType == BOOLEAN) {
 				bool helper = d:.tf
 				if (!helper) { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": false") }
-				else { json = new char[](json, "\"", t.fields[i].name, "\": true") }
+				else { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": true") }
 			} else if (fieldType == CHAR) {
 				char helper = d:.tf
 				if (helper != null) { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": \"", helper, "\"") }
-				else { json = new char[](json, "\"", t.fields[i].name, "\": null") }
+				else { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": null") }
 			} else if (fieldType == ARRAY) {
 				if (d:.tf == null) {
 					json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map) ,"\": null")
