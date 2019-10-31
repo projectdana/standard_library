@@ -326,16 +326,16 @@ component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.j
 		return json
 	}
 
-	Data[] JSONEncoder:jsonToArray(char json[], Map map[]) {
-		Type t = typeFromJSONElement(parser.parseDocument(json), map, false)
+	Data[] JSONEncoder:jsonToArray(char json[], Type t, Map map[]) {
+		//Type t = typeFromJSONElement(parser.parseDocument(json), map, false)
 		if (t.class == Type.ARRAY) {
 			return getArray(t, parser.parseDocument(json), map)
 		} else { throw new Exception("JSON cannot be converted into the given data type.") }
 		return null
 	}
 
-	Data JSONEncoder:jsonToData(char json[], Map map[]) {
-		Type t = typeFromJSONElement(parser.parseDocument(json), map, false)
+	Data JSONEncoder:jsonToData(char json[], Type t, Map map[]) {
+		//Type t = typeFromJSONElement(parser.parseDocument(json), map, false)
 		if (t.class == Type.DATA) {
 			Data d = new Data() from t
 			JSONElement e = parser.parseDocument(json)

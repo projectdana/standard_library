@@ -49,7 +49,7 @@ component provides UnitTest requires data.StringUtil strUtil, data.json.JSONEnco
 		char jsonDocument1[] = new char[]("{", 
                     "\"resources\": [", 
                         "{ \"uuid\": \"45b7d363-86fd-4f81-8681-663140b318d4\",", 
-                          "\"description\": \"Measure the luminosity of the environment\",", 
+                          	"\"description\": \"Measure the luminosity of the environment\",", 
                             "\"capabilities\": [\"temperature\", \"environment_monitoring\", \"illuminate\"],", 
                             "\"status\": \"active\",", 
                             "\"lat\": -23.559615,", 
@@ -66,7 +66,7 @@ component provides UnitTest requires data.StringUtil strUtil, data.json.JSONEnco
               "}")
 
 
-		ResponseToApplication test = encoder.jsonToData(jsonDocument1, null)
+		ResponseToApplication test = encoder.jsonToData(jsonDocument1, typeof(ResponseToApplication), null)
 		if (test.resources[0].uuid != "45b7d363-86fd-4f81-8681-663140b318d4") {
 			throw new Exception("Failure in test 1")
 		}
@@ -112,7 +112,7 @@ component provides UnitTest requires data.StringUtil strUtil, data.json.JSONEnco
                       "}", 
                   "]")		
 
-		ResourcesByCapability test2[] = encoder.jsonToArray(jsonDocument2, null)
+		ResourcesByCapability test2[] = encoder.jsonToArray(jsonDocument2, typeof(ResourcesByCapability[]), null)
 		if (test2[1].uuid != "89v8d363-86fd-4f81-8681-663140b314t5") {
 			throw new Exception("Failure in test 2")
 		}
@@ -174,7 +174,7 @@ component provides UnitTest requires data.StringUtil strUtil, data.json.JSONEnco
 		test3[0].secondLevel = sec
 		char jsonFormat[] = encoder.jsonFromArray(test3, null)
 		
-		Test anotherTest[] = encoder.jsonToArray(jsonFormat, null)
+		Test anotherTest[] = encoder.jsonToArray(jsonFormat, typeof(Test[]), null)
 		if (anotherTest[0].testID != test3[0].testID) {
 			throw new Exception("Failure in test 5")
 		}
@@ -200,7 +200,7 @@ component provides UnitTest requires data.StringUtil strUtil, data.json.JSONEnco
 		if (test4Json != test4HandMadeJson) {
 			throw new Exception("Failure in test 10")
 		}
-		JustChar test5 = encoder.jsonToData(test4Json, null)
+		JustChar test5 = encoder.jsonToData(test4Json, typeof(JustChar), null)
 		if (test5.justChar != test4.justChar) {
 			throw new Exception("Failure in test 11")
 		}
@@ -214,7 +214,7 @@ component provides UnitTest requires data.StringUtil strUtil, data.json.JSONEnco
 		if (test6Json != test6HandMadeJson) {
 			throw new Exception("Failure in test 12")	
 		}
-		ArrayString test7 = encoder.jsonToData(test6Json, null)
+		ArrayString test7 = encoder.jsonToData(test6Json, typeof(ArrayString), null)
 		for (int count = 0; count < test6.myArrayString.arrayLength; count++) {
 			if (test6.myArrayString[count].string != test7.myArrayString[count].string) {
 				throw new Exception("Failure in test 13")
@@ -231,10 +231,19 @@ component provides UnitTest requires data.StringUtil strUtil, data.json.JSONEnco
 		if (test8Json != test8HandMadeJson) {
 			throw new Exception("Failure in test 14")
 		}
-		ConflictingName test9 = encoder.jsonToData(test8Json, testMap)
+		ConflictingName test9 = encoder.jsonToData(test8Json, typeof(ConflictingName), testMap)
 		if (test8.aComponent != test9.aComponent) {
 			throw new Exception("Failure in test 15")
 		}
+
+		char test10JSON[] = "[\"tst1\", \"tst2\"]"
+		String test10[] = encoder.jsonToArray(test10JSON, typeof(String[]), null)
+		for (int i = 0; i < test10.arrayLength; i++) {
+			out.println("$(test10[i].string)")
+		}
+
+		char test11JSON[] = encoder.jsonFromArray(test10, null)
+		out.println("$test11JSON")
 
 		return true
 	}
