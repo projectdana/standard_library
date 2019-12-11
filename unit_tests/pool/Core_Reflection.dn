@@ -138,6 +138,16 @@ component provides UnitTest requires io.Output out, data.json.JSONEncoder encode
 		
 		if (sv.string != "Starbase") throw new Exception("Failure in test 5")
 		
+		// -- sizing --
+		
+		Type tsA = typeof(char[10])
+		
+		if (tsA.size != 10) throw new Exception("Failure in test 6")
+		
+		Type tsB = typeof(char[])
+		
+		if (tsB.size != 0) throw new Exception("Failure in test 7")
+		
 		return true
 		}
 	

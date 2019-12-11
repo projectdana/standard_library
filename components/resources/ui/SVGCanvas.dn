@@ -1,0 +1,8 @@
+interface SVGCanvas extends Canvas {
+	
+	void setEmbedFonts(bool on)
+	void setSize(int w, int h)
+	void clear()
+	char[] getSVG()
+	
+	}

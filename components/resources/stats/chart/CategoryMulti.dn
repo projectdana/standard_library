@@ -1,0 +1,30 @@
+//variants: multi-bar, stacked bar, multi-box
+
+uses ui.Color
+uses ui.Canvas
+
+interface CategoryMulti extends ChartCore {
+
+	CategoryMulti()
+	
+	void addSeries(char name[])
+	
+	void addSample(char series[], char cat[], dec yvalues[])
+	
+	void setSeriesColor(char series[], Color c)
+	
+	void setSeriesName(char series[], char name[])
+	
+	void showErrorBars(bool on)
+	
+	void clampErrorBars(dec low, dec high)
+	
+	void showLegend(bool on)
+	
+	void setCatDisplayWidth(dec percent)
+	
+	void setCatDisplayPadding(int pixels)
+	
+	void drawToCanvas(Canvas c)
+	
+	}

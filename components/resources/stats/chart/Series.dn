@@ -1,0 +1,27 @@
+//variants: line, scatter, stacked line
+
+uses ui.Color
+uses ui.Canvas
+
+interface Series extends ChartCore {
+
+	Series()
+	
+	void addSample(dec xv, dec yvalues[])
+	
+	void setSeriesColor(Color c)
+	
+	const byte M_NONE = 0
+	const byte M_SQUARE = 1
+	const byte M_SQUARE_OUTLINE = 2
+	const byte M_PLUS = 3
+	const byte M_CROSS = 4
+	void setSeriesMarkers(byte type)
+	
+	void showErrorBars(bool b)
+	
+	void clampErrorBars(dec low, dec high)
+	
+	void drawToCanvas(Canvas c)
+	
+	}

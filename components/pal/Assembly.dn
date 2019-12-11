@@ -60,6 +60,8 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 	bool appFinished
 	bool exitCode
 	
+	AppParam subParams[]
+	
 	bool verbose = true
 	
 	//the cache of loaded components and their current wirings
@@ -514,9 +516,11 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		return result
 		}
 	
-	Assembly:Assembly(char main[], IDC perc)
+	Assembly:Assembly(char main[], AppParam params[], IDC perc)
 		{
 		main = normalisePath(main)
+		
+		subParams = params
 		
 		if (!fileSystem.exists(main))
 			throw new Exception("Main component '$main' not found")
@@ -657,7 +661,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 	void launchMain(IDC class)
 		{
 		myApp = new App() from class
-		exitCode = myApp.main(null)
+		exitCode = myApp.main(subParams)
 		appFinished = true
 		}
 	

@@ -15,6 +15,11 @@ interface Math {
 	dec ceil(dec val)
 	
 	/*
+	 {"@description" : "Returns a rounded version of the input value to the nearest integer."}
+	*/
+	dec round(dec val)
+	
+	/*
 	 {"@description" : "Returns the square root of a decimal value."}
 	*/
 	dec sqrt(dec val)

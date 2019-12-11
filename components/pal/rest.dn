@@ -264,6 +264,44 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			return 0
 			}
 		
+		char objectFile[] = null
+		
+		int serverPort = HOST_POST
+		
+		AppParam subParams[] = null
+		
+		for (int i = 0; i < params.arrayLength; i++)
+			{
+			if (params[i].string == "-p")
+				{
+				if (i + 1 < params.arrayLength)
+					{
+					if (stringUtil.isNumeric(params[i+1].string))
+						{
+						serverPort = iu.intFromString(params[i+1].string)
+						i ++
+						}
+						else
+						{
+						out.println("expected port number after -p")
+						}
+					}
+					else
+					{
+					out.println("expected port number after -p")
+					return 0
+					}
+				}
+				else if (objectFile == null)
+				{
+				objectFile = params[i].string
+				}
+				else if (objectFile != null)
+				{
+				subParams = new AppParam[](subParams, params[i])
+				}
+			}
+		
 		char perceptionPath[] = search.getDefaultComponent("pal.Perception")
 		LoadedComponents lc = loader.load(perceptionPath)
 		IDC perception = lc.mainComponent
@@ -271,7 +309,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		out.println("[scanning system for components, please be patient...]")
 		
 		perc = new Perception() from perception
-		assembly = new Assembly(params[0].string, perception)
+		assembly = new Assembly(objectFile, subParams, perception)
 		
 		configs = assembly.getConfigs()
 		
@@ -282,9 +320,9 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		
 		TCPServerSocket server = new TCPServerSocket()
 		
-		if (server.bind(TCPServerSocket.ANY_ADDRESS, HOST_POST))
+		if (server.bind(TCPServerSocket.ANY_ADDRESS, serverPort))
 			{
-			out.println("[REST service started, visit http://localhost:$HOST_POST/meta/ for API details]")
+			out.println("[REST service started, visit http://localhost:$serverPort/meta/ for API details]")
 			
 			while (running)
 				{

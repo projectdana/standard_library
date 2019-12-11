@@ -1,0 +1,51 @@
+interface ChartCore extends ui.GraphicsObject {
+	
+	const byte AXIS_X = 1
+	const byte AXIS_Y = 2
+	
+	const int ATTR_NONE = 0x0
+	const int ATTR_MARKERS = 0x1
+	const int ATTR_NUMBERS = 0x2
+	const int ATTR_GRID = 0x4
+	const int ATTR_AUTO = 0x8
+	
+	ChartCore()
+	
+	void setSize(int w, int h)
+	WH getSize()
+	
+	void setAxisFont(Font f)
+	
+	void setLabelFont(Font f)
+	
+	void setXMinMax(dec min, dec max)
+	void setXLabelInterval(dec ivr)
+	void setXMarkerInterval(dec ivr)
+	void setXGridInterval(dec ivr)
+	
+	void setYMinMax(dec min, dec max)
+	void setYLabelInterval(dec ivr)
+	void setYMarkerInterval(dec ivr)
+	void setYGridInterval(dec ivr)
+	
+	void setAxisLabels(char x[], char y[])
+	
+	/*
+	{"@description" : "This function forces the given axis attribute (grid, markers, or numbers) to have even spacing when projected into an integer coordinate space. Using this feature may cause the effective plot area to be smaller than the pixel height/width given in setSize()."}
+	*/
+	void evenAxisSpacing(byte axisType, byte attributeType)
+	
+	/*
+	{"@description" : "This function ensures that the given axis finishes on the given attribute (grid, marker, or number)."}
+	*/
+	void setAxisFinish(byte axisType, byte attributeType)
+	
+	int[] getPlotPoint(dec x, dec y)
+	
+	void preparePlotArea()
+	void drawGrid(Canvas c)
+	void drawAxes(Canvas c)
+	
+	Rect getPlotArea()
+	
+	}

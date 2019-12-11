@@ -1,0 +1,24 @@
+//variants: bar, line, box & whisker
+
+uses ui.Color
+uses ui.Canvas
+
+interface Category extends ChartCore {
+
+	Category()
+	
+	void addSample(char cat[], dec yvalues[])
+	
+	void setSeriesColor(Color c)
+	
+	void showErrorBars(bool on)
+	
+	void clampErrorBars(dec low, dec high)
+	
+	void setCatDisplayWidth(dec percent)
+	
+	void setCatDisplayPadding(int pixels)
+	
+	void drawToCanvas(Canvas c)
+	
+	}
