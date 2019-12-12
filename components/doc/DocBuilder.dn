@@ -334,6 +334,8 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	
 	DataDef getDataDef(SourceFile sf, char name[])
 		{
+		//out.println("looking for type $name")
+		
 		for (int i = 0; i < sf.types.arrayLength; i++)
 			{
 			if (sf.types[i].class == TypeDef.DATA && sf.types[i].name == name)
@@ -915,7 +917,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 						}
 						else
 						{
-						throw new Exception("Syntax error '$(tokens[start].content)' in '$(sf.path)'")
+						throw new Exception("Syntax error T '$(tokens[start].content)' in '$(sf.path)'")
 						}
 					
 					count += ac
@@ -991,7 +993,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 						}
 						else
 						{
-						throw new Exception("Syntax error '$(tokens[start].content)' in '$(sf.path)'")
+						throw new Exception("Syntax error D '$(tokens[start].content)' in '$(sf.path)'")
 						}
 					
 					count += ac
@@ -1129,7 +1131,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 						q = new SourceFile(path)
 						
 						supportFiles = new SourceFile[](supportFiles, q)
-						sf.supportFiles = new SourceFile[](sf.supportFiles, q)
+						if (root_sf !== sf) sf.supportFiles = new SourceFile[](sf.supportFiles, q)
 						root_sf.supportFiles = new SourceFile[](root_sf.supportFiles, q)
 						
 						ParseToken tokens[] = tokeniser.tokenise(content)
@@ -1141,10 +1143,15 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 					{
 					if (!hasSupportFile(root_sf, q))
 						{
-						sf.supportFiles = new SourceFile[](sf.supportFiles, q)
 						root_sf.supportFiles = new SourceFile[](root_sf.supportFiles, q)
 						//we still need to add all supportFiles that q itself uses to root_sf's supportFiles
 						addSubSupportFiles(root_sf, q)
+						}
+					
+					if (sf !== q && !hasSupportFile(sf, q))
+						{
+						sf.supportFiles = new SourceFile[](sf.supportFiles, q)
+						addSubSupportFiles(sf, q)
 						}
 					}
 				}
@@ -1190,7 +1197,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			}
 		
 		//from the headers of "uses" and type definitions, collect all external types from other source files
-		// - the below function should check supportFiles first to see if it's already parsed, and if so just add a reference to sf's list
+		// - the below function should check supportFiles first to see if already parsed, and if so just add a reference to sf's list
 		collectExternalTypes(root_sf, sf, incList)
 		
 		//now that we have all externally-defined types, parse the internals of the type definitions (i.e. fields) from this source file

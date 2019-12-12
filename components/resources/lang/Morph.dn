@@ -1,5 +1,5 @@
 /*
- {"description" : "A component can use this type as a required interface, and that required interface can then be wired to a provided interface of any type. Along with lang.Proxy, this can be used to create a dynamic proxy, among other things. This interface does not have a constructor; when a Morph object is instantiated, it is only "initialised" (everything is done except calling its constructor, if it has one). It is then up to you to call a constructor afterwards, if you want to, and interpret the (boolean) return value of the constructor in determining what to do next with the object."}
+ {"description" : "A component can use this type as a required interface, and that required interface can then be wired to a provided interface of any type. Along with lang.Proxy, this can be used to create a dynamic proxy, among other things. This interface does not have a constructor; when a Morph object is instantiated, it is only 'initialised' (everything is done except calling its constructor, if it has one). It is then up to you to call a constructor afterwards, if you want to, and interpret the (boolean) return value of the constructor in determining what to do next with the object."}
 */
 
 interface Morph {

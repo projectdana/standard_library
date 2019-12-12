@@ -231,6 +231,8 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 						{
 						JSONElement doc = parser.parseDocument(id.doc_description)
 						
+						if (doc == null) out.println("invalid docstring '$(id.doc_description)' for interface $(id.name) defined in $(sf.path)")
+						
 						fd.write("<div class = \"doc_description\">")
 						fd.write(parser.getValue(doc, "description").value)
 						fd.write("</div>")
