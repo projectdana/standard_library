@@ -40,10 +40,13 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		//now check all secondary files used by sf
 		for (int i = 0; i < sf.supportFiles.arrayLength; i++)
 			{
-			char ts[]
-			
-			if ((ts = getTypeSource(sf.supportFiles[i], type)) != null)
-				return ts
+			for (int j = 0; j < sf.supportFiles[i].types.arrayLength; j++)
+				{
+				if (sf.supportFiles[i].types[j].name == type)
+					{
+					return getHTMLFileFor(sf.supportFiles[i].path, type)
+					}
+				}
 			}
 		
 		return null
