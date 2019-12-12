@@ -1,11 +1,35 @@
+/*
+ {"description" : "This API supports encoding of a general pixel map into a specific image format. Use one of the semantic variants of this interface to select an image format."
+	}
+*/
+
 uses media.PixelMap
 
 interface ImageEncoder {
+	
 	ImageEncoder()
 	
+	/*
+	 {"@description" : "Load an image from a given file system path."
+		}
+	*/
 	bool loadImage(char path[])
+	
+	/*
+	 {"@description" : "Save the pixel map help by this object to a given file system path."
+		}
+	*/
 	bool saveImage(char path[])
 	
+	/*
+	 {"@description" : "Get the pixel map held by this object."
+		}
+	*/
 	PixelMap getPixels()
+	
+	/*
+	 {"@description" : "Set the pixel map held by this object."
+		}
+	*/
 	void setPixels(PixelMap pm)
 	}

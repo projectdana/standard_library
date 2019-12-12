@@ -2,24 +2,63 @@ uses Rect
 uses media.PixelMap
 
 /*
- {"description" : "This allows the programmer to create new graphical windows on the screen."}
+ {"description" : "This API allows the programmer to create new graphical windows on the screen."}
 */
 interface Window extends Panel {
 	
 		event close()
 	
+	/*
+	 {"@description" : "Instantiate a new window with the given title."
+		}
+	*/
 	Window(char title[])
 	
+	/*
+	 {"@description" : "Make the window visible / invisible."
+		}
+	*/
 	void setVisible(bool b)
+	
+	/*
+	 {"@description" : "Make the window user-resizable or not."
+		}
+	*/
 	void setResizable(bool b)
+	
+	/*
+	 {"@description" : "Place the window in full-screen mode, or in windowed mode."
+		}
+	*/
 	void setFullScreen(bool b)
 	
+	/*
+	 {"@description" : "Set the title of the window."
+		}
+	*/
 	void setTitle(char title[])
+	
+	/*
+	 {"@description" : "Set the icon used to represent the window, if the operating system supports this."
+		}
+	*/
 	void setIcon(PixelMap p)
 	
+	/*
+	 {"@description" : "Get the current location of this window, relative to the top-left corner of the screen."
+		}
+	*/
 	Rect getRect()
 	
+	/*
+	 {"@description" : "Close the window (no further operations can be called on the window once this is done)."
+		}
+	*/
 	void close()
 	
+	/*
+	 {"@description" : "This utility function can be used to block the caller until the window is closed."
+		}
+	*/
 	void waitForClose()
 	}
