@@ -261,6 +261,11 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		if (params.arrayLength == 0)
 			{
 			out.println("usage: pal.rest main_component.o")
+			out.println("")
+			out.println("Any parameters after main_component.o are passed to the sub-program")
+			out.println("")
+			out.println("options for pal.rest:")
+			out.println(" -p portNumber     Set the port number on which the REST service will listen")
 			return 0
 			}
 		

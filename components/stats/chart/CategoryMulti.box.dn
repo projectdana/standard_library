@@ -17,6 +17,9 @@ const int MARKER_LENGTH = 3
 
 const int MARKER_SIZE = 7
 
+const int LEGEND_SQ_SIZE = 10
+const int LEGEND_PAD_SIZE = 5
+
 component provides CategoryMulti:box requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font, data.query.Search search {
 	
 	Series series[]
@@ -148,6 +151,12 @@ component provides CategoryMulti:box requires ChartCore, stats.StatCore stcore, 
 		showLegend = on
 		}
 	
+	void CategoryMulti:setAxisFont(Font f)
+		{
+		axisFont = f
+		super(f)
+		}
+	
 	void CategoryMulti:setCatDisplayWidth(dec percent)
 		{
 		if (percent <= 0.0 || percent > 100.0)
@@ -204,6 +213,49 @@ component provides CategoryMulti:box requires ChartCore, stats.StatCore stcore, 
 		
 		setXMinMax(lowX, highX)
 		setYMinMax(lowY, highY)
+		}
+	
+	int getLongestSeriesName()
+		{
+		int result = 0
+		
+		for (int i = 0; i < series.arrayLength; i++)
+			{
+			int wd = axisFont.getTextWidth(series[i].displayName)
+			
+			if (wd > result) result = wd
+			}
+		
+		return result
+		}
+	
+	void drawLegend(Canvas c)
+		{
+		//calculate the longest series name, and offset the legend by this much from the right (plus the legend color square width)
+		int longestTxt = getLongestSeriesName()
+		
+		int yPos = 10
+		int xStart = getSize().width - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		
+		int textHeight = axisFont.getFontMetrics().height
+		
+		int totalLegendHeight = ((textHeight + 5) * (series.arrayLength-1)) + textHeight
+		int totalLegendWidth = (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		
+		c.drawRect(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), bgColor))
+		c.drawRectOutline(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), axisColor))
+		
+		yPos += (axisFont.getFontMetrics().descent)
+		
+		for (int i = series.arrayLength - 1; i != INT_MAX; i--)
+			{
+			c.drawRect(new Rect2D(xStart, yPos, LEGEND_SQ_SIZE, LEGEND_SQ_SIZE, series[i].seriesColor))
+			
+			int yOffset = (yPos + (LEGEND_SQ_SIZE / 2)) - (textHeight / 2)
+			c.drawText(new Point2D(xStart + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE, yOffset, axisColor), axisFont, series[i].displayName)
+			
+			yPos += textHeight + 5
+			}
 		}
 	
 	// -- screen rendering (temporary?) --
@@ -317,6 +369,9 @@ component provides CategoryMulti:box requires ChartCore, stats.StatCore stcore, 
 		
 		//axes and labels
 		drawAxes(c)
+		
+		//legend
+		if (showLegend) drawLegend(c)
 		
 		c.popSurface()
 		}
