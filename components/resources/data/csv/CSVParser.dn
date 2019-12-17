@@ -2,16 +2,31 @@
 { "description" : "Read a file of comma-separated values."}
 */
 
+uses io.File
+
 interface CSVParser {
 	
 	/*
 	{ "@description" : "Read a text file of comma-separated values, in which new lines indicate row separators. The file is parsed according to the fields of the given template data type.",
-			"path" : "The file path to the text file.",
+			"fd" : "An open file descriptor of a text file to read the contents of.",
+			"hasHeaderLine" : "Ignore the first line of the file, assuming it's a list of column headers.",
 			"separators" : "Tokens that separate cells (usually a comma).",
 			"template" : "The data type template into which the file will be parsed."
 			"@return" : "An array of the data type given by template, where each array cell represents a row of the CSV file."
 	}
 	*/
-	Data[] parseDocument(char path[], char separators[], Data template)
+	Data[] parseDocument(File fd, bool hasHeaderLine, char separators[], Data template)
+	
+	
+	/*
+	{ "@description" : "Write a text file of comma-separated values, in which new lines indicate row separators, using the cells and fields of the given array as the data",
+			"fd" : "An open file descriptor of a text file to read the contents of.",
+			"hasHeaderLine" : "Write the first line of the file as column headers, using the field names of the given array type.",
+			"separators" : "Tokens that separate cells (usually a comma).",
+			"rows" : "The data to write to the file."
+			"@return" : "An array of the data type given by template, where each array cell represents a row of the CSV file."
+	}
+	*/
+	bool writeDocument(File fd, bool hasHeaderLine, char separators[], Data rows[])
 	
 	}
