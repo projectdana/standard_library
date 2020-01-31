@@ -1,10 +1,13 @@
 uses InterceptEvents
 
+data ObjectWrap {
+	Object o
+	}
+
 component provides Intercepter {
 
 	void interceptStatefulObject(IDC ofComponent, Object object, IDC source, char type[], char icReqInterface[])
 		{
-		InterceptEvents ie
 		if (dana.pauseObject(ofComponent, object))
 			{
 			// - wait for all in-progress calls to finish in the old object
@@ -17,9 +20,8 @@ component provides Intercepter {
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			if ((ie = source.getInterface(object, "InterceptEvents", typeof(InterceptEvents))) != null)
+			if (source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b), null))
 				{
-				ie.setTarget(b)
 				source.adoptObject(icReqInterface, b)
 				}
 			ofComponent.setTransferState(b, transferState)
@@ -39,9 +41,8 @@ component provides Intercepter {
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			if ((ie = source.getInterface(object, "InterceptEvents", typeof(InterceptEvents))) != null)
+			if (source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b), null))
 				{
-				ie.setTarget(b)
 				source.adoptObject(icReqInterface, b)
 				}
 			// - allow new calls to proceed in the new object
@@ -99,9 +100,10 @@ component provides Intercepter {
 			
 			Data transferState
 			
-			if ((ie = ofComponent.getInterface(object, "InterceptEvents", typeof(InterceptEvents))) != null)
+			ObjectWrap ieResult = new ObjectWrap()
+			if (source.callInterface(object, "InterceptEvents", null, InterceptEvents.[getTarget()], null, ieResult))
 				{
-				a = ie.getTarget()
+				a = ieResult.o
 				transferState = source.getTransferState(a)
 				}
 			
@@ -121,9 +123,10 @@ component provides Intercepter {
 		Object a
 		if (dana.pauseObject(ofComponent, object))
 			{
-			if ((ie = ofComponent.getInterface(object, "InterceptEvents", typeof(InterceptEvents))) != null)
+			ObjectWrap ieResult = new ObjectWrap()
+			if (source.callInterface(object, "InterceptEvents", null, InterceptEvents.[getTarget()], null, ieResult))
 				{
-				a = ie.getTarget()
+				a = ieResult.o
 				}
 			
 			// - rewire live object so calls now go to the new one (a becomes null)

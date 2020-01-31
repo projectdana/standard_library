@@ -4,7 +4,6 @@ component provides Adapter requires io.Output out {
 	
 	void adaptStatefulObject(IDC ofComponent, Object object, IDC source, char type[])
 		{
-		AdaptEvents ae
 		if (dana.pauseObject(ofComponent, object))
 			{
 			// - wait for all in-progress calls to finish in the old object
@@ -12,7 +11,7 @@ component provides Adapter requires io.Output out {
 			// - initialise a new object, without calling its constructor
 			Object a = source.initObject(type)
 			// - notify the object that it's now the "inactive" copy
-			if ((ae = ofComponent.getInterface(object, "AdaptEvents", typeof(AdaptEvents))) != null) ae.inactive()
+			ofComponent.callInterface(object, "AdaptEvents", null, AdaptEvents.[inactive()], null, null)
 			// - get the object's state
 			Data transferState = ofComponent.getTransferState(object)
 			// - rewire live object so calls now go to the new one (a becomes null)
@@ -20,7 +19,7 @@ component provides Adapter requires io.Output out {
 			// - set the object's state
 			source.setTransferState(object, transferState)
 			// - notify the object that it's now the "active" copy
-			if ((ae = source.getInterface(object, "AdaptEvents", typeof(AdaptEvents))) != null) ae.active()
+			source.callInterface(object, "AdaptEvents", null, AdaptEvents.[active()], null, null)
 			// - allow new calls to proceed in the new object
 			dana.resumeObject(object)
 			// - wait for any in-progress asynchronous threads to finish
@@ -30,17 +29,16 @@ component provides Adapter requires io.Output out {
 	
 	void adaptStatelessObject(IDC ofComponent, Object object, IDC source, char type[])
 		{
-		AdaptEvents ae
 		if (dana.pauseObject(ofComponent, object))
 			{
 			// - initialise a new object, without calling its constructor
 			Object a = source.initObject(type)
 			// - notify the object that it's now the "inactive" copy
-			if ((ae = ofComponent.getInterface(object, "AdaptEvents", typeof(AdaptEvents))) != null) ae.inactive()
+			ofComponent.callInterface(object, "AdaptEvents", null, AdaptEvents.[inactive()], null, null)
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			if ((ae = source.getInterface(object, "AdaptEvents", typeof(AdaptEvents))) != null) ae.active()
+			source.callInterface(object, "AdaptEvents", null, AdaptEvents.[active()], null, null)
 			// - allow new calls to proceed in the new object
 			dana.resumeObject(object)
 			// - wait for all in-progress calls to finish in the old object

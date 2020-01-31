@@ -6,6 +6,8 @@ data WindowEventData {
 
 interface UIPlaneLib {
 	
+	event ready()
+	
 	event mouseUp(WindowEventData wed)
 	event mouseDown(WindowEventData wed)
 	event mouseMove(WindowEventData wed)
@@ -13,6 +15,8 @@ interface UIPlaneLib {
 	event keyUp(WindowEventData wed)
 	event resize(WindowEventData wed)
 	event close()
+	
+	event post_shutdown()
 	
 	int makeWindow()
 	
@@ -59,6 +63,10 @@ interface UIPlaneLib {
 	
 	void closeWindow(int phandle)
 	
+	bool initMediaLayer()
+	void runSystemLoop()
+	void shutdown()
+	
 	// -- fonts --
 	int loadFont(char path[], int size)
 	int getTextWidth(int phandle, char text[])
@@ -69,9 +77,13 @@ interface UIPlaneLib {
 	void unloadFont(int fd)
 	}
 
-component provides WindowCanvas(Destructor), Font(Destructor) requires native UIPlaneLib lib, io.Output out, data.IntUtil iu
+component provides IOLayer, IOWindow, Font(Destructor) requires native UIPlaneLib lib, io.Output out, data.IntUtil iu
 	{
-	implementation WindowCanvas {
+	static bool initDone = false
+	static Mutex qlock = new Mutex()
+	
+	implementation IOWindow {
+		
 		int platformHandle
 		Mutex windowStateLock = new Mutex()
 		
@@ -113,15 +125,23 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		WindowCanvas:WindowCanvas()
+		IOWindow:IOWindow()
 			{
+			mutex(qlock)
+				{
+				if (!initDone)
+					{
+					throw new Exception("IOLayer must be initialised before windows are created")
+					}
+				}
+			
 			platformHandle = lib.makeWindow()
 			if (platformHandle == 0) throw new Exception("Platform window creation failed")
 			
 			sinkevent LibEvents(lib)
 			}
 		
-		void WindowCanvas:setVisible(bool b)
+		void IOWindow:setVisible(bool b)
 			{
 			mutex(windowStateLock)
 				{
@@ -129,7 +149,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:setResizable(bool v)
+		void IOWindow:setResizable(bool v)
 			{
 			mutex(windowStateLock)
 				{
@@ -137,7 +157,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:setFullScreen(bool v)
+		void IOWindow:setFullScreen(bool v)
 			{
 			mutex(windowStateLock)
 				{
@@ -145,7 +165,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		WH WindowCanvas:getResolution()
+		WH IOWindow:getResolution()
 			{
 			mutex(windowStateLock)
 				{
@@ -156,7 +176,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:setTitle(char title[])
+		void IOWindow:setTitle(char title[])
 			{
 			mutex(windowStateLock)
 				{
@@ -164,7 +184,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:setIcon(PixelMap p)
+		void IOWindow:setIcon(PixelMap p)
 			{
 			mutex(windowStateLock)
 				{
@@ -172,7 +192,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:close()
+		void IOWindow:close()
 			{
 			mutex(windowStateLock)
 				{
@@ -184,7 +204,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:paint()
+		void IOWindow:paint()
 			{
 			mutex(windowStateLock)
 				{
@@ -192,7 +212,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:drawRect(Rect2D r)
+		void IOWindow:drawRect(Rect2D r)
 			{
 			mutex(windowStateLock)
 				{
@@ -200,7 +220,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:drawRectOutline(Rect2D r)
+		void IOWindow:drawRectOutline(Rect2D r)
 			{
 			drawLine(new Line2D(r.x, r.y, (r.x + r.width) - 1, r.y, r.color))
 			
@@ -211,7 +231,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 			drawLine(new Line2D(r.x, (r.y + r.height) - 1, (r.x + r.width) - 1, (r.y + r.height) - 1, r.color))
 			}
 		
-		void WindowCanvas:drawLine(Line2D l)
+		void IOWindow:drawLine(Line2D l)
 			{
 			mutex(windowStateLock)
 				{
@@ -219,7 +239,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:drawPoint(Point2D p)
+		void IOWindow:drawPoint(Point2D p)
 			{
 			mutex(windowStateLock)
 				{
@@ -227,7 +247,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:drawPixels(PixelMap map, int x, int y, int rotation)
+		void IOWindow:drawPixels(PixelMap map, int x, int y, int rotation)
 			{
 			mutex(windowStateLock)
 				{
@@ -235,7 +255,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:drawPixelsEx(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
+		void IOWindow:drawPixelsEx(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
 			{
 			mutex(windowStateLock)
 				{
@@ -243,7 +263,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:drawText(Point2D origin, Font f, char text[])
+		void IOWindow:drawText(Point2D origin, Font f, char text[])
 			{
 			//check if f is implemented by this component and if so we use its internal font handle; otherwise we fall back on Font.getBitmap() (which is slow)
 			mutex(windowStateLock)
@@ -260,7 +280,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:drawTextEx(Point2D origin, Font f, char text[], int rotation)
+		void IOWindow:drawTextEx(Point2D origin, Font f, char text[], int rotation)
 			{
 			//check if f is implemented by this component and if so we use its internal font handle; otherwise we fall back on Font.getBitmap() (which is slow)
 			mutex(windowStateLock)
@@ -277,7 +297,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:pushSurface(Rect rect, int xscr, int yscr, byte alpha)
+		void IOWindow:pushSurface(Rect rect, int xscr, int yscr, byte alpha)
 			{
 			mutex(windowStateLock)
 				{
@@ -285,7 +305,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:popSurface()
+		void IOWindow:popSurface()
 			{
 			mutex(windowStateLock)
 				{
@@ -293,7 +313,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:setPosition(int x, int y)
+		void IOWindow:setPosition(int x, int y)
 			{
 			mutex(windowStateLock)
 				{
@@ -301,7 +321,7 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:setSize(int x, int y)
+		void IOWindow:setSize(int x, int y)
 			{
 			mutex(windowStateLock)
 				{
@@ -309,18 +329,68 @@ component provides WindowCanvas(Destructor), Font(Destructor) requires native UI
 				}
 			}
 		
-		void WindowCanvas:setBackground(Color c)
+		void IOWindow:setBackground(Color c)
 			{
 			mutex(windowStateLock)
 				{
 				lib.setBackgroundColor(platformHandle, c.r, c.g, c.b, c.a)
 				}
 			}
+		}
+	
+	implementation IOLayer {
 		
-		void Destructor:destroy()
+		eventsink LibSysEvents(EventData ed)
 			{
-			close()
+			if (ed.type == UIPlaneLib.[ready])
+				{
+				emitevent ready()
+				}
+				else if (ed.type == UIPlaneLib.[post_shutdown])
+				{
+				emitevent recvShutdown()
+				}
 			}
+		
+		bool IOLayer:init()
+			{
+			mutex(qlock)
+				{
+				if (initDone)
+					{
+					throw new Exception("initialisation has already been done")
+					}
+					else
+					{
+					initDone = true
+					}
+				}
+			
+			sinkevent LibSysEvents(lib)
+			
+			return lib.initMediaLayer()
+			}
+		
+		void IOLayer:run()
+			{
+			mutex(qlock)
+				{
+				if (!initDone)
+					{
+					throw new Exception("system must first be initialised via init()")
+					}
+				}
+			
+			lib.runSystemLoop()
+			}
+		
+		void IOLayer:shutdown()
+			{
+			lib.shutdown()
+			
+			initDone = false
+			}
+		
 		}
 	
 	implementation Font{

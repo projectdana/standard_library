@@ -16,7 +16,7 @@ data ClickableItem{
 	ClickableItem prev
 	}
 
-component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu {
+component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 	Thread waitThread
 
@@ -49,8 +49,6 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 	int currentWidth = 500
 	int currentHeight = 500
 
-	int platformHandle
-
 	bool isMaximised
 	int restoredWidth
 	int restoredHeight
@@ -65,47 +63,47 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 
 	Color borderColor = new Color(190, 190, 200, 255)
 
-	WindowCanvas canvas
+	IOWindow canvas
 
 	eventsink Events(EventData ed)
 		{
-		if (ed.type == WindowCanvas.[mouseUp])
+		if (ed.type == IOWindow.[mouseUp])
 			{
 			MouseEvent me = ed.details
 			mouseUp(me.x, me.y, me.button)
 			}
-			else if (ed.type == WindowCanvas.[mouseDown])
+			else if (ed.type == IOWindow.[mouseDown])
 			{
 			MouseEvent me = ed.details
 			mouseDown(me.x, me.y, me.button)
 			}
-			else if (ed.type == WindowCanvas.[mouseMove])
+			else if (ed.type == IOWindow.[mouseMove])
 			{
 			MouseEvent me = ed.details
 			mouseMove(me.x, me.y)
 			}
-			else if (ed.type == WindowCanvas.[keyDown])
+			else if (ed.type == IOWindow.[keyDown])
 			{
 			KeyEvent ke = ed.details
 			keyDown(ke.keyCode)
 			}
-			else if (ed.type == WindowCanvas.[keyUp])
+			else if (ed.type == IOWindow.[keyUp])
 			{
 			KeyEvent ke = ed.details
 			keyUp(ke.keyCode)
 			}
-			else if (ed.type == WindowCanvas.[resizeWindow])
+			else if (ed.type == IOWindow.[resizeWindow])
 			{
 			WH wh = ed.details
 			setSize(wh.width, wh.height)
 			}
-			else if (ed.type == WindowCanvas.[moveWindow])
+			else if (ed.type == IOWindow.[moveWindow])
 			{
 			Point xy = ed.details
 			currentX = xy.x
 			currentY = xy.y
 			}
-			else if (ed.type == WindowCanvas.[closeWindow])
+			else if (ed.type == IOWindow.[closeWindow])
 			{
 			emitevent close()
 			}
@@ -140,8 +138,8 @@ component provides Window requires WindowCanvas, io.Output out, data.IntUtil iu 
 
 	Window:Window(char title[])
 		{
-		canvas = new WindowCanvas()
-
+		canvas = new IOWindow()
+		
 		canvas.setTitle(title)
 
 		sinkevent Events(canvas)

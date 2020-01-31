@@ -1,0 +1,109 @@
+component provides TypeUtil {
+	
+	TypeField TypeUtil:getField(Data d, char fieldName[])
+		{
+		Type t = typeof(d)
+		
+		for (int i = 0; i < t.fields.arrayLength; i++)
+			{
+			if (t.fields[i].name == fieldName)
+				return i
+			}
+		
+		return TypeUtil.NOT_FOUND
+		}
+	
+	TypeField TypeUtil:getObjectField(Object o, char fieldName[])
+		{
+		Type obt = typeof(o)
+		Type t = obt.fields[2].type
+		
+		for (int i = 0; i < t.fields.arrayLength; i++)
+			{
+			if (t.fields[i].name == fieldName)
+				return i
+			}
+		
+		return TypeUtil.NOT_FOUND
+		}
+	
+	TypeField TypeUtil:getObjectEvent(Object o, char fieldName[])
+		{
+		Type obt = typeof(o)
+		Type t = obt.fields[1].type
+		
+		for (int i = 0; i < t.fields.arrayLength; i++)
+			{
+			if (t.fields[i].name == fieldName)
+				return i
+			}
+		
+		return TypeUtil.NOT_FOUND
+		}
+	
+	bool typeEqual(Type a, Type b)
+		{
+		if (a.fields.arrayLength != b.fields.arrayLength)
+			{
+			return false
+			}
+		
+		if (a.class != b.class)
+			{
+			return false
+			}
+		
+		if (a.size != b.size)
+			{
+			return false
+			}
+		
+		for (int i = 0; i < a.fields.arrayLength; i++)
+			{
+			if ((a.fields[i].flags & Field.FLAG_RECURSION) != Field.FLAG_RECURSION)
+				{
+				if (!typeEqual(a.fields[i].type, b.fields[i].type))
+					return false
+				}
+			}
+		
+		return true
+		}
+	
+	TypeField TypeUtil:getObjectFunction(Object o, char fieldName[], Type signature)
+		{
+		Type obt = typeof(o)
+		Type t = obt.fields[0].type
+		
+		for (int i = 0; i < t.fields.arrayLength; i++)
+			{
+			if (t.fields[i].name == fieldName)
+				{
+				//check for parameter equivalence (if any)
+				
+				if (signature != null && signature.fields.arrayLength == t.fields[i].type.fields.arrayLength)
+					{
+					Field params[] = signature.fields
+					bool paramMatch = true
+					for (int n = 0; n < params.arrayLength; n++)
+						{
+						if (!typeEqual(params[n].type, t.fields[i].type.fields[n].type))
+							{
+							paramMatch = false
+							break
+							}
+						}
+					
+					if (paramMatch) return i
+					}
+					else
+					{
+					return i
+					}
+				}
+			}
+		
+		return TypeUtil.NOT_FOUND
+		}
+	
+	}

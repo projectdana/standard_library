@@ -21,10 +21,10 @@ data KeyEvent {
 	}
 
 /*
- {"description" : "WindowCanvas is a low-level API to control an OS-level window and interpret its events; this interface is not normally used by applications."}
+ {"description" : "IOLayer is the system API to control an OS-level window and interpret its events."}
 */
 
-interface WindowCanvas extends Canvas {
+interface IOWindow extends Canvas {
 	
 	event mouseUp(MouseEvent m)
 	event mouseDown(MouseEvent m)
@@ -35,7 +35,7 @@ interface WindowCanvas extends Canvas {
 	event moveWindow(Point position)
 	event closeWindow()
 	
-	WindowCanvas()
+	IOWindow()
 	
 	void setVisible(bool v)
 	void setResizable(bool v)

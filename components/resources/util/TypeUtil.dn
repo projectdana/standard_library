@@ -1,0 +1,15 @@
+uses lang.Type
+
+interface TypeUtil {
+	
+	const TypeField NOT_FOUND = INT_MAX
+	
+	TypeField getField(Data d, char fieldName[])
+	
+	TypeField getObjectField(Object o, char fieldName[])
+	
+	TypeField getObjectEvent(Object o, char fieldName[])
+	
+	TypeField getObjectFunction(Object o, char fieldName[], Type signature)
+	
+	}

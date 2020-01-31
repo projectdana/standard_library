@@ -9,7 +9,7 @@ const byte BOOLEAN = 6
 const byte DATA    = 7
 const byte OBJECT  = 8
 
-component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.json.JSONParser parser {
+component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, util.TypeUtil tu, data.json.JSONParser parser {
 	
 	dec[] getDECArray(Type t, JSONElement e) {
 		if (e == null) { return null }
@@ -93,7 +93,7 @@ component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.j
 		if (t.class == Type.DATA) {
 			for (int i = 0; i < t.fields.arrayLength; i++) {
 				byte fieldType = getFieldType(t.fields[i])
-				TypeField tf = result.[t.fields[i].name]
+				TypeField tf = tu.getField(result, t.fields[i].name)
 				char value[]
 				if (array) { value = e.value }
 				else { value = getValue(e, t.fields[i].name, map) }
@@ -200,7 +200,7 @@ component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, data.j
 		char json[] = null
 		for (int i = 0; i < t.fields.arrayLength; i++) {
 			byte fieldType = getFieldType(t.fields[i])
-			TypeField tf = d.[t.fields[i].name]
+			TypeField tf = tu.getField(d, t.fields[i].name)
 			if (i > 0) { json = new char[](json, ", ") }
 			if (fieldType == STRING) {
 				if (d:.tf != null) { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": \"", d:.tf, "\"") }

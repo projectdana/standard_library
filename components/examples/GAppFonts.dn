@@ -1,18 +1,21 @@
-component provides App requires ui.Window, ui.Label, io.Output out {
+component provides App requires ui.IOLayer coreui, ui.Window, ui.Label, io.Output out {
 	
 	Window window
 	
-	Thread main
-	
 	eventsink Events(EventData ed)
 		{
-		if (ed.source === window)
+		if (ed.source === coreui && ed.type == IOLayer.[ready])
 			{
-			main.signal()
+			startApp()
+			}
+			else if (ed.source === window)
+			{
+			window.close()
+			coreui.shutdown()
 			}
 		}
 	
-	int App:main(AppParam params[])
+	void startApp()
 		{
 		window = new Window("Font test")
 		window.setSize(600, 200)
@@ -27,13 +30,19 @@ component provides App requires ui.Window, ui.Label, io.Output out {
 		window.addObject(label1)
 		window.addObject(label2)
 		
-		main = this.thread
-		
 		sinkevent Events(window)
-		
-		this.thread.wait()
-		
-		window.close()
+		}
+	
+	int App:main(AppParam params[])
+		{
+		//initialise the system-level UI framework
+		coreui.init()
+
+		//listen for startup events from the system
+		sinkevent Events(coreui)
+
+		//run the core system loop, which blocks until the last window is closed
+		coreui.run()
 		
 		return 0
 		}

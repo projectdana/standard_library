@@ -73,7 +73,7 @@ interface IDC {
 	/*
 	 {"@description" : "Get a secondary interface of an object."}
 	*/
-	Object getInterface(Object o, char typeName[], Type type)
+	bool callInterface(Object o, char typeName[], Type type, TypeField functionIndex, Data parameters, Data returnValue)
 	
 	/*
 	 {"@description" : "Check if the given object has transfer state."}
