@@ -17,7 +17,7 @@ interface RL {
 	
 	//the list of available actions
 	
-	void setActions(String actions[])
+	void setActions(store String actions[])
 	
 	//the state machine: getAction, consumeData, getAction, etc.
 	

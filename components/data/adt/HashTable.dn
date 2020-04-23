@@ -80,7 +80,7 @@ component provides HashTable(Destructor, AdaptEvents) {
 				if (table[index] == null)
 					table[index] = new HashBucket()
 				
-				ListItem ni = new ListItem(key, value)
+				store ListItem ni = new ListItem(key, value)
 				ni.next = table[index].items
 				if (table[index].items != null) table[index].items.prev = ni
 				table[index].items = ni
@@ -99,7 +99,7 @@ component provides HashTable(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			ListItem lw = getHashItem(key)
+			store ListItem lw = getHashItem(key)
 			
 			if (lw != null)
 				{

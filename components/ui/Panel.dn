@@ -114,7 +114,7 @@ component provides Panel requires io.Output out {
 
 	void Panel:addObject(GraphicsObject go)
 		{
-		GraphicsItem newItem = new GraphicsItem(go)
+		store GraphicsItem newItem = new GraphicsItem(go)
 
 		if (objects == null)
 			objects = newItem
@@ -143,7 +143,7 @@ component provides Panel requires io.Output out {
 
 	void Panel:remObject(GraphicsObject go)
 		{
-		for (GraphicsItem bi = objects; bi != null; bi = bi.next)
+		for (store GraphicsItem bi = objects; bi != null; bi = bi.next)
 			{
 			if (bi.object == go)
 				{
@@ -245,7 +245,7 @@ component provides Panel requires io.Output out {
 		return new WH(width, height)
 		}
 
-	void changeFocusTo(KeyEventObject ko)
+	void changeFocusTo(store KeyEventObject ko)
 		{
 		if (keyboardFocus !== ko)
 			{
@@ -258,7 +258,7 @@ component provides Panel requires io.Output out {
 
 	void Panel:click(int x, int y, int button)
 		{
-		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
+		for (store ClickableItem ci = clickObjects; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
 
@@ -278,7 +278,7 @@ component provides Panel requires io.Output out {
 
 	void addClickTarget(ClickableObject co)
 		{
-		ClickableItem nci = new ClickableItem(co)
+		store ClickableItem nci = new ClickableItem(co)
 
 		if (clickObjects == null)
 			clickObjects = nci
@@ -291,11 +291,11 @@ component provides Panel requires io.Output out {
 
 	void remClickTarget(ClickableObject o)
 		{
-		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
+		for (store ClickableItem ci = clickObjects; ci != null; ci = ci.next)
 			{
 			if (ci.object === o)
 				{
-				ClickableItem td = ci
+				store ClickableItem td = ci
 
 				if (td.prev == null)
 					clickObjects = td.next
@@ -314,7 +314,7 @@ component provides Panel requires io.Output out {
 
 	void addMouseEventTarget(XYMouseObject m)
 		{
-		XYListener nci = new XYListener(m)
+		store XYListener nci = new XYListener(m)
 
 		if (mouseListeners == null)
 			mouseListeners = nci
@@ -327,11 +327,11 @@ component provides Panel requires io.Output out {
 
 	void remMouseEventTarget(XYMouseObject m)
 		{
-		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+		for (store XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			if (ci.object === m)
 				{
-				XYListener td = ci
+				store XYListener td = ci
 
 				if (td.prev == null)
 					mouseListeners = td.next
@@ -401,7 +401,7 @@ component provides Panel requires io.Output out {
 		{
 		bool overSomething
 
-		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+		for (store XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
 

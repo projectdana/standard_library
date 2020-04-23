@@ -24,7 +24,7 @@ interface Series extends ChartCore {
 		"c" : "The color for this series."
 		}
 	*/
-	void setSeriesColor(Color c)
+	void setSeriesColor(store Color c)
 	
 	/*
 	 {"@description" : "Sets the marker style used to display this series.",

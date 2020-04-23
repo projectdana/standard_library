@@ -11,7 +11,7 @@ interface Queue{
 	/*
 	 {"@description" : "Add an element to the queue."}
 	*/
-	void add(Data item)
+	void add(store Data item)
 	
 	/*
 	 {"@description" : "Remove an element from the queue."}
@@ -21,7 +21,7 @@ interface Queue{
 	/*
 	 {"@description" : "Update an existing element in the queue."}
 	*/
-	void update(Data item, Data newVersion)
+	void update(Data item, store Data newVersion)
 	
 	/*
 	 {"@description" : "Read and remove an element from the queue according to the queue policy."}

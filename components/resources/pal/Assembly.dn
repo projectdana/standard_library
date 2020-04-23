@@ -11,7 +11,7 @@ interface Assembly {
 		"main" : "Path to a compiled Dana component which impements the App interface.",
 		"perceptionModule" : "A loaded Dana component which implements the pal.Perception interface." }
 	*/
-	Assembly(char main[], AppParam params[], IDC perceptionModule)
+	Assembly(char main[], store AppParam params[], store IDC perceptionModule)
 	
 	/*
 	{ "@description" : "Gets a list of all valid assemblies of the software system being managed, where each assembly is identified with a unique string." }

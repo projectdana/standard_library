@@ -95,7 +95,7 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 				result =[] buf
 				return result
 				}
-				else
+				else if (c.arrayLength == 1)
 				{
 				buf[ndx] = c[0]
 				ndx ++
@@ -123,6 +123,8 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 		
 		Type type = typeof(template)
 		
+		List lst = new List()
+		
 		if (hasHeaderLine)
 			readLine(fd)
 		
@@ -144,13 +146,29 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 					{
 					nd:.i = decUtil.decFromString(s[i].string)
 					}
-					else if (isStringArrayType(type.fields[i].type))
+					else if (isStringArrayType(type.fields[i].type) && s[i] != null)
 					{
-					nd:.i = s[i].string
+					char str[] = s[i].string
+					
+					if (str.arrayLength >= 2 && str[0] == "\"" && str[str.arrayLength-1] == "\"")
+						str = stringUtil.subString(str, 1, str.arrayLength - 2)
+					
+					nd:.i = str
 					}
 				}
 			
-			result = new Data[](result, nd) from type
+			lst.add(nd)
+			}
+		
+		if (lst.getLength() != 0)
+			{
+			int i = 0
+			result = new Data[lst.getLength()] from type
+			for (Data s = lst.getFirst(); s != null; s = lst.getNext())
+				{
+				result[i] = s
+				i ++
+				}
 			}
 		
 		return result

@@ -30,12 +30,12 @@ interface ChartCore extends ui.GraphicsObject {
 	/*
 	{"@description" : "Set the font used for the axis numbering."}
 	*/
-	void setAxisFont(Font f)
+	void setAxisFont(store Font f)
 	
 	/*
 	{"@description" : "Set the font used for the axis text labels."}
 	*/
-	void setLabelFont(Font f)
+	void setLabelFont(store Font f)
 	
 	/*
 	{"@description" : "Set the minimum and maximum value of the X-axis. This range must be at least enough to render every value on the graph, plus error bars if in use."}

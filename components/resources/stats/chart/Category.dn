@@ -24,7 +24,7 @@ interface Category extends ChartCore {
 		"c" : "The color for this series."
 		}
 	*/
-	void setSeriesColor(Color c)
+	void setSeriesColor(store Color c)
 	
 	/*
 	 {"@description" : "Display error bars on the graph (if the specific implementation supports it).",

@@ -23,7 +23,7 @@ interface Tokeniser {
 	{"@description" : "Initialise a tokeniser instance with the given set of tokens.",
 		"tokens" : "The tokens that will be used by the tokeniser to separate text."}
 	*/
-	Tokeniser(String tokens[])
+	Tokeniser(store String tokens[])
 	
 	/*
 	{"@description" : "Set the string that indicates the remainder of a line is a comment.",

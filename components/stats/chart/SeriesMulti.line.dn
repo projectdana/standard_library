@@ -57,7 +57,7 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 	
 	void SeriesMulti:addSeries(char name[])
 		{
-		series = new Series[](series, new Series(name, name, null, new Color(100, 100, 255, 255)))
+		series = new Series[](series, new Series(name, name, null, new Color(100, 200, 200, 255)))
 		}
 	
 	void SeriesMulti:setSeriesName(char name[], char displayName[])

@@ -25,6 +25,7 @@ data FieldDef {
 	char displayName[]
 	char type[]
 	bool array
+	bool scope_store
 	
 	char doc_description[]
 	}

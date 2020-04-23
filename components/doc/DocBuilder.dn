@@ -378,7 +378,12 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	
 	bool isReturnTypeQualifier(char str[])
 		{
-		return str == "copy"
+		return false
+		}
+	
+	bool isParamTypeQualifier(char str[])
+		{
+		return str == "store"
 		}
 	
 	bool isFieldDeclaration(SourceFile sf, ParseToken tokens[], int start)
@@ -501,16 +506,12 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		//[const|transfer|copy] <type> <name> [sqBrackets]
 		FieldDef field = new FieldDef()
 		
-		bool qCopy
 		bool qTransfer
 		bool qConstant
 		
 		int os = start
 		while (isTypeQualifier(tokens[start].content))
 			{
-			if (tokens[start].content == "copy")
-				qCopy = true
-			
 			if (tokens[start].content == "transfer")
 				qTransfer = true
 			
@@ -638,7 +639,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	int consumeInterfaceFunctionDeclaration(InterfaceDef id, ParseToken docComment, ParseToken tokens[], int start)
 		{
 		//regular:
-		//[copy] <type> <name> ([<paramater>] [,<paramater>])
+		//<type> <name> ([<paramater>] [,<paramater>])
 		//constructor:
 		//<interface_type_name> ([<paramater>] [,<paramater>])
 		
@@ -693,8 +694,15 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			
 			//[modifiers] <type> <name> [sqBrackets]
 			
-			while (isReturnTypeQualifier(tokens[start].content))
+			bool sStore = false
+			
+			while (isParamTypeQualifier(tokens[start].content))
+				{
+				if (tokens[start].content == "store")
+					sStore = true
+				
 				start ++
+				}
 			
 			FieldDef nfd = new FieldDef()
 			nfd.type = tokens[start].content
@@ -714,6 +722,8 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 				start += 2
 				nfd.displayName = new char[](nfd.displayName, "[]")
 				}
+			
+			nfd.scope_store = sStore
 			
 			newFunction.params = new FieldDef[](newFunction.params, nfd)
 			

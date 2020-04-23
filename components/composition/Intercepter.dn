@@ -20,8 +20,9 @@ component provides Intercepter {
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			if (source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b), null))
+			if (source.hasInterface(object, "InterceptEvents", null))
 				{
+				source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b))
 				source.adoptObject(icReqInterface, b)
 				}
 			ofComponent.setTransferState(b, transferState)
@@ -41,8 +42,9 @@ component provides Intercepter {
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			if (source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b), null))
+			if (source.hasInterface(object, "InterceptEvents", null))
 				{
+				source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b))
 				source.adoptObject(icReqInterface, b)
 				}
 			// - allow new calls to proceed in the new object
@@ -100,10 +102,10 @@ component provides Intercepter {
 			
 			Data transferState
 			
-			ObjectWrap ieResult = new ObjectWrap()
-			if (source.callInterface(object, "InterceptEvents", null, InterceptEvents.[getTarget()], null, ieResult))
+			if (source.hasInterface(object, "InterceptEvents", null))
 				{
-				a = ieResult.o
+				Data ieResult = source.callInterface(object, "InterceptEvents", null, InterceptEvents.[getTarget()], null)
+				a = ieResult:.0
 				transferState = source.getTransferState(a)
 				}
 			
@@ -123,10 +125,10 @@ component provides Intercepter {
 		Object a
 		if (dana.pauseObject(ofComponent, object))
 			{
-			ObjectWrap ieResult = new ObjectWrap()
-			if (source.callInterface(object, "InterceptEvents", null, InterceptEvents.[getTarget()], null, ieResult))
+			if (source.hasInterface(object, "InterceptEvents", null))
 				{
-				a = ieResult.o
+				Data ieResult = source.callInterface(object, "InterceptEvents", null, InterceptEvents.[getTarget()], null)
+				a = ieResult:.0
 				}
 			
 			// - rewire live object so calls now go to the new one (a becomes null)

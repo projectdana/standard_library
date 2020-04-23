@@ -1,0 +1,19 @@
+data Item {
+	Data val
+	char key[]
+	int num
+	}
+
+interface Store {
+	
+	bool functionA(char a[], Item b, store Item c)
+	
+	bool functionB(char a[], Item b, store Item c)
+	
+	bool functionC(char a[], Item b, store Item c)
+	
+	bool functionD(char a[], Item b, store Item c)
+	
+	bool functionE(char a[], Item b, store Item c)
+	
+	}

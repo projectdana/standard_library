@@ -11,7 +11,7 @@ component provides Series:line requires ChartCore, stats.StatCore stcore, io.Out
 	
 	Sample samples[]
 	
-	Color seriesColor = new Color(100, 100, 255, 255)
+	Color seriesColor = new Color(100, 200, 200, 255)
 	Color axisColor = new Color(0, 0, 0, 255)
 	Color gridColor = new Color(220, 220, 220, 255)
 	Color bgColor = new Color(255, 255, 255, 255)

@@ -75,7 +75,10 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		
 		for (int q = 0; q < f.params.arrayLength; q++)
 			{
-			result = new char[](result, formatType(sf, f.params[q].type), " ", f.params[q].displayName)
+			if (f.params[q].scope_store)
+				result = new char[](result, "<span class = \"doc_function_param_store\">store</span>", formatType(sf, f.params[q].type), " ", f.params[q].displayName)
+				else
+				result = new char[](result, formatType(sf, f.params[q].type), " ", f.params[q].displayName)
 			
 			if (q + 1 < f.params.arrayLength) result = new char[](result, ", ")
 			}

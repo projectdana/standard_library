@@ -69,7 +69,7 @@ component provides CategoryMulti:stackedbar requires ChartCore, stats.StatCore s
 	void CategoryMulti:addSeries(char name[])
 		{
 		if (series.search(Series.[name], new Series(null, name)) == null)
-			series = new Series[](series, new Series(null, name, name, new Color(100, 100, 255, 255)))
+			series = new Series[](series, new Series(null, name, name, new Color(100, 200, 200, 255)))
 		}
 	
 	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[])

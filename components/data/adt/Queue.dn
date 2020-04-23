@@ -15,7 +15,7 @@ component provides Queue(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			ListItem ni = new ListItem(item)
+			store ListItem ni = new ListItem(item)
 			
 			if (list == null)
 				{
@@ -37,7 +37,7 @@ component provides Queue(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			ListItem lw = list
+			store ListItem lw = list
 			while (lw != null)
 				{
 				if (lw.item === item)
@@ -69,7 +69,7 @@ component provides Queue(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			ListItem lw = list
+			store ListItem lw = list
 			while (lw != null)
 				{
 				if (lw.item === item)
@@ -90,7 +90,7 @@ component provides Queue(Destructor, AdaptEvents) {
 			{
 			if (list != null)
 				{
-				ListItem current = list
+				store ListItem current = list
 				
 				list = list.next
 				

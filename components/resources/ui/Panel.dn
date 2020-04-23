@@ -16,10 +16,10 @@ interface Panel extends KeyEventObject {
 	
 	Panel()
 	
-	void setBackground(Color c)
+	void setBackground(store Color c)
 	Color getBackground()
 	
-	void addObject(GraphicsObject go)
+	void addObject(store GraphicsObject go)
 	void remObject(GraphicsObject go)
 	void clearObjects()
 	GraphicsObjectItem[] getObjects()

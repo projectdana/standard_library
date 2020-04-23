@@ -37,12 +37,12 @@ interface TextField extends KeyEventObject {
 	/*
 	 {"@description" : "Set a clickable object (such as a button) to send a 'click' notification to when the user presses the return key."}
 	*/
-	void setClickTarget(ClickableObject o)
+	void setClickTarget(store ClickableObject o)
 	
-	void setBackground(Color c)
-	void setBorder(Color c)
-	void setHighlight(Color c)
-	void setTextColor(Color c)
+	void setBackground(store Color c)
+	void setBorder(store Color c)
+	void setHighlight(store Color c)
+	void setTextColor(store Color c)
 	
-	void setFont(Font f)
+	void setFont(store Font f)
 	}

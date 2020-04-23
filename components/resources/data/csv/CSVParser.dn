@@ -15,7 +15,7 @@ interface CSVParser {
 			"@return" : "An array of the data type given by template, where each array cell represents a row of the CSV file."
 	}
 	*/
-	Data[] parseDocument(File fd, bool hasHeaderLine, char separators[], Data template)
+	Data[] parseDocument(File fd, bool hasHeaderLine, char separators[], store Data template)
 	
 	
 	/*

@@ -33,7 +33,7 @@ interface CategoryMulti extends ChartCore {
 		"c" : "The color for this series."
 		}
 	*/
-	void setSeriesColor(char series[], Color c)
+	void setSeriesColor(char series[], store Color c)
 	
 	/*
 	 {"@description" : "Sets a display name for this series, which will appear on a legend.",

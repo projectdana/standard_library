@@ -2,9 +2,9 @@ uses media.PixelMap
 
 interface Image extends GraphicsObject {
 	
-	Image(PixelMap pm)
+	Image(store PixelMap pm)
 	
-	void setPixels(PixelMap b)
+	void setPixels(store PixelMap b)
 	
 	void setFrameSize(int w, int h)
 	

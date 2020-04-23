@@ -31,5 +31,5 @@ interface ImageEncoder {
 	 {"@description" : "Set the pixel map held by this object."
 		}
 	*/
-	void setPixels(PixelMap pm)
+	void setPixels(store PixelMap pm)
 	}

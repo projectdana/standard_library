@@ -42,7 +42,7 @@ interface Window extends Panel {
 	 {"@description" : "Set the icon used to represent the window, if the operating system supports this."
 		}
 	*/
-	void setIcon(PixelMap p)
+	void setIcon(store PixelMap p)
 	
 	/*
 	 {"@description" : "Get the current location of this window, relative to the top-left corner of the screen."

@@ -1,0 +1,59 @@
+data Thing {
+	Data q
+	}
+
+component provides Store requires data.adt.List {
+	
+	Data globalA
+	
+	List gList
+	
+	bool Store:functionA(char a[], Item b, store Item c)
+		{
+		globalA = b
+		
+		return true
+		}
+	
+	bool Store:functionB(char a[], Item b, store Item c)
+		{
+		Thing ma = new Thing(b)
+		
+		globalA = ma
+		
+		return true
+		}
+	
+	bool Store:functionC(char a[], Item b, store Item c)
+		{
+		List list = new List()
+		
+		list.add(b)
+		
+		if (list.getContents().arrayLength == 0) return false
+		
+		return true
+		}
+	
+	bool Store:functionD(char a[], Item b, store Item c)
+		{
+		gList = new List()
+		
+		gList.add(b)
+		
+		if (gList.getContents().arrayLength == 0) return false
+		
+		return true
+		}
+	
+	bool Store:functionE(char a[], Item b, store Item c)
+		{
+		Thing ma = new Thing()
+		ma.q = b
+		
+		globalA = ma
+		
+		return true
+		}
+	
+	}

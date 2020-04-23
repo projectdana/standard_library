@@ -273,7 +273,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		
 		int serverPort = HOST_POST
 		
-		AppParam subParams[] = null
+		store AppParam subParams[] = null
 		
 		for (int i = 0; i < params.arrayLength; i++)
 			{
@@ -308,8 +308,8 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			}
 		
 		char perceptionPath[] = search.getDefaultComponent("pal.Perception")
-		LoadedComponents lc = loader.load(perceptionPath)
-		IDC perception = lc.mainComponent
+		store LoadedComponents lc = loader.load(perceptionPath)
+		store IDC perception = lc.mainComponent
 		
 		out.println("[scanning system for components, please be patient...]")
 		

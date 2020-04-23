@@ -1,3 +1,5 @@
+uses data.String
+
 interface TCPLib{
 	int connect(char address[], int port)
 	void disconnect(int hnd)
@@ -12,7 +14,7 @@ interface TCPLib{
 
 component provides net.TCPServerSocket, net.TCPSocket requires native TCPLib lib, io.Output out {
 	
-	implementation TCPSocket{
+	implementation TCPSocket {
 		bool connected
 		int platformSocket
 		Mutex accessLock = new Mutex()
@@ -143,7 +145,7 @@ component provides net.TCPServerSocket, net.TCPSocket requires native TCPLib lib
 			}
 		}
 	
-	implementation TCPServerSocket{
+	implementation TCPServerSocket {
 		bool connected
 		int platformSocket
 		Mutex accessLock = new Mutex()
@@ -176,4 +178,5 @@ component provides net.TCPServerSocket, net.TCPSocket requires native TCPLib lib
 				}
 			}
 		}
+	
 	}

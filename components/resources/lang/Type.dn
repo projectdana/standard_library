@@ -2,7 +2,8 @@ data Field {
 const int NOT_FOUND = INT_MAX
 	Type type
 	char name[]
-const int FLAG_RECURSION = 0x1
+const int FLAG_RECURSION 	= 0x1
+const int FLAG_STORE		= 0x2
 	byte flags
 	}
 

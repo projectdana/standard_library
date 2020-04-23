@@ -9,5 +9,5 @@ uses Color
 interface Label extends GraphicsObject{
 	Label(char text[], char font[], int size)
 	void setText(char text[])
-	void setColor(Color c)
+	void setColor(store Color c)
 	}

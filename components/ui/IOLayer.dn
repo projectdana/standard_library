@@ -77,7 +77,7 @@ interface UIPlaneLib {
 	void unloadFont(int fd)
 	}
 
-component provides IOLayer, IOWindow, Font(Destructor) requires native UIPlaneLib lib, io.Output out, data.IntUtil iu
+component provides IOLayer, IOWindow(Destructor), Font(Destructor) requires native UIPlaneLib lib, io.Output out, data.IntUtil iu
 	{
 	static bool initDone = false
 	static Mutex qlock = new Mutex()
@@ -335,6 +335,12 @@ component provides IOLayer, IOWindow, Font(Destructor) requires native UIPlaneLi
 				{
 				lib.setBackgroundColor(platformHandle, c.r, c.g, c.b, c.a)
 				}
+			}
+		
+		void Destructor:destroy()
+			{
+			//if we're being destroyed, we need to free the window handle in the UI framework, otherwise it will have a bad reference
+			close()
 			}
 		}
 	

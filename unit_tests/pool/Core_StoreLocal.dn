@@ -1,0 +1,45 @@
+uses io.Output
+uses data.String
+
+component provides UnitTest requires Store st {
+	
+	int alpha
+	
+	bool testA()
+		{
+		Store stq = new Store()
+		
+		Item itemA = new Item(new String("hi"), "there")
+		
+		st.functionA("one", itemA, itemA)
+		
+		return true
+		}
+	
+	void humana(int a)
+		{
+		alpha = a
+		}
+	
+	bool UnitTest:runTest()
+		{
+		humana(99)
+		
+		Item itemA = new Item(new String("hi"), "there")
+		
+		store Item itemB = new Item(new String("hi"), "there")
+		
+		if (st.functionA("one", itemA, itemB) == true) throw new Exception("Failure in test 1")
+		
+		if (st.functionB("one", itemA, itemB) == true) throw new Exception("Failure in test 2")
+		
+		if (st.functionC("one", itemA, itemB) == false) throw new Exception("Failure in test 3")
+		
+		if (st.functionD("one", itemA, itemB) == true) throw new Exception("Failure in test 4")
+		
+		if (st.functionE("one", itemA, itemB) == true) throw new Exception("Failure in test 5")
+		
+		return true
+		}
+	
+	}
