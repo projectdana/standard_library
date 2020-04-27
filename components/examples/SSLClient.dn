@@ -1,0 +1,58 @@
+component provides App requires io.Output out, io.File, net.TLSCertStore, net.TLSContext, net.TLS, net.TCPSocket, net.dns.DNS dns {
+	
+	int App:main(AppParam params[])
+		{
+		char host[] = "www.projectdana.com"
+		char resource[] = "/"
+		char IP[] = dns.getHostIP(host)
+		
+		TLSCertStore cstore = new TLSCertStore()
+		//cstore.addCertificate(rootCA) //TODO: you'll need to get a suitable root CA to make verifyCertificate work...
+		
+		TLSContext ctx = new TLSContext(TLSContext.CLIENT)
+		
+		TCPSocket client = new TCPSocket()
+		
+		client.connect(IP, 443)
+		
+		TLS ssl = new TLS(ctx)
+		
+		ssl.connect(client)
+		
+		char cert[] = ssl.getPeerCertificate()
+		
+		String chain[] = ssl.getPeerCertChain()
+		
+		out.println("raw certificate:")
+		out.println(cert)
+		
+		VerifyStatus vres = ssl.verifyCertificate(cstore, cert, chain)
+		
+		if (vres.status == VerifyStatus.OK)
+			out.println("[certificate verified OK]")
+			else
+			{
+			out.println("[certificate NOT verified ('$(vres.failedReason)')]")
+			out.println("bad certificate:")
+			out.println(vres.failedCertificate)
+			}
+		
+		ssl.write("GET $resource HTTP/1.1\r\n")
+		ssl.write("Host: $host\r\n")
+		ssl.write("Connection: close\r\n\r\n")
+		
+		char b[]
+		char buf[]
+		while ((b = ssl.read(1)) != null)
+			buf = new char[](buf, b)
+		
+		ssl.close()
+		
+		client.disconnect()
+		
+		out.println(buf)
+		
+		return 99
+		}
+	
+	}

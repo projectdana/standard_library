@@ -56,4 +56,27 @@ component provides Store requires data.adt.List {
 		return true
 		}
 	
+	bool Store:functionF(char a[], Item b, store Item c)
+		{
+		store Thing ma = new Thing()
+		ma.q = b
+		
+		globalA = ma
+		
+		return true
+		}
+	
+	bool Store:functionG(char a[], Item b, store Item c)
+		{
+		store Thing ma = new Thing()
+		
+		Thing wa = ma
+		
+		wa.q = b
+		
+		globalA = ma
+		
+		return true
+		}
+	
 	}

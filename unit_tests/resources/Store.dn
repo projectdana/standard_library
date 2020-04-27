@@ -16,4 +16,8 @@ interface Store {
 	
 	bool functionE(char a[], Item b, store Item c)
 	
+	bool functionF(char a[], Item b, store Item c)
+	
+	bool functionG(char a[], Item b, store Item c)
+	
 	}

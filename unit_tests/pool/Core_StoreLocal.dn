@@ -39,6 +39,10 @@ component provides UnitTest requires Store st {
 		
 		if (st.functionE("one", itemA, itemB) == true) throw new Exception("Failure in test 5")
 		
+		if (st.functionF("one", itemA, itemB) == true) throw new Exception("Failure in test 6")
+		
+		if (st.functionG("one", itemA, itemB) == true) throw new Exception("Failure in test 7")
+		
 		return true
 		}
 	

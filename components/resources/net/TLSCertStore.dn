@@ -1,0 +1,16 @@
+uses data.String
+
+/* {"description" : "This API represents a store of trusted certificates that can be used to verify the authenticity of an arbitrary certificate. This is usually 'root' certificate authority certificates which are used to verify the authenticity of other certificates. You should only add certificates into a store if you have a reason to trust them."} */
+
+interface TLSCertStore {
+	
+	/* {"@description" : "Create a new certificate store."} */
+	TLSCertStore()
+	
+	/* {"@description" : "Add a new trusted X509 certificate to the store. The certificate should be supplied in a base64-encoded PEM format."} */
+	bool addCertificate(char cert[])
+	
+	/* {"@description" : "Load all certificates from the given system path into the store (must be a hash-format directory)."} */
+	bool loadLocation(char path[])
+	
+	}
