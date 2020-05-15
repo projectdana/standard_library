@@ -39,7 +39,7 @@ component provides Stack(Destructor, AdaptEvents) {
 			{
 			if (listEnd != null)
 				{
-				store ListItem current = listEnd
+				ListItem current = listEnd
 				
 				listEnd = listEnd.prev
 				
@@ -80,7 +80,7 @@ component provides Stack(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			store ListItem lw = list
+			ListItem lw = list
 			while (lw != null)
 				{
 				if (lw.item === item)
@@ -112,7 +112,7 @@ component provides Stack(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			store ListItem lw = list
+			ListItem lw = list
 			while (lw != null)
 				{
 				if (lw.item === item)

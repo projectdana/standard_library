@@ -74,13 +74,16 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 		char buf[] = new char[BUF_EX_SIZE]
 		int ndx = 0
 		
+		bool inString = false
 		char c[]
 		
 		while (!fd.eof())
 			{
 			c = fd.read(1)
 			
-			if (c == "\r")
+			if (isStringCharacter(c[0])) inString = !inString
+			
+			if (!inString && c == "\r")
 				{
 				if ((c = fd.read(1)).arrayLength == 1 && c != "\n")
 					fd.setPos(fd.getPos()-1)
@@ -89,7 +92,7 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 				result =[] buf
 				return result
 				}
-				else if (c == "\n")
+				else if (!inString && c == "\n")
 				{
 				char result[] = new char[ndx]
 				result =[] buf
@@ -138,22 +141,25 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 			
 			for (int i = 0; i < type.fields.arrayLength; i++)
 				{
-				if (type.fields[i].type.class == Type.INTEGER)
+				if (i < s.arrayLength && s[i] != null)
 					{
-					nd:.i = intUtil.intFromString(s[i].string)
-					}
-					else if (type.fields[i].type.class == Type.DECIMAL)
-					{
-					nd:.i = decUtil.decFromString(s[i].string)
-					}
-					else if (isStringArrayType(type.fields[i].type) && s[i] != null)
-					{
-					char str[] = s[i].string
-					
-					if (str.arrayLength >= 2 && str[0] == "\"" && str[str.arrayLength-1] == "\"")
-						str = stringUtil.subString(str, 1, str.arrayLength - 2)
-					
-					nd:.i = str
+					if (type.fields[i].type.class == Type.INTEGER)
+						{
+						nd:.i = intUtil.intFromString(s[i].string)
+						}
+						else if (type.fields[i].type.class == Type.DECIMAL)
+						{
+						nd:.i = decUtil.decFromString(s[i].string)
+						}
+						else if (isStringArrayType(type.fields[i].type))
+						{
+						char str[] = s[i].string
+						
+						if (str.arrayLength >= 2 && str[0] == "\"" && str[str.arrayLength-1] == "\"")
+							str = stringUtil.subString(str, 1, str.arrayLength - 2)
+						
+						nd:.i = str
+						}
 					}
 				}
 			

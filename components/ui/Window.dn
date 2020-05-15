@@ -236,11 +236,11 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 	void Window:remObject(GraphicsObject go)
 		{
-		for (store GraphicsItem bi = buffer; bi != null; bi = bi.next)
+		for (GraphicsItem bi = buffer; bi != null; bi = bi.next)
 			{
 			if (bi.object === go)
 				{
-				store GraphicsItem td = bi
+				GraphicsItem td = bi
 
 				stopevent PaintEvents(go)
 
@@ -277,7 +277,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 		}
 
-	void addClickTarget(ClickableObject co)
+	void addClickTarget(store ClickableObject co)
 		{
 		store ClickableItem nci = new ClickableItem(co)
 
@@ -292,11 +292,11 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 	void remClickTarget(ClickableObject o)
 		{
-		for (store ClickableItem ci = clickItems; ci != null; ci = ci.next)
+		for (ClickableItem ci = clickItems; ci != null; ci = ci.next)
 			{
 			if (ci.object === o)
 				{
-				store ClickableItem td = ci
+				ClickableItem td = ci
 
 				if (td.prev == null)
 					clickItems = td.next
@@ -313,7 +313,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 			}
 		}
 
-	void addMouseEventTarget(XYMouseObject m)
+	void addMouseEventTarget(store XYMouseObject m)
 		{
 		store XYListener nci = new XYListener(m)
 
@@ -328,11 +328,11 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 	void remMouseEventTarget(XYMouseObject m)
 		{
-		for (store XYListener ci = mouseListeners; ci != null; ci = ci.next)
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			if (ci.object === m)
 				{
-				store XYListener td = ci
+				XYListener td = ci
 
 				if (td.prev == null)
 					mouseListeners = td.next
@@ -459,7 +459,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 				}
 			}
 
-		for (store ClickableItem ci = clickItems; ci != null; ci = ci.next)
+		for (ClickableItem ci = clickItems; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
 
@@ -502,7 +502,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 		
 		if (clickDown == null)
 			{
-			for (store ClickableItem ci = clickItems; ci != null; ci = ci.next)
+			for (ClickableItem ci = clickItems; ci != null; ci = ci.next)
 				{
 				Rect r = ci.object.getBounds()
 
@@ -516,7 +516,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 		
 		//now fire the actual mouse down event
 		
-		for (store XYListener ci = mouseListeners; ci != null; ci = ci.next)
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
 
@@ -586,7 +586,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 			return
 			}
 
-		for (store XYListener ci = mouseListeners; ci != null; ci = ci.next)
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
 

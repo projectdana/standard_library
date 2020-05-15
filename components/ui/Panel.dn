@@ -143,7 +143,7 @@ component provides Panel requires io.Output out {
 
 	void Panel:remObject(GraphicsObject go)
 		{
-		for (store GraphicsItem bi = objects; bi != null; bi = bi.next)
+		for (GraphicsItem bi = objects; bi != null; bi = bi.next)
 			{
 			if (bi.object == go)
 				{
@@ -258,7 +258,7 @@ component provides Panel requires io.Output out {
 
 	void Panel:click(int x, int y, int button)
 		{
-		for (store ClickableItem ci = clickObjects; ci != null; ci = ci.next)
+		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
 
@@ -276,7 +276,7 @@ component provides Panel requires io.Output out {
 			}
 		}
 
-	void addClickTarget(ClickableObject co)
+	void addClickTarget(store ClickableObject co)
 		{
 		store ClickableItem nci = new ClickableItem(co)
 
@@ -291,11 +291,11 @@ component provides Panel requires io.Output out {
 
 	void remClickTarget(ClickableObject o)
 		{
-		for (store ClickableItem ci = clickObjects; ci != null; ci = ci.next)
+		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
 			{
 			if (ci.object === o)
 				{
-				store ClickableItem td = ci
+				ClickableItem td = ci
 
 				if (td.prev == null)
 					clickObjects = td.next
@@ -312,7 +312,7 @@ component provides Panel requires io.Output out {
 			}
 		}
 
-	void addMouseEventTarget(XYMouseObject m)
+	void addMouseEventTarget(store XYMouseObject m)
 		{
 		store XYListener nci = new XYListener(m)
 
@@ -327,11 +327,11 @@ component provides Panel requires io.Output out {
 
 	void remMouseEventTarget(XYMouseObject m)
 		{
-		for (store XYListener ci = mouseListeners; ci != null; ci = ci.next)
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			if (ci.object === m)
 				{
-				store XYListener td = ci
+				XYListener td = ci
 
 				if (td.prev == null)
 					mouseListeners = td.next
@@ -401,7 +401,7 @@ component provides Panel requires io.Output out {
 		{
 		bool overSomething
 
-		for (store XYListener ci = mouseListeners; ci != null; ci = ci.next)
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
 

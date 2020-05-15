@@ -14,10 +14,10 @@ interface Category extends ChartCore {
 	/*
 	 {"@description" : "Add a new sample (or set of samples) for a specific category.",
 		"cat" : "The category in which this series data will appear.",
-		"yvalues" : "The values for this series data for this category."
+		"values" : "The values for this series data for this category."
 		}
 	*/
-	void addSample(char cat[], dec yvalues[])
+	void addSample(char cat[], dec values[])
 	
 	/*
 	 {"@description" : "Sets a color used to display this series.",

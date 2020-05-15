@@ -268,7 +268,7 @@ component provides net.TCPServerSocket, net.TCPSocket, net.TLSCertStore(Destruct
 		
 		void Destructor:destroy()
 			{
-			slib.freeCertStore(platformHandle)
+			slib.freeContext(platformHandle)
 			}
 		
 		}
@@ -309,12 +309,12 @@ component provides net.TCPServerSocket, net.TCPSocket, net.TLSCertStore(Destruct
 			return slib.getPeerCertChain(platformHandle)
 			}
 		
-		int TLS:write(byte dat[])
+		int TLS:send(byte dat[])
 			{
 			return slib.write(platformHandle, dat)
 			}
 		
-		byte[] TLS:read(int len)
+		byte[] TLS:recv(int len)
 			{
 			return slib.read(platformHandle, len)
 			}

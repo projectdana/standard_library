@@ -78,6 +78,11 @@ interface ChartCore extends ui.GraphicsObject {
 	void setYGridInterval(dec ivr)
 	
 	/*
+	{"@description" : "Set the number of decimal places to which numbers are displayed on axes."}
+	*/
+	void setDecimalPlaces(byte axisType, int num)
+	
+	/*
 	{"@description" : "Set the text labels to appear on the x-axis and y-axis of the graph."}
 	*/
 	void setAxisLabels(char x[], char y[])
@@ -91,6 +96,11 @@ interface ChartCore extends ui.GraphicsObject {
 	{"@description" : "This function ensures that the given axis finishes on the given attribute (grid, marker, or number)."}
 	*/
 	void setAxisFinish(byte axisType, byte attributeType)
+	
+	/*
+	{"@description" : "This function controls the amount of white space between the given axis and the axis title."}
+	*/
+	void setAxisLabelSpace(byte axisType, int pixels)
 	
 	/*
 	 {"@description" : "Get the integer coordinates on the plot area, in pixels, at which the given x/y decimal values would appear.",

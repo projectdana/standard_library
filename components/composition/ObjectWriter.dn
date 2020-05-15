@@ -43,7 +43,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 		if (fd == null)
 			throw new Exception("File not found")
 		
-		SourceHeader hdr = new SourceHeader()
+		store SourceHeader hdr = new SourceHeader()
 		byte serialHDR[] = dana.getByteArrayOf(hdr)
 		
 		byte buf[]

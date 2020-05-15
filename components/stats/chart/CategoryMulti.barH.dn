@@ -20,7 +20,7 @@ const int MARKER_SIZE = 7
 const int LEGEND_SQ_SIZE = 10
 const int LEGEND_PAD_SIZE = 5
 
-component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font, data.query.Search search {
+component provides CategoryMulti:barH requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font, data.query.Search search {
 	
 	Series series[]
 	String categories[]
@@ -51,7 +51,7 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 	dec yAxMin
 	
 	//bar width, in percentage of category area
-	dec barWidth = 60.0
+	dec barWidth = 50.0
 	int barPad = 0
 	
 	bool showStdDev
@@ -63,13 +63,12 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 		
 		axisFont = new Font("SourceSansPro.ttf", 12)
 		
-		setXMarkerInterval(1.0)
+		setYMarkerInterval(1.0)
 		}
 	
 	void CategoryMulti:addSeries(char name[])
 		{
-		if (series.search(Series.[name], new Series(null, name)) == null)
-			series = new Series[](series, new Series(null, name, name, new Color(100, 200, 200, 255)))
+		series = new Series[](series, new Series(null, name, name, new Color(100, 200, 200, 255)))
 		}
 	
 	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[])
@@ -83,17 +82,17 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 		
 		Series n = series.search(Series.[name], new Series(null, seriesName))[0]
 		
-		xAxMax += 1.0
+		yAxMax += 1.0
 		
 		if (series.arrayLength == 1 && n.samples == null)
 			{
-			highestY = hy
-			lowestY = ly
+			highestX = hy
+			lowestX = ly
 			}
 			else
 			{
-			if (hy > highestY) highestY = hy
-			if (ly < lowestY) lowestY = ly
+			if (hy > highestX) highestX = hy
+			if (ly < lowestX) lowestX = ly
 			}
 		
 		//add sample
@@ -102,8 +101,8 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 		// -- automated calculation of the highest and lowest points on the axis --
 		
 		//update the axis endpoints, if the series values are now outside the bounds of whatever endpoints have been set
-		if (highestY > yAxMax) yAxMax = highestY
-		if (lowestY < yAxMin) yAxMin = lowestY
+		if (highestX > xAxMax) xAxMax = highestX
+		if (lowestX < xAxMin) xAxMin = lowestX
 		
 		setXMinMax(xAxMin, xAxMax)
 		setYMinMax(yAxMin, yAxMax)
@@ -118,12 +117,6 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 		yAxMax = max
 		
 		super(min, max)
-		}
-	
-	void CategoryMulti:setYLabelInterval(dec ivr)
-		{
-		numberIntervalY = ivr
-		super(ivr)
 		}
 	
 	void CategoryMulti:setSeriesColor(char seriesName[], Color c)
@@ -203,26 +196,15 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 					
 					dec mean = stcore.mean(s[0].values)
 					
-					if (mean > 0.0)
-						{
-						dec topY = barTop + mean
-						
-						barTop = topY
-						}
-						else
-						{
-						dec botY = barLow + mean
-						
-						barLow = botY
-						}
+					if (mean > highX) highX = mean
+					if (mean < lowX) lowX = mean
 					}
 				}
 			
-			if (barTop > highY) highY = barTop
-			if (barLow < lowY) lowY = barLow
-			
-			highX += 1.0
+			highY += 1.0
 			}
+		
+		//NOTE: we could now calculate end "endpoint" on each axis which is a multiple of their number interval
 		
 		setXMinMax(lowX, highX)
 		setYMinMax(lowY, highY)
@@ -271,11 +253,26 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 			}
 		}
 	
+	int getMaxCatTextWidth()
+		{
+		int high = 0
+		for (int i = 0; i < categories.arrayLength; i++)
+			{
+			int textWidth = axisFont.getTextWidth(categories[i].string)
+			
+			if (textWidth > high) high = textWidth
+			}
+		
+		return high
+		}
+	
 	// -- screen rendering (temporary?) --
 	
 	void CategoryMulti:paint(Canvas c)
 		{
 		prepAxisLimits()
+		
+		setAxisLabelSpace(ChartCore.AXIS_Y, getMaxCatTextWidth())
 		
 		Point pos = getPosition()
 		WH wh = getSize()
@@ -292,28 +289,20 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 		
 		//data
 		
-		int xyA[] = getPlotPoint(0.0, 0.0)
-		int xyB[] = getPlotPoint(1.0, 0.0)
+		int ySpacing = ((getPlotPoint(0.0, 0.0)[1] - getPlotPoint(0.0, 1.0)[1]+1) - barPad)
+		int totalBarHeightPX = (barWidth / 100.0) * ySpacing
+		int barHeightPX = totalBarHeightPX / series.arrayLength
 		
-		dec thisX = 0.0
-		
-		//we pre-compute the "bar offset" within the category space, as the distance from the left-side of that space
-		// - we then use the same offset for each category space, which gives a more uniform look
+		dec thisY = 0.0
 		
 		for (int i = 0; i < categories.arrayLength; i++)
 			{
-			dec barTop = 0.0
-			dec barLow = 0.0
+			int xyZ[] = getPlotPoint(0.0, thisY)
 			
-			int xyZ[] = getPlotPoint(thisX, barTop)
-			int xyZ1[] = getPlotPoint(thisX+1.0, 0.0)
+			int centreY = xyZ[1] - ((xyZ[1] - getPlotPoint(0.0, thisY+1.0)[1]) / 2)
 			
-			int xSpacing = ((xyZ1[0] - xyZ[0])+1) - (barPad*2)
-			int barWidthPX = (barWidth / 100.0) * xSpacing
-			
-			int centreX = xyZ[0] + (((xyZ1[0] - xyZ[0])+1) / 2)
-			
-			int barOffset = (centreX - (barWidthPX / 2)) - xyZ[0]
+			centreY -= totalBarHeightPX / 2
+			centreY += barHeightPX / 2
 			
 			for (int j = 0; j < series.arrayLength; j++)
 				{
@@ -327,35 +316,32 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 					
 					if (mean > 0.0)
 						{
-						dec topY = barTop + mean
+						int xyTop[] = getPlotPoint(0.0, thisY+1.0) //top-left
+						int xyBot[] = getPlotPoint(mean, thisY) //bottom-right
 						
-						int xyTop[] = getPlotPoint(thisX, topY)
-						int xyBot[] = getPlotPoint(thisX+1.0, barTop)
-						
-						c.drawRect(new Rect2D(xyTop[0] + barOffset + barPad, xyTop[1], barWidthPX, xyBot[1] - xyTop[1], series[j].seriesColor))
-						
-						barTop = topY
+						c.drawRect(new Rect2D(xyTop[0], (centreY - (barHeightPX/ 2))+barPad, xyBot[0] - xyTop[0], barHeightPX, series[j].seriesColor))
 						}
 						else
 						{
-						dec botY = barLow + mean
+						int xyTop[] = getPlotPoint(mean, thisY+1.0) //top-left
+						int xyBot[] = getPlotPoint(0.0, thisY) //bottom-right
 						
-						int xyTop[] = getPlotPoint(thisX, barLow)
-						int xyBot[] = getPlotPoint(thisX+1.0, botY)
-						
-						c.drawRect(new Rect2D(xyTop[0] + barOffset + barPad, xyTop[1], barWidthPX, xyBot[1] - xyTop[1], series[j].seriesColor))
-						
-						barLow = botY
+						c.drawRect(new Rect2D(xyTop[0], (centreY - (barHeightPX / 2))+barPad, xyBot[0] - xyTop[0], barHeightPX, series[j].seriesColor))
 						}
 					}
+				
+				centreY += barHeightPX
 				}
 			
 			//category label
 			
-			int textWidth = axisFont.getTextWidth(categories[i].string)
-			c.drawText(new Point2D(centreX - (textWidth/2), xyZ[1] + MARKER_LENGTH, axisColor), axisFont, categories[i].string)
+			centreY = xyZ[1] - ((xyZ[1] - getPlotPoint(0.0, thisY+1.0)[1]) / 2)
 			
-			thisX += 1.0
+			int textWidth = axisFont.getTextWidth(categories[i].string)
+			int textHeight = axisFont.getFontMetrics().height
+			c.drawText(new Point2D(getPlotArea().x - MARKER_LENGTH - textWidth, centreY - (textHeight / 2), axisColor), axisFont, categories[i].string)
+			
+			thisY += 1.0
 			}
 		
 		//axes and labels

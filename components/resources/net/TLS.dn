@@ -14,7 +14,7 @@ data VerifyStatus {
 
 /* {"description" : "This API supports transport layer security (TLS), historically known as a 'secure socket layer'. There are two parts of making secure connections: authentication and encryption. This API creates an encrypted channel by using X509 certificates as public keys to initiate a session key exchange. It also performs part of authentication, by verifying that a certificate is trusted. The other core part of authentication is host name verification, which checks that the server you are talking to actually matches that which the certificate has been issued for; host name verification is left to the programmer to do separately as it can be protocol-specific."} */
 
-interface TLS {
+interface TLS extends net.Stream {
 	
 	/* {"@description" : "Instantiate a new secure session object, using the configuration in the given TLSContext object."} */
 	TLS(TLSContext context)
@@ -33,12 +33,6 @@ interface TLS {
 	
 	/* {"@description" : "This function allows you to verify a certificate, as returned by getPeerCertificate() or getPeerCertChain(). An SSLCertStore instance must be passed in which holds root certificates that you intend to trust. It is still your responsibility to perform host name verification separately."} */
 	VerifyStatus verifyCertificate(TLSCertStore storeData, char certificate[], String chain[])
-	
-	/* {"@description" : "Write data to the channel, to be sent to the remote host."} */
-	int write(byte content[])
-	
-	/* {"@description" : "Read an amount of data from the channel; this function blocks until the given number of bytes have been read or the connection is closed."} */
-	byte[] read(int len)
 	
 	/* {"@description" : "Close the secure session."} */
 	void close()

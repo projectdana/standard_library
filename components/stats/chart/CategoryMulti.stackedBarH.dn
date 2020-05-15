@@ -20,7 +20,7 @@ const int MARKER_SIZE = 7
 const int LEGEND_SQ_SIZE = 10
 const int LEGEND_PAD_SIZE = 5
 
-component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font, data.query.Search search {
+component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font, data.query.Search search {
 	
 	Series series[]
 	String categories[]
@@ -63,7 +63,7 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 		
 		axisFont = new Font("SourceSansPro.ttf", 12)
 		
-		setXMarkerInterval(1.0)
+		setYMarkerInterval(1.0)
 		}
 	
 	void CategoryMulti:addSeries(char name[])
@@ -83,17 +83,17 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 		
 		Series n = series.search(Series.[name], new Series(null, seriesName))[0]
 		
-		xAxMax += 1.0
+		yAxMax += 1.0
 		
 		if (series.arrayLength == 1 && n.samples == null)
 			{
-			highestY = hy
-			lowestY = ly
+			highestX = hy
+			lowestX = ly
 			}
 			else
 			{
-			if (hy > highestY) highestY = hy
-			if (ly < lowestY) lowestY = ly
+			if (hy > highestX) highestX = hy
+			if (ly < lowestX) lowestX = ly
 			}
 		
 		//add sample
@@ -102,8 +102,8 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 		// -- automated calculation of the highest and lowest points on the axis --
 		
 		//update the axis endpoints, if the series values are now outside the bounds of whatever endpoints have been set
-		if (highestY > yAxMax) yAxMax = highestY
-		if (lowestY < yAxMin) yAxMin = lowestY
+		if (highestX > xAxMax) xAxMax = highestX
+		if (lowestX < xAxMin) xAxMin = lowestX
 		
 		setXMinMax(xAxMin, xAxMax)
 		setYMinMax(yAxMin, yAxMax)
@@ -205,23 +205,23 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 					
 					if (mean > 0.0)
 						{
-						dec topY = barTop + mean
+						dec topX = barTop + mean
 						
-						barTop = topY
+						barTop = topX
 						}
 						else
 						{
-						dec botY = barLow + mean
+						dec botX = barLow + mean
 						
-						barLow = botY
+						barLow = botX
 						}
 					}
 				}
 			
-			if (barTop > highY) highY = barTop
-			if (barLow < lowY) lowY = barLow
+			if (barTop > highX) highX = barTop
+			if (barLow < lowX) lowX = barLow
 			
-			highX += 1.0
+			highY += 1.0
 			}
 		
 		setXMinMax(lowX, highX)
@@ -271,11 +271,27 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 			}
 		}
 	
+	int getMaxCatTextWidth()
+		{
+		int high = 0
+		for (int i = 0; i < categories.arrayLength; i++)
+			{
+			int textWidth = axisFont.getTextWidth(categories[i].string)
+			
+			if (textWidth > high) high = textWidth
+			}
+		
+		return high
+		}
+	
 	// -- screen rendering (temporary?) --
 	
 	void CategoryMulti:paint(Canvas c)
 		{
 		prepAxisLimits()
+		
+		int maxCatWidth = getMaxCatTextWidth()
+		setAxisLabelSpace(ChartCore.AXIS_Y, maxCatWidth)
 		
 		Point pos = getPosition()
 		WH wh = getSize()
@@ -295,7 +311,7 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 		int xyA[] = getPlotPoint(0.0, 0.0)
 		int xyB[] = getPlotPoint(1.0, 0.0)
 		
-		dec thisX = 0.0
+		dec thisY = 0.0
 		
 		//we pre-compute the "bar offset" within the category space, as the distance from the left-side of that space
 		// - we then use the same offset for each category space, which gives a more uniform look
@@ -305,15 +321,15 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 			dec barTop = 0.0
 			dec barLow = 0.0
 			
-			int xyZ[] = getPlotPoint(thisX, barTop)
-			int xyZ1[] = getPlotPoint(thisX+1.0, 0.0)
+			int xyZ[] = getPlotPoint(0.0, thisY)
+			int xyZ1[] = getPlotPoint(0.0, thisY+1.0)
 			
-			int xSpacing = ((xyZ1[0] - xyZ[0])+1) - (barPad*2)
-			int barWidthPX = (barWidth / 100.0) * xSpacing
+			int ySpacing = ((xyZ[1] - xyZ1[1])+1) - (barPad*2)
+			int barHeightPX = (barWidth / 100.0) * ySpacing
 			
-			int centreX = xyZ[0] + (((xyZ1[0] - xyZ[0])+1) / 2)
+			int centreY = xyZ[1] - ((xyZ[1] - xyZ1[1]) / 2)
 			
-			int barOffset = (centreX - (barWidthPX / 2)) - xyZ[0]
+			int barOffset = (centreY - (barHeightPX / 2)) - xyZ1[1]
 			
 			for (int j = 0; j < series.arrayLength; j++)
 				{
@@ -327,35 +343,35 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 					
 					if (mean > 0.0)
 						{
-						dec topY = barTop + mean
+						dec topX = barTop + mean
 						
-						int xyTop[] = getPlotPoint(thisX, topY)
-						int xyBot[] = getPlotPoint(thisX+1.0, barTop)
+						int xyTop[] = getPlotPoint(topX, thisY)
+						int xyBot[] = getPlotPoint(barTop, thisY+1.0)
 						
-						c.drawRect(new Rect2D(xyTop[0] + barOffset + barPad, xyTop[1], barWidthPX, xyBot[1] - xyTop[1], series[j].seriesColor))
+						c.drawRect(new Rect2D(xyBot[0], xyBot[1] + barOffset + barPad, xyTop[0] - xyBot[0], barHeightPX, series[j].seriesColor))
 						
-						barTop = topY
+						barTop = topX
 						}
 						else
 						{
-						dec botY = barLow + mean
+						dec botX = barLow + mean
 						
-						int xyTop[] = getPlotPoint(thisX, barLow)
-						int xyBot[] = getPlotPoint(thisX+1.0, botY)
+						int xyTop[] = getPlotPoint(barLow, thisY)
+						int xyBot[] = getPlotPoint(botX, thisY+1.0)
 						
-						c.drawRect(new Rect2D(xyTop[0] + barOffset + barPad, xyTop[1], barWidthPX, xyBot[1] - xyTop[1], series[j].seriesColor))
+						c.drawRect(new Rect2D(xyBot[0], xyBot[1] + barOffset + barPad, xyTop[0] - xyBot[0], barHeightPX, series[j].seriesColor))
 						
-						barLow = botY
+						barLow = botX
 						}
 					}
 				}
 			
 			//category label
-			
 			int textWidth = axisFont.getTextWidth(categories[i].string)
-			c.drawText(new Point2D(centreX - (textWidth/2), xyZ[1] + MARKER_LENGTH, axisColor), axisFont, categories[i].string)
+			int textHeight = axisFont.getFontMetrics().height
+			c.drawText(new Point2D(getPlotArea().x - MARKER_LENGTH - textWidth, centreY - (textHeight / 2), axisColor), axisFont, categories[i].string)
 			
-			thisX += 1.0
+			thisY += 1.0
 			}
 		
 		//axes and labels

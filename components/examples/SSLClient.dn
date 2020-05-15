@@ -37,13 +37,13 @@ component provides App requires io.Output out, io.File, net.TLSCertStore, net.TL
 			out.println(vres.failedCertificate)
 			}
 		
-		ssl.write("GET $resource HTTP/1.1\r\n")
-		ssl.write("Host: $host\r\n")
-		ssl.write("Connection: close\r\n\r\n")
+		ssl.send("GET $resource HTTP/1.1\r\n")
+		ssl.send("Host: $host\r\n")
+		ssl.send("Connection: close\r\n\r\n")
 		
 		char b[]
 		char buf[]
-		while ((b = ssl.read(1)) != null)
+		while ((b = ssl.recv(1)) != null)
 			buf = new char[](buf, b)
 		
 		ssl.close()

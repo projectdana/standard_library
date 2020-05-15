@@ -9,7 +9,7 @@ data NetworkEndpoint{
 {"description" : "Communicate over the TCP network protocol. New connections can be established either using 'connect' (for a client) or by using 'accept' (for a server, in conjunction with a TCPServerSocket instance)."}
 */
 
-interface TCPSocket{
+interface TCPSocket extends net.Stream {
 	/*
 	{"@description" : "Connect to the given TCP server."}
 	*/
@@ -19,16 +19,6 @@ interface TCPSocket{
 	{"@description" : "Establish a TCP connection by accepting a new client via a TCP server socket."}
 	*/
 	bool accept(TCPServerSocket server)
-	
-	/*
-	{"@description" : "Send data over an open TCP connection."}
-	*/
-	int send(byte content[])
-	
-	/*
-	{"@description" : "Wait for data to arrive over an open TCP connection. This function will block until the requested amount of data has been received, or the TCP connection has been terminated."}
-	*/
-	byte[] recv(int length)
 	
 	/*
 	{"@description" : "Disconnect (terminate) this TCP connection."}

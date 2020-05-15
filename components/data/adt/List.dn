@@ -39,7 +39,7 @@ component provides List(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			store ListItem lw = list
+			ListItem lw = list
 			while (lw != null)
 				{
 				if (lw.item === item)
@@ -71,7 +71,7 @@ component provides List(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			store ListItem lw = list
+			ListItem lw = list
 			while (lw != null)
 				{
 				if (lw.item === item)
@@ -97,7 +97,7 @@ component provides List(Destructor, AdaptEvents) {
 			
 			iteratorNext = list
 			
-			store ListItem current = iteratorNext
+			ListItem current = iteratorNext
 			if (current != null)
 				{
 				iteratorNext = iteratorNext.next
@@ -114,7 +114,7 @@ component provides List(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			store ListItem current = iteratorNext
+			ListItem current = iteratorNext
 			
 			if (current != null)
 				{
@@ -151,7 +151,7 @@ component provides List(Destructor, AdaptEvents) {
 			Data items[] = new Data[length]
 			
 			int j = 0
-			for (store ListItem i = list; i != null; i = i.next)
+			for (ListItem i = list; i != null; i = i.next)
 				{
 				items[j] = i.item
 				j ++

@@ -33,7 +33,7 @@ component provides App requires io.Output out, net.TLSContext, net.TLS, net.TCPS
 		char buf[]
 		int len
 		
-		while ((buf = ssl.read(1)).arrayLength > 0 && buf != "\r" && buf != "\n")
+		while ((buf = ssl.recv(1)).arrayLength > 0 && buf != "\r" && buf != "\n")
 			{
 			command = new char[](command, buf)
 			}
@@ -45,13 +45,13 @@ component provides App requires io.Output out, net.TLSContext, net.TLS, net.TCPS
 		
 		char result[] = "Hi!"
 		
-		ssl.write("HTTP/1.0 200 OK\r\n")
-		ssl.write("Content-Length: $(result.arrayLength)\r\n")
-		ssl.write("Content-Encoding: binary\r\n")
-		ssl.write("Connection: close\r\n")
-		ssl.write("\r\n")
+		ssl.send("HTTP/1.0 200 OK\r\n")
+		ssl.send("Content-Length: $(result.arrayLength)\r\n")
+		ssl.send("Content-Encoding: binary\r\n")
+		ssl.send("Connection: close\r\n")
+		ssl.send("\r\n")
 		
-		ssl.write(result)
+		ssl.send(result)
 		
 		ssl.close()
 		

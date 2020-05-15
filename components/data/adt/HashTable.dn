@@ -99,7 +99,7 @@ component provides HashTable(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			store ListItem lw = getHashItem(key)
+			ListItem lw = getHashItem(key)
 			
 			if (lw != null)
 				{

@@ -22,10 +22,10 @@ interface CategoryMulti extends ChartCore {
 	 {"@description" : "Adds a new sample (or set of samples) to a series, for a specific category.",
 	 	"series" : "The unique name used for this series.",
 		"cat" : "The category in which this series data will appear.",
-		"yvalues" : "The values for this series data for this category."
+		"values" : "The values for this series data for this category."
 		}
 	*/
-	void addSample(char series[], char cat[], dec yvalues[])
+	void addSample(char series[], char cat[], dec values[])
 	
 	/*
 	 {"@description" : "Sets a color used to display this series.",

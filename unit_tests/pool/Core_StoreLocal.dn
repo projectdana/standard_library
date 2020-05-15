@@ -1,6 +1,10 @@
 uses io.Output
 uses data.String
 
+data Thing {
+	Data q
+	}
+
 component provides UnitTest requires Store st {
 	
 	int alpha
@@ -19,6 +23,70 @@ component provides UnitTest requires Store st {
 	void humana(int a)
 		{
 		alpha = a
+		}
+	
+	Data globalA
+	Data globalAR[]
+	
+	bool functionA(char a[], Item b)
+		{
+		store Thing ma = new Thing()
+		
+		Thing wa = ma
+		
+		wa.q = b
+		
+		globalA = ma
+		
+		return true
+		}
+	
+	bool functionB(char a[], Item b)
+		{
+		store Thing ma = new Thing(b)
+		
+		return true
+		}
+	
+	bool functionC(char a[], Item b)
+		{
+		store Thing ma = new Thing(new Thing(b))
+		
+		return true
+		}
+	
+	bool functionD(char a[], Item b)
+		{
+		store Item q[] = new Item[](b)
+		
+		return true
+		}
+	
+	bool functionE(char a[], Item b)
+		{
+		store Item q[] = new Item[1]
+		
+		q[0] = b
+		
+		return true
+		}
+	
+	bool functionF(char a[], Item b)
+		{
+		store Item q[] = new Item[](new Item[](b))
+		
+		return true
+		}
+	
+	bool functionG(char a[], Item b)
+		{
+		store Item q[] = new Item[1]
+		
+		Item lq[] = new Item[](b)
+		
+		q[0] = lq[0]
+		
+		return true
 		}
 	
 	bool UnitTest:runTest()
