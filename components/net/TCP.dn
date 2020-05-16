@@ -45,7 +45,7 @@ interface SSLLib{
 	void closeSSL(int hnd)
 	}
 
-component provides net.TCPServerSocket, net.TCPSocket, net.TLSCertStore(Destructor), net.TLSContext(Destructor), net.TLS requires native TCPLib lib, native SSLLib slib, io.Output out {
+component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TLSCertStore(Destructor), net.TLSContext(Destructor), net.TLS(Destructor) requires native TCPLib lib, native SSLLib slib, io.Output out {
 	
 	implementation TCPSocket {
 		bool connected
@@ -176,6 +176,17 @@ component provides net.TCPServerSocket, net.TCPSocket, net.TLSCertStore(Destruct
 			
 			return ha
 			}
+		
+		void Destructor:destroy()
+			{
+			if (connected)
+				{
+				lib.disconnect(platformSocket)
+				connected = false
+				platformSocket = 0
+				}
+			}
+		
 		}
 	
 	implementation TCPServerSocket {
@@ -276,6 +287,7 @@ component provides net.TCPServerSocket, net.TCPSocket, net.TLSCertStore(Destruct
 	implementation TLS {
 		
 		int platformHandle
+		bool closed
 		
 		TLS:TLS(TLSContext cxt)
 			{
@@ -321,7 +333,20 @@ component provides net.TCPServerSocket, net.TCPSocket, net.TLSCertStore(Destruct
 		
 		void TLS:close()
 			{
-			slib.closeSSL(platformHandle)
+			if (platformHandle != 0)
+				{
+				slib.closeSSL(platformHandle)
+				platformHandle = 0
+				}
+			}
+		
+		void Destructor:destroy()
+			{
+			if (platformHandle != 0)
+				{
+				slib.closeSSL(platformHandle)
+				platformHandle = 0
+				}
 			}
 		
 		}

@@ -23,7 +23,7 @@ data DCQ{
 	FileEntry entries[]
 	}
 
-component provides io.File, io.FileSystem requires native FileLib lib, io.Output out {
+component provides io.File(Destructor), io.FileSystem requires native FileLib lib, io.Output out {
 	
 	implementation File {
 		int platformHandle
@@ -144,6 +144,14 @@ component provides io.File, io.FileSystem requires native FileLib lib, io.Output
 					{
 					throw new Exception("File is not open for closing")
 					}
+				}
+			}
+		
+		void Destructor:destroy()
+			{
+			if (platformHandle != 0)
+				{
+				lib.close(platformHandle)
 				}
 			}
 		}

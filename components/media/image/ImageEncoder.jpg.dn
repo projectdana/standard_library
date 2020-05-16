@@ -1,6 +1,6 @@
 interface JPGLib {
-	bool loadImage(char path[], PixelMap b)
-	bool saveImage(char path[], PixelMap b)
+	int loadImage(byte fdata[], PixelMap b)
+	byte[] saveImage(PixelMap b)
 	}
 
 component provides ImageEncoder:jpg requires native JPGLib lib {
@@ -21,19 +21,30 @@ component provides ImageEncoder:jpg requires native JPGLib lib {
 		map = pm
 		}
 	
-	bool ImageEncoder:loadImage(char path[])
+	bool ImageEncoder:loadImage(File fd)
 		{
 		map = new PixelMap(new WH())
-		if (!lib.loadImage(path, map))
-			throw new Exception("failed to load PNG '$path'")
+		
+		int pos = fd.getPos()
+		
+		byte fdata[] = fd.read(fd.getSize() - pos)
+		
+		int flen = lib.loadImage(fdata, map)
+		
+		if (flen == 0)
+			throw new Exception("failed to load PNG")
 		
 		return true
 		}
 	
-	bool ImageEncoder:saveImage(char path[])
+	bool ImageEncoder:saveImage(File fd)
 		{
-		if (!lib.saveImage(path, map))
-			throw new Exception("failed to save PNG '$path'")
+		byte fdata[] = lib.saveImage(map)
+		
+		if (fdata == null)
+			throw new Exception("failed to encode PNG")
+		
+		fd.write(fdata)
 		
 		return true
 		}

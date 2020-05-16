@@ -4,22 +4,23 @@
 */
 
 uses media.PixelMap
+uses io.File
 
 interface ImageEncoder {
 	
 	ImageEncoder()
 	
 	/*
-	 {"@description" : "Load an image from a given file system path."
+	 {"@description" : "Load an image from a given file object."
 		}
 	*/
-	bool loadImage(char path[])
+	bool loadImage(File fd)
 	
 	/*
-	 {"@description" : "Save the pixel map help by this object to a given file system path."
+	 {"@description" : "Save the pixel map help by this object to a given file object."
 		}
 	*/
-	bool saveImage(char path[])
+	bool saveImage(File fd)
 	
 	/*
 	 {"@description" : "Get the pixel map held by this object."

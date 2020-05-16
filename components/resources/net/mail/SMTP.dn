@@ -3,7 +3,7 @@ uses net.TLS
 uses data.String
 
 /*
-{"@description" : "This API supports connections to SMTP (send-mail) servers, which can be used to send emails. This is a low-level protocol API which expects the caller to do some of the work of making connections and verifying hosts. A typical secure use of this API would either use SSL/TLS or STARTTLS, depending on what the remote server supports (which one you use is often indicated by the port on which the server is listening, but should also be documented in your server configuration). An SSL/TLS server initiates connections in secure mode via connectTLS(), while a STARTTLS server initiates connections in plain-text mode via connect() and then requires the use of startTLS() to convert the channel to an encrypted one."}
+{"description" : "This API supports connections to SMTP (send-mail) servers, which can be used to send emails. This is a low-level protocol API which expects the caller to do some of the work of making connections and verifying hosts. A typical secure use of this API would either use SSL/TLS or STARTTLS, depending on what the remote server supports (which one you use is often indicated by the port on which the server is listening, but should also be documented in your server configuration). An SSL/TLS server initiates connections in secure mode via connectTLS(), while a STARTTLS server initiates connections in plain-text mode via connect() and then requires the use of startTLS() to convert the channel to an encrypted one."}
 */
 
 interface SMTP {
