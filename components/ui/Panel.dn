@@ -114,7 +114,7 @@ component provides Panel requires io.Output out {
 
 	void Panel:addObject(GraphicsObject go)
 		{
-		store GraphicsItem newItem = new GraphicsItem(go)
+		GraphicsItem newItem = new GraphicsItem(go)
 
 		if (objects == null)
 			objects = newItem
@@ -278,7 +278,7 @@ component provides Panel requires io.Output out {
 
 	void addClickTarget(store ClickableObject co)
 		{
-		store ClickableItem nci = new ClickableItem(co)
+		ClickableItem nci = new ClickableItem(co)
 
 		if (clickObjects == null)
 			clickObjects = nci
@@ -314,7 +314,7 @@ component provides Panel requires io.Output out {
 
 	void addMouseEventTarget(store XYMouseObject m)
 		{
-		store XYListener nci = new XYListener(m)
+		XYListener nci = new XYListener(m)
 
 		if (mouseListeners == null)
 			mouseListeners = nci

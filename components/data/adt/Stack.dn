@@ -15,7 +15,7 @@ component provides Stack(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			store ListItem ni = new ListItem(item)
+			ListItem ni = new ListItem(item)
 			
 			if (list == null)
 				{

@@ -2,6 +2,7 @@ interface FileLib{
 	int open(char file[], byte mode)
 	int write(int fd, byte content[])
 	byte[] read(int fd, int length)
+	bool flush(int fd)
 	bool setPos(int fd, int pos)
 	int getSize(int fd)
 	bool eof(int fd)
@@ -72,6 +73,14 @@ component provides io.File(Destructor), io.FileSystem requires native FileLib li
 					{
 					throw new Exception("File is not open for read")
 					}
+				}
+			}
+		
+		bool File:flush()
+			{
+			mutex(rwLock)
+				{
+				return lib.flush(platformHandle)
 				}
 			}
 		

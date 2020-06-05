@@ -146,6 +146,11 @@ component provides io.File:mem requires data.IntUtil iu, io.Output out {
 			}
 		}
 	
+	bool File:flush()
+		{
+		return true
+		}
+	
 	bool File:eof()
 		{
 		mutex(rwLock)

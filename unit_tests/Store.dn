@@ -1,80 +1,153 @@
-data Thing {
-	Data q
+data Container {
+	String content
+	Container nest
+	}
+
+data QCon {
+	String f1[]
+	}
+
+data Interface {
+	//name of the required interface
+	char name[]
+	//path of the component to which this required interface is currently connected, if any
+	char currentWiring[]
+	}
+
+data Component {
+	//path to the component and loaded version, if any
+	char path[]
+	IDC class
+	
+	int completeWirings
+	bool serviceStarted
+	
+	//the set of required interfaces of this component
+	Interface interfaces[]
 	}
 
 component provides Store requires data.adt.List {
 	
-	Data globalA
+	String global
+	Container glCon
 	
-	List gList
+	String gsArray[]
 	
-	bool Store:functionA(char a[], Item b, store Item c)
+	Container glArray[]
+	
+	QCon qcon
+	
+	Component components[]
+	
+	bool Store:fail1(String lc)
 		{
-		globalA = b
+		Container cnt = new Container(lc)
+		
+		glCon = cnt
 		
 		return true
 		}
 	
-	bool Store:functionB(char a[], Item b, store Item c)
+	bool Store:fail2(String lc)
 		{
-		Thing ma = new Thing(b)
+		Container cntA = new Container()
 		
-		globalA = ma
+		cntA.content = lc
+		
+		glCon = cntA
 		
 		return true
 		}
 	
-	bool Store:functionC(char a[], Item b, store Item c)
+	bool Store:fail3(String lc)
 		{
-		List list = new List()
+		Container cntB = new Container(null, new Container())
 		
-		list.add(b)
+		cntB.nest.content = lc
 		
-		if (list.getContents().arrayLength == 0) return false
+		glCon = cntB
 		
 		return true
 		}
 	
-	bool Store:functionD(char a[], Item b, store Item c)
+	bool Store:fail4(String lc)
 		{
-		gList = new List()
+		Container qrA[] = new Container[](new Container(lc))
 		
-		gList.add(b)
-		
-		if (gList.getContents().arrayLength == 0) return false
+		glArray = qrA
 		
 		return true
 		}
 	
-	bool Store:functionE(char a[], Item b, store Item c)
+	bool Store:fail5(String lc)
 		{
-		Thing ma = new Thing()
-		ma.q = b
+		Container qrB[] = new Container[1]
 		
-		globalA = ma
+		qrB[0] = new Container(lc)
+		
+		glArray = qrB
 		
 		return true
 		}
 	
-	bool Store:functionF(char a[], Item b, store Item c)
+	bool Store:fail6(String lc)
 		{
-		store Thing ma = new Thing()
-		ma.q = b
+		Container cntX = new Container()
 		
-		globalA = ma
+		cntX:.0 = lc
+		
+		glCon = cntX
 		
 		return true
 		}
 	
-	bool Store:functionG(char a[], Item b, store Item c)
+	bool Store:fail7(String lc)
 		{
-		store Thing ma = new Thing()
+		Container cntX = new Container()
+		Container cntY = new Container()
+		cntY.content = lc
 		
-		Thing wa = ma
+		cntX:.0 = cntY:.0
 		
-		wa.q = b
+		glCon = cntX
 		
-		globalA = ma
+		return true
+		}
+	
+	bool Store:fail8(String lc[])
+		{
+		store String k[] = new String[](new String("hi"))
+		k = new String[](k, lc[0])
+		
+		gsArray = k
+		
+		return true
+		}
+	
+	bool Store:fail9(String lc[])
+		{
+		gsArray = lc
+		
+		return true
+		}
+	
+	bool Store:fail10(String lc[])
+		{
+		QCon q = new QCon(lc)
+		
+		qcon = q
+		
+		return true
+		}
+	
+	bool Store:pass1(char in[])
+		{
+		Component c = new Component(in)
+		
+		Interface iq = new Interface()
+		c.interfaces = new Interface[](iq)
+		
+		components = new Component[](components, c)
 		
 		return true
 		}

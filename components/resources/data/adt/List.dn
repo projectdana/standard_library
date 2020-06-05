@@ -42,6 +42,12 @@ interface List{
 	*/
 	bool isEnd()
 	
+	/*
+	 {"@description" : "Get the data instance at this index in the list.",
+			"@return" : "The data instance at this index, if any, or null if the index is out of bounds or empty."}
+	*/
+	Data getIndex(int n)
+	
 	int getLength()
 	Data[] getContents()
 	}

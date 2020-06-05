@@ -303,13 +303,13 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				}
 				else if (objectFile != null)
 				{
-				subParams = new AppParam[](subParams, params[i])
+				subParams = new AppParam[](subParams, new AppParam(params[i].string))
 				}
 			}
 		
 		char perceptionPath[] = search.getDefaultComponent("pal.Perception")
-		store LoadedComponents lc = loader.load(perceptionPath)
-		store IDC perception = lc.mainComponent
+		LoadedComponents lc = loader.load(perceptionPath)
+		IDC perception = lc.mainComponent
 		
 		out.println("[scanning system for components, please be patient...]")
 		

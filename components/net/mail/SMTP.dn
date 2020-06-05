@@ -115,7 +115,7 @@ component provides SMTP requires io.Output out, data.IntUtil iu, data.StringUtil
 	
 	bool doHello(Stream s, char addr[])
 		{
-		store ResponseData rd
+		ResponseData rd
 		
 		//send hello message, depending on server type
 		writeLine(s, "EHLO $addr")

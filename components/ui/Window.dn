@@ -203,7 +203,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 	void Window:addObject(GraphicsObject go)
 		{
-		store GraphicsItem newItem = new GraphicsItem(go)
+		GraphicsItem newItem = new GraphicsItem(go)
 
 		if (buffer == null)
 			buffer = newItem
@@ -279,7 +279,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 	void addClickTarget(store ClickableObject co)
 		{
-		store ClickableItem nci = new ClickableItem(co)
+		ClickableItem nci = new ClickableItem(co)
 
 		if (clickItems == null)
 			clickItems = nci
@@ -315,7 +315,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 	void addMouseEventTarget(store XYMouseObject m)
 		{
-		store XYListener nci = new XYListener(m)
+		XYListener nci = new XYListener(m)
 
 		if (mouseListeners == null)
 			mouseListeners = nci

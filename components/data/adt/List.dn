@@ -17,7 +17,7 @@ component provides List(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			store ListItem ni = new ListItem(item)
+			ListItem ni = new ListItem(item)
 			
 			if (list == null)
 				{
@@ -134,6 +134,23 @@ component provides List(Destructor, AdaptEvents) {
 	bool List:isEnd()
 		{
 		return iteratorNext == null
+		}
+	
+	Data List:getIndex(int ndx)
+		{
+		mutex(listLock)
+			{
+			if (ndx >= length) throw new Exception("list index $ndx out of bounds")
+			
+			ListItem lw = list
+			
+			for (int i = 0; i < ndx; i++)
+				{
+				lw = lw.next
+				}
+			
+			return lw.item
+			}
 		}
 	
 	int List:getLength()

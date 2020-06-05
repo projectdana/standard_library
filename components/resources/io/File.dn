@@ -52,6 +52,12 @@ interface File{
 	int write(byte content[])
 	
 	/*
+	 {"@description" : "Flush any buffered bytes from write operations to disk.",
+			"@return" : "True if successful, false otherwise."}
+	*/
+	bool flush()
+	
+	/*
 	 {"@description" : "Move the logical read/write position of the file to a specified offset.",
 			"@return" : "True if the operation succeeded, false otherwise (for example if the requested position is larger than the size of the file)."}
 	*/

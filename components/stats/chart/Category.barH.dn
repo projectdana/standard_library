@@ -112,6 +112,12 @@ component provides Category:barH requires ChartCore, stats.StatCore stcore, io.O
 		showStdDev = on
 		}
 	
+	void Category:setAxisFont(Font f)
+		{
+		axisFont = f
+		super(f)
+		}
+	
 	void Category:clampErrorBars(dec low, dec high)
 		{
 		

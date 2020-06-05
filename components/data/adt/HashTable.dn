@@ -80,7 +80,7 @@ component provides HashTable(Destructor, AdaptEvents) {
 				if (table[index] == null)
 					table[index] = new HashBucket()
 				
-				store ListItem ni = new ListItem(key, value)
+				ListItem ni = new ListItem(key, value)
 				ni.next = table[index].items
 				if (table[index].items != null) table[index].items.prev = ni
 				table[index].items = ni

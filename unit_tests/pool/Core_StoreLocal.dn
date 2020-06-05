@@ -5,20 +5,14 @@ data Thing {
 	Data q
 	}
 
+data Item {
+	String q
+	char str[]
+	}
+
 component provides UnitTest requires Store st {
 	
 	int alpha
-	
-	bool testA()
-		{
-		Store stq = new Store()
-		
-		Item itemA = new Item(new String("hi"), "there")
-		
-		st.functionA("one", itemA, itemA)
-		
-		return true
-		}
 	
 	void humana(int a)
 		{
@@ -93,23 +87,27 @@ component provides UnitTest requires Store st {
 		{
 		humana(99)
 		
-		Item itemA = new Item(new String("hi"), "there")
+		if (st.fail1(new String("one"))) throw new Exception("Failure in test 1")
 		
-		store Item itemB = new Item(new String("hi"), "there")
+		if (st.fail2(new String("one"))) throw new Exception("Failure in test 2")
 		
-		if (st.functionA("one", itemA, itemB) == true) throw new Exception("Failure in test 1")
+		if (st.fail3(new String("one"))) throw new Exception("Failure in test 3")
 		
-		if (st.functionB("one", itemA, itemB) == true) throw new Exception("Failure in test 2")
+		if (st.fail4(new String("one"))) throw new Exception("Failure in test 4")
 		
-		if (st.functionC("one", itemA, itemB) == false) throw new Exception("Failure in test 3")
+		if (st.fail5(new String("one"))) throw new Exception("Failure in test 5")
 		
-		if (st.functionD("one", itemA, itemB) == true) throw new Exception("Failure in test 4")
+		if (st.fail6(new String("one"))) throw new Exception("Failure in test 6")
 		
-		if (st.functionE("one", itemA, itemB) == true) throw new Exception("Failure in test 5")
+		if (st.fail7(new String("one"))) throw new Exception("Failure in test 7")
 		
-		if (st.functionF("one", itemA, itemB) == true) throw new Exception("Failure in test 6")
+		if (st.fail8(new String("one"))) throw new Exception("Failure in test 8")
 		
-		if (st.functionG("one", itemA, itemB) == true) throw new Exception("Failure in test 7")
+		if (st.fail9(new String("one"))) throw new Exception("Failure in test 9")
+		
+		if (st.fail10(new String("one"))) throw new Exception("Failure in test 10")
+		
+		if (!st.pass1("one")) throw new Exception("Failure in test 11")
 		
 		return true
 		}

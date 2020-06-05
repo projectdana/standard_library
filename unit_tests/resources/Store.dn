@@ -1,23 +1,27 @@
-data Item {
-	Data val
-	char key[]
-	int num
-	}
+uses data.String
 
 interface Store {
 	
-	bool functionA(char a[], Item b, store Item c)
+	bool fail1(String str)
 	
-	bool functionB(char a[], Item b, store Item c)
+	bool fail2(String str)
 	
-	bool functionC(char a[], Item b, store Item c)
+	bool fail3(String str)
 	
-	bool functionD(char a[], Item b, store Item c)
+	bool fail4(String str)
 	
-	bool functionE(char a[], Item b, store Item c)
+	bool fail5(String str)
 	
-	bool functionF(char a[], Item b, store Item c)
+	bool fail6(String str)
 	
-	bool functionG(char a[], Item b, store Item c)
+	bool fail7(String str)
+	
+	bool fail8(String str[])
+	
+	bool fail9(String str[])
+	
+	bool fail10(String str[])
+	
+	bool pass1(char in[])
 	
 	}
