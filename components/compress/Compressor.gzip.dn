@@ -21,9 +21,9 @@ data Int2 {
 	int2 val
 	}
 
-const int BUF_SIZE = 512
+const int BUF_SIZE = 5048
 
-component provides Compressor:gzip requires compress.algorithm.StreamCompression:deflate alg, data.checksum.CRC32 crc32 {
+component provides Compressor:gzip requires compress.algorithm.StreamCompression:deflate, data.checksum.CRC32 crc32 {
 	
 	int4 readInt4(byte buf[])
 		{
@@ -109,6 +109,8 @@ component provides Compressor:gzip requires compress.algorithm.StreamCompression
 	
 	bool Compressor:compress(File ifd, File ofd)
 		{
+		StreamCompression alg = new StreamCompression:deflate()
+		
 		GZHeader mainHeader = new GZHeader()
 		
 		mainHeader.ID1 = 31
@@ -161,6 +163,8 @@ component provides Compressor:gzip requires compress.algorithm.StreamCompression
 		{
 		//a gzip file can contain a list of compressed files (or "members"), one after the other
 		// - if so, we behave like *nix gzip and concatenate all files into the same output file
+		
+		StreamCompression alg = new StreamCompression:deflate()
 		
 		while (!ifd.eof())
 			{

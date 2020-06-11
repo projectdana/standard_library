@@ -109,6 +109,10 @@ component provides UnitTest requires Store st {
 		
 		if (!st.pass1("one")) throw new Exception("Failure in test 11")
 		
+		if (!st.pass2("one")) throw new Exception("Failure in test 12")
+		
+		if (!st.pass3(new String[](new String("one")))) throw new Exception("Failure in test 13")
+		
 		return true
 		}
 	

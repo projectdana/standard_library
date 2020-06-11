@@ -24,7 +24,7 @@ interface Clustering {
 		"values" : "The numeric values of this coordinate, which must be of length 'dimensions'",
 		"el" : "A data element to associate with this value"}
 	*/
-	void addValue(dec values[], Data el)
+	void addValue(dec values[], store Data el)
 	
 	/*
 	{"@description" : "Run the clustering algorithm on the accumulated values",

@@ -142,7 +142,7 @@ component provides HTTPRequest requires io.Output out, net.TCPSocket, net.dns.DN
 				
 				if (chunkSize == 0)
 					{
-					s.recv(2)
+					s.recv(4)
 					done = true
 					}
 					else
@@ -192,58 +192,56 @@ component provides HTTPRequest requires io.Output out, net.TCPSocket, net.dns.DN
 		return result
 		}
 	
-	HTTPResponse HTTPRequest:get(char url[], Header headers[])
-		{
+	HTTPResponse handleRequest(char url[], Header headers[], char method[], char postData[]) {
 		//look up host address of URL and extract the resource path being requested
 		ResourceParts parts = parseResource(url)
-		
 		char resource[] = parts.resource
-		
 		char serverIP[] = dns.getHostIP(parts.hostName)
-		
+
 		//construct the request message, including a "host" field if none is provided
-		
-		char request[] = "GET $resource HTTP/1.1\r\n"
+		char request[] = "$method $resource HTTP/1.1\r\n"
 		bool hostIncluded = false
-		for (int i = 0; i < headers.arrayLength; i++)
-			{
-			if (stringUtil.lowercase(headers[i].key) == "host") hostIncluded = true
+		for (int i = 0; i < headers.arrayLength; i++) {
+			if (stringUtil.lowercase(headers[i].key) == "host") { hostIncluded = true }
 			request = new char[](request, headers[i].key, ":", headers[i].value, "\r\n")
-			}
-		if (!hostIncluded) request = new char[](request, "host:$(parts.hostName)\r\n")
+		}
+		if (method == "POST") {
+			request = new char[](request, "content-length", ":", intUtil.intToString(postData.arrayLength), "\r\n")
+		}
+		if (!hostIncluded) { request = new char[](request, "host:$(parts.hostName)\r\n") }
 		request = new char[](request, "\r\n")
+		if (method == "POST") {
+			request = new char[](request, postData)
+		}
 		
 		//connect to server and send request
-		
 		TCPSocket s = new TCPSocket()
-		
-		if (s.connect(serverIP, parts.hostPort))
-			{
+		if (s.connect(serverIP, parts.hostPort)) {
 			s.send(request)
-			
 			headers = readHeaders(s)
-			
 			char content[] = readContent(s, headers)
-			
 			s.disconnect()
-			
 			//for convenience here we parse the response line into code/message, and we also extract the content type
 			char responseCode[] = ""
 			char responseMessage[] = ""
 			String split[]
-			
 			if ((split = splitString(getHeaderValue(headers, "response"), " ")).arrayLength == 2
-				&& (split = splitString(split[1].string, " ")).arrayLength == 2)
-				{
+				&& (split = splitString(split[1].string, " ")).arrayLength == 2) {
 				responseCode = split[0].string
 				responseMessage = split[1].string
-				}
-			
-			return new HTTPResponse(url, responseCode, responseMessage, content, getHeaderValue(headers, "content-type"), headers)
 			}
-			else
-			{
+			return new HTTPResponse(url, responseCode, responseMessage, content, 
+				getHeaderValue(headers, "content-type"), headers)
+		} else {
 			throw new Exception("Could not connect to host")
-			}
 		}
 	}
+
+	HTTPResponse HTTPRequest:get(char url[], Header headers[]) {
+		return handleRequest(url, headers, "GET", null)
+	}
+
+	HTTPResponse HTTPRequest:post(char url[], Header headers[], char postData[]) {
+		return handleRequest(url, headers, "POST", postData)
+	}
+}

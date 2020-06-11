@@ -24,4 +24,8 @@ interface Store {
 	
 	bool pass1(char in[])
 	
+	bool pass2(char in[])
+	
+	bool pass3(String str[])
+	
 	}

@@ -152,4 +152,24 @@ component provides Store requires data.adt.List {
 		return true
 		}
 	
+	bool Store:pass2(char in[])
+		{
+		String n = new String(in)
+		
+		global = n
+		
+		return true
+		}
+	
+	bool Store:pass3(String lc[])
+		{
+		String nima = new String("numa")
+		
+		Container cntZ = new Container(nima)
+		
+		glCon = cntZ
+		
+		return true
+		}
+	
 	}

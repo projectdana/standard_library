@@ -19,10 +19,12 @@ interface TLS extends net.Stream {
 	/* {"@description" : "Instantiate a new secure session object, using the configuration in the given TLSContext object."} */
 	TLS(TLSContext context)
 	
-	/* {"@description" : "This function is used by servers to accept new client connections."} */
+	/* {"@description" : "This function is used by servers to accept new client connections.",
+		"socket" : "A TCPSocket instance which has already been connected to a remote host via the TCP accept() function"} */
 	bool accept(TCPSocket socket)
 	
-	/* {"@description" : "This function allows you to connect to a remote host using a TLS handshake, creating an encrypted channel. It *does not* verify that the remote host has an authentic TLS (X509) certificate and is therefore trustworthy. You must do this verification after connect() by using verifyCertificate() and then, based on the result, decide on whether or not you wish to send any data. Note that you should *also* perform host name verification yourself before sending any data."} */
+	/* {"@description" : "This function allows you to connect to a remote host using a TLS handshake, creating an encrypted channel. After connecting, you can then send/recv encrypted data over this channel. However, connecting in itself *does not* verify that the remote host has an authentic TLS (X509) certificate and is therefore trustworthy. In order to assure that the certificate is actually authentic, you must do this verification immediately after connect() by using verifyCertificate() and then, based on the result, decide on whether or not you wish to send any data. Note that you should *also* perform host name verification yourself before sending any data.",
+		"socket" : "A TCPSocket instance which has already been connected to a remote host"} */
 	bool connect(TCPSocket socket)
 	
 	/* {"@description" : "Get the certificate of the remote host, which can be queried or used in verifyCertificate(). The certificate is returned in base64-encoded PEM format."} */
