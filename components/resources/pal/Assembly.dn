@@ -28,6 +28,6 @@ interface Assembly {
 	/*
 	{ "@description" : "Checks if the main method of the program has exited, returning true if so." }
 	*/
-	bool appFinished()
+	bool runApp()
 	
 	}

@@ -2,6 +2,6 @@ interface Intercepter {
 	
 	bool insertInterceptor(IDC ofComponent, char reqInterface[], IDC interceptor, char icProvInterface[], char icReqInterface[])
 	
-	bool removeInterceptor(IDC ofComponent, char reqInterface[], IDC toComponent, char provInterface[])
+	bool removeInterceptor(IDC ofComponent, char reqInterface[], IDC toComponent, char provInterface[], char icReqInterface[])
 	
 	}

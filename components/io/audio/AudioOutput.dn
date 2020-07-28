@@ -1,0 +1,383 @@
+data DeviceInfo {
+	int id
+	char name[]
+	}
+
+interface AudioLib {
+	
+	event trackFinished(TrackInfo ti)
+	
+	const int DECODER_RAW = 0
+	const int DECODER_WAV = 1
+	const int DECODER_MP3 = 2
+	const int DECODER_FLAC = 3
+	const int DECODER_OGG = 4
+	
+	int decoderLoad(byte type, byte content[], byte format, int sampleRate, int channels)
+	int decoderGetLengthFrames(int handle)
+	byte[] decoderGetRawData(int handle)
+	void decoderDestroy(int handle)
+	
+	int trackLoad(int decoderHandle)
+	bool trackSetVolume(int handle, int vol)
+	bool trackSeek(int handle, int frame)
+	void trackSetFinishEvent(int handle, bool on)
+	int trackGetPos(int handle)
+	void trackDestroy(int handle)
+	
+	int deviceInit(int id, byte format, int sampleRate, int channels)
+	int deviceSetDevice(int handle, int id) //NOTE: we'll use this in future, which will reinit the device to a new output device and keep tracks playing there
+	bool devicePlay(int handle, Track track, int sourceHandle)
+	bool deviceLoop(int handle, Track track, int sourceHandle)
+	bool deviceStop(int handle, int sourceHandle)
+	bool deviceStopAll(int handle)
+	void deviceDestroy(int handle)
+	
+	DeviceInfo[] getPlaybackDevices()
+	DeviceInfo[] getCaptureDevices()
+	
+	}
+
+component provides AudioOutput(Destructor), Source:raw(Destructor), Source:wav(Destructor), Source:mp3(Destructor), Source:flac(Destructor), Source:ogg(Destructor), Track(Destructor) requires io.Output out, native AudioLib lib {
+	
+	implementation Source:raw {
+		
+		int handle
+		
+		byte srcData[]
+		
+		Format format
+		
+		int length = 0
+		
+		Source:Source(byte content[], Format f)
+			{
+			if (f == null)
+				format = new Format(Format.FORMAT_F32, 48000, 2)
+				else
+				format = clone f
+			
+			handle = lib.decoderLoad(AudioLib.DECODER_RAW, content, format.format, format.sampleRate, format.channels)
+			
+			if (handle == 0) throw new Exception("audio decode failed")
+			
+			srcData = content
+			length = lib.decoderGetLengthFrames(handle)
+			}
+		
+		int Source:getLength()
+			{
+			return length
+			}
+		
+		void Destructor:destroy()
+			{
+			if (handle != 0) lib.decoderDestroy(handle)
+			}
+		
+		}
+	
+	implementation Source:wav {
+		
+		int handle
+		
+		byte srcData[]
+		
+		Format format
+		
+		int length = 0
+		
+		Source:Source(byte content[], Format f)
+			{
+			if (f == null)
+				format = new Format(Format.FORMAT_F32, 48000, 2)
+				else
+				format = clone f
+			
+			handle = lib.decoderLoad(AudioLib.DECODER_WAV, content, format.format, format.sampleRate, format.channels)
+			
+			if (handle == 0) throw new Exception("audio decode failed")
+			
+			srcData = content
+			length = lib.decoderGetLengthFrames(handle)
+			}
+		
+		int Source:getLength()
+			{
+			return length
+			}
+		
+		void Destructor:destroy()
+			{
+			if (handle != 0) lib.decoderDestroy(handle)
+			}
+		
+		}
+	
+	implementation Source:mp3 {
+		
+		int handle
+		
+		byte srcData[]
+		
+		Format format
+		
+		int length = 0
+		
+		Source:Source(byte content[], Format f)
+			{
+			if (f == null)
+				format = new Format(Format.FORMAT_F32, 48000, 2)
+				else
+				format = clone f
+			
+			handle = lib.decoderLoad(AudioLib.DECODER_MP3, content, format.format, format.sampleRate, format.channels)
+			
+			if (handle == 0) throw new Exception("audio decode failed")
+			
+			srcData = content
+			length = lib.decoderGetLengthFrames(handle)
+			}
+		
+		int Source:getLength()
+			{
+			return length
+			}
+		
+		void Destructor:destroy()
+			{
+			if (handle != 0) lib.decoderDestroy(handle)
+			}
+		
+		}
+	
+	implementation Source:flac {
+		
+		int handle
+		
+		byte srcData[]
+		
+		Format format
+
+		int length = 0
+		
+		Source:Source(byte content[], Format f)
+			{
+			if (f == null)
+				format = new Format(Format.FORMAT_F32, 48000, 2)
+				else
+				format = clone f
+			
+			handle = lib.decoderLoad(AudioLib.DECODER_FLAC, content, format.format, format.sampleRate, format.channels)
+			
+			if (handle == 0) throw new Exception("audio decode failed")
+			
+			srcData = content
+			length = lib.decoderGetLengthFrames(handle)
+			}
+		
+		int Source:getLength()
+			{
+			return length
+			}
+		
+		void Destructor:destroy()
+			{
+			if (handle != 0) lib.decoderDestroy(handle)
+			}
+		
+		}
+	
+	implementation Source:ogg {
+		
+		int handle
+		
+		byte srcData[]
+		
+		Format format
+		
+		int length = 0
+		
+		Source:Source(byte content[], Format f)
+			{
+			if (f == null)
+				format = new Format(Format.FORMAT_F32, 48000, 2)
+				else
+				format = clone f
+			
+			handle = lib.decoderLoad(AudioLib.DECODER_OGG, content, format.format, format.sampleRate, format.channels)
+			
+			if (handle == 0) throw new Exception("audio decode failed")
+			
+			srcData = content
+			}
+		
+		int Source:getLength()
+			{
+			if (length == 0)
+				return length = lib.decoderGetLengthFrames(handle)
+				else
+				return length
+			}
+		
+		void Destructor:destroy()
+			{
+			if (handle != 0) lib.decoderDestroy(handle)
+			}
+		
+		}
+	
+	implementation Track {
+	
+		Source sample
+		int handle
+		
+		bool finishEvent
+		
+		int lengthFrames
+		int lengthMS
+		
+		Track:Track(Source s)
+			{
+			sample = s
+			handle = lib.trackLoad(s.handle)
+			
+			if (handle == 0) throw new Exception("track construction failed")
+			
+			lengthFrames = sample.getLength()
+			lengthMS = lengthFrames / (sample.format.sampleRate / 1000)
+			}
+		
+		void Track:setFinishEvent(bool on)
+			{
+			finishEvent = on
+			lib.trackSetFinishEvent(handle, on)
+			}
+		
+		void Track:setVolume(int vol)
+			{
+			if (vol > 100) throw new Exception("volume must be between 0 and 100")
+			
+			lib.trackSetVolume(handle, vol)
+			}
+		
+		void Track:setPosFrame(int frame)
+			{
+			if (frame > lengthFrames)
+				throw new Exception("frame index out of bounds")
+			
+			lib.trackSeek(handle, frame)
+			}
+		
+		int Track:getLengthFrames()
+			{
+			return lengthFrames
+			}
+		
+		int Track:getPosFrame()
+			{
+			return lib.trackGetPos(handle)
+			}
+		
+		void Track:setPosMS(int ms)
+			{
+			if (ms > lengthMS)
+				throw new Exception("time index out of bounds")
+			
+			//convert to frame index, and seek
+			int pos = ms * (sample.format.sampleRate / 1000)
+			
+			lib.trackSeek(handle, pos)
+			}
+		
+		int Track:getLengthMS()
+			{
+			return lengthMS
+			}
+		
+		int Track:getPosMS()
+			{
+			int pos = lib.trackGetPos(handle)
+			
+			int posMS = pos / (sample.format.sampleRate / 1000)
+			
+			return posMS
+			}
+		
+		void Destructor:destroy()
+			{
+			if (handle != 0) lib.trackDestroy(handle)
+			}
+		
+		}
+	
+	implementation AudioOutput {
+		
+		int handle
+		
+		Format format
+		
+		AudioOutput:AudioOutput(Format f)
+			{
+			if (f == null)
+				format = new Format(Format.FORMAT_F32, 48000, 2)
+				else
+				format = clone f
+			
+			handle = lib.deviceInit(0, format.format, format.sampleRate, format.channels)
+			
+			if (handle == 0) throw new Exception("device init failed")
+			
+			sinkevent LibEvents(lib)
+			}
+		
+		eventsink LibEvents(EventData ed)
+			{
+			if (ed.type == AudioLib.[trackFinished])
+				{
+				TrackInfo info = ed.details
+				emitevent trackFinished(new TrackInfo(info.track))
+				}
+			}
+		
+		bool AudioOutput:play(Track source)
+			{
+			if (source.sample.format.format != format.format
+				|| source.sample.format.sampleRate != format.sampleRate
+				|| source.sample.format.channels != format.channels)
+				throw new Exception("Audio sources must use the same audio format as the playback device")
+			
+			//here we pass in a reference to the object, so we can maintain a reference to it during playback and avoid its audio source data getting garbage collected...
+			return lib.devicePlay(handle, source, source.handle)
+			}
+		
+		bool AudioOutput:loop(Track source)
+			{
+			if (source.sample.format.format != format.format
+				|| source.sample.format.sampleRate != format.sampleRate
+				|| source.sample.format.channels != format.channels)
+				throw new Exception("Audio sources must use the same audio format as the playback device")
+			
+			//here we pass in a reference to the object, so we can maintain a reference to it during playback and avoid its audio source data getting garbage collected...
+			return lib.deviceLoop(handle, source, source.handle)
+			}
+		
+		bool AudioOutput:stop(Track source)
+			{
+			//here we pass in a reference to the object, so we can maintain a reference to it during playback and avoid its audio source data getting garbage collected...
+			return lib.deviceStop(handle, source.handle)
+			}
+		
+		void AudioOutput:stopAll()
+			{
+			lib.deviceStopAll(handle)
+			}
+		
+		void Destructor:destroy()
+			{
+			if (handle != 0) lib.deviceDestroy(handle)
+			}
+		
+		}
+	
+	}

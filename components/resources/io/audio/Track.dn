@@ -1,0 +1,29 @@
+uses Source
+
+/*
+ {"description" : "Audio track object. This interface wraps an audio source data instance, and allows you to control elements of the track's playback of that audio source."}
+*/
+
+interface Track {
+
+	Track(store Source src)
+	
+	/*
+	 {"@description" : "Receive event notifications (through the audio output device) on which this track finishes playing. Default is false."}
+	*/
+	void setFinishEvent(bool on)
+	
+	/*
+	 {"@description" : "Set the volume level for this track, which must be between 0 and 100."}
+	*/
+	void setVolume(int volume)
+	
+	int getLengthFrames()
+	void setPosFrame(int frame)
+	int getPosFrame()
+	
+	int getLengthMS()
+	void setPosMS(int ms)
+	int getPosMS()
+	
+	}

@@ -1,0 +1,12 @@
+/*
+{"description" : "Data type to describe an audio format, in frame encoding, sample rate, and channels."}
+*/
+
+data Format {
+	
+	const byte FORMAT_F32 = 1
+	
+	byte format
+	int sampleRate
+	int channels
+	}

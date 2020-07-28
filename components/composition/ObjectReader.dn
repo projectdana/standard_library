@@ -45,7 +45,7 @@ component provides ObjectReader requires io.File, System system {
 			throw new Exception("File not found")
 		
 		SourceHeader hdr = new SourceHeader()
-		byte serialHDR[] = dana.getByteArrayOf(hdr)
+		byte serialHDR[] = dana.serial(hdr)
 		
 		byte buf[]
 		
@@ -105,7 +105,7 @@ component provides ObjectReader requires io.File, System system {
 			byte serialData[]
 			
 			DanaInfoSection is = new DanaInfoSection()
-			serialData = dana.getByteArrayOf(is)
+			serialData = dana.serial(is)
 			serialData =[] fd.read(serialData.arrayLength)
 			
 			byte contents[] = fd.read(is.size)
@@ -117,7 +117,7 @@ component provides ObjectReader requires io.File, System system {
 		byte serialData[]
 		
 		DanaInfoSection is
-		serialData = dana.getByteArrayOf(is)
+		serialData = dana.serial(is)
 		serialData =[] fd.read(serialData.arrayLength)
 		
 		section.sectionType = is.sectionType
@@ -146,7 +146,7 @@ component provides ObjectReader requires io.File, System system {
 			byte serialData[]
 			
 			DanaInfoSection is = new DanaInfoSection()
-			serialData = dana.getByteArrayOf(is)
+			serialData = dana.serial(is)
 			serialData =[] fd.read(serialData.arrayLength)
 			
 			byte contents[] = fd.read(is.size)

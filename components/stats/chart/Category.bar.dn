@@ -53,6 +53,12 @@ component provides Category:bar requires ChartCore, stats.StatCore stcore, io.Ou
 		setXMarkerInterval(1.0)
 		}
 	
+	void Category:setAxisFont(Font f)
+		{
+		axisFont = f
+		super(f)
+		}
+	
 	void Category:addSample(char cat[], dec yvalues[])
 		{
 		//update our highest and lowest X and Y points, to use in normalising coordinates
@@ -165,8 +171,16 @@ component provides Category:bar requires ChartCore, stats.StatCore stcore, io.Ou
 			highX += 1.0
 			}
 		
-		setXMinMax(lowX, highX)
-		setYMinMax(lowY, highY)
+		//expand axes if needed, otherwise respect user-defined limits
+		
+		if (highX > xAxMax) xAxMax = highX
+		if (lowX < xAxMin) xAxMin = lowX
+		
+		if (highY > yAxMax) yAxMax = highY
+		if (lowY < yAxMin) yAxMin = lowY
+		
+		setXMinMax(xAxMin, xAxMax)
+		setYMinMax(yAxMin, yAxMax)
 		}
 	
 	// -- screen rendering (temporary?) --

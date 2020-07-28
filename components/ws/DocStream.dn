@@ -14,9 +14,8 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 	bool firstWrite = true
 	bool autoChunked = false
 	bool streamEnded = false
-	bool autoClose = false
 	
-	DocStream:DocStream(TCPSocket s, Header headers[], bool ac)
+	DocStream:DocStream(TCPSocket s, Header headers[], Header responseHeaders[])
 		{
 		socket = s
 		requestHeaders = headers
@@ -36,8 +35,6 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 			{
 			sessionKeys[i].value = encoder.decode(sessionKeys[i].value)
 			}
-		
-		autoClose = ac
 		}
 	
 	Header[] getSubHeaders(char content[])
@@ -60,7 +57,7 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 	char[] intToHex(int i, bool trim)
 		{
 		IntH id = new IntH(i)
-		byte bytes[] = dana.getByteArrayOf(id)
+		byte bytes[] = dana.serial(id)
 		char res[]
 		
 		for (int p = bytes.arrayLength - 1; p != INT_MAX; p--)
@@ -77,8 +74,8 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 			//stop here, if in "trim" mode and p has reached 0
 			if (trim)
 				{
-				bytes[p] = 0x0
-				if (i == 0) break
+				bytes[p] = 0
+				if (id.i == 0) break
 				}
 			}
 		
@@ -89,7 +86,7 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 		{
 		char q[] = intToHex(dt.arrayLength, true)
 		
-		socket.send(new char[](q, ";\r\n"))
+		socket.send(new char[](q, "\r\n"))
 		}
 	
 	Header[] DocStream:getRequestHeaders()
@@ -104,7 +101,7 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 		
 		if (firstWrite)
 			{
-			writeStatus(200, "OK", new Header("transfer-encoding", "chunked"))
+			writeStatus(200, "OK", new Header[](new Header("transfer-encoding", "chunked")))
 			
 			firstWrite = false
 			autoChunked = true
@@ -126,9 +123,6 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 			{
 			char hdrLine[] = new char[]("HTTP/1.1 ", intUtil.makeString(code), " ", reason, "\r\n")
 			socket.send(hdrLine)
-			
-			if (autoClose)
-				headers = new Header[](new Header("connection", "close"), headers)
 			
 			for (int i = 0; i < headers.arrayLength; i++)
 				{
@@ -202,15 +196,15 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 			{
 			if (!firstWrite)
 				{
-				if (autoChunked) socket.send("0;\r\n\r\n")
+				if (autoChunked)
+					{
+					socket.send("0\r\n\r\n")
+					}
 				}
 				else
 				{
 				writeStatus(200, "OK", new Header("content-length", "0"))
 				}
-			
-			if (autoClose)
-				socket.disconnect()
 			
 			streamEnded = true
 			}

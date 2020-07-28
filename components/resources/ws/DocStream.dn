@@ -10,7 +10,7 @@ interface DocStream {
 	/*
 	 {"@description" : "Construct a new doc stream. This is done automatically by a web framework."}
 	*/
-	DocStream(store TCPSocket s, store Header headers[], bool autoCloseSocket)
+	DocStream(store TCPSocket s, store Header headers[], store Header responseHeaders[])
 	
 	/*
 	 {"@description" : "Get the list of request headers send by the client."}

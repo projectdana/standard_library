@@ -256,6 +256,28 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		socket.disconnect()
 		}
 	
+	void serverThread(int port)
+		{
+		TCPServerSocket server = new TCPServerSocket()
+		
+		if (server.bind(TCPServerSocket.ANY_ADDRESS, port))
+			{
+			out.println("[REST service started, visit http://localhost:$port/meta/ for API details]")
+			
+			while (running)
+				{
+				TCPSocket s = new TCPSocket()
+				
+				if (s.accept(server))
+					handleRequest(s)
+				}
+			}
+			else
+			{
+			out.println("Failed to bind to server port")
+			}
+		}
+	
 	int App:main(AppParam params[])
 		{
 		if (params.arrayLength == 0)
@@ -323,25 +345,10 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		assembly.setConfig(configs[0].string)
 		currentConfig = configs[0].string
 		
-		TCPServerSocket server = new TCPServerSocket()
+		//call assembly.runApp(), and launch the server stuff in a different thread...
+		asynch::serverThread(serverPort)
 		
-		if (server.bind(TCPServerSocket.ANY_ADDRESS, serverPort))
-			{
-			out.println("[REST service started, visit http://localhost:$serverPort/meta/ for API details]")
-			
-			while (running)
-				{
-				TCPSocket s = new TCPSocket()
-				
-				if (s.accept(server))
-					handleRequest(s)
-				}
-			}
-			else
-			{
-			out.println("Failed to bind to server port")
-			return 1
-			}
+		assembly.runApp()
 		
 		return 0
 		}

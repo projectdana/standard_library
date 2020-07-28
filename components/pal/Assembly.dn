@@ -20,8 +20,13 @@ data Component {
 	int completeWirings
 	bool serviceStarted
 	
+	//for tagging components as not-used in a new config, and therefore open to unload
+	bool used
+	
 	//the set of required interfaces of this component
 	Interface interfaces[]
+	
+	Component next
 	}
 
 //the below are used when building the list of configs
@@ -64,8 +69,9 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 	
 	bool verbose = true
 	
-	//the cache of loaded components and their current wirings
-	Component components[]
+	//the list of loaded components and their current wirings
+	Component components
+	Component mainComponent
 	
 	//the set of all available complete compositions of components that each form a working system
 	String configs[]
@@ -401,18 +407,21 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		return result
 		}
 	
-	bool componentLoaded(char comp[])
+	Component componentLoaded(Component list, char comp[])
 		{
-		for (int i = 0; i < components.arrayLength; i++)
+		Component cw = list
+		while (cw != null)
 			{
-			if (components[i].path == comp)
-				return true
+			if (cw.path == comp)
+				return cw
+			
+			cw = cw.next
 			}
 		
-		return false
+		return null
 		}
 	
-	void loadComponent(char comp[])
+	Component loadComponent(char comp[])
 		{
 		//out.println(" -- loading '$comp'")
 		
@@ -450,7 +459,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 				}
 			}
 		
-		components = new Component[](components, c)
+		return c
 		}
 	
 	char[] normalisePath(char path[])
@@ -541,35 +550,11 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			q = flattenCB(exs[i])
 			configs = new String[](configs, new String(q))
 			}
-		
-		//out.println("[pre-caching components into memory]")
-		
-		//load every component
-		for (int i = 0; i < configs.arrayLength; i++)
-			{
-			String comps[] = stringUtil.explode(stringUtil.explode(configs[i].string, "|")[0].string, ",")
-			
-			for (int j = 0; j < comps.arrayLength; j++)
-				{
-				if (!componentLoaded(comps[j].string))
-					loadComponent(comps[j].string)
-				}
-			}
 		}
 	
 	String[] Assembly:getConfigs()
 		{
 		return configs
-		}
-	
-	Component getComponent(char path[])
-		{
-		for (int i = 0; i < components.arrayLength; i++)
-			{
-			if (components[i].path == path) return components[i]
-			}
-		
-		return null
 		}
 	
 	Interface getInterface(Component c, char name[])
@@ -612,8 +597,8 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			}
 		
 		// - and now do this wiring
-		Component fromComponent = getComponent(comps[fromIndex].string)
-		Component toComponent = getComponent(comps[toIndex].string)
+		Component fromComponent = componentLoaded(components, comps[fromIndex].string)
+		Component toComponent = componentLoaded(components, comps[toIndex].string)
 		
 		Interface iq = getInterface(fromComponent, intfName)
 		
@@ -663,6 +648,30 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		myApp = new App() from class
 		exitCode = myApp.main(subParams)
 		appFinished = true
+		appStarted = false
+		}
+	
+	void removeUnusedComponents()
+		{
+		Component prev = null
+		Component cw = components
+		while (cw != null)
+			{
+			if (!cw.used)
+				{
+				if (prev == null)
+					{
+					components = cw.next
+					}
+					else
+					{
+					prev.next = cw.next
+					}
+				}
+			
+			prev = cw
+			cw = cw.next
+			}
 		}
 	
 	bool Assembly:setConfig(char conf[])
@@ -689,29 +698,91 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		
 		mutex(configLock)
 			{
-			int wiringsChanged
+			//mark all loaded components as not-used
+			Component cw = components
+			while (cw != null)
+				{
+				cw.used = false
+				cw = cw.next
+				}
 			
+			//load all components that are not yet loaded
+			Component newComponents = null
+			Component end = null
+			
+			for (int j = 0; j < comps.arrayLength; j++)
+				{
+				Component ldc = null
+				if ((ldc = componentLoaded(components, comps[j].string)) == null)
+					{
+					if (componentLoaded(newComponents, comps[j].string) == null)
+						{
+						Component c = loadComponent(comps[j].string)
+						c.used = true
+						
+						if (end == null) end = c
+						
+						c.next = newComponents
+						newComponents = c
+						}
+					}
+					else
+					{
+					ldc.used = true
+					}
+				}
+			
+			if (mainComponent == null)
+				{
+				mainComponent = end
+				}
+			
+			//add new components into the in-use list
+			// (note, this list can be empty if we're setting to the same config)
+			if (end != null)
+				{
+				end.next = components
+				components = newComponents
+				}
+			
+			//update wirings
 			for (int i = 0; i < wirings.arrayLength; i++)
 				{
 				if (wirings[i] != null)
 					{
-					wiringsChanged += forwardWire(comps, wirings, i)
+					forwardWire(comps, wirings, i)
 					}
 				}
 			
-			if (!appStarted)
-				{
-				appStarted = true
-				asynch::launchMain(components[0].class)
-				}
+			//remove all components that aren't used
+			removeUnusedComponents()
 			}
 		
 		return true
 		}
 	
-	bool Assembly:appFinished()
+	bool Assembly:runApp()
 		{
-		return appFinished
+		mutex(configLock)
+			{
+			if (mainComponent == null)
+				{
+				throw new Exception("no main component loaded - use setConfig first")
+				}
+			
+			if (!appStarted)
+				{
+				appStarted = true
+				}
+				else
+				{
+				throw new Exception("app is already running")
+				}
+			}
+		
+		launchMain(mainComponent.class)
+		
+		return true
 		}
 	
 	}

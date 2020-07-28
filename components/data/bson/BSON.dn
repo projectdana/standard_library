@@ -60,7 +60,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 	{
 	Int4 q = new Int4()
 	
-	byte x[] = dana.getByteArrayOf(q)
+	byte x[] = dana.serial(q)
 	
 	x =[] array
 	
@@ -92,7 +92,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
   byte[] toLittleEndian(int4 value){
 	Int4 q = new Int4(value)
-	byte x[] = dana.getByteArrayOf(q)
+	byte x[] = dana.serial(q)
     return bu.reverse(x)
   }
 
