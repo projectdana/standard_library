@@ -15,4 +15,32 @@ component provides Search {
 		return result
 		}
 	
+	Data[] Search:find(Data list[], TypeField field, Data template)
+		{
+		Data result[]
+		
+		for (int i = 0; i < list.arrayLength; i++)
+			{
+			if (list[i]:.field == template:.field)
+				{
+				result = new Data[](result, list[i]) from typeof(template)
+				}
+			}
+		
+		return result
+		}
+	
+	Data Search:findFirst(Data list[], TypeField field, Data template)
+		{
+		for (int i = 0; i < list.arrayLength; i++)
+			{
+			if (list[i]:.field == template:.field)
+				{
+				return list[i]
+				}
+			}
+		
+		return null
+		}
+	
 	}

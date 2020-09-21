@@ -11,17 +11,17 @@ interface SMTP {
 	SMTP()
 	
 	/*
-	{"@description" : "Connect to an SMTP server which starts in plain text mode (this is usually a server on port 587). Communication over this connection will not be encrypted, and you will usually want to upgrade the connection to a secure one using the startTLS() function. The socket given here must already be connected to the remote host, but no data should have been sent or received from that socket."}
+	{"@description" : "Connect to an SMTP server which starts in plain text mode (this is usually a server on port 587). Communication over this connection will not be encrypted, and you will usually want to upgrade the connection to a secure one using the startTLS() function. The TCP socket given here must already be connected to the remote host, but no data should have been sent or received from that socket."}
 	*/
 	bool connect(store TCPSocket s)
 	
 	/*
-	{"@description" : "Connect to an SMTP server which starts in secure/encrypted (this is usually a server on port 465). This function only establishes an encrypted channel. You are responsible for authenticating that the host you are talking to is really what it claims to be, by verifying certificates and the associated hostname. The socket given here must already be connected to the remote host, but no data should have been sent or received from that socket."}
+	{"@description" : "Connect to an SMTP server which starts in secure/encrypted (this is usually a server on port 465). This function only establishes an encrypted channel. You are responsible for authenticating that the host you are talking to is really what it claims to be, by verifying certificates and the associated hostname. The TCP socket given here must already be connected to the remote host, but no data should have been sent or received from that socket. The TLS instance should be instantiated but not connected."}
 	*/
 	bool connectTLS(store TCPSocket s, store TLS tls)
 	
 	/*
-	{"@description" : "Request an upgrade from plain text mode to an encrypted channel. As above, this function only establishes an encrypted channel. You are responsible for authenticating that the host you are talking to is really what it claims to be, by verifying certificates and the associated hostname."}
+	{"@description" : "Request an upgrade from plain text mode to an encrypted channel. As above, this function only establishes an encrypted channel. You are responsible for authenticating that the host you are talking to is really what it claims to be, by verifying certificates and the associated hostname. The TLS instance passed in should be instantiated but not connected."}
 	*/
 	bool startTLS(store TLS s)
 	

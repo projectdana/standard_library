@@ -14,42 +14,59 @@ component provides data.mysql.MySQL requires native MySQLLib mySQLLib {
 	
 	int connection
 	int result
-
+	
+	//we use this lock to avoid apparent thread safety issues in the MySQL client lib
+	// - it's not an ideal solution because it's really concurrency-control overkill, but solves a range of problems for now...
+	static Mutex connectionLock = new Mutex()
+	
 	MySQL:MySQL(char host[], int port, char user[], char pass[], char dbName[]) {
-		connection = mySQLLib.connect(host, port, user, pass, dbName)
-		if (connection == 0) { throw new Exception("Connection failed.") }
+		mutex (connectionLock)
+			{
+			connection = mySQLLib.connect(host, port, user, pass, dbName)
+			if (connection == 0) { throw new Exception("Connection failed.") }
+			}
 	}
 	
 	bool MySQL:execute(char query[]) {
-		if (connection == 0) { throw new Exception("Connection not established.") }
-		result = mySQLLib.executeQuery(connection, query)
-		return true
+		mutex (connectionLock)
+			{
+			if (connection == 0) { throw new Exception("Connection not established.") }
+			result = mySQLLib.executeQuery(connection, query)
+			return true
+			}
 	}
 
 	MySQLRow[] MySQL:fetchAll() {
-		if (result == 0) { return null }
-		MySQLRow rows[] = null
-		int i = 0
-		int numFields = mySQLLib.numFields(result)
-		//get field names
-		String fieldNames[]
-		for (i = 0; i < numFields; i++) {
-			fieldNames = new String[](fieldNames, new String(mySQLLib.getFieldName(result)))
-		}
-		//get field values
-		int row
-		while ((row = mySQLLib.fetchRow(result)) != 0) {
-			MySQLField fields[] = null
+		
+		mutex (connectionLock)
+			{
+			if (result == 0) { return null }
+			MySQLRow rows[] = null
+			int i = 0
+			int numFields = mySQLLib.numFields(result)
+			//get field names
+			String fieldNames[]
 			for (i = 0; i < numFields; i++) {
-				fields = new MySQLField[](fields, new MySQLField(fieldNames[i].string, 
-					mySQLLib.getField(row, i)))
+				fieldNames = new String[](fieldNames, new String(mySQLLib.getFieldName(result)))
 			}
-			rows = new MySQLRow[](rows, new MySQLRow(fields))
-		}
-		return rows
+			//get field values
+			int row
+			while ((row = mySQLLib.fetchRow(result)) != 0) {
+				MySQLField fields[] = null
+				for (i = 0; i < numFields; i++) {
+					fields = new MySQLField[](fields, new MySQLField(fieldNames[i].string, 
+						mySQLLib.getField(row, i)))
+				}
+				rows = new MySQLRow[](rows, new MySQLRow(fields))
+			}
+			return rows
+			}
 	}
 
 	void MySQL:close() {
-		mySQLLib.close(connection, result)
+		mutex (connectionLock)
+			{
+			mySQLLib.close(connection, result)
+			}
 	}
 }

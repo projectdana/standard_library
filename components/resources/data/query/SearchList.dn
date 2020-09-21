@@ -1,0 +1,29 @@
+/*
+{ "description" : "Search for values in a list instance."}
+*/
+
+uses data.adt.List
+
+interface SearchList {
+	
+	/*
+	{ "@description" : "Search a list for cells matching a template, returning all matching cells.",
+			"list" : "The list to search.",
+			"field" : "The field to search against.",
+			"template" : "An instance of the same type as the data held in list, in which the field to match against is set to the value being searched for."
+			"@return" : "An array of cells matching the search term."
+	}
+	*/
+	Data[] find(List list, TypeField field, Data template)
+	
+	/*
+	{ "@description" : "Search a list for a cell matching a template, returning the first matching cell.",
+			"list" : "The list to search.",
+			"field" : "The field to search against.",
+			"template" : "An instance of the same type as the data held in list, in which the field to match against is set to the value being searched for."
+			"@return" : "An array of cells matching the search term."
+	}
+	*/
+	Data findFirst(List list, TypeField field, Data template)
+	
+	}
