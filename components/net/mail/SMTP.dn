@@ -161,7 +161,7 @@ component provides SMTP requires io.Output out, data.IntUtil iu, data.StringUtil
 		
 		socket = s
 		ssl = tls
-		tls.connect(socket)
+		if (!tls.connect(socket)) throw new Exception("failed to perform TLS handshake")
 		
 		mstream = tls
 		
@@ -189,14 +189,14 @@ component provides SMTP requires io.Output out, data.IntUtil iu, data.StringUtil
 		
 		readLines(socket)
 		
-		s.connect(socket)
+		if (!s.connect(socket)) throw new Exception("failed to perform TLS handshake")
 		
 		mstream = s
 		
 		//do the standard hello and parse the response lines, exactly as in a non-TLS hello...
 		doHello(mstream, socket.getLocalEndpoint().address)
 		
-		return false
+		return true
 		}
 	
 	byte[] SMTP:getAuthTypes()

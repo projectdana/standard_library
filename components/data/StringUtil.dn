@@ -225,4 +225,29 @@ component provides StringUtil requires io.Output out, data.adt.List {
 		return true
 		}
 	
+	bool StringUtil:startsWith(char str[], char with[])
+		{
+		if (with.arrayLength > str.arrayLength) return false
+		
+		for (int i = 0; i < with.arrayLength; i++)
+			{
+			if (str[i] != with[i]) return false
+			}
+		
+		return true
+		}
+	
+	bool StringUtil:endsWith(char str[], char with[])
+		{
+		if (with.arrayLength > str.arrayLength) return false
+		
+		int offset = str.arrayLength - with.arrayLength
+		for (int i = 0; i < with.arrayLength; i++)
+			{
+			if (str[offset+i] != with[i]) return false
+			}
+		
+		return true
+		}
+	
 	}

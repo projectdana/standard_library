@@ -43,6 +43,7 @@ interface SSLLib{
 	byte[] read(int hnd, int len)
 	
 	void closeSSL(int hnd)
+	void freeSSL(int hnd)
 	}
 
 component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TLSCertStore(Destructor), net.TLSContext(Destructor), net.TLS(Destructor) requires native TCPLib lib, native SSLLib slib, io.Output out {
@@ -288,20 +289,26 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TLSCertSt
 		
 		int platformHandle
 		bool closed
+		Mutex connectLock = new Mutex()
+		TLSContext context
+		//TCPSocket socket
 		
 		TLS:TLS(TLSContext cxt)
 			{
+			context = cxt
 			platformHandle = slib.makeSSL(cxt.platformHandle)
 			}
 		
-		bool TLS:accept(TCPSocket socket)
+		bool TLS:accept(TCPSocket s)
 			{
-			return slib.accept(platformHandle, socket.platformSocket)
+			//socket = s
+			return slib.accept(platformHandle, s.platformSocket)
 			}
 		
-		bool TLS:connect(TCPSocket socket)
+		bool TLS:connect(TCPSocket s)
 			{
-			return slib.connect(platformHandle, socket.platformSocket)
+			//socket = s
+			return slib.connect(platformHandle, s.platformSocket)
 			}
 		
 		VerifyStatus TLS:verifyCertificate(TLSCertStore st, char cert[], String chain[])
@@ -333,20 +340,22 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TLSCertSt
 		
 		void TLS:close()
 			{
-			if (platformHandle != 0)
+			if (platformHandle != 0 && !closed)
 				{
 				slib.closeSSL(platformHandle)
-				platformHandle = 0
+				closed = true
 				}
 			}
 		
 		void Destructor:destroy()
 			{
-			if (platformHandle != 0)
+			if (platformHandle != 0 && !closed)
 				{
 				slib.closeSSL(platformHandle)
-				platformHandle = 0
 				}
+			
+			if (platformHandle != 0)
+				slib.freeSSL(platformHandle)
 			}
 		
 		}

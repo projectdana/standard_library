@@ -1,0 +1,14 @@
+/*
+ {"description" : "Interface to created hashes using the SHA3 algorithm family."}
+*/
+
+interface SHA3 {
+	
+	const byte HASH_SHA_224 = 1
+	const byte HASH_SHA_256 = 2
+	const byte HASH_SHA_384 = 3
+	const byte HASH_SHA_512 = 4
+	
+	byte[] hashData(byte content[], byte hashType)
+	
+	}

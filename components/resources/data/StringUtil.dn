@@ -92,4 +92,16 @@ interface StringUtil{
 			"@return" : "True if the string is comprised only of numerical characters, false otherwise."}
 	*/
 	bool isNumeric(char str[])
+	
+	/*
+	 {"@description" : "Check if a string starts with another string."
+			"@return" : "True if the string is comprised only of numerical characters, false otherwise."}
+	*/
+	bool startsWith(char str[], char with[])
+	
+	/*
+	 {"@description" : "Check if a string ends with another string."
+			"@return" : "True if the string is comprised only of numerical characters, false otherwise."}
+	*/
+	bool endsWith(char str[], char with[])
 	}

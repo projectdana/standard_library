@@ -1,0 +1,9 @@
+/*
+ {"description" : "Interface to created hashes using the SHA1 algorithm. Note that this algorithm is not recommended for secure uses as it has known vulnerabilities."}
+*/
+
+interface SHA1 {
+	
+	byte[] hashData(byte content[])
+	
+	}

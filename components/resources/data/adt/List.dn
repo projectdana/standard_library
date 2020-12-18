@@ -48,6 +48,27 @@ interface List{
 	*/
 	Data getIndex(int n)
 	
+	/*
+	 {"@description" : "Set the given index of the list to stored the given data instance."}
+	*/
+	void setIndex(int n, store Data d)
+	
+	/*
+	 {"@description" : "Get the number of items currently stored in the list.",
+			"@return" : "The number of items in the list."}
+	*/
 	int getLength()
+	
+	/*
+	 {"@description" : "Get all items in the list as an array of type Data[].",
+			"@return" : "An array of type Data[] containing all items in the list, in order."}
+	*/
 	Data[] getContents()
+	
+	/*
+	 {"@description" : "Get all items in the list as an array of the given type. Returns null if any item stored in the list does not have this type.",
+			"t" : "The type for the resulting array."
+			"@return" : "An array of the given type containing all items in the list, in order."}
+	*/
+	Data[] getContentsAs(Type t)
 	}

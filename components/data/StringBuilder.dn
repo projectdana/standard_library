@@ -1,0 +1,48 @@
+data Item {
+	char str[]
+	Item next
+	}
+
+component provides StringBuilder {
+	
+	Item list
+	Item last
+	int length
+	
+	void copyChars(char into[], int start, char src[])
+		{
+		for (int i = 0; i < src.arrayLength; i++)
+			{
+			into[start+i] = src[i]
+			}
+		}
+	
+	void StringBuilder:add(char str[])
+		{
+		Item i = new Item(str)
+		if (list == null)
+			list = i
+			else
+			last.next = i
+		
+		last = i
+		length += str.arrayLength
+		}
+	
+	char[] StringBuilder:get()
+		{
+		if (length == 0) return null
+		
+		char result[] = new char[length]
+		int offset = 0
+		
+		for (Item i = list; i != null; i = i.next)
+			{
+			copyChars(result, offset, i.str)
+			offset += i.str.arrayLength
+			}
+		
+		return result
+		}
+	
+	}

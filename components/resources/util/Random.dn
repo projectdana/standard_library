@@ -1,0 +1,31 @@
+/*
+ {"description" : "Generate random or pseudo-random values. The setSeed() function should generally be used once (after instantiation) to ensure a unique starting point for the sequence of numbers returned by successive calls to get(). The current time is commonly used with setSeed(). If setSeed() is not used, each instance of the random number generator may return the same sequence of numbers."}
+*/
+
+interface Random {
+	
+	/*
+	 {"@description" : "Set a 'seed' value for the random number generator. Some implementations may generate the same sequence of numbers from the same seed, so this should generally be set from something like the current time to help ensure good pseudo-random numbers."}
+	*/
+	void setSeed(int seed)
+	
+	/*
+	 {"@description" : "Get a random number between zero and 'top', excluding top itself."}
+	*/
+	int getInt(int top)
+	
+	/*
+	 {"@description" : "Get a random string of given length, using the default characters of the random number generator."}
+	*/
+	char[] getString(int len)
+	
+	/*
+	 {"@description" : "Get a random string of given length, using the given characters in charset."}
+	*/
+	char[] getStringOf(int len, char charset[])
+	
+	/*
+	 {"@description" : "Get a random decimal value between the two given end-points, inclusive of those end-points."}
+	*/
+	dec getDec(dec low, dec high)
+	}
