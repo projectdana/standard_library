@@ -691,13 +691,11 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		
 		out.println("Scanning components and generating pages")
 		
-		/*
 		//generate a set of HTML files for p.primaryFiles
 		for (int i = 0; i < p.primaryFiles.arrayLength; i++)
 			{
 			writeFile(p.primaryFiles[i])
 			}
-		*/
 		
 		if (writeIndex)
 			{

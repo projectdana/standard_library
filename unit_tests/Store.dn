@@ -26,7 +26,7 @@ data Component {
 	Interface interfaces[]
 	}
 
-component provides Store requires data.adt.List {
+component provides Store requires data.adt.List, io.Output out {
 	
 	String global
 	Container glCon
@@ -44,6 +44,8 @@ component provides Store requires data.adt.List {
 		Container cnt = new Container(lc)
 		
 		glCon = cnt
+		
+		out.println("HERE-A")
 		
 		return true
 		}
@@ -136,6 +138,13 @@ component provides Store requires data.adt.List {
 		QCon q = new QCon(lc)
 		
 		qcon = q
+		
+		return true
+		}
+	
+	bool Store:fail11(String lc)
+		{
+		global = lc
 		
 		return true
 		}

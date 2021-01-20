@@ -22,6 +22,8 @@ interface Store {
 	
 	bool fail10(String str[])
 	
+	bool fail11(String str)
+	
 	bool pass1(char in[])
 	
 	bool pass2(char in[])

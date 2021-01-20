@@ -10,7 +10,7 @@ data Item {
 	char str[]
 	}
 
-component provides UnitTest requires Store st {
+component provides UnitTest requires Store st, io.Output out {
 	
 	int alpha
 	
@@ -107,11 +107,15 @@ component provides UnitTest requires Store st {
 		
 		if (st.fail10(new String("one"))) throw new Exception("Failure in test 10")
 		
-		if (!st.pass1("one")) throw new Exception("Failure in test 11")
+		String test = new String("one")
 		
-		if (!st.pass2("one")) throw new Exception("Failure in test 12")
+		if (st.fail11(test)) throw new Exception("Failure in test 11")
 		
-		if (!st.pass3(new String[](new String("one")))) throw new Exception("Failure in test 13")
+		if (!st.pass1("one")) throw new Exception("Failure in test 12")
+		
+		if (!st.pass2("one")) throw new Exception("Failure in test 13")
+		
+		if (!st.pass3(new String[](new String("one")))) throw new Exception("Failure in test 14")
 		
 		return true
 		}
