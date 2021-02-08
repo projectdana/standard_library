@@ -1,0 +1,20 @@
+component provides UnitTest requires sec.crypto.RSA_KeyGen keygen, sec.crypto.RSA_OAEP {
+	
+	bool UnitTest:runTest()
+		{
+		RSAKey key = keygen.generateKey(1024)
+		
+		RSA_OAEP rsaEnc = new RSA_OAEP(key.public, RSA_OAEP.PUBLIC_KEY)
+		RSA_OAEP rsaDec = new RSA_OAEP(key.private, RSA_OAEP.PRIVATE_KEY)
+		
+		char plain[] = "Hello Daddy"
+		
+		byte cipher[] = rsaEnc.encrypt(plain)
+		char decrypted[] = rsaDec.decrypt(cipher)
+		
+		if (plain != decrypted) throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

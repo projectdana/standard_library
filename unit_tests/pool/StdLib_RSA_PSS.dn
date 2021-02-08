@@ -1,0 +1,19 @@
+component provides UnitTest requires sec.crypto.RSA_KeyGen keygen, sec.crypto.RSA_PSS {
+	
+	bool UnitTest:runTest()
+		{
+		RSAKey key = keygen.generateKey(1024)
+		
+		RSA_PSS rsaSign = new RSA_PSS(key.private, RSA_PSS.PRIVATE_KEY)
+		RSA_PSS rsaVerify = new RSA_PSS(key.public, RSA_PSS.PUBLIC_KEY)
+		
+		char plain[] = "Hello Daddy"
+		
+		byte signed[] = rsaSign.sign(plain)
+		
+		if (!rsaVerify.verify(plain, signed)) throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

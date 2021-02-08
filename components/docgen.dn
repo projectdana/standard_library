@@ -73,8 +73,16 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		
 		result = new char[](result, "(")
 		
+		bool optLatch = false
+		
 		for (int q = 0; q < f.params.arrayLength; q++)
 			{
+			if (f.params[q].opt_param && !optLatch)
+				{
+				result = new char[](result, "<span class = \"doc_function_opt_group\"><span class = \"doc_function_param_opt\">optional</span> ")
+				optLatch = true
+				}
+			
 			if (f.params[q].scope_store)
 				result = new char[](result, "<span class = \"doc_function_param_store\">store</span>", formatType(sf, f.params[q].type), " ", f.params[q].displayName)
 				else
@@ -82,6 +90,9 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 			
 			if (q + 1 < f.params.arrayLength) result = new char[](result, ", ")
 			}
+		
+		if (optLatch) result = new char[](result, "</span>")
+		
 		result = new char[](result, ")")
 		
 		return result

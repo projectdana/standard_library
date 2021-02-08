@@ -1,0 +1,121 @@
+// https://wiki.openssl.org/index.php/EVP_Symmetric_Encryption_and_Decryption
+
+uses data.String
+
+interface CipherLib {
+	int aes_cbc_encryptInit(int keyLength, char key[], char iv[])
+	byte[] aes_cbc_encryptPart(int handle, byte content[])
+	byte[] aes_cbc_encryptFinish(int handle)
+	bool aes_cbc_encryptOK(int handle)
+	
+	int aes_cbc_decryptInit(int keyLength, char key[], char iv[])
+	byte[] aes_cbc_decryptPart(int handle, byte content[])
+	byte[] aes_cbc_decryptFinish(int handle)
+	bool aes_cbc_decryptOK(int handle)
+	
+	int aes_gcm_encryptInit(int keyLength, char key[], char iv[])
+	bool aes_gcm_encryptAAD(int handle, byte content[])
+	byte[] aes_gcm_encryptPart(int handle, byte content[])
+	byte[] aes_gcm_encryptFinish(int handle)
+	bool aes_gcm_encryptOK(int handle)
+	byte[] aes_gcm_encryptGetTag(int handle)
+	
+	int aes_gcm_decryptInit(int keyLength, char key[], char iv[])
+	bool aes_gcm_decryptAAD(int handle, byte content[])
+	byte[] aes_gcm_decryptPart(int handle, byte content[])
+	byte[] aes_gcm_decryptFinish(int handle)
+	void aes_gcm_decryptSetTag(int handle, byte tag[])
+	bool aes_gcm_decryptOK(int handle)
+	
+	void instance_cleanup(int handle)
+	
+	int rsa_oaep_init(char key_pem[], byte mode)
+	byte[] rsa_oaep_encrypt(int handle, byte content[])
+	byte[] rsa_oaep_decrypt(int handle, byte content[])
+	void rsa_oaep_cleanup(int handle)
+	
+	int rsa_pss_init(char key_pem[], byte mode)
+	byte[] rsa_pss_sign(int handle, byte content[])
+	bool rsa_pss_verify(int handle, byte plain[], byte signed[])
+	void rsa_pss_cleanup(int handle)
+	
+	bool rsa_generate_key(int keyBits, String public, String private)
+	bool rsa_convert_key(char public[], char private[], byte type, String newPublic, String newPrivate, byte newType)
+	}
+
+component provides AES_CBC(Destructor) requires native CipherLib lib {
+	
+	int platformHandle
+	byte encMode
+	bool encryptOK = true
+	bool decryptOK = true
+	
+	AES_CBC:AES_CBC(byte mode, int keyLength, char key[], char iv[])
+		{
+		if (iv.arrayLength != 16)
+			throw new Exception("iv must be of length 16 characters (128 bits) for AES-CBC")
+		
+		if (keyLength != 128 && keyLength != 192 && keyLength != 256)
+			throw new Exception("keyLength must be one of 128, 192, 256")
+		
+		if (key.arrayLength != (keyLength / 8))
+			throw new Exception("length of secret key must be the same number of bits as the keyLength")
+		
+		if (mode == AES_CBC.ENCRYPT)
+			platformHandle = lib.aes_cbc_encryptInit(keyLength, key, iv)
+			else if (mode == AES_CBC.DECRYPT)
+			platformHandle = lib.aes_cbc_decryptInit(keyLength, key, iv)
+			else
+			throw new Exception("unknown operating mode (use ENCRYPT/DECRYPT)")
+		
+		if (platformHandle == 0) throw new Exception("cipher creation failed")
+		
+		encMode = mode
+		}
+	
+	//the below functions could be in a general supertype...
+	byte[] AES_CBC:encryptPart(byte content[])
+		{
+		if (encMode != AES_CBC.ENCRYPT) throw new Exception("attempt to encrypt data with a cipher configured in decrypt mode")
+		return lib.aes_cbc_encryptPart(platformHandle, content)
+		}
+	
+	byte[] AES_CBC:encryptFinish()
+		{
+		if (encMode != AES_CBC.ENCRYPT) throw new Exception("attempt to encrypt data with a cipher configured in decrypt mode")
+		return lib.aes_cbc_encryptFinish(platformHandle)
+		}
+	
+	bool AES_CBC:encryptOK()
+		{
+		if (encMode != AES_CBC.ENCRYPT) throw new Exception("attempt to encrypt data with a cipher configured in decrypt mode")
+		if (!encryptOK) return false
+		return encryptOK = lib.aes_cbc_encryptOK(platformHandle)
+		}
+	
+	byte[] AES_CBC:decryptPart(byte content[])
+		{
+		if (encMode != AES_CBC.DECRYPT) throw new Exception("attempt to decrypt data with a cipher configured in encrypt mode")
+		return lib.aes_cbc_decryptPart(platformHandle, content)
+		}
+	
+	byte[] AES_CBC:decryptFinish()
+		{
+		if (encMode != AES_CBC.DECRYPT) throw new Exception("attempt to decrypt data with a cipher configured in encrypt mode")
+		return lib.aes_cbc_decryptFinish(platformHandle)
+		}
+	
+	bool AES_CBC:decryptOK()
+		{
+		if (encMode != AES_CBC.DECRYPT) throw new Exception("attempt to decrypt data with a cipher configured in encrypt mode")
+		if (!decryptOK) return false
+		return decryptOK = lib.aes_cbc_decryptOK(platformHandle)
+		}
+	
+	void Destructor:destroy()
+		{
+		if (platformHandle != 0)
+			lib.instance_cleanup(platformHandle)
+		}
+	
+	}

@@ -1,0 +1,38 @@
+/*
+{
+ "description" : "RSA-PSS implementation, providing asymmetric signing/verification using RSA keys. This is generally used to verify that the sender of a message is authentic. Assuming that the sender's public key is held at the receiver, the sender can sign a message using their private key and the receiver can verify that the signed message can only have been signed by a private key matching a given public key."
+}
+*/
+
+interface RSA_PSS {
+	
+	const byte PUBLIC_KEY = 1
+	const byte PRIVATE_KEY = 2
+	
+	/*
+	{
+	 "@description" : "Create the cipher using the given key and mode. A private key must be used for signing, and a public key for verification.",
+		"key_pem" : "A public or private key, encoded using base-64 PEM format.",
+		"mode" : "Operation mode, either PUBLIC_KEY or PRIVATE_KEY."
+	}
+	*/
+	RSA_PSS(char key_pem[], byte mode)
+	
+	/*
+	{
+	 "@description" : "Sign a piece of plain text using a private key. Internally the plain text is first hashed to a fixed-length, with the hashed value signed.",
+		"plaintext" : "The plain text to sign."
+	}
+	*/
+	byte[] sign(byte plaintext[])
+	
+	/*
+	{
+	 "@description" : "Verify the signature, derived from the given piece of plain text, was signed using a private key that matches our public key.",
+		"plaintext" : "The plain text that was signed using the sign function.",
+		"signedtext" : "The signature that was returned from the sign function."
+	}
+	*/
+	bool verify(byte plaintext[], byte signedtext[])
+	
+	}

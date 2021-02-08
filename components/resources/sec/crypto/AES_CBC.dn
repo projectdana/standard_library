@@ -1,0 +1,69 @@
+/*
+{
+ "description" : "AES-CBC implementation. AES-CBC provides confidentiality but not authenticity of the encrypted ciphertext data."
+}
+*/
+
+interface AES_CBC {
+	
+	const byte ENCRYPT = 1
+	const byte DECRYPT = 2
+	
+	const int KEY_128 = 128
+	const int KEY_192 = 192
+	const int KEY_256 = 256
+	
+	/*
+	{
+	 "@description" : "Create the cipher using a given key length, shared secret key, and IV. The provided key must be the same length, in bits, as keyLength. Applications will typically use an SHA algorithm to convert an arbitrary-length key (like a user password) into a fixed-length key for use with a cipher. IV should be a randomly-generated string, and must be of length 16 (128 bits). The same IV value must be used when decrypting the ciphertext (it is generally considered safe to store / transmit the IV in plain text to allow decryption).",
+		"mode" : "Encryption or decryption mode, using the constants ENCRYPT or DECRYPT.",
+		"keyLength" : "The length of the key, in bits. This must be one of KEY_128, KEY_192, or KEY_256.",
+		"key" : "The shared secret key, which must be the same length as the specified key length (e.g., 32 bytes for KEY_256). Applications will typically use an SHA algorithm to convert an arbitrary-length key (like a user password) into a fixed-length key for use with a cipher."
+		"iv" : "A string of characters, which must be of length 16 (128 bits). This is used to help generate the first encrypted block, and the same iv value must later be used to decrypt."
+	}
+	*/
+	AES_CBC(byte mode, int keyLength, char key[], char iv[])
+	
+	/*
+	{
+	 "@description" : "Encrypt part (or all) of a plain-text message. This function can be called repeatedly on each successive part of a message / data, or can be called once on the entirety of that item."
+	}
+	*/
+	byte[] encryptPart(byte content[])
+	
+	/*
+	{
+	 "@description" : "Finish encryption. This function must always be called to return any final bytes of ciphertext."
+	}
+	*/
+	byte[] encryptFinish()
+	
+	/*
+	{
+	 "@description" : "Check if encryption process has occurred without errors so far. Because it is potentially 'normal' for encryptPart() or encryptFinish() to return an empty / null byte array, and this return status can also occur due to an exception, this function can be called to differentiate the two cases."
+	}
+	*/
+	bool encryptOK()
+	
+	/*
+	{
+	 "@description" : "Decrypt part (or all) of a ciphertext message. This function can be called repeatedly on each successive part of a ciphertext message / data, or can be called once on the entirety of that item."
+	}
+	*/
+	byte[] decryptPart(byte content[])
+	
+	/*
+	{
+	 "@description" : "Finish decryption. This function must always be called to return any final bytes of decrypted plain text."
+	}
+	*/
+	byte[] decryptFinish()
+	
+	/*
+	{
+	 "@description" : "Check if decryption process has occurred without errors so far. Because it is potentially 'normal' for decryptPart() or decryptFinish() to return an empty / null byte array, and this return status can also occur due to an exception, this function can be called to differentiate the two cases."
+	}
+	*/
+	bool decryptOK()
+	
+	}

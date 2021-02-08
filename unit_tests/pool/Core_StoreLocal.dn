@@ -117,6 +117,8 @@ component provides UnitTest requires Store st, io.Output out {
 		
 		if (!st.pass3(new String[](new String("one")))) throw new Exception("Failure in test 14")
 		
+		if (!st.pass4(new String[](new String("one")))) throw new Exception("Failure in test 14")
+		
 		return true
 		}
 	

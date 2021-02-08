@@ -26,6 +26,7 @@ data FieldDef {
 	char type[]
 	bool array
 	bool scope_store
+	bool opt_param
 	
 	char doc_description[]
 	}

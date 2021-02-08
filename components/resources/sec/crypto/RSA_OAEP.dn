@@ -1,0 +1,37 @@
+/*
+{
+ "description" : "RSA-OAEP implementation, providing asymmetric encryption/decryption for a limited amount of data using RSA keys."
+}
+*/
+
+interface RSA_OAEP {
+	
+	const byte PUBLIC_KEY = 1
+	const byte PRIVATE_KEY = 2
+	
+	/*
+	{
+	 "@description" : "Create the cipher using the given key and mode. A public key must be used for encryption, and a private key for decryption.",
+		"key_pem" : "A public or private key, encoded using base-64 PEM format.",
+		"mode" : "Operation mode, either PUBLIC_KEY or PRIVATE_KEY."
+	}
+	*/
+	RSA_OAEP(char key_pem[], byte mode)
+	
+	/*
+	{
+	 "@description" : "Encrypt plain text using a public key. The encrypted result can only be decrypted using the matching private key.",
+		"plainText" : "The plain text to encrypt. The amount of plain text which can be encrypted is limited by the key length of the public key."
+	}
+	*/
+	byte[] encrypt(byte plainText[])
+	
+	/*
+	{
+	 "@description" : "Decrypt ciphertext using a private key. The private key used must be the matching key of the public key used to encrypt the data.",
+		"ciphertext" : "The ciphertext to decrypt."
+	}
+	*/
+	byte[] decrypt(byte ciphertext[])
+	
+	}

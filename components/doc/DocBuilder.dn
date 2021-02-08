@@ -383,7 +383,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	
 	bool isParamTypeQualifier(char str[])
 		{
-		return str == "store"
+		return str == "store" || str == "opt"
 		}
 	
 	bool isFieldDeclaration(SourceFile sf, ParseToken tokens[], int start)
@@ -687,6 +687,8 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		
 		start ++
 		
+		bool optLatch = false
+		
 		while (start < tokens.arrayLength)
 			{
 			if (tokens[start].content == ")")
@@ -695,11 +697,18 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			//[modifiers] <type> <name> [sqBrackets]
 			
 			bool sStore = false
+			bool pOpt = optLatch
 			
 			while (isParamTypeQualifier(tokens[start].content))
 				{
 				if (tokens[start].content == "store")
 					sStore = true
+				
+				if (tokens[start].content == "opt")
+					{
+					pOpt = true
+					optLatch = true
+					}
 				
 				start ++
 				}
@@ -724,6 +733,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 				}
 			
 			nfd.scope_store = sStore
+			nfd.opt_param = pOpt
 			
 			newFunction.params = new FieldDef[](newFunction.params, nfd)
 			

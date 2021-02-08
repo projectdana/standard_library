@@ -1,0 +1,24 @@
+component provides UnitTest requires util.Random random, sec.hash.SHA2 sha2, sec.crypto.AES_CBC {
+	
+	bool UnitTest:runTest()
+		{
+		char iv[] = random.getString(16)
+		
+		char plain[] = "Hello Daddy"
+		
+		AES_CBC aesEnc = new AES_CBC(AES_CBC.ENCRYPT, 256, sha2.hashData("password", SHA2.HASH_SHA_256), iv)
+		
+		byte encrypted[] = aesEnc.encryptPart(plain)
+		encrypted = new byte[](encrypted, aesEnc.encryptFinish())
+		
+		AES_CBC aesDec = new AES_CBC(AES_CBC.DECRYPT, 256, sha2.hashData("password", SHA2.HASH_SHA_256), iv)
+		
+		byte decrypted[] = aesDec.decryptPart(encrypted)
+		decrypted = new byte[](decrypted, aesDec.decryptFinish())
+		
+		if (decrypted != plain) throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

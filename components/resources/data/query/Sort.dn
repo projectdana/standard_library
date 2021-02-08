@@ -12,6 +12,6 @@ interface Sort {
 			"@return" : "The sorted array."
 	}
 	*/
-	Data[] sort(Data list[], TypeField field, bool ascending)
+	Data[] sort(Data list[], TypeField field, opt bool ascending)
 	
 	}

@@ -63,6 +63,19 @@ body{
 	background-color: rgba(200, 200, 255, 0.3);
 }
 
+.doc_function_param_opt{
+	font-size: small;
+	border: 1px solid silver;
+	padding-left: 2px;
+	padding-right: 2px;
+	background-color: rgba(200, 200, 255, 0.3);
+	font-weight: bold;
+}
+
+.doc_function_opt_group{
+	color: rgb(10, 10, 255);
+}
+
 .doc_eventsource_list{
 	padding: 2px;
 	background-color: #FEC;

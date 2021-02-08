@@ -1,0 +1,37 @@
+data RSAKey {
+	
+	const byte PKCS_PEM = 0x1
+	const byte RSA_PEM = 0x2
+	const byte ASN1_DER = 0x4
+	
+	char public[]
+	char private[]
+	byte type
+	}
+
+/*
+{
+ "description" : "Key generator for RSA key pairs."
+}
+*/
+
+interface RSA_KeyGen {
+	
+	/*
+	{
+	 "@description" : "Generate an RSA public/private key pair.",
+		"keyLength" : "Desired length, in bits, of the generated key."
+	}
+	*/
+	RSAKey generateKey(int keyLength)
+	
+	/*
+	{
+	 "@description" : "Convert an RSA public/private key pair to a different format.",
+		"current" : "The current RSA key pair.",
+		"toType" : "The key encoding type to return (one of the types available on RSAKey)."
+	}
+	*/
+	RSAKey convertKey(RSAKey current, byte toType)
+	
+	}

@@ -1,0 +1,22 @@
+component provides UnitTest requires sec.crypto.RSA_KeyGen keygen {
+	
+	bool UnitTest:runTest()
+		{
+		RSAKey k = keygen.generateKey(1024)
+		
+		RSAKey kRSA = keygen.convertKey(k, RSAKey.RSA_PEM)
+		
+		RSAKey kNew = keygen.convertKey(kRSA, RSAKey.PKCS_PEM)
+		
+		if (k.public != kNew.public || k.private != kNew.private) throw new Exception("Failure in test 1")
+		
+		RSAKey kASN = keygen.convertKey(k, RSAKey.ASN1_DER)
+		
+		kNew = keygen.convertKey(kASN, RSAKey.PKCS_PEM)
+		
+		if (k.public != kNew.public || k.private != kNew.private) throw new Exception("Failure in test 2")
+		
+		return true
+		}
+	
+	}

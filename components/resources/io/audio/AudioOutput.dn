@@ -19,7 +19,7 @@ interface AudioOutput {
 	/*
 	 {"@description" : "Initialise audio output, using the system's default audio output device. Output will use the specified audio format, or will use a default format is none is specified."}
 	*/
-	AudioOutput(store Format f)
+	AudioOutput(opt store Format f)
 	
 	/*
 	 {"@description" : "Plays an audio track on this output device and stops the track when it reaches the end. The track will be mixed together with any other tracks already playing on the device. Each audio track instance can only be played once on any device. If the given track is already playing, this function does nothing; if the track is playing in loop mode this function removes the loop mode from the track."}

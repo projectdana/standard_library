@@ -30,4 +30,6 @@ interface Store {
 	
 	bool pass3(String str[])
 	
+	bool pass4(String str[])
+	
 	}

@@ -181,4 +181,13 @@ component provides Store requires data.adt.List, io.Output out {
 		return true
 		}
 	
+	bool Store:pass4(String lc[])
+		{
+		String nima[] = new String[1] from typeof(lc)
+		
+		nima[0] = lc[0]
+		
+		return true
+		}
+	
 	}

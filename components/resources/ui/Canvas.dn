@@ -14,24 +14,90 @@ uses Point
 
 interface Canvas {
 	
+	/*
+	{ "@description" : "Draw a filled rectangle using the given description of size, position, and color. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
+			"rect" : "Description of the rectangle to draw."
+	}
+	*/
 	void drawRect(Rect2D rect)
 	
+	/*
+	{ "@description" : "Draw an outline rectangle using the given description of size, position, and color. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
+			"rect" : "Description of the rectangle to draw."
+	}
+	*/
 	void drawRectOutline(Rect2D rect)
 	
+	/*
+	{ "@description" : "Draw a line between two points, the given description of size, position, and color. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
+			"line" : "Description of the line to draw."
+	}
+	*/
 	void drawLine(Line2D line)
 	
+	/*
+	{ "@description" : "Draw a single-pixel point at the given location and with the given color. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
+			"point" : "Description of the point to draw."
+	}
+	*/
 	void drawPoint(Point2D point)
 	
-	void drawPixels(PixelMap map, int x, int y, int rotation)
+	/*
+	{ "@description" : "Draw a rectangle of pixels, at the given position, with the given rotation in degrees. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
+			"map" : "The pixels to draw.",
+			"x" : "The X position at which to draw the top-left of the pixel map.",
+			"y" : "The Y position at which to draw the top-left of the pixel map.",
+			"rotation" : "The rotation to apply to the pixel map, in degrees."
+	}
+	*/
+	void drawPixels(PixelMap map, int x, int y, opt int rotation)
 	
+	/*
+	{ "@description" : "Draw a rectangle of pixels, at the given position, with the given rotation in degrees, and with the given scaling factor and clipping boundary. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
+			"map" : "The pixels to draw.",
+			"subRect" : "The clipping boundary.",
+			"x" : "The X position at which to draw the top-left of the pixel map.",
+			"y" : "The Y position at which to draw the top-left of the pixel map.",
+			"scaledWidth" : "The width in pixels at which to scale the image.",
+			"scaledHeight" : "The height in pixels at which to scale the image.",
+			"rotation" : "The rotation to apply to the pixel map, in degrees."
+	}
+	*/
 	void drawPixelsEx(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
 	
+	/*
+	{ "@description" : "Draw a piece of text, at the given position, with the given font. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
+			"position" : "The x/y coordinate at which to draw the top left of the text.",
+			"f" : "The font with which to draw the text.",
+			"text" : "The text to draw."
+	}
+	*/
 	void drawText(Point2D position, Font f, char text[])
 	
+	/*
+	{ "@description" : "Draw a piece of text, at the given position, with the given font, and the given rotation. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
+			"position" : "The x/y coordinate at which to draw the top left of the text.",
+			"f" : "The font with which to draw the text.",
+			"text" : "The text to draw.",
+			"rotation" : "The rotation to apply to the text, in degrees."
+	}
+	*/
 	void drawTextEx(Point2D position, Font f, char text[], int rotation)
 	
+	/*
+	{ "@description" : "Push a new surface to the surface stack, using the given rect instance to indicate the x/y position and width/height. Any new draw operations will take place inside this surface, and will be clipped at the surface's width/height.",
+			"rect" : "The x/y coordinate and width/height of the surface.",
+			"xscr" : "The amount, in pixels, by which the surface is 'scrolled' on the X-axis.",
+			"yscr" : "The amount, in pixels, by which the surface is 'scrolled' on the Y-axis.",
+			"alpha" : "The alpha blend to apply to elements drawn on the surface."
+	}
+	*/
 	void pushSurface(Rect rect, int xscr, int yscr, byte alpha)
 	
+	/*
+	{ "@description" : "Pop the top-most surface from the surface stack."
+	}
+	*/
 	void popSurface()
 	
 	}

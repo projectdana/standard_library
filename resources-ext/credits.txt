@@ -5,7 +5,7 @@ Behind the scenes, our current set of libraries uses:
 SDL2 (windows and graphics)
 Miniaudio (audio playback and capture)
 STBVorbis (OGG Vorbis audio decoding)
-OpenSSL (TLS implementation)
+OpenSSL (TLS, AES, RSA implementations)
 MySQL Client (MySQL driver)
 libpng (PNG image encoding)
 libjpg (JPEG image encoding)

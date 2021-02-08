@@ -7,7 +7,7 @@ interface HTTPRequest {
 	/*
 	 {"@description" : "Make a HTTP GET request, returning a response structure."}
 	*/
-	HTTPResponse get(char url[], Header headers[])
+	HTTPResponse get(char url[], opt Header headers[])
 	
 	/*
 	 {"@description" : "Make a HTTP POST request, returning a response structure."}

@@ -4,6 +4,7 @@ const int NOT_FOUND = INT_MAX
 	char name[]
 const int FLAG_RECURSION 	= 0x1
 const int FLAG_STORE		= 0x2
+const int FLAG_OPT			= 0x4
 	byte flags
 	}
 
