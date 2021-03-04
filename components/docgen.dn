@@ -52,14 +52,17 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		return null
 		}
 	
-	char[] formatType(SourceFile sf, char type[])
+	char[] formatType(SourceFile sf, char type[], opt bool optional)
 		{
 		//check if the type is declared anywhere in sf or any secondary file; if so create a hyperlink to its doc file
 		char sfn[] = getTypeSource(sf, type)
 		
 		if (sfn != null)
 			{
-			type = new char[]("<a href = \"$sfn\" class = \"doc_type_link\">$type</a>")
+			if (optional)
+				type = new char[]("<a href = \"$sfn\" class = \"doc_type_link_opt\">$type</a>")
+				else
+				type = new char[]("<a href = \"$sfn\" class = \"doc_type_link\">$type</a>")
 			}
 		
 		return type
@@ -84,9 +87,9 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 				}
 			
 			if (f.params[q].scope_store)
-				result = new char[](result, "<span class = \"doc_function_param_store\">store</span>", formatType(sf, f.params[q].type), " ", f.params[q].displayName)
+				result = new char[](result, "<span class = \"doc_function_param_store\">store</span>", formatType(sf, f.params[q].type, optLatch), " ", f.params[q].displayName)
 				else
-				result = new char[](result, formatType(sf, f.params[q].type), " ", f.params[q].displayName)
+				result = new char[](result, formatType(sf, f.params[q].type, optLatch), " ", f.params[q].displayName)
 			
 			if (q + 1 < f.params.arrayLength) result = new char[](result, ", ")
 			}

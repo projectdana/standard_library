@@ -1,0 +1,22 @@
+/* This is a simple program which connects to the PAL REST API and alters its component pool. */
+
+uses data.String
+
+uses pal.Perception
+
+const char DEFAULT_SERVER_IP[] = "localhost"
+const int DEFAULT_SERVER_PORT = 8008
+
+component provides App requires pal.control.RestAPI, io.Output out {
+	
+	int App:main(AppParam params[])
+		{
+		RestAPI restAPI = new RestAPI(DEFAULT_SERVER_IP, DEFAULT_SERVER_PORT)
+		
+		char res[] = restAPI.getConfig()
+		out.println("system in config $res")
+		
+		return 0
+		}
+	
+	}

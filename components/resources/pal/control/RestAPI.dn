@@ -18,4 +18,12 @@ interface RestAPI {
 	
 	PerceptionData getPerception()
 	
+	bool addComponent(char str[])
+	
+	bool remComponent(char str[])
+	
+	char[] updComponent(char str[])
+	
+	char[] updArch(String intfs[])
+	
 	}

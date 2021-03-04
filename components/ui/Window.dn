@@ -463,20 +463,23 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 			{
 			Rect r = ci.object.getBounds()
 
-			if (clickDown === ci.object && x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				if (contextItem != null)
+				if (clickDown === ci.object)
 					{
-					stopevent PaintEvents(contextItem)
-					contextItem = null
-					postRepaint()
-					}
+					if (contextItem != null)
+						{
+						stopevent PaintEvents(contextItem)
+						contextItem = null
+						postRepaint()
+						}
 
-				ci.object.click(x - r.x, y - r.y, button)
+					ci.object.click(x - r.x, y - r.y, button)
 
-				if (ci.object hastype KeyEventObject)
-					{
-					changeFocusTo(ci.object)
+					if (ci.object hastype KeyEventObject)
+						{
+						changeFocusTo(ci.object)
+						}
 					}
 
 				break
@@ -537,7 +540,18 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				ci.object.mouseUp(x - r.x, y - r.y, button)
+				//we only register a mouse-up if this was the thing that got the mouse-down
+				if (ci === clickDown)
+					{
+					ci.object.mouseUp(x - r.x, y - r.y, button)
+					}
+					else if (clickDown hastype XYMouseObject)
+					{
+					XYMouseObject co = clickDown
+					r = co.getBounds()
+					co.mouseUp(x - r.x, y - r.y, button)
+					}
+				
 				break
 				}
 			}

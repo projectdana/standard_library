@@ -68,12 +68,12 @@ body{
 	border: 1px solid silver;
 	padding-left: 2px;
 	padding-right: 2px;
-	background-color: rgba(200, 200, 255, 0.3);
+	background-color: rgba(170, 100, 0, 0.1);
 	font-weight: bold;
 }
 
 .doc_function_opt_group{
-	color: rgb(10, 10, 255);
+	color: rgb(170, 100, 0);
 }
 
 .doc_eventsource_list{
@@ -227,6 +227,23 @@ a.doc_type_link:link {
 
 a.doc_type_link:hover {
 	color: black;
+    text-decoration: none;
+	border-bottom: 1px solid black;
+}
+
+a.doc_type_link_opt:visited {
+	color: rgb(170, 100, 0);
+    text-decoration: none;
+}
+
+a.doc_type_link_opt:link {
+	color: rgb(170, 100, 0);
+    text-decoration: none;
+	border-bottom: 1px dotted black;
+}
+
+a.doc_type_link_opt:hover {
+	color: rgb(170, 100, 0);
     text-decoration: none;
 	border-bottom: 1px solid black;
 }

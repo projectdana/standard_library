@@ -28,6 +28,9 @@ component provides Panel requires io.Output out {
 	XYListener mouseListenersEnd
 
 	XYMouseObject mouseOver
+	
+	//we store the item on which a mouse button was pressed down, to know if the button is release on the same item (triggering a click)
+	GraphicsObject clickDown
 
 	bool backgroundSet
 	Color backgroundColor = new Color(190, 190, 200, 255)
@@ -258,19 +261,26 @@ component provides Panel requires io.Output out {
 
 	void Panel:click(int x, int y, int button)
 		{
+		}
+	
+	void clickOn(int x, int y, int button)
+		{
 		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
 
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				ci.object.click(x - r.x, y - r.y, button)
-
-				if (ci.object hastype KeyEventObject)
+				if (clickDown === ci.object)
 					{
-					changeFocusTo(ci.object)
-					}
+					ci.object.click(x - r.x, y - r.y, button)
 
+					if (ci.object hastype KeyEventObject)
+						{
+						changeFocusTo(ci.object)
+						}
+					}
+				
 				break
 				}
 			}
@@ -371,12 +381,27 @@ component provides Panel requires io.Output out {
 
 	void Panel:mouseDown(int x, int y, int button)
 		{
+		if (clickDown == null)
+			{
+			for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
+				{
+				Rect r = ci.object.getBounds()
+
+				if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+					{
+					clickDown = ci.object
+					break
+					}
+				}
+			}
+		
 		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
 
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
+				clickDown = ci.object
 				ci.object.mouseDown(x - r.x, y - r.y, button)
 				break
 				}
@@ -391,10 +416,24 @@ component provides Panel requires io.Output out {
 
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				ci.object.mouseUp(x - r.x, y - r.y, button)
+				//we only register a mouse-up if this was the thing that got the mouse-down
+				if (ci === clickDown)
+					{
+					ci.object.mouseUp(x - r.x, y - r.y, button)
+					}
+					else if (clickDown hastype XYMouseObject)
+					{
+					XYMouseObject co = clickDown
+					r = co.getBounds()
+					co.mouseUp(x - r.x, y - r.y, button)
+					}
 				break
 				}
 			}
+		
+		clickOn(x, y, button)
+		
+		clickDown = null
 		}
 
 	void Panel:mouseMove(int x, int y)

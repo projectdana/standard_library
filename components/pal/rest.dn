@@ -25,6 +25,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		while (last4 != "\r\n\r\n")
 			{
 			char b[] = socket.recv(1)
+			if (b.arrayLength == 0) break
 			buf = new char[](buf, b)
 			last4[0] = last4[1]
 			last4[1] = last4[2]
@@ -197,6 +198,22 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 											"POST /meta/set_config HTTP/1.0<br/>",
 											"Content-Type: text<br/>",
 											"</div>",
+											"<div style=\"$divStyle\">",
+											"POST /meta/add_component HTTP/1.0<br/>",
+											"Content-Type: text<br/>",
+											"</div>",
+											"<div style=\"$divStyle\">",
+											"POST /meta/rem_component HTTP/1.0<br/>",
+											"Content-Type: text<br/>",
+											"</div>",
+											"<div style=\"$divStyle\">",
+											"POST /meta/upd_component HTTP/1.0<br/>",
+											"Content-Type: text<br/>",
+											"</div>",
+											"<div style=\"$divStyle\">",
+											"POST /meta/upd_arch HTTP/1.0<br/>",
+											"Content-Type: text/json<br/>",
+											"</div>",
 											"</body>",
 											"</html>")
 				
@@ -236,6 +253,121 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 						else
 						{
 						sendError(socket, "text", "Requested configuration '$config' is not known (you must use one of the configurations returned by get_configs)")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text/json")
+					}
+				}
+				else if (rsc == "/meta/add_component")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text")
+					{
+					char comp[] = socket.recv(iu.intFromString(payloadSize))
+					
+					if (assembly.addComponent(comp))
+						{
+						//respond with HTTP OK
+						sendOK(socket, "text/html", null)
+						}
+						else
+						{
+						sendError(socket, "text", "Addition of component failed (check component exists in the system's default search paths)")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text")
+					}
+				}
+				else if (rsc == "/meta/rem_component")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text")
+					{
+					char comp[] = socket.recv(iu.intFromString(payloadSize))
+					
+					if (assembly.remComponent(comp))
+						{
+						//respond with HTTP OK
+						sendOK(socket, "text/html", null)
+						}
+						else
+						{
+						sendError(socket, "text", "Removal of component failed (check component exists in the system, and the system is not currently using the selected component)")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text")
+					}
+				}
+				else if (rsc == "/meta/upd_component")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text")
+					{
+					char comp[] = socket.recv(iu.intFromString(payloadSize))
+					
+					char res[] = null
+					if ((res = assembly.updComponent(comp)) != null)
+						{
+						//respond with HTTP OK
+						sendOK(socket, "text", res)
+						}
+						else
+						{
+						sendError(socket, "text", "Update of component failed (check component exists in the system's default search paths)")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text")
+					}
+				}
+				else if (rsc == "/meta/upd_arch")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text/json")
+					{
+					char intfs[] = socket.recv(iu.intFromString(payloadSize))
+					
+					//parse the JSON array
+					JSONElement doc = parser.parseDocument(intfs)
+					
+					if (doc.type == JSONElement.TYPE_ARRAY)
+						{
+						String ifGroup[] = new String[doc.children.arrayLength]
+						
+						for (int i = 0; i < doc.children.arrayLength; i++)
+							{
+							ifGroup[i] = new String(doc.children[i].value)
+							}
+						
+						char res[] = null
+						if ((res = assembly.updArch(ifGroup)) != null)
+							{
+							//respond with HTTP OK
+							sendOK(socket, "text", res)
+							}
+							else
+							{
+							sendError(socket, "text", "Update of architecture failed (check all components exist in the system's default search paths)")
+							}
+						}
+						else
+						{
+						sendError(socket, "text", "Content type must be an array of strings")
 						}
 					}
 					else

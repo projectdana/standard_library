@@ -211,5 +211,39 @@ component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONPar
 		
 		return pd
 		}
+	
+	bool RestAPI:addComponent(char str[])
+		{
+		post("/meta/add_component", "text", str)
+		
+		return true
+		}
+	
+	bool RestAPI:remComponent(char str[])
+		{
+		post("/meta/rem_component", "text", str)
+		
+		return true
+		}
+	
+	char[] RestAPI:updComponent(char str[])
+		{
+		return post("/meta/upd_component", "text", str)
+		}
+	
+	char[] RestAPI:updArch(String intfs[])
+		{
+		char content[] = "["
+		for (int i = 0; i < intfs.arrayLength; i ++)
+			{
+			if (i > 0)
+				content = new char[](content, ",", "\"", intfs[i].string, "\"")
+				else
+				content = new char[](content, "\"", intfs[i].string, "\"")
+			}
+		content = new char[](content, "]")
+		
+		return post("/meta/upd_arch", "text/json", content)
+		}
 
 }
