@@ -1,7 +1,0 @@
-FileBrowser=ui\FileBrowser.o
-ui.FileObject->FileGO
-ui.GraphicsListView->GLViewer
-io.FileSystem->FileSystem
-ui.Button->BSButton
-data.StringUtil->StringUtil
-ui.Panel->Panel

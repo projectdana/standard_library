@@ -1,7 +1,0 @@
-FileBrowser=ui\FileBrowserB
-FileSystem->FileSystem
-Button->BSButton
-StringUtil->StringUtil
-Font->WindowCanvas
-SystemInfo->SystemInfo
-Panel->Panel

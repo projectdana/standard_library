@@ -5,7 +5,7 @@ data PrimaryType{
 
 const char OUTPUT_DIR[] = "_docs"
 
-component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo, composition.Search csearch, composition.ObjectWriter, data.query.Search dsearch {
+component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo, composition.Search csearch, composition.ObjectWriter, data.query.Search dsearch {
 	
 	char[] getHTMLFileFor(char sourceFile[], char type[])
 		{

@@ -1,0 +1,434 @@
+// state machine to evaluate numbers
+const byte NUMBER_STARTING_STATE 			= 0
+const byte NUMBER_NEGATIVE_STATE 			= 1
+const byte NUMBER_DIGIT_STATE 				= 2
+const byte NUMBER_HEX_STATE 				= 3
+const byte NUMBER_DECIMAL_STATE 			= 4
+const byte NUMBER_DECIMAL_DIGIT_STATE 		= 5
+const byte NUMBER_SCIENTIFIC_STATE 			= 6
+const byte NUMBER_SCIENTIFIC_DIGIT_STATE 	= 7
+const byte NUMBER_UNKNOWN_STATE 			= 8
+
+component provides data.Tokeniser requires io.Output out, data.StringUtil stringUtil {
+	
+	String tokens[]
+	String lineComment
+	String blockComment[]
+	char DECIMAL_POINT[] = "."
+	
+	Tokeniser:Tokeniser(String t[])
+		{
+		tokens = t
+		}
+	
+	void Tokeniser:setLineComment(char str[])
+		{
+		lineComment = new String(str)
+		}
+	
+	void Tokeniser:setBlockComment(char s[], char e[])
+		{
+		blockComment = new String[](new String(s), new String(e))
+		}
+	
+	void copyArray(char toArray[], char fromArray[], int fromStart, int fromLen)
+		{
+		for (int i = 0; i < fromLen; i++)
+			{
+			toArray[i] = fromArray[fromStart+i]
+			}
+		}
+	
+	bool isHex(char c)
+		{
+		if (stringUtil.isNumeric(c))
+			return true
+			else
+			{
+			if (c == "a" || c == "A")
+				return true
+
+			if (c == "b" || c == "B")
+				return true
+
+			if (c == "c" || c == "C")
+				return true
+
+			if (c == "d" || c == "D")
+				return true
+
+			if (c == "e" || c == "E")
+				return true
+
+			if (c == "f" || c == "F")
+				return true
+			}
+
+		return false
+		}
+	
+	bool isValidEscapeCharacterUnicode(char c[]) 
+		{
+		for (int i = 0; i < c.arrayLength; i++)
+			{
+			if (!isHex(c[i]))
+				return false
+			}
+		
+		return true
+		}
+	
+	bool isValidEscapeCharacter(char c)
+		{
+		if (c == "\"" ||
+			c == "\\" ||
+			c == "/" ||
+			c == "b" ||
+			c == "f" ||
+			c == "n" ||
+			c == "r" ||
+			c == "t")
+			return true
+		
+		return false
+		}
+	
+	ParseToken consumeString(char string[], int start)
+		{
+		ParseToken t = new ParseToken(ParseToken.TYPE_LITERAL_STRING)
+		bool stringClosed = false
+		int len = 0
+		
+		for (int i = start+1; i < string.arrayLength; i++)
+			{
+			if (string[i] == "\\")
+				{
+				//escape character; read the next character
+				len ++
+				
+				i ++
+				
+				if (isValidEscapeCharacter(string[i]))
+					{
+					len ++
+					}
+					// unicode validation
+					else if (string[i] == "u")
+					{
+					if ((i+5 < string.arrayLength) && isValidEscapeCharacterUnicode(stringUtil.subString(string, i+1, 4)))
+						{
+						i += 4
+						len += 5
+						}
+						else
+						{
+						throw new Exception("Invalid escape character")
+						}
+					}
+					else
+					{
+					throw new Exception("Invalid escape character")
+					}
+				}
+				else if (string[i] == "\"")
+				{
+				stringClosed = true
+				break
+				}
+				else
+				{
+				len ++
+				}
+			}
+		
+		t.content = new char[len]
+		copyArray(t.content, string, start+1, len)
+		
+		if (!stringClosed) throw new Exception("Unterminated string '$(t.content)'")
+		
+		t.sourceStart = start
+		t.sourceLength = t.content.arrayLength + 2
+		
+		return t
+		}
+	
+	byte execStartingState(char c) {
+		if (c == "-")
+			return NUMBER_NEGATIVE_STATE
+		else if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_DIGIT_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execNegativeState(char c)
+	{
+		if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_DIGIT_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execNumberDigitState(char current[], char c)
+	{
+		if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_DIGIT_STATE
+		else if (c == ".")
+			return NUMBER_DECIMAL_STATE
+		else if (c == "x" && current == "0")
+			return NUMBER_HEX_STATE
+		else if (c == "E" || c == "e")
+			return NUMBER_SCIENTIFIC_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execNumberDecimalState(char c) {
+		if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_DECIMAL_DIGIT_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execDecimalDigitState(char c) {
+		if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_DECIMAL_DIGIT_STATE
+		else if (c == "E" || c == "e")
+			return NUMBER_SCIENTIFIC_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execNumberScientificState(char c) {
+		if (c == "-" || c == "+" 
+			|| stringUtil.isNumeric(new char[](c)))
+			return NUMBER_SCIENTIFIC_DIGIT_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	byte execNumberScientificDigitState(char c) {
+		if (stringUtil.isNumeric(new char[](c)))
+			return NUMBER_SCIENTIFIC_DIGIT_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+	
+	byte execNumberHexState(char c) {
+		if (isHex(c))
+			return NUMBER_HEX_STATE
+		else
+			return NUMBER_UNKNOWN_STATE
+	}
+
+	bool isFinalStateValid(byte state) {
+		if ((state == NUMBER_SCIENTIFIC_DIGIT_STATE) ||
+			(state == NUMBER_DECIMAL_DIGIT_STATE) ||
+			(state == NUMBER_DIGIT_STATE) ||
+			(state == NUMBER_HEX_STATE))
+			return true
+		else
+			return false
+	}
+
+	ParseToken consumeNumber(char string[], int start)
+		{
+		ParseToken t = new ParseToken(ParseToken.TYPE_LITERAL_NUMBER)
+
+		byte state = NUMBER_STARTING_STATE
+
+		for (int i = start; i < string.arrayLength; i++)
+			{
+			if (isWhitespace(string[i]))
+				break
+			
+			if (isTokenStart(string[i]) && (string[i] != DECIMAL_POINT || state == NUMBER_DECIMAL_DIGIT_STATE))
+				break
+			
+			if (state == NUMBER_STARTING_STATE) { state = execStartingState(string[i]) }
+			else if (state == NUMBER_NEGATIVE_STATE) { state = execNegativeState(string[i]) }
+			else if (state == NUMBER_DIGIT_STATE) { state = execNumberDigitState(t.content, string[i]) }
+			else if (state == NUMBER_HEX_STATE) { state = execNumberHexState(string[i]) }
+			else if (state == NUMBER_DECIMAL_STATE) { state = execNumberDecimalState(string[i]) }
+			else if (state == NUMBER_DECIMAL_DIGIT_STATE) { state = execDecimalDigitState(string[i]) }		
+			else if (state == NUMBER_SCIENTIFIC_STATE) { state = execNumberScientificState(string[i])	}
+			else if (state == NUMBER_SCIENTIFIC_DIGIT_STATE) { state = execNumberScientificDigitState(string[i]) }
+			
+			if (state != NUMBER_UNKNOWN_STATE) t.content = new char[](t.content, string[i])
+			
+			if (state == NUMBER_UNKNOWN_STATE)
+				{
+				throw new Exception("Unknown number format $(t.content)$(string[i])")
+				}
+			}
+		
+		if (isFinalStateValid(state))
+			{
+			t.sourceStart = start
+			t.sourceLength = t.content.arrayLength
+			}
+			else
+			{
+			throw new Exception("Unknown number format")
+			}
+
+		return t
+		}
+	
+	bool isValidToken(char string[])
+		{
+		for (int i = 0; i < tokens.arrayLength; i++)
+			{
+			if (string == tokens[i].string)
+				return true
+			}
+		
+		return false
+		}
+	
+	bool isTokenStart(char string[])
+		{
+		for (int i = 0; i < tokens.arrayLength; i++)
+			{
+			if (string[0] == tokens[i].string[0])
+				return true
+			}
+		
+		return false
+		}
+	
+	ParseToken consumeToken(char string[], int start)
+		{
+		ParseToken t = new ParseToken(ParseToken.TYPE_TOKEN, string[start])
+		
+		for (int i = start+1; i < string.arrayLength; i++)
+			{
+			bool isBiggerTokenAvailable = isValidToken(new char[](t.content, string[i]))
+			
+			if (isWhitespace(string[i]) || (isTokenStart(string[i]) && !isBiggerTokenAvailable) || (isValidToken(t.content) && !isBiggerTokenAvailable))
+				{
+				break
+				}
+				else
+				{
+				t.content = new char[](t.content, string[i])
+				}
+			}
+		
+		t.sourceStart = start
+		t.sourceLength = t.content.arrayLength
+		
+		return t
+		}
+	
+	ParseToken consumeBlockComment(char string[], int start)
+		{
+		ParseToken t = new ParseToken(ParseToken.TYPE_BLOCK_COMMENT)
+		
+		for (int i = start + blockComment[0].string.arrayLength; i < string.arrayLength; i++)
+			{
+			if (isToken(string, i, blockComment[1].string))
+				{
+				break
+				}
+			
+			t.content = new char[](t.content, string[i])
+			}
+		
+		t.sourceStart = start
+		t.sourceLength = t.content.arrayLength + blockComment[0].string.arrayLength + blockComment[1].string.arrayLength
+		
+		return t
+		}
+	
+	ParseToken consumeLineComment(char string[], int start)
+		{
+		ParseToken t = new ParseToken(ParseToken.TYPE_LINE_COMMENT)
+		
+		for (int i = start + lineComment.string.arrayLength; i < string.arrayLength; i++)
+			{
+			if (string[i] == "\n" || string[i] == "\r")
+				{
+				break
+				}
+			
+			t.content = new char[](t.content, string[i])
+			}
+		
+		t.sourceStart = start
+		t.sourceLength = t.content.arrayLength + lineComment.string.arrayLength
+		
+		return t
+		}
+	
+	bool isWhitespace(char c)
+		{
+		return c == " " || c == "\n" || c == "\r" || c == "\t"
+		}
+	
+	bool isToken(char content[], int ndx, char search[])
+		{
+		int si = 0
+		while (ndx < content.arrayLength && si < search.arrayLength)
+			{
+			if (content[ndx] != search[si])
+				return false
+			
+			si ++
+			ndx ++
+			}
+		
+		return si == search.arrayLength
+		}
+	
+	ParseToken[] Tokeniser:tokenise(char content[])
+		{
+		ParseToken result[]
+		int i = 0
+		while (i < content.arrayLength)
+			{
+			if (! isWhitespace(content[i]))
+				{
+				//a new token to consume
+				ParseToken next = null
+				
+				if (content[i] == "\"")
+					{
+					next = consumeString(content, i)
+					}
+					else if (stringUtil.isNumeric(new char[](content[i])))
+					{
+					next = consumeNumber(content, i)
+					}
+					else if (blockComment != null && isToken(content, i, blockComment[0].string))
+					{
+					next = consumeBlockComment(content, i)
+					}
+					else if (lineComment != null && isToken(content, i, lineComment.string))
+					{
+					next = consumeLineComment(content, i)
+					}
+					else
+					{
+					next = consumeToken(content, i)
+					}
+				
+				if (next == null) return null
+				
+				//out.println(next.content)
+				
+				if (next.type == ParseToken.TYPE_TOKEN && !isValidToken(next.content))
+					next.type = ParseToken.TYPE_PARTICLE
+				
+				i += next.sourceLength
+				result = new ParseToken[](result, next)
+				}
+				else
+				{
+				i ++
+				}
+			}
+		
+		return result
+		}
+	}

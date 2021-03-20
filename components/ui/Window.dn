@@ -274,7 +274,46 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 	void Window:clearObjects()
 		{
+		GraphicsItem iw = buffer
+		while (iw != null)
+			{
+			GraphicsItem td = iw
+			iw = iw.next
 
+			td.next = null
+			td.prev = null
+			}
+
+		buffer = null
+		bufferEnd = null
+
+		ClickableItem ci = clickItems
+		while (ci != null)
+			{
+			ClickableItem td = ci
+			ci = ci.next
+
+			td.next = null
+			td.prev = null
+			}
+
+		clickItems = null
+		clickItemsEnd = null
+		
+		XYListener mi = mouseListeners
+		while (mi != null)
+			{
+			XYListener td = mi
+			mi = mi.next
+
+			td.next = null
+			td.prev = null
+			}
+
+		mouseListeners = null
+		mouseListenersEnd = null
+
+		postRepaint()
 		}
 
 	void addClickTarget(store ClickableObject co)

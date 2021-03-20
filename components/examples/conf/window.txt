@@ -1,2 +1,0 @@
-UIPlane=ui.Window
-ui.WindowCanvas->WindowCanvas

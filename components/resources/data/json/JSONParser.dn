@@ -4,7 +4,7 @@ const byte JSON_ELEMENT_NUMBER	= 3
 const byte JSON_ELEMENT_BOOLEAN	= 4
 const byte JSON_ELEMENT_ARRAY	= 5
 
-data JSONElement {
+data JSONElement nocycle {
 const byte TYPE_OBJECT	= 1
 const byte TYPE_STRING	= 2
 const byte TYPE_NUMBER	= 3

@@ -85,6 +85,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 									new String("transfer"),
 									new String("static"),
 									new String("event"),
+									new String("nocycle"),
 									new String("new"),
 									new String("true"),
 									new String("false"),
@@ -250,6 +251,13 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		start ++
 		count ++
 		
+		//nocycle?
+		if (tokens[start].content == "nocycle")
+			{
+			start ++
+			count ++
+			}
+		
 		//extends?
 		
 		if (tokens[start].content == "extends")
@@ -273,6 +281,13 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 				}
 			
 			incList.list = new String[](incList.list, new String(pkg))
+			}
+		
+		//nocycle?
+		if (tokens[start].content == "nocycle")
+			{
+			start ++
+			count ++
 			}
 		
 		//skip the type definition
@@ -306,7 +321,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			}
 		}
 	
-	InterfaceDef getInterfaceDef(SourceFile sf, char name[])
+	InterfaceDef getInterfaceDef(SourceFile sf, char pkg[], char name[])
 		{
 		for (int i = 0; i < sf.types.arrayLength; i++)
 			{
@@ -362,7 +377,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	
 	bool isType(SourceFile sf, char name[])
 		{
-		return getInterfaceDef(sf, name) != null || getDataDef(sf, name) != null || isBuiltinType(name)
+		return getInterfaceDef(sf, null, name) != null || getDataDef(sf, name) != null || isBuiltinType(name)
 		}
 	
 	bool isPlainName(SourceFile sf, char name[])
@@ -859,7 +874,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		
 		if (tokens[start].content == "interface")
 			{
-			InterfaceDef id = getInterfaceDef(root_sf, tokens[start+1].content)
+			InterfaceDef id = getInterfaceDef(root_sf, null, tokens[start+1].content)
 			
 			if (id == null) throw new Exception("Interface $(tokens[start+1].content) not found!!!")
 			
@@ -879,7 +894,8 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 				
 				//(package) and type name of the thing we're extending
 				char pkg[]
-				pkg = new char[](pkg, tokens[start].content)
+				char nm[] = tokens[start].content
+				pkg = new char[](pkg, nm)
 				start ++
 				count ++
 				
@@ -887,12 +903,13 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 					{
 					start ++
 					count ++
-					pkg = new char[](pkg, ".", tokens[start].content)
+					nm = tokens[start].content
+					pkg = new char[](pkg, ".", nm)
 					start ++
 					count ++
 					}
 				
-				id.extendsType = getInterfaceDef(root_sf, pkg)
+				id.extendsType = getInterfaceDef(root_sf, pkg, nm)
 				}
 			
 			//the type definition
