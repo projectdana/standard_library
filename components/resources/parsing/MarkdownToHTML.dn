@@ -1,0 +1,22 @@
+uses Markdown
+uses data.String
+
+data KeywordGroup {
+	char style[]
+	String keywords[]
+	}
+
+data MDCodeStyle {
+	char languageName[]
+	String syntaxTokens[]
+	String blockComment[]
+	char lineComment[]
+	String stringDelimiters[]
+	char commentStyle[]
+	char stringStyle[]
+	KeywordGroup keywords[]
+	}
+
+interface MarkdownToHTML {
+	char[] process(MDElement doc, opt MDCodeStyle codeStyling[])
+	}

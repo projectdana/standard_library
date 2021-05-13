@@ -9,7 +9,7 @@ const byte NUMBER_SCIENTIFIC_STATE 			= 6
 const byte NUMBER_SCIENTIFIC_DIGIT_STATE 	= 7
 const byte NUMBER_UNKNOWN_STATE 			= 8
 
-component provides data.Tokeniser requires io.Output out, data.StringUtil stringUtil {
+component provides parsing.Tokeniser requires io.Output out, data.StringUtil stringUtil {
 	
 	String tokens[]
 	String lineComment

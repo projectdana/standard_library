@@ -74,11 +74,16 @@ component provides RL requires io.Output out, data.IntUtil iu, data.DecUtil du, 
 		return maxInd
 		}
 	
-	void RL:consumeData(dec reward)
+	void RL:setReward(dec reward, opt int action)
 		{
 		//compute the next action to take for currentState, based on reward and confidence
+		int aci = currentAction
+		
+		if (isset action)
+			aci = action
+		
 		learningData.totalCount = learningData.totalCount + 1.0
-		updateTable(reward, currentAction)
+		updateTable(reward, aci)
 		currentAction = selectAction()
 		}
 	

@@ -1,0 +1,361 @@
+uses data.String
+
+data Sample {
+	dec values[]
+	Series series
+	}
+
+data Series {
+	char name[]
+	char displayName[]
+	Color seriesColor
+	}
+
+data Bar {
+	char category[]
+	Sample samples[]
+	}
+
+//marker length in pixels (the "ticks" on the axes)
+const int MARKER_LENGTH = 3
+
+const int MARKER_SIZE = 7
+
+const int LEGEND_SQ_SIZE = 10
+const int LEGEND_PAD_SIZE = 5
+
+component provides CategoryMulti:barcodeH requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font, data.query.Search search {
+	
+	Series series[]
+	Bar categories[]
+	
+	Color stdDevColor = new Color(0, 0, 0, 255)
+	Color axisColor = new Color(0, 0, 0, 255)
+	Color gridColor = new Color(220, 220, 220, 255)
+	Color bgColor = new Color(255, 255, 255, 255)
+	
+	Font axisFont
+	Font labelFont
+	
+	dec highestX
+	dec lowestX
+	dec highestY
+	dec lowestY
+	
+	dec numberIntervalX = 1.0
+	dec markerIntervalX = 1.0
+	
+	dec numberIntervalY
+	dec markerIntervalY
+	dec gridIntervalY
+	
+	dec xAxMax
+	dec xAxMin
+	dec yAxMax
+	dec yAxMin
+	
+	//bar width, in percentage of category area
+	dec barWidth = 60.0
+	int barPad = 0
+	
+	bool showStdDev
+	bool showLegend
+	
+	CategoryMulti:CategoryMulti()
+		{
+		super()
+		
+		axisFont = new Font("SourceSansPro.ttf", 12)
+		
+		setYMarkerInterval(1.0)
+		}
+	
+	void CategoryMulti:addSeries(char name[])
+		{
+		if (series.search(Series.[name], new Series(name)) == null)
+			series = new Series[](series, new Series(name, name, new Color(100, 200, 200, 255)))
+		}
+	
+	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[])
+		{
+		Bar bar = null
+		
+		if ((bar = categories.findFirst(Bar.[category], new Bar(cat))) == null)
+			{
+			bar = new Bar(cat)
+			categories = new Bar[](categories, bar)
+			}
+		
+		Series n = series.findFirst(Series.[name], new Series(seriesName))
+		
+		//add sample
+		bar.samples = new Sample[](bar.samples, new Sample(yvalues, n))
+		
+		postRepaint()
+		}
+	
+	void CategoryMulti:setYMinMax(dec min, dec max)
+		{
+		//TODO: disallow values that can't contain all of the graph points...
+		yAxMin = min
+		yAxMax = max
+		
+		super(min, max)
+		}
+	
+	void CategoryMulti:setYLabelInterval(dec ivr)
+		{
+		numberIntervalY = ivr
+		super(ivr)
+		}
+	
+	void CategoryMulti:setSeriesColor(char seriesName[], Color c)
+		{
+		Series n = series.findFirst(Series.[name], new Series(seriesName))
+		
+		n.seriesColor = c
+		}
+	
+	void CategoryMulti:setSeriesName(char seriesName[], char displayName[])
+		{
+		Series n = series.findFirst(Series.[name], new Series(seriesName))
+		
+		n.displayName = displayName
+		}
+	
+	void CategoryMulti:showErrorBars(bool on)
+		{
+		showStdDev = on
+		}
+	
+	void CategoryMulti:clampErrorBars(dec low, dec high)
+		{
+		
+		}
+	
+	void CategoryMulti:showLegend(bool on)
+		{
+		showLegend = on
+		}
+	
+	void CategoryMulti:setAxisFont(Font f)
+		{
+		axisFont = f
+		super(f)
+		}
+	
+	void CategoryMulti:setCatDisplayWidth(dec percent)
+		{
+		if (percent <= 0.0 || percent > 100.0)
+			throw new Exception("display width must be a percentage, between 1 and 100")
+		
+		barWidth = percent
+		}
+	
+	void CategoryMulti:setCatDisplayPadding(int pixels)
+		{
+		barPad = pixels
+		}
+	
+	// -- custom rendering --
+	
+	void CategoryMulti:drawToCanvas(Canvas c)
+		{
+		paint(c)
+		}
+	
+	void prepAxisLimits()
+		{
+		dec highX
+		dec lowX
+		dec highY
+		dec lowY
+		
+		for (int i = 0; i < categories.arrayLength; i++)
+			{
+			dec barTop = 0.0
+			dec barLow = 0.0
+			
+			for (int j = 0; j < categories[i].samples.arrayLength; j++)
+				{
+				//add it to the bar, by going on to the top or below the bottom, depending on whether it's positive or negative...
+				
+				dec mean = stcore.mean(categories[i].samples[j].values)
+				
+				if (mean > 0.0)
+					{
+					dec topX = barTop + mean
+					
+					barTop = topX
+					}
+					else
+					{
+					dec botX = barLow - mean
+					
+					barLow = botX
+					}
+				}
+			
+			if (barTop > highX) highX = barTop
+			if (barLow < lowX) lowX = barLow
+			
+			highY += 1.0
+			}
+		
+		setXMinMax(lowX, highX)
+		setYMinMax(lowY, highY)
+		}
+	
+	int getLongestSeriesName()
+		{
+		int result = 0
+		
+		for (int i = 0; i < series.arrayLength; i++)
+			{
+			int wd = axisFont.getTextWidth(series[i].displayName)
+			
+			if (wd > result) result = wd
+			}
+		
+		return result
+		}
+	
+	void drawLegend(Canvas c)
+		{
+		//calculate the longest series name, and offset the legend by this much from the right (plus the legend color square width)
+		int longestTxt = getLongestSeriesName()
+		
+		int yPos = 10
+		int xStart = getSize().width - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		
+		int textHeight = axisFont.getFontMetrics().height
+		
+		int totalLegendHeight = ((textHeight + 5) * (series.arrayLength-1)) + textHeight
+		int totalLegendWidth = (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		
+		c.drawRect(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), bgColor))
+		c.drawRectOutline(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), axisColor))
+		
+		yPos += (axisFont.getFontMetrics().descent)
+		
+		for (int i = series.arrayLength - 1; i != INT_MAX; i--)
+			{
+			c.drawRect(new Rect2D(xStart, yPos, LEGEND_SQ_SIZE, LEGEND_SQ_SIZE, series[i].seriesColor))
+			
+			int yOffset = (yPos + (LEGEND_SQ_SIZE / 2)) - (textHeight / 2)
+			c.drawText(new Point2D(xStart + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE, yOffset, axisColor), axisFont, series[i].displayName)
+			
+			yPos += textHeight + 5
+			}
+		}
+	
+	int getMaxCatTextWidth()
+		{
+		int high = 0
+		for (int i = 0; i < categories.arrayLength; i++)
+			{
+			int textWidth = axisFont.getTextWidth(categories[i].category)
+			
+			if (textWidth > high) high = textWidth
+			}
+		
+		return high
+		}
+	
+	// -- screen rendering (temporary?) --
+	
+	void CategoryMulti:paint(Canvas c)
+		{
+		prepAxisLimits()
+		
+		int maxCatWidth = getMaxCatTextWidth()
+		setAxisLabelSpace(ChartCore.AXIS_Y, maxCatWidth)
+		
+		Point pos = getPosition()
+		WH wh = getSize()
+		
+		c.pushSurface(new Rect(pos.x, pos.y, wh.width, wh.height), 0, 0, 255)
+		
+		preparePlotArea()
+		
+		//background
+		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		
+		//grid lines, if any
+		drawGrid(c)
+		
+		//data
+		
+		int xyA[] = getPlotPoint(0.0, 0.0)
+		int xyB[] = getPlotPoint(1.0, 0.0)
+		
+		dec thisY = 0.0
+		
+		//we pre-compute the "bar offset" within the category space, as the distance from the left-side of that space
+		// - we then use the same offset for each category space, which gives a more uniform look
+		
+		for (int i = 0; i < categories.arrayLength; i++)
+			{
+			dec barTop = 0.0
+			dec barLow = 0.0
+			
+			int xyZ[] = getPlotPoint(0.0, thisY)
+			int xyZ1[] = getPlotPoint(0.0, thisY+1.0)
+			
+			int ySpacing = ((xyZ[1] - xyZ1[1])+1) - (barPad*2)
+			int barHeightPX = (barWidth / 100.0) * ySpacing
+			
+			int centreY = xyZ[1] - ((xyZ[1] - xyZ1[1]) / 2)
+			
+			int barOffset = (centreY - (barHeightPX / 2)) - xyZ1[1]
+			
+			for (int j = 0; j < categories[i].samples.arrayLength; j++)
+				{
+				Sample s = categories[i].samples[j]
+				
+				//add it to the bar, by going on to the top or below the bottom, depending on whether it's positive or negative...
+				
+				dec mean = stcore.mean(s.values)
+				
+				if (mean > 0.0)
+					{
+					dec topX = barTop + mean
+					
+					int xyTop[] = getPlotPoint(topX, thisY)
+					int xyBot[] = getPlotPoint(barTop, thisY+1.0)
+					
+					c.drawRect(new Rect2D(xyBot[0], xyBot[1] + barOffset + barPad, xyTop[0] - xyBot[0], barHeightPX, s.series.seriesColor))
+					
+					barTop = topX
+					}
+					else
+					{
+					dec botX = barLow - mean
+					
+					int xyTop[] = getPlotPoint(barLow, thisY)
+					int xyBot[] = getPlotPoint(botX, thisY+1.0)
+					
+					c.drawRect(new Rect2D(xyBot[0], xyBot[1] + barOffset + barPad, xyTop[0] - xyBot[0], barHeightPX, s.series.seriesColor))
+					
+					barLow = botX
+					}
+				}
+			
+			//category label
+			int textWidth = axisFont.getTextWidth(categories[i].category)
+			int textHeight = axisFont.getFontMetrics().height
+			c.drawText(new Point2D(getPlotArea().x - MARKER_LENGTH - textWidth, centreY - (textHeight / 2), axisColor), axisFont, categories[i].category)
+			
+			thisY += 1.0
+			}
+		
+		//axes and labels
+		drawAxes(c)
+		
+		//legend
+		if (showLegend) drawLegend(c)
+		
+		c.popSurface()
+		}
+	
+	}

@@ -210,6 +210,7 @@ component provides KeyMapping {
 			else if (n == 68) return KeyCode.F11
 			else if (n == 69) return KeyCode.F12
 			else if (n == 41) return KeyCode.ESCAPE
+			else if (n == 44) return KeyCode.SPACE
 			else if (n == 57) return KeyCode.CAPLOCK
 			else if (n == 4) return KeyCode.A
 			else if (n == 5) return KeyCode.B

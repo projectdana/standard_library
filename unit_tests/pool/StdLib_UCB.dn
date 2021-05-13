@@ -34,7 +34,7 @@ component provides UnitTest requires io.Output out, data.IntUtil iu, ml.rl.RL uc
 		for (int i = 0; i < rows.arrayLength; i++)
 			{
 			int a = ucb.getAction()
-			ucb.consumeData(normaliseReward(rows[i].values[a]))
+			ucb.setReward(normaliseReward(rows[i].values[a]))
 			
 			distribution[a] ++
 			}

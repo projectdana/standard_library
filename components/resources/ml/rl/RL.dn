@@ -1,7 +1,7 @@
 uses data.String
 
 /*
-{"description" : "A reinforcement learning algorithm. To begin with, setActions must be used to provide a uniquely-identified set of possible actions. Following this, getAction and consumeData are called continuously, in a loop, to drive the learning algorithm. The index returned by getAction is an index into the list of actions supplied to setActions, after which the calling entity waits for some amount of time before calling consumeData with the reward level observed from the system."}
+{"description" : "A reinforcement learning algorithm. To begin with, setActions must be used to provide a uniquely-identified set of possible actions. Following this, getAction and setReward are called continuously, in a loop, to drive the learning algorithm. The index returned by getAction is an index into the list of actions supplied to setActions, after which the calling entity waits for some amount of time before calling setReward with the reward level observed from the system."}
 */
 
 interface RL {
@@ -19,11 +19,11 @@ interface RL {
 	
 	void setActions(store String actions[])
 	
-	//the state machine: getAction, consumeData, getAction, etc.
+	//the state machine: getAction, setReward, getAction, etc.
 	
 	int getAction()
 	
-	void consumeData(dec reward)
+	void setReward(dec reward, opt int action)
 	
 	//information functions
 	

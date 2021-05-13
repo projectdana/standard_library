@@ -16,5 +16,5 @@ interface DecUtil{
 	/*
 	{ "@description" : "Convert a decimal fraction to a string."}
 	*/
-	char[] makeString(dec i)
+	char[] makeString(dec i, opt int decimalPlaces)
 	}

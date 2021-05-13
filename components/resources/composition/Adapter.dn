@@ -1,5 +1,5 @@
 /*
- {"description" : "Utility API to perform runtime adaptation on a required interface or on a specific object. Note that IDC references are typically gained via the use of composition.Loader."}
+ {"description" : "Utility API to perform runtime adaptation on a required interface or on a specific object. Note that IDC references are typically gained via the use of Loader."}
 */
 
 interface Adapter {
@@ -20,18 +20,9 @@ interface Adapter {
 			"ofComponent" : "The component with the required interface you want to adapt.",
 			"interfaceName" : "The string name of the required interface type that you want to adapt.",
 			"toComponent" : "The component with the provided interface that you want to wire the required interface to.",
+			"toInterfaceName" : "The specific provided interface of toComponent to wire to, if different from interfaceName.",
 			"@return" : "True if the adaptation was successful, false otherwise."}
 	*/
-	bool adaptRequiredInterface(IDC ofComponent, char interfaceName[], IDC toComponent)
+	bool adaptRequiredInterface(IDC ofComponent, char interfaceName[], IDC toComponent, opt char toInterfaceName[])
 	
-	/*
-	 { "@description" : "Adapt a given required interface of a component to be wired to a different component Q, specifing the provided interface of Q. All objects sourced from that required interface are adapted to be sourced from Q. Note that toComponent must have a required interface of the given name, and toComponent must have a provided interface of the same name.",
-	 
-			"ofComponent" : "The component with the required interface you want to adapt.",
-			"interfaceName" : "The string name of the required interface type that you want to adapt.",
-			"toComponent" : "The component with the provided interface that you want to wire the required interface to.",
-			"toInterfaceName" : "The specific provided interface of toComponent to wire to.",
-			"@return" : "True if the adaptation was successful, false otherwise."}
-	*/
-	bool adaptRequiredInterfaceTo(IDC ofComponent, char interfaceName[], IDC toComponent, char toInterfaceName[])
 	}

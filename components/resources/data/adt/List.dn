@@ -61,14 +61,8 @@ interface List{
 	
 	/*
 	 {"@description" : "Get all items in the list as an array of type Data[].",
+			"t" : "The specific type for the resulting array.",
 			"@return" : "An array of type Data[] containing all items in the list, in order."}
 	*/
-	Data[] getContents()
-	
-	/*
-	 {"@description" : "Get all items in the list as an array of the given type. Returns null if any item stored in the list does not have this type.",
-			"t" : "The type for the resulting array."
-			"@return" : "An array of the given type containing all items in the list, in order."}
-	*/
-	Data[] getContentsAs(Type t)
+	Data[] getContents(opt Type t)
 	}

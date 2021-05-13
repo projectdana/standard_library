@@ -1,0 +1,42 @@
+data MDElement nocycle {
+	const byte PARAGRAPH 	= 1
+	const byte PLAIN 		= 2
+	const byte LINK 		= 6
+	const byte IMAGE 		= 7
+	const byte CODE_BLOCK 	= 9
+	const byte QUOTE_BLOCK 	= 10
+	const byte LIST_ORDERED = 11
+	const byte LIST_UNORDERED = 12
+	const byte LIST_ITEM 	= 13
+	const byte HEADING 		= 14
+	const byte HLINE 		= 15
+	
+	byte type
+	
+	//heading ext. styles
+	const byte H1 		= 1
+	const byte H2 		= 2
+	const byte H3 		= 3
+	const byte H4 		= 4
+	const byte H5 		= 5
+	const byte H6 		= 6
+	
+	//code block ext. styles
+	const byte CODE_FENCE = 1
+	
+	//plain text ext. styles (bitwise flags)
+	const byte BOLD 		= 1
+	const byte ITALIC 		= 2
+	const byte CODE 		= 4
+	
+	byte extType
+	
+	char content[]
+	char extInfo[]
+	
+	MDElement children[]
+	}
+
+interface Markdown {
+	MDElement parse(char doc[])
+	}

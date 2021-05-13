@@ -976,6 +976,13 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			start ++
 			count ++
 			
+			//nocycle?
+			if (tokens[start].content == "nocycle")
+				{
+				start ++
+				count ++
+				}
+			
 			//extends?
 			if (tokens[start].content == "extends")
 				{
@@ -998,6 +1005,13 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 					}
 				
 				td.extendsType = getDataDef(root_sf, pkg)
+				}
+			
+			//nocycle?
+			if (tokens[start].content == "nocycle")
+				{
+				start ++
+				count ++
 				}
 			
 			//the type definition

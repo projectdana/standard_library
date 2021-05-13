@@ -178,28 +178,16 @@ component provides List(Destructor, AdaptEvents) {
 			}
 		}
 	
-	Data[] List:getContents()
+	Data[] List:getContents(opt Type t)
 		{
 		mutex(listLock)
 			{
-			Data items[] = new Data[length]
+			Data items[]
 			
-			int j = 0
-			for (ListItem i = list; i != null; i = i.next)
-				{
-				items[j] = i.item
-				j ++
-				}
-			
-			return items
-			}
-		}
-	
-	Data[] List:getContentsAs(Type t)
-		{
-		mutex(listLock)
-			{
-			Data items[] = new Data[length] from t
+			if (isset t)
+				items = new Data[length] from t
+				else
+				items = new Data[length]
 			
 			int j = 0
 			for (ListItem i = list; i != null; i = i.next)

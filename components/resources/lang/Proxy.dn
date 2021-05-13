@@ -9,6 +9,7 @@ data FunctionCall {
 	Type type
 	
 	Data params
+	int pSetMask
 	}
 
 /*

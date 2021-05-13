@@ -1,0 +1,33 @@
+component provides UnitTest requires time.Timer timer {
+	
+	Mutex m = new Mutex()
+	
+	void function()
+		{
+		mutex(m)
+			{
+			throw new Exception("(expected-test-exception)")
+			}
+		}
+	
+	void fthread()
+		{
+		timer.sleep(1000)
+		
+		function()
+		function()
+		}
+	
+	bool UnitTest:runTest()
+		{
+		Thread th = asynch::fthread()
+		
+		function()
+		function()
+		
+		th.join()
+		
+		return true
+		}
+	
+	}
