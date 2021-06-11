@@ -1,0 +1,90 @@
+const int TEXT_MARGIN = 3
+const int TEXT_PAD = 6
+
+const int CHECK_WIDTH = 20
+const int CHECK_HEIGHT = 20
+
+component provides CheckBox requires ui.Font, os.SystemInfo sysInfo, io.Output out {
+	
+	bool checked
+	Font labelFont
+	
+	int width
+	
+	CheckBox:CheckBox(char label[])
+		{
+		labelFont = new Font(sysInfo.getSystemFont(false), 15)
+		text = label
+		width = CHECK_WIDTH + labelFont.getTextWidth(text) + TEXT_PAD
+		}
+	
+	void CheckBox:paint(Canvas c)
+		{
+		c.drawRect(new Rect2D(xPosition, yPosition, CHECK_WIDTH, CHECK_HEIGHT, new Color(170, 178, 170, 255)))
+		if (checked) c.drawRect(new Rect2D(xPosition+4, yPosition+4, CHECK_WIDTH-8, CHECK_HEIGHT-8, new Color(50, 50, 40, 255)))
+		c.drawText(new Point2D(xPosition+CHECK_WIDTH+TEXT_MARGIN, yPosition+1, new Color(0, 0, 0, 255)), labelFont, text)
+		}
+	
+	bool CheckBox:isChecked()
+		{
+		return checked
+		}
+	
+	void CheckBox:setChecked(bool t)
+		{
+		checked = t
+		}
+	
+	void CheckBox:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+	
+	void CheckBox:click(int x, int y, int button)
+		{
+		if (button == MouseButtons.BUTTON_LEFT)
+			{
+			checked = !checked
+			postRepaint()
+			emitevent click()
+			}
+		}
+	
+	void CheckBox:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	void CheckBox:setFocus()
+		{
+		emitevent requestFocus()
+		}
+	
+	void CheckBox:setText(char t[])
+		{
+		text = t
+		width = CHECK_WIDTH + labelFont.getTextWidth(text) + TEXT_PAD
+		}
+	
+	char[] CheckBox:getText()
+		{
+		return text
+		}
+	
+	Rect CheckBox:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, CHECK_HEIGHT)
+		}
+	
+	WH CheckBox:getPreferredSize()
+		{
+		return new WH(width, CHECK_HEIGHT)
+		}
+	
+	Point CheckBox:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+	
+	}

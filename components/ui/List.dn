@@ -1,0 +1,201 @@
+data ListItem {
+	char label[]
+	}
+
+component provides List requires ui.Font, io.Output out {
+
+	ListItem listItems[]
+	int nextItemY
+
+	char selectedItem[]
+	int selectedIndex
+	
+	int filterList[]
+
+	Color bgColor = new Color(170, 178, 190, 255)
+
+	Color evenColor = new Color(150, 150, 170, 255)
+	Color selectedColor = new Color(200, 200, 190, 255)
+
+	WH preferredSize = new WH()
+
+	int width
+
+	Font textFont
+
+	List:List()
+		{
+		textFont = new Font("SourceSansPro.ttf", 14)
+		}
+
+	void List:addItem(char item[])
+		{
+		listItems = new ListItem[](listItems, new ListItem(item))
+
+		nextItemY += 25
+
+		preferredSize.height += 24
+
+		postRepaint()
+		}
+
+	void List:updateItem(int index, char name[])
+		{
+		if (index < listItems.arrayLength)
+			{
+			listItems[index].label = name
+			postRepaint()
+			}
+		}
+	
+	void List:deleteItem(int index)
+		{
+		if (index < listItems.arrayLength)
+			{
+			ListItem newList[] = new ListItem[listItems.arrayLength-1]
+			
+			int j = 0
+			for (int i = 0; i < listItems.arrayLength; i++)
+				{
+				if (i != index)
+					{
+					newList[j] = listItems[i]
+					j ++
+					}
+				}
+			
+			listItems = newList
+			
+			preferredSize.height -= 24
+			
+			postRepaint()
+			}
+		}
+	
+	void List:filter(int indices[])
+		{
+		//note the filter list, then repaint
+		filterList = indices
+		postRepaint()
+		}
+	
+	void List:clear()
+		{
+		listItems = null
+		nextItemY = 0
+
+		postRepaint()
+		}
+	
+	bool isIn(int lst[], int n)
+		{
+		for (int i = 0; i < lst.arrayLength; i++)
+			{
+			if (lst[i] == n)
+				return true
+			}
+		
+		return false
+		}
+	
+	void List:paint(Canvas c)
+		{
+		c.pushSurface(new Rect(xPosition, yPosition, width, preferredSize.height), 0, 0, 255)
+
+		c.drawRect(new Rect2D(0, 0, width, preferredSize.height, bgColor))
+
+		nextItemY = 0
+		for (int i = 0; i < listItems.arrayLength; i++)
+			{
+			if (filterList == null || isIn(filterList, i))
+				{
+				Color nextColor = evenColor
+
+				if (selectedItem != null && i == selectedIndex)
+					nextColor = selectedColor
+
+				c.drawRect(new Rect2D(0, nextItemY, width, 20, nextColor))
+				c.drawText(new Point2D(10, nextItemY, new Color(0, 0, 0, 255)), textFont, listItems[i].label)
+
+				nextItemY += 24
+				}
+			}
+
+		c.popSurface()
+		}
+
+	char[] List:getSelectedItem()
+		{
+		return selectedItem
+		}
+
+	int List:getSelectedIndex()
+		{
+		return selectedIndex
+		}
+
+	Rect List:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, preferredSize.height)
+		}
+
+	void List:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+
+	Point List:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+
+	WH List:getPreferredSize()
+		{
+		if (filterList == null)
+			return preferredSize
+			else
+			return new WH(preferredSize.width, 24 * filterList.arrayLength)
+		}
+
+	void List:setWidth(int w)
+		{
+		width = w
+
+		preferredSize.width = w
+		}
+
+	void List:click(int x, int y, int button)
+		{
+		int qY = 0
+		for (int i = 0; i < listItems.arrayLength; i++)
+			{
+			if (filterList == null || isIn(filterList, i))
+				{
+				if (y >= qY && y <= (qY+20))
+					{
+					selectedIndex = i
+					selectedItem = listItems[i].label
+
+					emitevent selectItem()
+					emitevent repaint()
+
+					break
+					}
+
+				qY += 24
+				}
+			}
+		}
+
+	void List:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	void List:setFocus()
+		{
+		emitevent requestFocus()
+		}
+
+	}

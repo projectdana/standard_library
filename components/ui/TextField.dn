@@ -6,7 +6,10 @@ const int TEXT_BORDER_V = 1
 
 const int CURSOR_WIDTH = 1
 
-component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, os.SystemInfo sysInfo, ui.ContextMenu, os.Clipboard clipboard, locale.KeyMapping keyMapping {
+const byte CONTEXT_MENU = 0
+const byte CONTEXT_HINT = 1
+
+component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, os.SystemInfo sysInfo, os.Clipboard clipboard, locale.KeyMapping keyMapping {
 	
 	bool passwordMask
 	
@@ -31,7 +34,21 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	
 	ClickableObject clickTarget
 	
-	ContextMenu menu
+	ContextMenuSpec menu
+	MenuItem cutMenu = new MenuItem("Cut", "Ctrl+X")
+	MenuItem copyMenu = new MenuItem("Copy", "Ctrl+C")
+	MenuItem pasteMenu = new MenuItem("Paste", "Ctrl+V")
+	MenuItem selectAllMenu= new MenuItem("Select All", "Ctrl+A")
+	
+	HotKey hkeys[]
+	HotKey hkCut = new HotKey(KeyState.KEY_CTRL, KeyCode.X)
+	HotKey hkCopy = new HotKey(KeyState.KEY_CTRL, KeyCode.C)
+	HotKey hkPaste = new HotKey(KeyState.KEY_CTRL, KeyCode.V)
+	HotKey hkSelectAll = new HotKey(KeyState.KEY_CTRL, KeyCode.A)
+	
+	ContextMenuSpec hintMenu
+	
+	byte contextMode = CONTEXT_MENU
 	
 	Color bgColor = new Color(200, 200, 220, 255)
 	Color borderColor = new Color(180, 180, 190, 255)
@@ -42,15 +59,23 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		{
 		textFont = new Font(sysInfo.getSystemFont(false), 15)
 		
-		menu = new ContextMenu()
-		menu.addItem("Cut", KeyCode.X, KeyState.KEY_CTRL)
-		menu.addItem("Copy", KeyCode.C, KeyState.KEY_CTRL)
-		menu.addItem("Paste", KeyCode.V, KeyState.KEY_CTRL)
-		menu.addItem("Select All", KeyCode.A, KeyState.KEY_CTRL)
+		menu = new ContextMenuSpec()
+		
+		menu.items = new MenuItem[](cutMenu,
+									copyMenu,
+									pasteMenu,
+									selectAllMenu
+									)
+		
+		hkeys = new HotKey[](hkCut,
+							hkCopy,
+							hkPaste,
+							hkSelectAll
+							)
+		
+		hintMenu = new ContextMenuSpec()
 		
 		height = textFont.getFontMetrics().height + (TEXT_BORDER_V*2)
-		
-		sinkevent MenuEvents(menu)
 		}
 	
 	void TextField:setBackground(Color c)
@@ -197,63 +222,8 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		emitevent textChanged()
 		}
 	
-	eventsink MenuEvents(EventData ed)
-		{
-		if (ed.type == ContextMenu.[menuClick])
-			{
-			MenuItem mi = ed.details
-			
-			if (mi.name == "Copy")
-				{
-				clipboard.setContent(getSelectedText())
-				}
-				else if (mi.name == "Cut")
-				{
-				clipboard.setContent(getSelectedText())
-				deleteSelection()
-				if (selectStartPos > cursorPosition)
-					selectStartPos = cursorPosition
-					else
-					cursorPosition = selectStartPos
-				
-				updateCursorPosition()
-				}
-				else if (mi.name == "Paste")
-				{
-				char itext[] = clipboard.getContent()
-				deleteSelection()
-				if (selectStartPos > cursorPosition)
-					selectStartPos = cursorPosition
-					else
-					cursorPosition = selectStartPos
-				insertText(itext)
-				
-				updateCursorPosition()
-				}
-				else if (mi.name == "Select All")
-				{
-				selectStartPos = 0
-				cursorPosition = currentText.arrayLength
-				
-				updateCursorPosition()
-				}
-			
-			emitevent contextItemOff()
-			}
-		}
-	
 	void TextField:keyDown(int keyCode)
 		{
-		//out.println("keycode: $(iu.makeString(keyCode))")
-		
-		//if the ctrl key is being held down we direct the key press to the context menu
-		
-		if ((keyState & KeyState.KEY_CTRL) == KeyState.KEY_CTRL)
-			{
-			menu.keyPress(keyMapping.getKeyCode(keyCode), keyState)
-			return
-			}
-		
 		//here we check if the key press was a printable character and if so insert it, else handle other key strokes
 		
 		char ch[] = keyMapping.getCharacter(keyCode, keyState)
@@ -502,8 +472,81 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			}
 			else if (button == MouseButtons.BUTTON_RIGHT)
 			{
-			emitevent contextItemOn()
+			menu.xAnchor = x
+			menu.yAnchor = y
+			contextMode = CONTEXT_MENU
+			emitevent contextMenuOn(menu)
 			}
+		}
+	
+	void processMenuClick(MenuItem item)
+		{
+		if (item === copyMenu)
+			{
+			clipboard.setContent(getSelectedText())
+			}
+			else if (item === cutMenu)
+			{
+			clipboard.setContent(getSelectedText())
+			deleteSelection()
+			if (selectStartPos > cursorPosition)
+				selectStartPos = cursorPosition
+				else
+				cursorPosition = selectStartPos
+			
+			updateCursorPosition()
+			
+			emitevent repaint()
+			}
+			else if (item === pasteMenu)
+			{
+			char itext[] = clipboard.getContent()
+			deleteSelection()
+			if (selectStartPos > cursorPosition)
+				selectStartPos = cursorPosition
+				else
+				cursorPosition = selectStartPos
+			insertText(itext)
+			
+			updateCursorPosition()
+			
+			emitevent repaint()
+			}
+			else if (item === selectAllMenu)
+			{
+			selectStartPos = 0
+			cursorPosition = currentText.arrayLength
+			
+			updateCursorPosition()
+			
+			emitevent repaint()
+			}
+		}
+	
+	void TextField:contextClick(MenuItem item)
+		{
+		if (contextMode == CONTEXT_MENU)
+			{
+			processMenuClick(item)
+			}
+			else
+			{
+			setText(item.name)
+			cursorPosition = currentText.arrayLength
+			selectStartPos = cursorPosition
+			}
+		}
+	
+	void TextField:hotKeyClick(HotKey h)
+		{
+		if (h === hkCut)
+			processMenuClick(cutMenu)
+			else if (h === hkCopy)
+			processMenuClick(copyMenu)
+			else if (h === hkPaste)
+			processMenuClick(pasteMenu)
+			else if (h === hkSelectAll)
+			processMenuClick(selectAllMenu)
 		}
 	
 	void TextField:mouseUp(int x, int y, int button)
@@ -648,7 +691,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	
 	Point TextField:getPosition()
 		{
-		return null
+		return new Point(xPosition, yPosition)
 		}
 	
 	WH TextField:getPreferredSize()
@@ -661,20 +704,17 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		emitevent requestFocus()
 		}
 	
-	void TextField:recvFocus()
+	HotKey[] TextField:recvFocus()
 		{
 		focus = true
+		
+		return hkeys
 		}
 	
 	void TextField:loseFocus()
 		{
 		focus = false
 		selectStartPos = cursorPosition
-		}
-	
-	GraphicsObject TextField:getContextItem()
-		{
-		return menu
 		}
 	
 	void TextField:setWidth(int w)
@@ -686,4 +726,29 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		{
 		clickTarget = o
 		}
+	
+	void TextField:setHintItems(String items[])
+		{
+		if (items == null || items.arrayLength == 0)
+			{
+			emitevent contextMenuOff()
+			}
+			else
+			{
+			contextMode = CONTEXT_HINT
+			
+			hintMenu.xAnchor = 0
+			hintMenu.yAnchor = height
+			
+			hintMenu.items = new MenuItem[items.arrayLength]
+			
+			for (int i = 0; i < items.arrayLength; i++)
+				{
+				hintMenu.items[i] = new MenuItem(items[i].string)
+				}
+			
+			emitevent contextMenuOn(hintMenu)
+			}
+		}
+	
 	}

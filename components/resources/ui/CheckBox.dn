@@ -1,0 +1,8 @@
+interface CheckBox extends ui.Button {
+	
+	CheckBox(char name[])
+	
+	bool isChecked()
+	void setChecked(bool t)
+	
+	}

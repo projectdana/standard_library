@@ -4,6 +4,7 @@
 
 uses Color
 uses Font
+uses data.String
 
 interface TextField extends KeyEventObject {
 	
@@ -45,4 +46,6 @@ interface TextField extends KeyEventObject {
 	void setTextColor(store Color c)
 	
 	void setFont(store Font f)
+	
+	void setHintItems(store String items[])
 	}

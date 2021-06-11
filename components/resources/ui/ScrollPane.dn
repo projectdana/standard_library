@@ -1,0 +1,11 @@
+interface ScrollPane extends KeyEventObject {
+	
+	ScrollPane()
+	
+	void setContent(store GraphicsObject g)
+	
+	void setSize(int w, int h)
+	
+	void showScroll(bool v, bool h)
+	
+	}

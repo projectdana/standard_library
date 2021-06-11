@@ -1,0 +1,19 @@
+interface List extends ClickableObject {
+	
+	event selectItem()
+
+	List()
+
+	void addItem(char name[])
+	void updateItem(int index, char name[])
+	void deleteItem(int index)
+	void clear()
+
+	void setWidth(int w)
+	
+	void filter(int indices[])
+
+	char[] getSelectedItem()
+	int getSelectedIndex()
+
+	}

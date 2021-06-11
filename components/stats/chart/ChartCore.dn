@@ -183,7 +183,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 		return new int[](xPoint, yPoint)
 		}
 	
-	dec[] calculateAttributeSpacingY(dec min, dec max, dec interval)
+	dec[] calculateAttributeSpacing(dec min, dec max, dec interval)
 		{
 		dec result[]
 		
@@ -218,8 +218,6 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 				}
 			
 			mv = 0.0 - interval
-			result = new dec[](mv, result)
-			mv -= interval
 			
 			while (mv >= min)
 				{
@@ -247,7 +245,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 		
 		if (markerIntervalX != 0.0)
 			{
-			result = calculateAttributeSpacingY(xAxMin, xAxMax, markerIntervalX)
+			result = calculateAttributeSpacing(xAxMin, xAxMax, markerIntervalX)
 			}
 		
 		return result
@@ -259,7 +257,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 		
 		if (numberIntervalX != 0.0)
 			{
-			result = calculateAttributeSpacingY(xAxMin, xAxMax, numberIntervalX)
+			result = calculateAttributeSpacing(xAxMin, xAxMax, numberIntervalX)
 			}
 		
 		return result
@@ -271,7 +269,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 		
 		if (gridIntervalX != 0.0)
 			{
-			result = calculateAttributeSpacingY(xAxMin, xAxMax, gridIntervalX)
+			result = calculateAttributeSpacing(xAxMin, xAxMax, gridIntervalX)
 			}
 		
 		return result
@@ -283,7 +281,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 		
 		if (markerIntervalY != 0.0)
 			{
-			result = calculateAttributeSpacingY(yAxMin, yAxMax, markerIntervalY)
+			result = calculateAttributeSpacing(yAxMin, yAxMax, markerIntervalY)
 			}
 		
 		return result
@@ -295,7 +293,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 		
 		if (numberIntervalY != 0.0)
 			{
-			result = calculateAttributeSpacingY(yAxMin, yAxMax, numberIntervalY)
+			result = calculateAttributeSpacing(yAxMin, yAxMax, numberIntervalY)
 			}
 		
 		return result
@@ -361,7 +359,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 		
 		if (gridIntervalY != 0.0)
 			{
-			result = calculateAttributeSpacingY(yAxMin, yAxMax, gridIntervalY)
+			result = calculateAttributeSpacing(yAxMin, yAxMax, gridIntervalY)
 			}
 		
 		return result

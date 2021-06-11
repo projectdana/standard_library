@@ -16,14 +16,17 @@ data ClickableItem{
 	ClickableItem prev
 	}
 
-component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
+component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.ContextMenu, locale.KeyMapping keyMapping {
 
 	Thread waitThread
 
 	GraphicsItem buffer
 	GraphicsItem bufferEnd
 
-	GraphicsObject contextItem
+	ContextMenu contextMenu
+	ClickableObject contextOwner
+	HotKey focusHotKeys[]
+	KeyEventObject keyboardFocus
 
 	ClickableItem clickItems
 	ClickableItem clickItemsEnd
@@ -32,11 +35,9 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 	GraphicsObject clickDown
 
 	XYListener mouseListeners
+
 	XYListener mouseListenersEnd
-
 	Mutex paintLock = new Mutex()
-
-	KeyEventObject keyboardFocus
 
 	XYMouseObject mouseOver
 
@@ -56,6 +57,8 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 	int restoredY
 
 	bool fullScreen
+	
+	byte keyState //used for hot key triggers
 	
 	bool closed
 	
@@ -113,6 +116,22 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 		{
 		paint(null)
 		}
+	
+	eventsink ContextMenuEvents(EventData ed)
+		{
+		if (ed.type == ContextMenu.[repaint])
+			{
+			paint(null)
+			}
+			else if (ed.type == ContextMenu.[menuClick])
+			{
+			contextOwner.contextClick(ed.details)
+			
+			stopevent ContextMenuEvents(contextMenu)
+			contextMenu = null
+			postRepaint()
+			}
+		}
 
 	eventsink FocusEvents(EventData ed)
 		{
@@ -120,18 +139,24 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 			{
 			changeFocusTo(ed.source)
 			}
-			else if (ed.type == ClickableObject.[contextItemOn])
+			else if (ed.type == ClickableObject.[contextMenuOn])
 			{
-			ClickableObject co = ed.source
-			contextItem = co.getContextItem()
-			contextItem.setPosition(mouseX, mouseY)
-			sinkevent PaintEvents(contextItem)
+			GraphicsObject srcObj = ed.source
+			contextOwner = ed.source
+			ContextMenuSpec spec = ed.details
+			if (spec.owner != null) contextOwner = spec.owner
+			
+			//create contextMenu, based on spec
+			contextMenu = new ContextMenu()
+			contextMenu.setPosition(spec.xAnchor + srcObj.getPosition().x, spec.yAnchor + srcObj.getPosition().y)
+			contextMenu.setItems(spec.items)
+			sinkevent ContextMenuEvents(contextMenu)
 			postRepaint()
 			}
-			else if (ed.type == ClickableObject.[contextItemOff])
+			else if (ed.type == ClickableObject.[contextMenuOff])
 			{
-			stopevent PaintEvents(contextItem)
-			contextItem = null
+			stopevent ContextMenuEvents(contextMenu)
+			contextMenu = null
 			postRepaint()
 			}
 		}
@@ -449,9 +474,9 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 			canvas.drawRectOutline(new Rect2D(0, 0, currentWidth, currentHeight, borderColor))
 
-			if (contextItem != null)
+			if (contextMenu != null)
 				{
-				contextItem.paint(canvas)
+				contextMenu.paint(canvas)
 				}
 
 			canvas.paint()
@@ -472,28 +497,29 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 		{
 		paint(null)
 		}
-
+	
 	void changeFocusTo(store KeyEventObject ko)
 		{
 		if (keyboardFocus !== ko)
 			{
-			if (keyboardFocus != null) keyboardFocus.loseFocus()
-			ko.recvFocus()
+			if (keyboardFocus != null)
+				keyboardFocus.loseFocus()
 			}
+
+		focusHotKeys = ko.recvFocus()
 
 		keyboardFocus = ko
 		}
 
 	void Window:click(int x, int y, int button)
 		{
-		if (contextItem != null && contextItem hastype ClickableObject)
+		if (contextMenu != null)
 			{
-			ClickableObject ci = contextItem
-			Rect r = ci.getBounds()
+			Rect r = contextMenu.getBounds()
 
-			if (clickDown === ci && x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+			if (clickDown === contextMenu && x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				ci.click(x - r.x, y - r.y, button)
+				contextMenu.click(x - r.x, y - r.y, button)
 				return
 				}
 			}
@@ -506,10 +532,10 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 				{
 				if (clickDown === ci.object)
 					{
-					if (contextItem != null)
+					if (contextMenu != null)
 						{
-						stopevent PaintEvents(contextItem)
-						contextItem = null
+						stopevent ContextMenuEvents(contextMenu)
+						contextMenu = null
 						postRepaint()
 						}
 
@@ -531,14 +557,14 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 		//first register what the mouse was pressed down on, for click handling
 		clickDown = null
 		
-		if (contextItem != null && contextItem hastype ClickableObject)
+		if (contextMenu != null)
 			{
-			ClickableObject ci = contextItem
-			Rect r = ci.getBounds()
+			Rect r = contextMenu.getBounds()
 
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				clickDown = ci
+				clickDown = contextMenu
+				return
 				}
 			}
 		
@@ -564,7 +590,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				clickDown = ci.object
+				if (clickDown == null) clickDown = ci.object
 				ci.object.mouseDown(x - r.x, y - r.y, button)
 				break
 				}
@@ -607,27 +633,26 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 		bool overSomething
 
-		if (contextItem != null && contextItem hastype XYMouseObject)
+		if (contextMenu != null)
 			{
-			XYMouseObject ci = contextItem
-			Rect r = ci.getBounds()
+			Rect r = contextMenu.getBounds()
 
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				if (mouseOver !== ci)
+				if (mouseOver !== contextMenu)
 					{
 					if (mouseOver != null)
 						{
 						mouseOver.mouseOut()
 						}
 
-					mouseOver = ci
+					mouseOver = contextMenu
 					mouseOver.mouseOver()
 					}
 
 				overSomething = true
 
-				ci.mouseMove(x - r.x, y - r.y)
+				contextMenu.mouseMove(x - r.x, y - r.y)
 				}
 
 			if (!overSomething && mouseOver != null)
@@ -658,7 +683,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 
 				overSomething = true
 
-				ci.object.mouseMove(x, y)
+				ci.object.mouseMove(x - r.x, y - r.y)
 
 				break
 				}
@@ -670,20 +695,90 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 			mouseOver = null
 			}
 		}
-
+	
+	bool triggerHotKey(int keyCode)
+		{
+		for (int i = 0; i < focusHotKeys.arrayLength; i++)
+			{
+			if (keyState == focusHotKeys[i].modifier && keyCode == focusHotKeys[i].keyCode)
+				{
+				keyboardFocus.hotKeyClick(focusHotKeys[i])
+				
+				return true
+				}
+			}
+		
+		return false
+		}
+	
 	void Window:keyDown(int keyCode)
 		{
-		//get the "keyboard focus" item, if any, and dispatch a key event to it
-		// (note this might be a panel, which in turn has a sub-item with keyboard focus)
-
-		if (keyboardFocus != null)
+		//capture key state, for hot keys
+		int kCode
+		if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.UNKNOWN)
 			{
-			keyboardFocus.keyDown(keyCode)
+			if (kCode == KeyCode.SHIFT_LEFT || kCode == KeyCode.SHIFT_RIGHT)
+				{
+				keyState |= KeyState.KEY_SHIFT
+				}
+			
+			if (kCode == KeyCode.CTRL_LEFT || kCode == KeyCode.CTRL_RIGHT)
+				{
+				keyState |= KeyState.KEY_CTRL
+				}
+			
+			if (kCode == KeyCode.ALT_LEFT)
+				{
+				keyState |= KeyState.KEY_ALT
+				}
+			
+			if (kCode == KeyCode.CMD)
+				{
+				keyState |= KeyState.KEY_CMD
+				}
+			}
+		
+		//trigger a hot key, if any
+		if (!triggerHotKey(kCode))
+			{
+			//get the "keyboard focus" item, if any, and dispatch a key event to it
+			// (note this might be a panel, which in turn has a sub-item with keyboard focus)
+			
+			if (keyboardFocus != null)
+				{
+				keyboardFocus.keyDown(keyCode)
+				}
 			}
 		}
 
 	void Window:keyUp(int keyCode)
 		{
+		//capture key state, for hot keys
+		int kCode
+		if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.UNKNOWN)
+			{
+			if (kCode == KeyCode.SHIFT_LEFT || kCode == KeyCode.SHIFT_RIGHT)
+				{
+				keyState &= ~KeyState.KEY_SHIFT
+				}
+			
+			if (kCode == KeyCode.CTRL_LEFT || kCode == KeyCode.CTRL_RIGHT)
+				{
+				keyState &= ~KeyState.KEY_CTRL
+				}
+			
+			if (kCode == KeyCode.ALT_LEFT)
+				{
+				keyState &= ~KeyState.KEY_ALT
+				}
+			
+			if (kCode == KeyCode.CMD)
+				{
+				keyState &= ~KeyState.KEY_CMD
+				}
+			}
+		
+		//fire key to focused item, if any
 		if (keyboardFocus != null)
 			{
 			keyboardFocus.keyUp(keyCode)
@@ -694,9 +789,9 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow {
 		{
 		}
 
-	void Window:recvFocus()
+	HotKey[] Window:recvFocus()
 		{
-
+		return null
 		}
 
 	void Window:loseFocus()

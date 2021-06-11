@@ -1,5 +1,15 @@
+/*
+ {"description" : "Result of an execute command."}
+*/
+
 data RunStatus{
+	/*
+	 {"@description" : "True if the command was successfully executed, false otherwise (e.g. if no such command was found on the host OS)."}
+	*/
 	bool executed
+	/*
+	 {"@description" : "The result code returned by executing the command (if executed is true). Note that the integer range available for result is OS-dependent; check your operating system process exit code semantics for further detail."}
+	*/
 	int result
 	}
 

@@ -4,19 +4,15 @@
 
 uses os.KeyState
 
-data MenuItem {
-	char name[]
-	}
-
 interface ContextMenu extends XYMouseObject {
 	
 	event menuClick(MenuItem mi)
 	
 	ContextMenu()
 	
-	void addItem(char name[], int keyCode, byte keyStatus)
-	void remItem(char name[])
+	void addItem(store MenuItem item)
+	void remItem(MenuItem item)
 	
-	bool keyPress(int keyCode, byte keyStatus)
+	void setItems(store MenuItem items[])
 	
 	}

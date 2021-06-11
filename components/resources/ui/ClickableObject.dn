@@ -2,6 +2,23 @@ uses GraphicsObject
 uses Rect
 uses MouseButtons
 
+data MenuItem {
+	char name[]
+	char hotkey[]
+	}
+
+data ContextMenuSpec {
+	int xAnchor
+	int yAnchor
+	MenuItem items[]
+	ClickableObject owner
+	}
+
+data HotKey {
+	byte modifier
+	int keyCode
+	}
+
 /*
  {"description" : "A graphical entity that can be clicked on (e.g. with a mouse) triggering click events to any registered listeners."}
 */
@@ -9,11 +26,22 @@ interface ClickableObject extends GraphicsObject{
 	
 	event click()
 	
-	event contextItemOn()
-	event contextItemOff()
+	event contextMenuOn(ContextMenuSpec menu)
+	event contextMenuOff()
+	
+	event requestFocus()
 	
 	Rect getBounds()
 	void click(int x, int y, int button)
 	
-	GraphicsObject getContextItem(){return null}
+	void contextClick(MenuItem item){}
+	
+	//called by the UI app, to make this object the focused one
+	void setFocus()
+	
+	//called by the UI framework, to tell a button that is has gained focus
+	HotKey[] recvFocus(){return null}
+	void loseFocus(){}
+	
+	void hotKeyClick(HotKey k){}
 	}

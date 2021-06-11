@@ -1,0 +1,13 @@
+interface ScrollBar extends XYMouseObject {
+	
+	event scrollMoved()
+	
+	void setMaxValue(int v)
+	void setIncrement(int v)
+	
+	void setScrollPos(int v)
+	int getScrollPos()
+	
+	void setLength(int pixels)
+	
+	}

@@ -4,12 +4,6 @@ const int FONT_HEIGHT = 15
 const int PAD_LEFT = 3
 const int PAD_RIGHT = 3
 
-data ListItem {
-	char string[]
-	int keyCode
-	byte keyState
-	}
-
 component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Output out {
 	
 	Font labelFont
@@ -17,7 +11,7 @@ component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Outpu
 	int width = 2
 	int height = 2
 	
-	ListItem items[]
+	MenuItem menuItems[]
 	
 	Color borderColor = new Color(190, 190, 200, 255)
 	
@@ -33,26 +27,26 @@ component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Outpu
 		c.drawRect(new Rect2D(xPosition, yPosition, width, height, new Color(170, 178, 170, 255)))
 		
 		int ryPos = yPosition
-		for (int i = 0; i < items.arrayLength; i++)
+		for (int i = 0; i < menuItems.arrayLength; i++)
 			{
 			if (i == hoverIndex)
 				{
 				c.drawRect(new Rect2D(xPosition, ryPos, width, FONT_HEIGHT + ITEM_SEP, new Color(180, 188, 180, 255)))
 				}
 			
-			c.drawText(new Point2D(xPosition+PAD_LEFT, ryPos, new Color(0, 0, 0, 255)), labelFont, items[i].string)
+			c.drawText(new Point2D(xPosition+PAD_LEFT, ryPos, new Color(0, 0, 0, 255)), labelFont, menuItems[i].name)
 			ryPos += FONT_HEIGHT + ITEM_SEP
 			}
 		
 		c.drawRectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
 		}
 	
-	void ContextMenu:addItem(char name[], int keyCode, byte keyState)
+	void ContextMenu:addItem(store MenuItem item)
 		{
-		items = new ListItem[](items, new ListItem(name, keyCode, keyState))
+		menuItems = new MenuItem[](menuItems, item)
 		height += FONT_HEIGHT + ITEM_SEP
 		
-		int textWidth = labelFont.getTextWidth(name)
+		int textWidth = labelFont.getTextWidth(item.name)
 		
 		if ((textWidth + PAD_LEFT + PAD_RIGHT) > width)
 			{
@@ -60,24 +54,26 @@ component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Outpu
 			}
 		}
 	
-	void ContextMenu:remItem(char name[])
+	void ContextMenu:remItem(MenuItem item)
 		{
 		
 		}
 	
-	bool ContextMenu:keyPress(int keyCode, byte keyState)
+	void ContextMenu:setItems(store MenuItem items[])
 		{
+		menuItems = items
+		
 		for (int i = 0; i < items.arrayLength; i++)
 			{
-			if (items[i].keyCode == keyCode && items[i].keyState == keyState)
+			int textWidth = labelFont.getTextWidth(items[i].name)
+			
+			if ((textWidth + PAD_LEFT + PAD_RIGHT) > width)
 				{
-				emitevent menuClick(new MenuItem(items[i].string))
-				
-				return true
+				width = textWidth + PAD_LEFT + PAD_RIGHT
 				}
 			}
 		
-		return false
+		height = (FONT_HEIGHT + ITEM_SEP) * items.arrayLength
 		}
 	
 	void ContextMenu:setPosition(int x, int y)
@@ -91,11 +87,11 @@ component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Outpu
 		if (button == MouseButtons.BUTTON_LEFT)
 			{
 			int ryPos = 0
-			for (int i = 0; i < items.arrayLength; i++)
+			for (int i = 0; i < menuItems.arrayLength; i++)
 				{
 				if (y > ryPos && y < ryPos + FONT_HEIGHT)
 					{
-					emitevent menuClick(new MenuItem(items[i].string))
+					emitevent menuClick(menuItems[i])
 					
 					break
 					}
@@ -108,6 +104,11 @@ component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Outpu
 	void ContextMenu:postRepaint()
 		{
 		emitevent repaint()
+		}
+	
+	void ContextMenu:setFocus()
+		{
+		emitevent requestFocus()
 		}
 	
 	Rect ContextMenu:getBounds()
@@ -129,7 +130,7 @@ component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Outpu
 		{
 		int ryPos = 0
 		
-		for (int i = 0; i < items.arrayLength; i++)
+		for (int i = 0; i < menuItems.arrayLength; i++)
 			{
 			if (y > ryPos && y < ryPos + FONT_HEIGHT)
 				{

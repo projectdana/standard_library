@@ -602,10 +602,34 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 						
 						for (int j = 0; j < td.constants.arrayLength; j++)
 							{
+							char desc[] = null
+							
+							if (td.constants[j].doc_description != null)
+								{
+								JSONElement doc = parser.parseDocument(td.constants[j].doc_description)
+								if (parser.getValue(doc, "@description") != null)
+									desc = parser.getValue(doc, "@description").value
+								}
+							
+							/*
+							if (isDeprecated(td.constants[j].doc_description))
+								fd.write("<div class = \"doc_constant_desc_deprecated\">")
+								else
+								fd.write("<div class = \"doc_constant_desc\">")
+							*/
 							fd.write("<div class = \"doc_const_list_item\">")
+							fd.write("<span class = \"doc_data_field_entry\">")
+							
 							fd.write(formatType(sf, td.constants[j].type))
 							fd.write(" ")
 							fd.write(td.constants[j].displayName)
+							fd.write("</span>")
+							
+							if (desc != null)
+								{
+								fd.write(" <span class = \"doc_data_field_desc\">$desc</span>")
+								}
+							
 							fd.write("</div>")
 							}
 						fd.write("</div>")
@@ -621,10 +645,27 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 						
 						for (int j = 0; j < td.fields.arrayLength; j++)
 							{
+							char desc[] = null
+							
+							if (td.fields[j].doc_description != null)
+								{
+								JSONElement doc = parser.parseDocument(td.fields[j].doc_description)
+								if (parser.getValue(doc, "@description") != null)
+									desc = parser.getValue(doc, "@description").value
+								}
+							
 							fd.write("<div class = \"doc_function_list_item\">")
+							fd.write("<span class = \"doc_data_field_entry\">")
 							fd.write(formatType(sf, td.fields[j].type))
 							fd.write(" ")
 							fd.write(td.fields[j].displayName)
+							fd.write("</span>")
+							
+							if (desc != null)
+								{
+								fd.write(" <span class = \"doc_data_field_desc\">$desc</span>")
+								}
+							
 							fd.write("</div>")
 							}
 						fd.write("</div>")

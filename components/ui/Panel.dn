@@ -34,10 +34,9 @@ component provides Panel requires io.Output out {
 
 	bool backgroundSet
 	Color backgroundColor = new Color(190, 190, 200, 255)
-
+	
+	HotKey focusHotKeys[]
 	KeyEventObject keyboardFocus
-
-	GraphicsObject contextItem
 
 	eventsink Events(EventData ed)
 		{
@@ -54,32 +53,37 @@ component provides Panel requires io.Output out {
 			changeFocusTo(ed.source)
 			emitevent requestFocus()
 			}
-			else if (ed.type == ClickableObject.[contextItemOn])
+			else if (ed.type == ClickableObject.[contextMenuOn])
 			{
 			ClickableObject co = ed.source
-			contextItem = co.getContextItem()
-			emitevent contextItemOn()
+			ContextMenuSpec spec = ed.details
+			ClickableObject owner = spec.owner
+			if (owner == null) owner = co
+			emitevent contextMenuOn(new ContextMenuSpec(spec.xAnchor + co.getPosition().x, spec.yAnchor + co.getPosition().y, spec.items, owner))
 			}
-			else if (ed.type == ClickableObject.[contextItemOff])
+			else if (ed.type == ClickableObject.[contextMenuOff])
 			{
-			emitevent contextItemOff()
-			contextItem = null
+			emitevent contextMenuOff()
 			}
 		}
 
 	Panel:Panel()
 		{
 		}
-
+	
 	void Panel:setFocus()
 		{
 		emitevent requestFocus()
 		}
-
-	void Panel:recvFocus()
+	
+	HotKey[] Panel:recvFocus()
 		{
 		if (keyboardFocus != null)
-			keyboardFocus.recvFocus()
+			{
+			return keyboardFocus.recvFocus()
+			}
+		
+		return null
 		}
 
 	void Panel:loseFocus()
@@ -266,14 +270,20 @@ component provides Panel requires io.Output out {
 		if (keyboardFocus !== ko)
 			{
 			if (keyboardFocus != null) keyboardFocus.loseFocus()
-			ko.recvFocus()
 			}
+
+		focusHotKeys = ko.recvFocus()
 
 		keyboardFocus = ko
 		}
 
 	void Panel:click(int x, int y, int button)
 		{
+		}
+	
+	void Panel:hotKeyClick(HotKey h)
+		{
+		if (keyboardFocus != null) keyboardFocus.hotKeyClick(h)
 		}
 	
 	void clickOn(int x, int y, int button)
@@ -371,24 +381,19 @@ component provides Panel requires io.Output out {
 			}
 		}
 
-	GraphicsObject Panel:getContextItem()
-		{
-		return contextItem
-		}
-
-	void Panel:keyDown(int keyID)
+	void Panel:keyDown(int keyCode)
 		{
 		if (keyboardFocus != null)
 			{
-			keyboardFocus.keyDown(keyID)
+			keyboardFocus.keyDown(keyCode)
 			}
 		}
 
-	void Panel:keyUp(int keyID)
+	void Panel:keyUp(int keyCode)
 		{
 		if (keyboardFocus != null)
 			{
-			keyboardFocus.keyUp(keyID)
+			keyboardFocus.keyUp(keyCode)
 			}
 		}
 
