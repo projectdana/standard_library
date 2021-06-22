@@ -1,0 +1,121 @@
+/*
+ {"description" : "Unicode string encoding support (UTF-8 by default). Unicode formats use multi-byte character encoding of various lengths per character."
+	}
+*/
+
+interface StringUTF {
+	
+	/*
+	 {"@description" : "Construct a new UTF-encoded string, from raw encoded data."
+		}
+	*/
+	StringUTF(char input[])
+	
+	/*
+	 {"@description" : "Get the character at the given index.",
+	 	"i" : "The index into the string.",
+		"@return" : "The encoded character, which may be more than one byte."
+		}
+	*/
+	char[] charAt(int i)
+	
+	/*
+	 {"@description" : "Set the character at the given index.",
+	 	"i" : "The index into the string.",
+		"ch" : "The encoded character, which may be more than one byte."
+		}
+	*/
+	void setCharAt(int i, char ch[])
+	
+	/*
+	 {"@description" : "Get the unicode codepoint of the given encoded raw character bytes.",
+	 	"c" : "The encoded character bytes.",
+		"@return" : "The unicode codepoint."
+		}
+	*/
+	int4 charCode(char c[])
+	
+	/*
+	 {"@description" : "Get the encoded character bytes for the given unicode codepoint.",
+	 	"c" : "The unicode codepoint.",
+		"@return" : "The encoded character bytes."
+		}
+	*/
+	char[] codeChar(int4 c)
+	
+	/*
+	 {"@description" : "Get the length of the unicode string, in unicode characters."
+		}
+	*/
+	int length()
+	
+	/*
+	 {"@description" : "Get a sub-string, with the start and length specified in unicode characters.",
+		"@return" : "The raw encoded character bytes of the sub-string."
+		}
+	*/
+	char[] subString(int start, int length)
+	
+	/*
+	 {"@description" : "Replace a region of the string with a different string (which can be a different length.",
+		"start" : "The starting character index of the region to replace (in unicode characters).",
+		"length" : "The length of the region to replace (in unicode characters).",
+		"with" : "The raw encoded characters to use as the replacement."
+		}
+	*/
+	void replace(int start, int length, char with[])
+	
+	/*
+	 {"@description" : "Delete a region of the string.",
+		"start" : "The starting character index of the region to replace (in unicode characters).",
+		"length" : "The length of the region to replace (in unicode characters)."
+		}
+	*/
+	void delete(int start, int length)
+	
+	/*
+	 {"@description" : "Insert a string into the existing string.",
+		"index" : "The location index at which to insert the string (indexes in unicode characters).",
+		"txt" : "The raw encoded characters to insert."
+		}
+	*/
+	void insert(int index, char txt[])
+	
+	/*
+	 {"@description" : "Append additional text to the end of the string.",
+		"txt" : "The raw encoded characters to append."
+		}
+	*/
+	void append(char txt[])
+	
+	/*
+	 {"@description" : "Get the raw encoded bytes of the string, usually used to output the string to a file or console."
+		}
+	*/
+	char[] getRaw()
+	
+	/*
+	 {"@description" : "Get the raw encoded byte index of the given unicode-indexed character."
+		}
+	*/
+	int rawIndex(int charIndex)
+	
+	/*
+	 {"@description" : "Get the unicode-indexed character index of the given raw encoded byte index."
+		}
+	*/
+	int charIndex(int rawIndex)
+	
+	/*
+	 {"@description" : "Get the string as an array of unicode codepoints."
+		}
+	*/
+	int4[] getCodepoints()
+	
+	/*
+	 {"@description" : "Set the string's value from an array of unicode codepoints."
+		}
+	*/
+	void setCodepoints(int4 points[])
+	
+	}

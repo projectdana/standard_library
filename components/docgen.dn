@@ -4,6 +4,7 @@ data PrimaryType{
 	}
 
 const char OUTPUT_DIR[] = "_docs"
+const bool SHOW_WARNINGS = true
 
 component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo, composition.Search csearch, composition.ObjectWriter, data.query.Search dsearch {
 	
@@ -373,6 +374,10 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 									if (parser.getValue(doc, "@description") != null)
 										desc = parser.getValue(doc, "@description").value
 									}
+									else
+									{
+									if (SHOW_WARNINGS) out.println("[warning] element $(id.name).$(id.constants[j].name) has no documentation")
+									}
 								
 								if (isDeprecated(id.constants[j].doc_description))
 									fd.write("<div class = \"doc_constant_desc_deprecated\">")
@@ -409,6 +414,10 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 									if (parser.getValue(doc, "@description") != null)
 										desc = parser.getValue(doc, "@description").value
 									}
+									else
+									{
+									if (SHOW_WARNINGS) out.println("[warning] element $(id.name).$(id.transferFields[j].name) has no documentation")
+									}
 								
 								fd.write("<div class = \"doc_transfer_field\">")
 								fd.write("<span class = \"doc_function_description_param_name\">$(id.transferFields[j].name)</span> ")
@@ -441,6 +450,10 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 									JSONElement doc = parser.parseDocument(id.eventSources[j].doc_description)
 									if (parser.getValue(doc, "@description") != null)
 										desc = parser.getValue(doc, "@description").value
+									}
+									else
+									{
+									if (SHOW_WARNINGS) out.println("[warning] element $(id.name).$(id.eventSources[j].name) has no documentation")
 									}
 								
 								fd.write("<div class = \"doc_event_source\">")
@@ -477,6 +490,10 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 										fd.write(parser.getValue(doc, "@description").value)
 										fd.write("</div>")
 										}
+									}
+									else
+									{
+									if (SHOW_WARNINGS) out.println("[warning] element $(id.name).$(id.functions[j].name) has no documentation")
 									}
 								
 								//description of each parameter
@@ -629,6 +646,10 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 								{
 								fd.write(" <span class = \"doc_data_field_desc\">$desc</span>")
 								}
+								else
+								{
+								if (SHOW_WARNINGS) out.println("[warning] element $(td.name).$(td.constants[j].displayName) has no documentation")
+								}
 							
 							fd.write("</div>")
 							}
@@ -664,6 +685,10 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 							if (desc != null)
 								{
 								fd.write(" <span class = \"doc_data_field_desc\">$desc</span>")
+								}
+								else
+								{
+								if (SHOW_WARNINGS) out.println("[warning] element $(td.name).$(td.fields[j].displayName) has no documentation")
 								}
 							
 							fd.write("</div>")

@@ -9,11 +9,11 @@ const int CURSOR_WIDTH = 1
 const byte CONTEXT_MENU = 0
 const byte CONTEXT_HINT = 1
 
-component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, os.SystemInfo sysInfo, os.Clipboard clipboard, locale.KeyMapping keyMapping {
+component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, os.SystemInfo sysInfo, os.Clipboard clipboard, locale.KeyMapping keyMapping, encoding.StringUTF {
 	
 	bool passwordMask
 	
-	char currentText[]
+	StringUTF currentText
 	char maskedText[]
 	Font textFont
 	
@@ -76,6 +76,8 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		hintMenu = new ContextMenuSpec()
 		
 		height = textFont.getFontMetrics().height + (TEXT_BORDER_V*2)
+		
+		currentText = new StringUTF("")
 		}
 	
 	void TextField:setBackground(Color c)
@@ -131,16 +133,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			s = cursorPosition
 			}
 		
-		char result[] = new char[e-s]
-		
-		int j = 0
-		for (int i = s; i < e; i++)
-			{
-			result[j] = currentText[i]
-			j ++
-			}
-		
-		return result
+		return currentText.subString(s, e-s)
 		}
 	
 	char[] getMask(int len)
@@ -157,20 +150,9 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	
 	void deleteText(int s, int e)
 		{
-		char newText[] = new char[currentText.arrayLength - (e - s)]
+		currentText.delete(s, e-s)
 		
-		int j = 0
-		for (int i = 0; i < currentText.arrayLength; i++)
-			{
-			if (i < s || i >= e)
-				{
-				newText[j] = currentText[i]
-				j ++
-				}
-			}
-		
-		currentText = newText
-		maskedText = getMask(currentText.arrayLength)
+		maskedText = getMask(currentText.length())
 		}
 	
 	void deleteSelection()
@@ -198,25 +180,22 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	
 	void insertText(char text[])
 		{
-		char ntext[]
+		int oLen = currentText.length()
 		
-		if (cursorPosition == currentText.arrayLength)
+		if (cursorPosition == currentText.length())
 			{
-			ntext = new char[](currentText, text)
+			currentText.append(text)
 			}
 			else
 			{
-			for (int i = 0; i < currentText.arrayLength; i++)
-				{
-				if (i == cursorPosition) ntext = new char[](ntext, text)
-				ntext = new char[](ntext, currentText[i])
-				}
+			currentText.insert(cursorPosition, text)
 			}
 		
-		currentText = ntext
-		maskedText = getMask(currentText.arrayLength)
+		int nLen = currentText.length()
 		
-		cursorPosition += text.arrayLength
+		maskedText = getMask(currentText.length())
+		
+		cursorPosition += (nLen - oLen)
 		selectStartPos = cursorPosition
 		
 		emitevent textChanged()
@@ -231,8 +210,6 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		
 		if (ch != null)
 			{
-			char ntext[]
-			
 			if (selectStartPos != cursorPosition)
 				{
 				deleteSelection()
@@ -242,20 +219,15 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 					cursorPosition = selectStartPos
 				}
 			
-			if (cursorPosition == currentText.arrayLength)
+			if (cursorPosition == currentText.length())
 				{
-				ntext = new char[](currentText, ch)
+				currentText.append(ch)
 				}
 				else
 				{
-				for (int i = 0; i < currentText.arrayLength; i++)
-					{
-					if (i == cursorPosition) ntext = new char[](ntext, ch)
-					ntext = new char[](ntext, currentText[i])
-					}
+				currentText.insert(cursorPosition, ch)
 				}
 			
-			currentText = ntext //new char[](currentText, ch)
 			maskedText = new char[](maskedText, "*")
 			
 			cursorPosition ++
@@ -282,7 +254,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 				return
 				}
 			
-			if (kCode == KeyCode.ALT_LEFT)
+			if (kCode == KeyCode.ALT_LEFT || kCode == KeyCode.ALT_RIGHT)
 				{
 				keyState |= KeyState.KEY_ALT
 				return
@@ -296,9 +268,9 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			
 			if (kCode == KeyCode.DELETE)
 				{
-				if (currentText.arrayLength > 0)
+				if (currentText.length() > 0)
 					{
-					if (cursorPosition == selectStartPos && cursorPosition < currentText.arrayLength)
+					if (cursorPosition == selectStartPos && cursorPosition < currentText.length())
 						{
 						selectStartPos = cursorPosition + 1
 						deleteSelection()
@@ -324,7 +296,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			
 			if (kCode == KeyCode.BACKSPACE)
 				{
-				if (currentText.arrayLength > 0)
+				if (currentText.length() > 0)
 					{
 					if (cursorPosition == selectStartPos && cursorPosition > 0)
 						{
@@ -371,7 +343,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			
 			if (kCode == KeyCode.ARROW_RIGHT)
 				{
-				if (cursorPosition < currentText.arrayLength)
+				if (cursorPosition < currentText.length())
 					{
 					cursorPosition ++
 					
@@ -384,7 +356,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			
 			if (kCode == KeyCode.END)
 				{
-				cursorPosition = currentText.arrayLength
+				cursorPosition = currentText.length()
 				
 				if (!shiftDown)
 					selectStartPos = cursorPosition
@@ -445,19 +417,19 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	int getCursorPos(int x)
 		{
 		char test[]
-		for (int i = 0; i < currentText.arrayLength; i++)
+		for (int i = 0; i < currentText.length(); i++)
 			{
 			if (passwordMask)
 				test = new char[](test, maskedText[i])
 				else
-				test = new char[](test, currentText[i])
+				test = currentText.subString(i, 1)
 			
 			int text_xp = textFont.getTextWidth(test)
 			
 			if (text_xp >= x) return i
 			}
 		
-		return currentText.arrayLength
+		return currentText.length()
 		}
 	
 	void TextField:click(int x, int y, int button)
@@ -515,7 +487,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			else if (item === selectAllMenu)
 			{
 			selectStartPos = 0
-			cursorPosition = currentText.arrayLength
+			cursorPosition = currentText.length()
 			
 			updateCursorPosition()
 			
@@ -532,7 +504,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			else
 			{
 			setText(item.name)
-			cursorPosition = currentText.arrayLength
+			cursorPosition = currentText.length()
 			selectStartPos = cursorPosition
 			}
 		}
@@ -561,13 +533,13 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 
 	char[] TextField:getText()
 		{
-		return currentText
+		return currentText.getRaw()
 		}
 	
 	
 	void TextField:setText(char text[])
 		{
-		currentText = text
+		currentText = new StringUTF(text)
 		char k[] = clone text
 		for (int i = 0; i < k.arrayLength; i++)
 			{
@@ -590,7 +562,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		if (passwordMask)
 			mt =[] maskedText
 			else
-			mt =[] currentText
+			mt = currentText.subString(0, pos)
 		
 		return textFont.getTextWidth(mt)
 		}
@@ -642,7 +614,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			}
 		
 		//test if the total text width has become less than the scroll width (i.e., there's empty space and hScroll is not 0)
-		int qfx = getX(currentText.arrayLength)
+		int qfx = getX(currentText.length())
 		
 		if ((hScroll != 0) && (qfx + CURSOR_WIDTH < (hScroll + (width-(TEXT_BORDER_H*2)))))
 			{
@@ -666,7 +638,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		if (passwordMask)
 			c.drawText(new Point2D(0, TEXT_BORDER_V, textColor), textFont, maskedText)
 			else
-			c.drawText(new Point2D(0, TEXT_BORDER_V, textColor), textFont, currentText)
+			c.drawText(new Point2D(0, TEXT_BORDER_V, textColor), textFont, currentText.getRaw())
 		
 		if (focus)
 			{

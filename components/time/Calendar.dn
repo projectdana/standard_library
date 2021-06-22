@@ -2,6 +2,7 @@ uses time.DateTime
 
 interface CalendarLib {
 	void getLocalTime(DateTime d)
+	int getMS()
 	}
 
 component provides time.Calendar requires native CalendarLib lib
@@ -13,4 +14,10 @@ component provides time.Calendar requires native CalendarLib lib
 		
 		return t
 		}
+	
+	int Calendar:getMS()
+		{
+		return lib.getMS()
+		}
+	
 	}

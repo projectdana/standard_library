@@ -9,4 +9,9 @@ interface Calendar{
 	{ "@description" : "Returns the current date and time." }
 	*/
 	DateTime getTime()
+	
+	/*
+	{ "@description" : "Get the number of milliseconds that have ellapsed since a fixed point in time (e.g. system start). This function can be used to quickly calculate how much time has passed between two points. Note that a call to getMS() may return a smaller number than a previous call, if the millisecond time value has reached the maximum integer value and wrapped around zero. Implementations should check for this condition and perform an appropriate calculation." }
+	*/
+	int getMS()
 	}
