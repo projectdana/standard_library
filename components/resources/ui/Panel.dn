@@ -15,16 +15,25 @@ interface Panel extends KeyEventObject {
 	transfer int width
 	transfer int height
 	
+	/* {"@description" : "Instantiate a new panel."} */
 	Panel()
 	
+	/* {"@description" : "Set the background of the panel."} */
 	void setBackground(store Color c)
+	/* {"@description" : "Get the current background of the panel."} */
 	Color getBackground()
 	
+	/* {"@description" : "Add a graphical object to the panel."} */
 	void addObject(store GraphicsObject go)
+	/* {"@description" : "Remove a graphical object from the panel."} */
 	void remObject(GraphicsObject go)
+	/* {"@description" : "Remove all graphical objects from the panel."} */
 	void clearObjects()
+	/* {"@description" : "Get the list of graphical objects on the panel."} */
 	GraphicsObjectItem[] getObjects()
 	
+	/* {"@description" : "Set the size of this panel. Any graphical objects which are outside of this size will be clipped."} */
 	void setSize(int w, int h)
+	/* {"@description" : "Get the size of this panel."} */
 	WH getSize()
 	}

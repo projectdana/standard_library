@@ -6,27 +6,19 @@ uses data.String
 
 interface RL {
 	
-	//parameters for the algorithm
-	
-	/*
-	{ "@description" : "Set the exploration penalty of the algorithm, to balance the tradeoff of explore/exploit. The default is 1.0, indicating no penalty, with higher values increasing the penalty.",
-		"penalty" : "Penalty to apply."}
-	*/
-	
+	/* { "@description" : "Set the exploration penalty of the algorithm, to balance the tradeoff of explore/exploit. The default is 1.0, indicating no penalty, with higher values increasing the penalty."} */
 	void setExplorationPenalty(dec penalty)
 	
-	//the list of available actions
-	
+	/* { "@description" : "Set the list of available actions."} */
 	void setActions(store String actions[])
 	
-	//the state machine: getAction, setReward, getAction, etc.
-	
+	/* { "@description" : "Get the next action index requested by the learning algorithm."} */
 	int getAction()
 	
+	/* { "@description" : "Set the reward gained for taking a given action. If no action parameter is provided, the algorithm assumes that this reward relates to the last action returned by getAction()."} */
 	void setReward(dec reward, opt int action)
 	
-	//information functions
-	
+	/* { "@description" : "Get the most highly-rewarded n actions."} */
 	int[] getTopActions(int n)
 	
 	}

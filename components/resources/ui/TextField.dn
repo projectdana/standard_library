@@ -8,44 +8,38 @@ uses data.String
 
 interface TextField extends KeyEventObject {
 	
-	/*
-	 {"@description" : "An event which reports whenever the content of the text field is changed (which could be by entering new text, cutting or pasting, deleting text, etc.)."}
-	*/
+	/* {"@description" : "An event which reports whenever the content of the text field is changed (which could be by entering new text, cutting or pasting, deleting text, etc.)."} */
 	event textChanged()
 	
 	TextField()
 	
-	/*
-	 {"@description" : "Get the current text in the field."}
-	*/
+	/* {"@description" : "Get the current text in the field."} */
 	char[] getText()
 	
-	/*
-	 {"@description" : "Set the current text in the field."}
-	*/
+	/* {"@description" : "Set the current text in the field."} */
 	void setText(char text[])
 	
-	/*
-	 {"@description" : "Set the width of the field in pixels (note that its height is calculated automatically from the font)."}
-	*/
+	/* {"@description" : "Set the width of the field in pixels (note that its height is calculated automatically from the font)."} */
 	void setWidth(int w)
 	
-	/*
-	 {"@description" : "Set whether or not text is obscured by password mask characters (default is false)."}
-	*/
+	/* {"@description" : "Set whether or not text is obscured by password mask characters (default is false)."} */
 	void setPasswordMask(bool t)
 	
-	/*
-	 {"@description" : "Set a clickable object (such as a button) to send a 'click' notification to when the user presses the return key."}
-	*/
+	/* {"@description" : "Set a clickable object (such as a button) to send a 'click' notification to when the user presses the return key."} */
 	void setClickTarget(store ClickableObject o)
 	
+	/* {"@description" : "Set the background of the text field."} */
 	void setBackground(store Color c)
+	/* {"@description" : "Set the border of the text field."} */
 	void setBorder(store Color c)
+	/* {"@description" : "Set the text highlight style of the text field."} */
 	void setHighlight(store Color c)
+	/* {"@description" : "Set the text color of the text field."} */
 	void setTextColor(store Color c)
 	
+	/* {"@description" : "Set the font used in the text field."} */
 	void setFont(store Font f)
 	
+	/* {"@description" : "Set a list of hint items to be displayed by the text field (which the user can click on, to auto-fill the text field)."} */
 	void setHintItems(store String items[])
 	}

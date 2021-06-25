@@ -1,5 +1,9 @@
+/* {"description" : "Transfer state type for hash table content."} */
+
 data HashTableItem{
+	/* {"@description" : "The key associated with this hash table item."} */
 	char key[]
+	/* {"@description" : "The value associated with this hash table item."} */
 	Data value
 	}
 

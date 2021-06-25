@@ -1,20 +1,22 @@
+/* {"description" : "This data type represents and RSA key pair."} */
 data RSAKey {
 	
+	/* {"@description" : "Possible value for 'type', indicating that this key is in the PKCS_PEM format."} */
 	const byte PKCS_PEM = 0x1
+	/* {"@description" : "Possible value for 'type', indicating that this key is in the RSA_PEM format."} */
 	const byte RSA_PEM = 0x2
+	/* {"@description" : "Possible value for 'type', indicating that this key is in the ASN1_DER format."} */
 	const byte ASN1_DER = 0x4
 	
+	/* {"@description" : "The characters which encode the public key of the key pair. The public key can be shared with others."} */
 	char public[]
+	/* {"@description" : "The characters which encode the private key of the key pair. The private key should never be shared with others."} */
 	char private[]
+	/* {"@description" : "The encoding type of the key pair."} */
 	byte type
 	}
 
-/*
-{
- "description" : "Key generator for RSA key pairs."
-}
-*/
-
+/* {"description" : "Key generator for RSA key pairs."} */
 interface RSA_KeyGen {
 	
 	/*

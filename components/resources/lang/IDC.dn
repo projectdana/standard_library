@@ -1,18 +1,18 @@
-/*
- {"description" : "This type represents a component's interface."}
-*/
-
+/* {"description" : "This type describes a component's interface."} */
 data InterfaceSpec {
+	/* {"@description" : "The name used to identify the interface."} */
 	char alias[]
+	/* {"@description" : "The package in which the interface type was originally defined."} */
 	char package[]
+	/* {"@description" : "The semantic variant of this interface (optional)."} */
 	char variant[]
+	/* {"@description" : "The type of this interface."} */
 	Type type
 	}
 
 /*
  {"description" : "This type represents a loaded component."}
 */
-
 interface IDC {
 	
 	/*

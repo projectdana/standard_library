@@ -1,10 +1,10 @@
-/*
- {"description" : "Instances of this data type are delivered to event sinks, which must declare a single parameter of this type."
-	}
-*/
+/* {"description" : "Instances of this data type are delivered to event sinks. Each event sink must declare a single parameter of this type."} */
 
 data EventData {
+	/* {"@description" : "The object from which this event was emitted."} */
 	Object source
+	/* {"@description" : "The event type, represented as a type field of the interface from the object which emitted the event."} */
 	TypeField type
+	/* {"@description" : "A data instance delivered by the object which emitted the event (optional, check the eventsource definition on the interface)."} */
 	Data details
 	}

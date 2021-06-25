@@ -1,3 +1,7 @@
+/*
+{"description" : "This type is a container for constants which describe values for hardware-independent key codes. When receiving key presses in a graphical application you will need to use a keyboard map function to convert hardware key codes into abstract ones from this type."}
+*/
+
 data KeyCode {
 	
 	const byte UNKNOWN = 0

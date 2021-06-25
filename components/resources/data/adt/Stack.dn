@@ -33,7 +33,9 @@ interface Stack{
 	*/
 	void update(Data item, store Data newVersion)
 	
-	//information
+	/* {"@description" : "Get the number of items in the stack."} */
 	int getLength()
+	
+	/* {"@description" : "Get all items currently in the stack."} */
 	Data[] getContents()
 	}

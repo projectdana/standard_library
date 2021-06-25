@@ -3,12 +3,16 @@
 */
 
 data FunctionCall {
+	/* {"@description" : "The name of this function call."} */
 	char name[]
+	/* {"@description" : "The index of this function header in its interface type."} */
 	int index
 	
+	/* {"@description" : "The type of this function header (including its return type and parameter types)."} */
 	Type type
-	
+	/* {"@description" : "The parameters that were passed to this function call."} */
 	Data params
+	/* {"@description" : "Bit mask indicating which parameters were given a value by the caller (where optional parameters may not have been given a value)."} */
 	int pSetMask
 	}
 

@@ -1,8 +1,6 @@
-/*
-* String data type
-* This is an utility data type that is used by other interfaces, for example when an array of strings needs to be input to or returned from a function.
-*/
+/* {"description" : "This is a container data type for strings, used for example when an array of strings needs to be input to or returned from a function."} */
 
 data String{
+	/* {"@description" : "The string value."} */
 	char string[]
 	}

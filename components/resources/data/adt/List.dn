@@ -3,10 +3,9 @@
 */
 
 interface List{
-	/*
-	 {"@description" : "The contents of the list."}
-	*/
+	/* {"@description" : "The contents of the list."} */
 	transfer Data content[]
+	/* {"@description" : "The current iterator index."} */
 	transfer int iteratorIndex
 	
 	/*

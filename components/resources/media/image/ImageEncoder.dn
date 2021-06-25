@@ -1,36 +1,22 @@
-/*
- {"description" : "This API supports encoding of a general pixel map into a specific image format. Use one of the semantic variants of this interface to select an image format."
-	}
-*/
+/* {"description" : "This API supports encoding of a general pixel map into a specific image format. Use one of the semantic variants of this interface to select an image format." } */
 
 uses media.PixelMap
 uses io.File
 
 interface ImageEncoder {
 	
+	/* {"@description" : "Instantiate an image encoder." } */
 	ImageEncoder()
 	
-	/*
-	 {"@description" : "Load an image from a given file object."
-		}
-	*/
+	/* {"@description" : "Load an image from a given file object." } */
 	bool loadImage(File fd)
 	
-	/*
-	 {"@description" : "Save the pixel map help by this object to a given file object."
-		}
-	*/
+	/* {"@description" : "Save the pixel map help by this object to a given file object." } */
 	bool saveImage(File fd)
 	
-	/*
-	 {"@description" : "Get the pixel map held by this object."
-		}
-	*/
+	/* {"@description" : "Get the pixel map held by this object." } */
 	PixelMap getPixels()
 	
-	/*
-	 {"@description" : "Set the pixel map held by this object."
-		}
-	*/
+	/* {"@description" : "Set the pixel map held by this object." } */
 	void setPixels(store PixelMap pm)
 	}

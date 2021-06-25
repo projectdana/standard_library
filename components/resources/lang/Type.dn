@@ -1,27 +1,48 @@
+/* {"description" : "A field of a type, for object types, data types, or array types."} */
 data Field {
-const int NOT_FOUND = INT_MAX
+	/* {"@description" : "The type of this field."} */
 	Type type
+	/* {"@description" : "The name of this field."} */
 	char name[]
-const int FLAG_RECURSION 	= 0x1
-const int FLAG_STORE		= 0x2
-const int FLAG_OPT			= 0x4
+	/* {"@description" : "Possible value for 'flags', indicating that this field refers to a type instance earlier in the graph."} */
+	const int FLAG_RECURSION 	= 0x1
+	/* {"@description" : "Possible value for 'flags', for fields that represent a function parameter, indicating that this parameter is declared as 'store'."} */
+	const int FLAG_STORE		= 0x2
+	/* {"@description" : "Possible value for 'flags', for fields that represent a function parameter, indicating that this parameter is declared as optional."} */
+	const int FLAG_OPT			= 0x4
+	/* {"@description" : "Additional flags which describe this type field."} */
 	byte flags
 	}
 
+/* {"description" : "Data type reprenting the structure of a type, for example as returned by typeof() or various other reflective functions."} */
 data Type {
+/* {"@description" : "Possible value for 'class', indicating that this type element is an integer."} */
 const byte INTEGER		= 1
+/* {"@description" : "Possible value for 'class', indicating that this type element is a decimal."} */
 const byte DECIMAL		= 2
+/* {"@description" : "Possible value for 'class', indicating that this type element is a data type."} */
 const byte DATA			= 3
+/* {"@description" : "Possible value for 'class', indicating that this type element is an object type."} */
 const byte OBJECT		= 4
+/* {"@description" : "Possible value for 'class', indicating that this type element is an array type."} */
 const byte ARRAY		= 5
+	/* {"@description" : "The class of this type, such as an integer or decimal."} */
 	byte class
 
+/* {"@description" : "Possible value for 'flags', potentially set for an integer of size 1, indicating that this type is a boolean."} */
 const byte F_BOOL		= 0x1
+/* {"@description" : "Possible value for 'flags', potentially set for an integer of size 1, indicating that this type is a character."} */
 const byte F_CHAR		= 0x2
+/* {"@description" : "Possible value for 'flags', potentially set for a type type, indicating that this describes a function header."} */
 const byte F_FUNCTION	= 0x1
+/* {"@description" : "Possible value for 'flags', potentially set for a type type, indicating that this describes an event source."} */
 const byte F_EVENT		= 0x2
+	/* {"@description" : "Additional flags describing a type, such as boolean or character."} */
 	byte flags
 
+	/* {"@description" : "The size of this type; this value is meaningful for integer or decimal types where it indicates the number of bytes of those types. For an array type, this field is non-zero if the array has a fixed size -- and if so indicates the number of array cells."} */
 	int size
+	
+	/* {"@description" : "The sub-fields of this type. This will be used for a data type, object type, or array type."} */
 	Field fields[]
 	}

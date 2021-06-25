@@ -2,20 +2,31 @@ uses GraphicsObject
 uses Rect
 uses MouseButtons
 
+/* {"description" : "Data type describing an individual context menu item."} */
 data MenuItem {
+	/* {"@description" : "The text name of this menu item."} */
 	char name[]
+	/* {"@description" : "The hot key help displayed on the menu."} */
 	char hotkey[]
 	}
 
+/* {"description" : "Data type describing the items in a context menu, and the relative position at which to render that menu."} */
 data ContextMenuSpec {
+	/* {"@description" : "The x-position of the top-left of this context menu, relative to the graphics object which has requested the menu."} */
 	int xAnchor
+	/* {"@description" : "The y-position of the top-left of this context menu, relative to the graphics object which has requested the menu."} */
 	int yAnchor
+	/* {"@description" : "The list of menu items to display on the context menu."} */
 	MenuItem items[]
+	/* {"@description" : "The object to which the menu belongs (this does not need to be set by the originating object, it is set as appropriate by the windowing framework)."} */
 	ClickableObject owner
 	}
 
+/* {"description" : "Data type describing a hot key which is active when a graphics object has focus."} */
 data HotKey {
+	/* {"@description" : "The key modifier for the hot key, which is a bitwise-or of values from KeyState."} */
 	byte modifier
+	/* {"@description" : "The hardware-independent key code for this hot key, from os.KeyCode."} */
 	int keyCode
 	}
 
@@ -24,24 +35,33 @@ data HotKey {
 */
 interface ClickableObject extends GraphicsObject{
 	
+	/* {"@description" : "This application-level event is fired when a user clicks on this object."} */
 	event click()
 	
+	/* {"@description" : "This windowing event is intended for the windowing system only, and is fired when the object requests a context menu to be displayed."} */
 	event contextMenuOn(ContextMenuSpec menu)
+	/* {"@description" : "This windowing event is intended for the windowing system only, and is fired when the object requests a context menu to be hidden."} */
 	event contextMenuOff()
 	
+	/* {"@description" : "This windowing event is intended for the windowing system only, and is fired when the object requests focus."} */
 	event requestFocus()
 	
+	/* {"@description" : "Get the bounding rectangle for mouse click hit detection by the windowing system."} */
 	Rect getBounds()
+	/* {"@description" : "This function is called when the object receives a mouse click from the windowing system."} */
 	void click(int x, int y, int button)
 	
+	/* {"@description" : "This function is called by the windowing system when a context menu item is clicked on."} */
 	void contextClick(MenuItem item){}
 	
-	//called by the UI app, to make this object the focused one
+	/* {"@description" : "This function can be called by an application to set this object as the one with focus."} */
 	void setFocus()
 	
-	//called by the UI framework, to tell a button that is has gained focus
+	/* {"@description" : "This function is called by the windowing system when the object is being given focus. The function can return an array of hotkeys that will be tracked by the windowing system."} */
 	HotKey[] recvFocus(){return null}
+	/* {"@description" : "This function is called by the windowing system when the object is no longer given focus."} */
 	void loseFocus(){}
 	
+	/* {"@description" : "This function is called by the windowing system when a hot key returned by recvFocus() is pressed."} */
 	void hotKeyClick(HotKey k){}
 	}

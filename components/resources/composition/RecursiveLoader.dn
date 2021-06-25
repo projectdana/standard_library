@@ -3,21 +3,26 @@
 */
 
 interface RecursiveLoader{
-	/*
-	 {"@description" : "Load a component from a file into main memory, plus all of its needed support components (recursively)."}
-	*/
+	/* {"@description" : "Load a component from a file into main memory, plus all of its needed support components (recursively)."} */
 	LoadedComponents load(char path[])
 	
 	}
 
+/* {"description" : "This type represents a single loaded component."}	*/
 data LoadedComponent {
+	/* {"@description" : "The IDC of the loaded component."} */
 	IDC class
+	/* {"@description" : "The file system path from which this component was loaded."} */
 	char path[]
 	}
 
+/* {"description" : "This type represents a set of recursively loaded components, which started at mainComponent."}	*/
 data LoadedComponents {
+	/* {"@description" : "The main/origin component from a recursive load procedure."} */
 	IDC mainComponent
 	
+	/* {"@description" : "A text-based representation of the wiring graph between the components in loadedComponents."} */
 	char graph[]
+	/* {"@description" : "The set of loaded components."} */
 	LoadedComponent loadedComponents[]
 	}

@@ -260,6 +260,10 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 							fd.write(parser.getValue(doc, "description").value)
 							fd.write("</div>")
 							}
+							else
+							{
+							if (SHOW_WARNINGS) out.println("[warning] type $(id.name) has no summary documentation")
+							}
 						
 						//summary of the interface
 						// - constants
@@ -606,6 +610,10 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 						fd.write("<div class = \"doc_description\">")
 						fd.write(parser.getValue(doc, "description").value)
 						fd.write("</div>")
+						}
+						else
+						{
+						if (SHOW_WARNINGS) out.println("[warning] type $(td.name) has no summary documentation")
 						}
 					
 					//the list of fields as a summary (with hyperlinks to their descriptions)

@@ -1,14 +1,22 @@
 uses data.String
 
+/* {"description" : "Basic information about a compiled Dana component."} */
 data ObjectInfo{
+	/* {"@description" : "The size of the compiled code, in bytes."} */
 	int textSize
+	/* {"@description" : "How many info sections are in the compiled file."} */
 	int infoSectionCount
+	/* {"@description" : "How many relocations are needed for the compiled code after loading it into memory."} */
 	int relocationCount
 	}
 
+/* {"description" : "Details of an information section from a compiled Dana component file."} */
 data InfoSection{
+	/* {"@description" : "The type of this information section."} */
 	char sectionType[]
+	/* {"@description" : "The type of the content held in this information section."} */
 	char contentType[]
+	/* {"@description" : "The content held in this information section."} */
 	byte content[]
 	}
 

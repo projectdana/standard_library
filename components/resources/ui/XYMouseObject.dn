@@ -1,15 +1,19 @@
 /*
-* XYMouseListener interface
-* A callback interface for objects that want to be notified of detailed mouse events with x/y coordinates and a button type (see MouseButtons).
+{"description" : "This interface is implemented by graphical objects that want to be notified of detailed mouse events with x/y coordinates and a button type (see MouseButtons)."}
 */
 
 uses MouseButtons
 
 interface XYMouseObject extends ClickableObject {
+	/* {"@description" : "This function is called by the windowing system when a mouse button is pressed down over this object."} */
 	void mouseDown(int x, int y, int button){}
+	/* {"@description" : "This function is called by the windowing system when a mouse button is released over this object."} */
 	void mouseUp(int x, int y, int button){}
+	/* {"@description" : "This function is called by the windowing system when the mouse pointer is moved over this object."} */
 	void mouseMove(int x, int y){}
 	
+	/* {"@description" : "This function is called by the windowing system when the mouse pointer enters the bounding box of this object."} */
 	void mouseOver(){}
+	/* {"@description" : "This function is called by the windowing system when the mouse pointer exits the bounding box of this object."} */
 	void mouseOut(){}
 	}

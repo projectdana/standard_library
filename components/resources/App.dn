@@ -3,6 +3,7 @@
 */
 
 data AppParam{
+	/* {"@description" : "The text-based data delivered to a command-line parameter."} */
 	char string[]
 	}
 

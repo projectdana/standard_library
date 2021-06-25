@@ -1,7 +1,9 @@
 uses Track
 uses Format
 
+/* {"description" : "Data type used by audio events, to deliver which audio track object is being referred to."} */
 data TrackInfo {
+	/* {"@description" : "The audio track object."} */
 	Track track
 	}
 

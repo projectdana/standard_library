@@ -10,7 +10,7 @@ interface RandomInt{
 	void setSeed(int s)
 	
 	/*
-	 {"@description" : "Get a pseudo-random number between zero and 'top', exluding top itself."}
+	 {"@description" : "Get a pseudo-random number between zero and 'top', excluding top itself."}
 	*/
 	int get(int top)
 	}
