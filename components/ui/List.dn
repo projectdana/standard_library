@@ -2,20 +2,22 @@ data ListItem {
 	char label[]
 	}
 
+const int ITEM_HEIGHT = 20
+const int ITEM_GAP = 4
+
 component provides List requires ui.Font, io.Output out {
 
 	ListItem listItems[]
-	int nextItemY
 
 	char selectedItem[]
 	int selectedIndex
 	
 	int filterList[]
 
-	Color bgColor = new Color(170, 178, 190, 255)
+	Color bgColor = new Color(200, 200, 215, 255)
 
-	Color evenColor = new Color(150, 150, 170, 255)
-	Color selectedColor = new Color(200, 200, 190, 255)
+	Color itemColor = new Color(170, 170, 185, 255)
+	Color selectedColor = new Color(210, 210, 200, 255)
 
 	WH preferredSize = new WH()
 
@@ -32,9 +34,7 @@ component provides List requires ui.Font, io.Output out {
 		{
 		listItems = new ListItem[](listItems, new ListItem(item))
 
-		nextItemY += 25
-
-		preferredSize.height += 24
+		preferredSize.height += ITEM_HEIGHT + ITEM_GAP
 
 		postRepaint()
 		}
@@ -66,7 +66,7 @@ component provides List requires ui.Font, io.Output out {
 			
 			listItems = newList
 			
-			preferredSize.height -= 24
+			preferredSize.height -= (ITEM_HEIGHT+ITEM_GAP)
 			
 			postRepaint()
 			}
@@ -82,7 +82,6 @@ component provides List requires ui.Font, io.Output out {
 	void List:clear()
 		{
 		listItems = null
-		nextItemY = 0
 
 		postRepaint()
 		}
@@ -100,24 +99,24 @@ component provides List requires ui.Font, io.Output out {
 	
 	void List:paint(Canvas c)
 		{
-		c.pushSurface(new Rect(xPosition, yPosition, width, preferredSize.height), 0, 0, 255)
+		c.pushSurface(new Rect(xPosition, yPosition, width, preferredSize.height-ITEM_GAP), 0, 0, 255)
 
-		c.drawRect(new Rect2D(0, 0, width, preferredSize.height, bgColor))
+		c.drawRect(new Rect2D(0, 0, width, preferredSize.height-ITEM_GAP, bgColor))
 
-		nextItemY = 0
+		int nextItemY = 0
 		for (int i = 0; i < listItems.arrayLength; i++)
 			{
 			if (filterList == null || isIn(filterList, i))
 				{
-				Color nextColor = evenColor
+				Color nextColor = itemColor
 
 				if (selectedItem != null && i == selectedIndex)
 					nextColor = selectedColor
 
-				c.drawRect(new Rect2D(0, nextItemY, width, 20, nextColor))
+				c.drawRect(new Rect2D(0, nextItemY, width, ITEM_HEIGHT, nextColor))
 				c.drawText(new Point2D(10, nextItemY, new Color(0, 0, 0, 255)), textFont, listItems[i].label)
 
-				nextItemY += 24
+				nextItemY += (ITEM_HEIGHT+ITEM_GAP)
 				}
 			}
 
@@ -132,6 +131,20 @@ component provides List requires ui.Font, io.Output out {
 	int List:getSelectedIndex()
 		{
 		return selectedIndex
+		}
+	
+	void List:setSelectedIndex(int index)
+		{
+		if (index < listItems.arrayLength)
+			{
+			selectedIndex = index
+			selectedItem = listItems[index].label
+			postRepaint()
+			}
+			else
+			{
+			throw new Exception("index out of bounds")
+			}
 		}
 
 	Rect List:getBounds()
@@ -153,9 +166,16 @@ component provides List requires ui.Font, io.Output out {
 	WH List:getPreferredSize()
 		{
 		if (filterList == null)
+			{
 			return preferredSize
+			}
 			else
-			return new WH(preferredSize.width, 24 * filterList.arrayLength)
+			{
+			if (filterList.arrayLength > 0)
+				return new WH(preferredSize.width, (24 * filterList.arrayLength)-ITEM_GAP)
+				else
+				return new WH(preferredSize.width, 0)
+			}
 		}
 
 	void List:setWidth(int w)

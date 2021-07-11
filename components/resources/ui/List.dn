@@ -29,5 +29,8 @@ interface List extends ClickableObject {
 	char[] getSelectedItem()
 	/* {"@description" : "Get the index of the list item that has been selected."} */
 	int getSelectedIndex()
+	
+	/* {"@description" : "Set the index of the list item that shows as selected."} */
+	void setSelectedIndex(int index)
 
 	}

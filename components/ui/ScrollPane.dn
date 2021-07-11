@@ -12,7 +12,7 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 	
 	GraphicsObject content
 	
-	Color gapColor = new Color(100, 100, 100, 255)
+	Color gapColor = new Color(200, 200, 215, 255)
 	
 	bool showScrollV = true
 	ScrollBar scrollV

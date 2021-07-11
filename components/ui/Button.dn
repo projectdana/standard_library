@@ -6,6 +6,10 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 	Font labelFont
 	int width
 	
+	Color buttonColor = new Color(195, 195, 215, 255)
+	Color borderColor = new Color(157, 188, 220, 255)
+	Color textColor = new Color(0, 0, 0, 255)
+	
 	Button:Button(char myLabel[])
 		{
 		text = myLabel
@@ -28,8 +32,8 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 	
 	void Button:paint(Canvas c)
 		{
-		c.drawRect(new Rect2D(xPosition, yPosition, width, 20, new Color(157, 188, 220, 255)))
-		c.drawText(new Point2D(xPosition+TEXT_MARGIN, yPosition+1, new Color(0, 0, 0, 255)), labelFont, text)
+		c.drawRect(new Rect2D(xPosition, yPosition, width, 20, buttonColor))
+		c.drawText(new Point2D(xPosition+TEXT_MARGIN, yPosition+1, textColor), labelFont, text)
 		}
 	
 	void Button:click(int x, int y, int button)

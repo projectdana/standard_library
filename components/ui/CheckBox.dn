@@ -1,8 +1,8 @@
 const int TEXT_MARGIN = 3
 const int TEXT_PAD = 6
 
-const int CHECK_WIDTH = 20
-const int CHECK_HEIGHT = 20
+const int CHECK_WIDTH = 16
+const int CHECK_HEIGHT = 16
 
 component provides CheckBox requires ui.Font, os.SystemInfo sysInfo, io.Output out {
 	
@@ -10,6 +10,10 @@ component provides CheckBox requires ui.Font, os.SystemInfo sysInfo, io.Output o
 	Font labelFont
 	
 	int width
+	
+	Color background = new Color(185, 185, 200, 255)
+	Color checkColor = new Color(50, 50, 65, 255)
+	Color textColor = new Color(0, 0, 0, 255)
 	
 	CheckBox:CheckBox(char label[])
 		{
@@ -20,9 +24,9 @@ component provides CheckBox requires ui.Font, os.SystemInfo sysInfo, io.Output o
 	
 	void CheckBox:paint(Canvas c)
 		{
-		c.drawRect(new Rect2D(xPosition, yPosition, CHECK_WIDTH, CHECK_HEIGHT, new Color(170, 178, 170, 255)))
-		if (checked) c.drawRect(new Rect2D(xPosition+4, yPosition+4, CHECK_WIDTH-8, CHECK_HEIGHT-8, new Color(50, 50, 40, 255)))
-		c.drawText(new Point2D(xPosition+CHECK_WIDTH+TEXT_MARGIN, yPosition+1, new Color(0, 0, 0, 255)), labelFont, text)
+		c.drawRect(new Rect2D(xPosition, yPosition+2, CHECK_WIDTH, CHECK_HEIGHT, background))
+		if (checked) c.drawRect(new Rect2D(xPosition+3, yPosition+5, CHECK_WIDTH-6, CHECK_HEIGHT-6, checkColor))
+		c.drawText(new Point2D(xPosition+CHECK_WIDTH+TEXT_MARGIN, yPosition+1, textColor), labelFont, text)
 		}
 	
 	bool CheckBox:isChecked()

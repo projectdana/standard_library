@@ -10,11 +10,11 @@ component provides ScrollBar:h {
 	int width
 	int height = HEIGHT
 	
-	Color scrollButtonColor = new Color(90, 90, 120, 255)
-	Color scrollButtonLineColor = new Color(160, 160, 200, 255)
-	Color scrollButtonArrowColor = new Color(160, 160, 200, 255)
-	Color scrollBarColor = new Color(100, 100, 140, 255)
-	Color scrollSliderColor = new Color(130, 130, 170, 255)
+	Color scrollButtonColor = new Color(185, 185, 200, 255)
+	Color scrollButtonLineColor = new Color(140, 140, 165, 255)
+	Color scrollButtonArrowColor = new Color(100, 100, 135, 255)
+	Color scrollBarColor = new Color(220, 220, 235, 255)
+	Color scrollSliderColor = new Color(195, 195, 210, 255)
 
 	int scroll
 
@@ -281,7 +281,7 @@ component provides ScrollBar:h {
 			int availableWidth = (width - ((SCR_BUTTON_WIDTH*2))) - sliderWidth
 			sliderX = ((percent * availableWidth) / 100) + SCR_BUTTON_WIDTH
 
-			c.drawRect(new Rect2D(xPosition + sliderX, yPosition, sliderWidth, SCR_BUTTON_HEIGHT, scrollSliderColor))
+			c.drawRect(new Rect2D(xPosition + sliderX, yPosition+1, sliderWidth, height-2, scrollSliderColor))
 			}
 		}
 	

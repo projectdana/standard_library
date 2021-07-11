@@ -13,7 +13,11 @@ component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Outpu
 	
 	MenuItem menuItems[]
 	
-	Color borderColor = new Color(190, 190, 200, 255)
+	Color borderColor = new Color(180, 180, 200, 255)
+	Color shadowColor = new Color(180, 180, 180, 255)
+	Color bgColor = new Color(195, 195, 215, 255)
+	Color textColor = new Color(0, 0, 0, 255)
+	Color hlColor = new Color(180, 188, 220, 255)
 	
 	int hoverIndex = INT_MAX
 	
@@ -24,17 +28,18 @@ component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Outpu
 	
 	void ContextMenu:paint(Canvas c)
 		{
-		c.drawRect(new Rect2D(xPosition, yPosition, width, height, new Color(170, 178, 170, 255)))
+		c.drawRect(new Rect2D(xPosition+2, yPosition+2, width, height, shadowColor))
+		c.drawRect(new Rect2D(xPosition, yPosition, width, height, bgColor))
 		
 		int ryPos = yPosition
 		for (int i = 0; i < menuItems.arrayLength; i++)
 			{
 			if (i == hoverIndex)
 				{
-				c.drawRect(new Rect2D(xPosition, ryPos, width, FONT_HEIGHT + ITEM_SEP, new Color(180, 188, 180, 255)))
+				c.drawRect(new Rect2D(xPosition, ryPos, width, FONT_HEIGHT + ITEM_SEP, hlColor))
 				}
 			
-			c.drawText(new Point2D(xPosition+PAD_LEFT, ryPos, new Color(0, 0, 0, 255)), labelFont, menuItems[i].name)
+			c.drawText(new Point2D(xPosition+PAD_LEFT, ryPos, textColor), labelFont, menuItems[i].name)
 			ryPos += FONT_HEIGHT + ITEM_SEP
 			}
 		
