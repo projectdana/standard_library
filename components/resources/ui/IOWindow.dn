@@ -20,6 +20,12 @@ data KeyEvent {
 	int keyCode
 	}
 
+data DropEvent {
+	int x
+	int y
+	char path[]
+	}
+
 /*
  {"description" : "IOLayer is the system API to control an OS-level window and interpret its events. This API is not normally used directly by the programmer. To create graphical windows, you would usually use an application-level wrapper of this API such as ui.Window."}
 */
@@ -31,67 +37,44 @@ interface IOWindow extends Canvas {
 	event mouseMove(MouseEvent m)
 	event keyUp(KeyEvent k)
 	event keyDown(KeyEvent k)
+	event fileDrop(DropEvent d)
 	event resizeWindow(WH size)
 	event moveWindow(Point position)
 	event closeWindow()
 	
-	/*
-	 {"@description" : "Initialise a new OS-level window."}
-	*/
+	/* {"@description" : "Initialise a new OS-level window."} */
 	IOWindow()
 	
-	/*
-	 {"@description" : "Hide/show the window."}
-	*/
+	/* {"@description" : "Hide/show the window."} */
 	void setVisible(bool v)
 	
-	/*
-	 {"@description" : "Set the window as user-resizeable or not."}
-	*/
+	/* {"@description" : "Set the window as user-resizeable or not."} */
 	void setResizable(bool v)
 	
-	/*
-	 {"@description" : "Set the window as full-screen or not."}
-	*/
+	/* {"@description" : "Set the window as full-screen or not."} */
 	void setFullScreen(bool v)
 	
-	/*
-	 {"@description" : "Set the title of the window."}
-	*/
+	/* {"@description" : "Set the title of the window."} */
 	void setTitle(char title[])
 	
-	/*
-	 {"@description" : "Set the image used for the icon of the window."}
-	*/
+	/* {"@description" : "Set the image used for the icon of the window."} */
 	void setIcon(store PixelMap p)
 	
-	/*
-	 {"@description" : "Set the x/y position of the window on the screen."}
-	*/
+	/* {"@description" : "Set the x/y position of the window on the screen."} */
 	void setPosition(int x, int y)
 	
-	/*
-	 {"@description" : "Set the width and height of the window."}
-	*/
+	/* {"@description" : "Set the width and height of the window."} */
 	void setSize(int w, int h)
 	
-	/*
-	 {"@description" : "Set the background color of the window."}
-	*/
+	/* {"@description" : "Set the background color of the window."} */
 	void setBackground(store Color c)
 	
-	/*
-	 {"@description" : "Get the screen resolution of the display on which the window resides."}
-	*/
+	/* {"@description" : "Get the screen resolution of the display on which the window resides."} */
 	WH getResolution()
 	
-	/*
-	 {"@description" : "Repaint the window and its contents."}
-	*/
+	/* {"@description" : "Repaint the window and its contents."} */
 	void paint()
 	
-	/*
-	 {"@description" : "Close the window (other functions on this API will not work after this)."}
-	*/
+	/* {"@description" : "Close the window (other functions on this API will not work after this)."} */
 	void close()
 	}

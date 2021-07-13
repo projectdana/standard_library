@@ -207,7 +207,12 @@ component provides List requires ui.Font, io.Output out {
 				}
 			}
 		}
-
+	
+	void List:dropFile(int x, int y, char path[])
+		{
+		emitevent fileDrop(new String(path))
+		}
+	
 	void List:postRepaint()
 		{
 		emitevent repaint()

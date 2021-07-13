@@ -4,6 +4,12 @@ data WindowEventData {
 	int y
 }
 
+data DropEventData {
+	int x
+	int y
+	char path[]
+}
+
 interface UIPlaneLib {
 	
 	event ready()
@@ -14,6 +20,7 @@ interface UIPlaneLib {
 	event keyDown(WindowEventData wed)
 	event keyUp(WindowEventData wed)
 	event resize(WindowEventData wed)
+	event drop(DropEventData ded)
 	event close()
 	
 	event post_shutdown()
@@ -118,6 +125,11 @@ component provides IOLayer, IOWindow(Destructor), Font(Destructor) requires nati
 				{
 				WindowEventData wed = ed.details
 				emitevent resizeWindow(new WH(wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.[drop])
+				{
+				DropEventData wed = ed.details
+				emitevent fileDrop(new DropEvent(wed.x, wed.y, wed.path))
 				}
 				else if (ed.type == UIPlaneLib.[close])
 				{

@@ -12,6 +12,9 @@ interface XYMouseObject extends ClickableObject {
 	/* {"@description" : "This function is called by the windowing system when the mouse pointer is moved over this object."} */
 	void mouseMove(int x, int y){}
 	
+	/* {"@description" : "This function is called by the windowing system when a file is dropped onto this object."} */
+	void dropFile(int x, int y, char path[]){}
+	
 	/* {"@description" : "This function is called by the windowing system when the mouse pointer enters the bounding box of this object."} */
 	void mouseOver(){}
 	/* {"@description" : "This function is called by the windowing system when the mouse pointer exits the bounding box of this object."} */

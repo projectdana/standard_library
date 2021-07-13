@@ -85,6 +85,11 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			MouseEvent me = ed.details
 			mouseMove(me.x, me.y)
 			}
+			else if (ed.type == IOWindow.[fileDrop])
+			{
+			DropEvent de = ed.details
+			dropFile(de.x, de.y, de.path)
+			}
 			else if (ed.type == IOWindow.[keyDown])
 			{
 			KeyEvent ke = ed.details
@@ -693,6 +698,22 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			{
 			mouseOver.mouseOut()
 			mouseOver = null
+			}
+		}
+	
+	void Window:dropFile(int x, int y, char path[])
+		{
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+			{
+			Rect r = ci.object.getBounds()
+
+			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+				{
+				XYMouseObject co = ci.object
+				co.dropFile(x - r.x, y - r.y, path)
+				
+				break
+				}
 			}
 		}
 	

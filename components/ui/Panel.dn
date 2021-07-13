@@ -489,5 +489,30 @@ component provides Panel requires io.Output out {
 			mouseOver = null
 			}
 		}
+	
+	void Panel:mouseOut()
+		{
+		if (mouseOver != null)
+			{
+			mouseOver.mouseOut()
+			mouseOver = null
+			}
+		}
+	
+	void Panel:dropFile(int x, int y, char path[])
+		{
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+			{
+			Rect r = ci.object.getBounds()
+
+			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+				{
+				XYMouseObject co = ci.object
+				co.dropFile(x - r.x, y - r.y, path)
+				
+				break
+				}
+			}
+		}
 
 	}

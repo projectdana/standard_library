@@ -206,6 +206,12 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 			else
 			{
 			clickDown = content
+			
+			if (content hastype XYMouseObject)
+				{
+				XYMouseObject cco = content
+				cco.mouseDown(x+scrollX, y+scrollY, button)
+				}
 			}
 		}
 	
@@ -219,6 +225,14 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 			{
 			scrollH.mouseMove(x, y)
 			}
+			else
+			{
+			if (content hastype XYMouseObject)
+				{
+				XYMouseObject cco = content
+				cco.mouseMove(x+scrollX, y+scrollY)
+				}
+			}
 		}
 	
 	void ScrollPane:mouseUp(int x, int y, int button)
@@ -230,6 +244,49 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 			else if (showScrollH && (y >= height-SCR_BUTTON_HEIGHT && y <= height))
 			{
 			scrollH.mouseUp(x, y - (height-SCR_BUTTON_HEIGHT), button)
+			}
+			else
+			{
+			if (content hastype XYMouseObject)
+				{
+				XYMouseObject cco = content
+				cco.mouseUp(x+scrollX, y+scrollY, button)
+				}
+			
+			if (content hastype ClickableObject && clickDown === content)
+				{
+				ClickableObject cco = content
+				cco.click(x+scrollX, y+scrollY, button)
+				}
+			
+			clickDown = null
+			}
+		}
+	
+	void ScrollPane:mouseOut()
+		{
+		if (content != null && content hastype XYMouseObject)
+			{
+			XYMouseObject cco = content
+			cco.mouseOut()
+			}
+		}
+	
+	void ScrollPane:dropFile(int x, int y, char path[])
+		{
+		if (showScrollV && (x >= width-SCR_BUTTON_WIDTH && x <= width))
+			{
+			}
+			else if (showScrollH && (y >= height-SCR_BUTTON_HEIGHT && y <= height))
+			{
+			}
+			else
+			{
+			if (content hastype XYMouseObject)
+				{
+				XYMouseObject cco = content
+				cco.dropFile(x+scrollX, y+scrollY, path)
+				}
 			}
 		}
 	
@@ -248,11 +305,7 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 			}
 			else
 			{
-			if (content hastype ClickableObject && clickDown === content)
-				{
-				ClickableObject cco = content
-				cco.click(x, y+scrollY, button)
-				}
+
 			}
 		}
 

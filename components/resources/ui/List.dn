@@ -2,10 +2,14 @@
  {"description" : "A graphical list, allowing a user to click on items shown in the list. This widget would usually be used together with a ScrollPane to support scrolling."}
 */
 
-interface List extends ClickableObject {
+uses data.String
+
+interface List extends XYMouseObject {
 	
 	/* {"@description" : "This event is fired when a user clicks on an item in the list."} */
 	event selectItem()
+	/* {"@description" : "This event is fired when a file is dropped on the list."} */
+	event fileDrop(String path)
 
 	/* {"@description" : "Instantiate a new list widget."} */
 	List()
