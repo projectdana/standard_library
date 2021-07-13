@@ -59,7 +59,7 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 			}
 		}
 
-	ScrollPane:ScrollPane()
+	ScrollPane:ScrollPane(opt GraphicsObject g)
 		{
 		scrollV = new ScrollBar()
 		scrollV.setPosition(width - SCR_BUTTON_WIDTH, 0)
@@ -69,6 +69,11 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 		
 		sinkevent ScrollEvents(scrollV)
 		sinkevent ScrollEvents(scrollH)
+		
+		if (g != null)
+			{
+			setContent(g)
+			}
 		}
 
 	eventsink ContentPaintEvents(EventData ed)

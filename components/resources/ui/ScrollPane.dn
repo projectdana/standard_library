@@ -5,7 +5,7 @@
 interface ScrollPane extends KeyEventObject {
 	
 	/* {"@description" : "Instantiate a new scroll pane."} */
-	ScrollPane()
+	ScrollPane(opt GraphicsObject content)
 	
 	/* {"@description" : "Set the graphics object to place inside the scroll pane."} */
 	void setContent(store GraphicsObject g)
