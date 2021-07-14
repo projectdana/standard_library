@@ -273,6 +273,9 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 						{
 						//respond with HTTP OK
 						sendOK(socket, "text/html", null)
+						
+						configs = assembly.getConfigs()
+						currentConfig = configs[0].string
 						}
 						else
 						{
@@ -297,6 +300,9 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 						{
 						//respond with HTTP OK
 						sendOK(socket, "text/html", null)
+						
+						configs = assembly.getConfigs()
+						currentConfig = configs[0].string
 						}
 						else
 						{
@@ -322,6 +328,9 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 						{
 						//respond with HTTP OK
 						sendOK(socket, "text", res)
+						
+						configs = assembly.getConfigs()
+						currentConfig = configs[0].string
 						}
 						else
 						{
@@ -359,6 +368,9 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 							{
 							//respond with HTTP OK
 							sendOK(socket, "text", res)
+							
+							configs = assembly.getConfigs()
+							currentConfig = configs[0].string
 							}
 							else
 							{
