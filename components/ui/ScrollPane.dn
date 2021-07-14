@@ -13,6 +13,7 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 	GraphicsObject content
 	
 	Color gapColor = new Color(200, 200, 215, 255)
+	Color backgroundColor
 	
 	bool showScrollV = true
 	ScrollBar scrollV
@@ -75,7 +76,7 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 			setContent(g)
 			}
 		}
-
+	
 	eventsink ContentPaintEvents(EventData ed)
 		{
 		updateScrollBarV()
@@ -103,7 +104,12 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 			postRepaint()
 			}
 		}
-
+	
+	void ScrollPane:setBackground(Color c)
+		{
+		backgroundColor = c
+		}
+	
 	void ScrollPane:setContent(GraphicsObject g)
 		{
 		if (content != null)
@@ -322,7 +328,9 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 	void ScrollPane:paint(Canvas c)
 		{
 		c.pushSurface(new Rect(xPosition, yPosition, width, height), 0, 0, 255)
-
+		
+		if (backgroundColor != null) c.drawRect(new Rect2D(0, 0, width, height, backgroundColor))
+		
 		c.pushSurface(new Rect(0, 0, width, height), scrollX, scrollY, 255)
 
 		content.paint(c)
