@@ -844,6 +844,8 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		int fromActualIndex = cb.components.arrayLength
 		cb.components = new String[](cb.components, new String(comps[cIndex].string))
 		
+		//out.println(" -- pop @ $(comps[cIndex].string)")
+		
 		for (int j = 0; j < wirings.arrayLength; j++)
 			{
 			String argsB[] = stringUtil.explode(wirings[j].string, ":")
@@ -863,9 +865,13 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 					cb.components = new String[](cb.components, new String(sr.currentWiring))
 					
 					cb.bindings = new Binding[](cb.bindings, new Binding(intfNameB, fromActualIndex, toIndexB))
+					
+					//out.println(" -- [intf $intfNameB @ frontier]")
 					}
 					else
 					{
+					//out.println(" -- [intf $intfNameB NOT frontier]")
+					
 					//find this "wire to" component's index, if it already exists in cb, and recurse on it if it didn't exist
 					char searchFor[] = comps[toIndexB].string
 					
@@ -875,11 +881,15 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 						{
 						toIndexB = searchedIndex
 						cb.bindings = new Binding[](cb.bindings, new Binding(intfNameB, fromActualIndex, toIndexB))
+						
+						//out.println(" -- [adding wiring]")
 						}
 						else
 						{
-						toIndexB = cb.components.arrayLength
-						cb.bindings = new Binding[](cb.bindings, new Binding(intfNameB, fromActualIndex, toIndexB))
+						int relativeIndex = cb.components.arrayLength
+						cb.bindings = new Binding[](cb.bindings, new Binding(intfNameB, fromActualIndex, relativeIndex))
+						
+						//out.println(" -- [adding wiring and recursing to $toIndexB from '$(wirings[j].string)']")
 						
 						populateCBStep(comps, wirings, cb, toIndexB, frontier)
 						}
@@ -891,6 +901,8 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 	//"frontier" here is a list of ALL interfaces at which you want to stop, with the specific component to deploy as the stop for that interface
 	ConfigBuilder populatePartialCB(char conf[], Interface frontier[])
 		{
+		//out.println("::populate partCB from '$conf'")
+		
 		String comps[] = stringUtil.explode(stringUtil.explode(conf, "|")[0].string, ",")
 		String wirings[] = clone stringUtil.explode(stringUtil.explode(conf, "|")[1].string, ",")
 		
@@ -955,7 +967,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 				bool match = true
 				for (int j = 0; j < test.components.arrayLength; j ++)
 					{
-					if (asearch.find(list[i].components, String.[string], test.components[i]) == null)
+					if (asearch.findFirst(list[i].components, String.[string], test.components[j]) == null)
 						{
 						match = false
 						break
