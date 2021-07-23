@@ -1,0 +1,25 @@
+/*
+ {"description" : "A graphical file drop zone, allowing a user to drag and drop files from the OS into the drop zone."}
+*/
+
+uses data.String
+uses ui.Font
+
+interface FileDrop extends XYMouseObject {
+	
+	/* {"@description" : "This event is fired when a file is dropped on the object."} */
+	event fileDrop(String file)
+
+	/* {"@description" : "Instantiate a new file drop zone widget."} */
+	FileDrop()
+	
+	/* {"@description" : "Set the size of the file drop zone."} */
+	void setSize(int width, int height)
+	
+	/* {"@description" : "Set the text drawn in the file drop zone."} */
+	void setText(char text[])
+	
+	/* {"@description" : "Set the font used for the file drop zone's text."} */
+	void setFont(store Font f)
+	
+	}
