@@ -414,7 +414,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		return new Rect(xPosition, yPosition, width, height)
 		}
 	
-	int getCursorPos(int x)
+	int findCursorPos(int x)
 		{
 		char test[]
 		for (int i = 0; i < currentText.length(); i++)
@@ -438,8 +438,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		if (button == MouseButtons.BUTTON_LEFT)
 			{
 			//locate this position in the text, and set the cursor there
-			out.println("x: $x")
-			cursorPosition = getCursorPos(x + hScroll)
+			cursorPosition = findCursorPos(x + hScroll)
 			selectStartPos = cursorPosition
 			postRepaint()
 			}
@@ -722,6 +721,26 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			
 			emitevent contextMenuOn(hintMenu)
 			}
+		}
+	
+	void TextField:setCursorPos(int p)
+		{
+		if (p <= currentText.length())
+			{
+			cursorPosition = p
+			selectStartPos = cursorPosition
+			updateCursorPosition()
+			postRepaint()
+			}
+			else
+			{
+			throw new Exception("index out of bounds")
+			}
+		}
+	
+	int TextField:getCursorPos()
+		{
+		return cursorPosition
 		}
 	
 	}

@@ -42,4 +42,10 @@ interface TextField extends KeyEventObject {
 	
 	/* {"@description" : "Set a list of hint items to be displayed by the text field (which the user can click on, to auto-fill the text field)."} */
 	void setHintItems(store String items[])
+	
+	/* {"@description" : "Set the position of the cursor, as a character index starting from zero."} */
+	void setCursorPos(int p)
+	
+	/* {"@description" : "Get the current position of the cursor, as a character index starting from zero."} */
+	int getCursorPos()
 	}
