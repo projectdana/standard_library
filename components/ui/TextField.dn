@@ -422,7 +422,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			if (passwordMask)
 				test = new char[](test, maskedText[i])
 				else
-				test = currentText.subString(i, 1)
+				test = new char[](test, currentText.subString(i, 1))
 			
 			int text_xp = textFont.getTextWidth(test)
 			
@@ -438,7 +438,8 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		if (button == MouseButtons.BUTTON_LEFT)
 			{
 			//locate this position in the text, and set the cursor there
-			cursorPosition = getCursorPos(x)
+			out.println("x: $x")
+			cursorPosition = getCursorPos(x + hScroll)
 			selectStartPos = cursorPosition
 			postRepaint()
 			}
@@ -543,7 +544,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		char k[] = clone text
 		for (int i = 0; i < k.arrayLength; i++)
 			{
-			k [i] = "*"
+			k[i] = "*"
 			}
 		maskedText = k
 		postRepaint()
