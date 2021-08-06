@@ -1,0 +1,38 @@
+uses data.String
+uses io.File
+
+uses time.DateTime
+
+data ArchiveFile {
+	char path[]
+	bool dir
+	int compressedSize
+	int uncompressedSize
+	DateTime modified
+	}
+
+/*
+{ "description" : "Interface to read file archives, often using compression."}
+*/
+
+interface Archive {
+	
+	/* { "@description" : "Create a new Archive instance, which will read the archive from the given file."} */
+	Archive(store File fd)
+	
+	/* { "@description" : "Get the contents of the given directory within the archive (or the root folder, if path is null)."} */
+	ArchiveFile[] getContents(char path[])
+	/* { "@description" : "Get all contents of the archive as a flat list."} */
+	ArchiveFile[] getAllContents()
+	/* { "@description" : "Check if a given file or directory exists in the archive."} */
+	bool exists(char path[])
+	/* { "@description" : "Get the details of a given file or directory in the archive."} */
+	ArchiveFile getInfo(char path[])
+	
+	/* { "@description" : "Extract (decompress) a file in the archive, returning the extracted bytes. Use of this function is generally suitable only for small files."} */
+	byte[] extractFile(char path[])
+	
+	/* { "@description" : "Extract (decompress) a file in the archive, writing the extracted file to the given output file."} */
+	bool extractFileTo(char path[], File ofd)
+	
+	}

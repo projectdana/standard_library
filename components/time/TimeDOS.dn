@@ -1,0 +1,48 @@
+component provides TimeDOS {
+	
+	int2 TimeDOS:toDOSTime(DateTime dt)
+		{
+		int2 hour = dt.hour
+		hour = hour << 11
+		int2 minute = dt.minute
+		minute = minute << 5
+		int2 second = dt.second / 2
+		
+		return hour | minute | second
+		}
+	
+	int2 TimeDOS:toDOSDate(DateTime dt)
+		{
+		int2 year = dt.year - 1980
+		year = (year << 9)
+		int2 month = dt.month
+		month = month << 5
+		int2 day = dt.day
+		
+		return year | month | day
+		}
+	
+	DateTime TimeDOS:fromDOSTime(int2 date, int2 time)
+		{
+		DateTime result = new DateTime()
+		
+		int2 year = ((date >> 9) & 0x7F) + 1980
+		int2 month = (date >> 5) & 0x0F
+		int2 day = date & 0x1F
+		
+		result.year = year
+		result.month = month
+		result.day = day
+		
+		int2 hour = time >> 11
+		int2 minute = (time >> 5) & 0x3F
+		int2 second = (time & 0x1F) * 2
+		
+		result.hour = hour
+		result.minute = minute
+		result.second = second
+		
+		return result
+		}
+	
+	}
