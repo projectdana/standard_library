@@ -1,0 +1,108 @@
+component provides TimeUnix requires io.Output out, data.IntUtil iu {
+	
+	int month_days[] = new int[](31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+	
+	//TODO: as below, the way in which leap years are calculated here is not future-proof...
+	int TimeUnix:toUnixTime(DateTime dt)
+		{
+		if (dt.year < 1970) throw new Exception("Unix time cannot represent years before 1970")
+		
+		int yearsSinceEpoch = dt.year - 1970
+		int leapYears = yearsSinceEpoch / 4
+		
+		int days = 0
+		
+		bool leap = isLeapYear(dt.year)
+		
+		int months = dt.month - 1
+		
+		while (months > 0)
+			{
+			int mdays = month_days[months-1]
+			if (months == 2 && leap) mdays ++
+			
+			days += mdays
+			months --
+			}
+		
+		days += dt.day
+		
+		days += leapYears
+		
+		days += (yearsSinceEpoch * 365)
+		
+		int seconds = dt.second
+		seconds += dt.minute * 60
+		seconds += (dt.hour * 60 * 60)
+		
+		seconds += (days * 86400)
+		
+		return seconds
+		}
+	
+	bool isLeapYear(int year)
+		{
+		if ((year % 4) == 0)
+			{
+			if (year % 100 == 0)
+				{
+				return year % 400 == 0
+				}
+				else
+				{
+				return true
+				}
+			}
+		
+		return false
+		}
+	
+	//Unix time is the number of seconds which have elapsed since 01/01/1970
+	DateTime TimeUnix:fromUnixTime(int time)
+		{
+		//we first separate out the days from the seconds
+		
+		int days = time / 86400
+		int rsecs = time % 86400
+		
+		//we now need to convert the days into years, months, and days; because Unix time is relative to a fixed point, this calculation is made complicated by leap years
+		
+		//TODO: this is a very simple calculation of leap years that have taken place within the elapsed years period, which needs some updating to be future-proof
+		int yearsSinceEpoch = (days / 365)
+		int year = yearsSinceEpoch + 1970
+		
+		int leapYears = yearsSinceEpoch / 4
+		
+		//the total number of days is the remainder of years, minus extra days taken by leap years
+		int remdays = (days % 365) - leapYears
+		
+		//calculate month from remdays, including whether this year was a leap year
+		// - use the remainder of days as the value for day-of-month
+		int month = 1
+		
+		bool leap = isLeapYear(year)
+		
+		for (int i = 0; i < month_days.arrayLength; i++)
+			{
+			int mdays = month_days[i]
+			if (i == 1 && leap) mdays ++
+			
+			if (remdays < mdays) break
+			
+			month ++
+			
+			remdays -= mdays
+			}
+		
+		DateTime result = new DateTime()
+		result.year = (days / 365) + 1970
+		result.month = month
+		result.day = remdays
+		result.hour = rsecs / 3600
+		result.minute = rsecs / 60 % 60
+		result.second = rsecs % 60
+		
+		return result
+		}
+	
+	}

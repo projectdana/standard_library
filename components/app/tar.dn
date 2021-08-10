@@ -3,7 +3,7 @@ data CompressEntry {
 	char localPath[]
 	}
 
-component provides App requires io.Output out, io.File,	io.FileSystem fileSystem, data.StringUtil stringUtil, compress.Archive:zip, compress.ArchiveWriter:zip {
+component provides App requires io.Output out, io.File,	io.FileSystem fileSystem, data.StringUtil stringUtil, compress.Archive:tar, compress.ArchiveWriter:tar {
 	
 	char[] normalisePath(char path[])
 		{
@@ -127,10 +127,10 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 		if (params.arrayLength == 0)
 			{
 			out.println("Usage:")
-			out.println(" dana zip -c  archiveName.zip fileToCompress1 fileToCompress2 folderToCompress3")
-			out.println(" dana zip -x  archiveToExtract.zip -d extractToDirectory")
-			out.println(" dana zip -l  archiveContentsToList.zip")
-			out.println(" dana zip -lr archiveContentsToListRecursively.zip")
+			out.println(" dana tar -c  archiveName.tar fileToCompress1 fileToCompress2 folderToCompress3")
+			out.println(" dana tar -x  archiveToExtract.tar -d extractToDirectory")
+			out.println(" dana tar -l  archiveContentsToList.tar")
+			out.println(" dana tar -lr archiveContentsToListRecursively.tar")
 			return 1
 			}
 		
@@ -140,7 +140,7 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 			
 			File fd = new File(archiveName, File.CREATE)
 			
-			ArchiveWriter aw = new ArchiveWriter:zip(fd, ArchiveWriter.CM_DEFLATE)
+			ArchiveWriter aw = new ArchiveWriter:tar(fd)
 			
 			for (int i = 2; i < params.arrayLength; i++)
 				{
@@ -167,7 +167,7 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 				return 1
 				}
 			
-			Archive ar = new Archive:zip(archiveFD)
+			Archive ar = new Archive:tar(archiveFD)
 			
 			if (params.arrayLength == 4 && params[2].string == "-d")
 				{
@@ -187,7 +187,7 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 				return 1
 				}
 			
-			Archive archive = new Archive:zip(archiveFD)
+			Archive archive = new Archive:tar(archiveFD)
 			
 			ArchiveFile fileList[] = archive.getContents(null)
 			
@@ -206,7 +206,7 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 				return 1
 				}
 			
-			Archive archive = new Archive:zip(archiveFD)
+			Archive archive = new Archive:tar(archiveFD)
 			
 			printContents(archive, null)
 			}
