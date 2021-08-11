@@ -159,6 +159,51 @@ component provides Archive:targz requires io.Output out, data.IntUtil iu, data.S
 		return res
 		}
 	
+	//there appear to be two different ways of storing a tar checksum; we accept both
+	int4 i4FromChecksum(byte ar[])
+		{
+		if (ar[ar.arrayLength-1] == " ")
+			{
+			//standard checksum, terminated by a nul then a space
+			int4 res = 0
+			
+			int n = 0
+			for (int i = ar.arrayLength-3; i != INT_MAX; i--)
+				{
+				if (ar[i] != 0)
+					{
+					char cn = ar[i]
+					int4 rq = ar[i] - 48
+					
+					res = res | (rq << (n*3))
+					}
+				n ++
+				}
+			
+			return res
+			}
+			else
+			{
+			//alternative checksum, which is terminated only by a nul
+			int4 res = 0
+			
+			int n = 0
+			for (int i = ar.arrayLength-2; i != INT_MAX; i--)
+				{
+				if (ar[i] != 0)
+					{
+					char cn = ar[i]
+					int4 rq = ar[i] - 48
+					
+					res = res | (rq << (n*3))
+					}
+				n ++
+				}
+			
+			return res
+			}
+		}
+	
 	TarHeader readFileHeader(File fd, int offset)
 		{
 		TarHeader record = new TarHeader()
@@ -185,7 +230,7 @@ component provides Archive:targz requires io.Output out, data.IntUtil iu, data.S
 	
 	bool checksumOK(TarHeader record)
 		{
-		int4 chk = i4FromOctal(record.checksum, record.checksum.arrayLength-3)
+		int4 chk = i4FromChecksum(record.checksum)
 		
 		byte srd[] = dana.serial(record)
 		
