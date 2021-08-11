@@ -436,6 +436,7 @@ component provides Archive:targz requires io.Output out, data.IntUtil iu, data.S
 			int4 crcCheck
 			byte chunk[]
 			int ucOffset = 0
+			int ucSize = 0
 			
 			//decompress chunks that are a multiple of 512, and pass each chunk in to a Tar stream decoder to read any things from that stream chunk...
 			
@@ -459,6 +460,7 @@ component provides Archive:targz requires io.Output out, data.IntUtil iu, data.S
 					crcCheck = crc32.makeCRC(crcCheck, dchunk)
 					processStreamChunk(dchunk, ucOffset)
 					ucOffset += dchunk.arrayLength
+					ucSize += dchunk.arrayLength
 					}
 				}
 			
@@ -467,6 +469,7 @@ component provides Archive:targz requires io.Output out, data.IntUtil iu, data.S
 				byte dchunk[] = sbuf.read(sbuf.getSize())
 				crcCheck = crc32.makeCRC(crcCheck, dchunk)
 				processStreamChunk(dchunk, ucOffset)
+				ucSize += dchunk.arrayLength
 				}
 			
 			int lcSize = alg.decompressEnd()

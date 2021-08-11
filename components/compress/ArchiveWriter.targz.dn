@@ -440,6 +440,7 @@ component provides ArchiveWriter:targz requires io.Output out, data.IntUtil iu, 
 		byte srd[] = dana.serial(record)
 		
 		totalCRC = crc32.makeCRC(totalCRC, srd)
+		totalSize += srd.arrayLength
 		combuf = alg.compress(srd, false)
 		
 		ifd.write(combuf)
@@ -447,6 +448,7 @@ component provides ArchiveWriter:targz requires io.Output out, data.IntUtil iu, 
 		pad512(ifd, srd.arrayLength)
 		
 		totalCRC = crc32.makeCRC(totalCRC, srd)
+		totalSize += srd.arrayLength
 		combuf = alg.compress(srd, false)
 		
 		ifd.write(combuf)

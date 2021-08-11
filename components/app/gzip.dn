@@ -66,16 +66,16 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 			{
 			char archiveName[] = params[1].string
 			
-			if (params.arrayLength > 2) throw new Exception("gzip files can only store a single compressed file")
+			if (params.arrayLength > 3) throw new Exception("gzip files can only store a single compressed file")
 			
-			CompressEntry files[] = getFilesToCompress(params[1].string)
+			CompressEntry files[] = getFilesToCompress(params[2].string)
 			
 			if (files.arrayLength > 1) throw new Exception("gzip files can only store a single compressed file")
 			
 			if (fileSystem.getInfo(files[0].fullPath).type == FileInfo.TYPE_DIR) throw new Exception("gzip files can only store a single compressed file")
 			
 			File ifd = new File(files[0].fullPath, File.READ)
-			File ofd = new File(archiveName, File.WRITE)
+			File ofd = new File(archiveName, File.CREATE)
 			
 			zip.compress(ifd, ofd, files[0].fullPath)
 			}
@@ -94,7 +94,7 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 			
 			char outpath[] = zip.getFileName(ifd)
 			
-			File ofd = new File("$extractPath/$outpath", File.WRITE)
+			File ofd = new File("$extractPath/$outpath", File.CREATE)
 			
 			zip.decompress(ifd, ofd)
 			}
