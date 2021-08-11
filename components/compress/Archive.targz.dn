@@ -4,6 +4,10 @@ uses time.DateTime
 
 const int CHUNK_SIZE = 5120
 
+const int SP_FAIL = 0
+const int SP_CONTINUE = 1
+const int SP_END = 2
+
 data GZHeader {
 	byte ID1
 	byte ID2
@@ -356,7 +360,7 @@ component provides Archive:targz requires io.Output out, data.IntUtil iu, data.S
 	
 	int nextTarHeader = 0
 	
-	bool processStreamChunk(byte chunk[], int offset)
+	int processStreamChunk(byte chunk[], int offset)
 		{
 		while (nextTarHeader < (offset + chunk.arrayLength))
 			{
@@ -365,14 +369,14 @@ component provides Archive:targz requires io.Output out, data.IntUtil iu, data.S
 			hdr = readArrayHeader(chunk, nextTarHeader - offset)
 			
 			//NOTE: we're supposed to get two empty headers in a row, to indicate end-of-stream, but we stop at one
-			if (blankHeader(hdr)) return true
+			if (blankHeader(hdr)) return SP_END
 			
 			if (!checksumOK(hdr))
 				{
 				throw new Exception("invalid tar file (checksum failure)")
 				}
 			
-			if (hdr == null) return true
+			if (hdr == null) return SP_END
 			
 			int8 sz = i8FromOctal(hdr.fileSize)
 			processHeader(hdr, nextTarHeader + 512)
@@ -387,7 +391,7 @@ component provides Archive:targz requires io.Output out, data.IntUtil iu, data.S
 			}
 			//else: wait for the next chunk that's in the range I want
 		
-		return false
+		return SP_CONTINUE
 		}
 	
 	Archive:Archive(File fd)
@@ -458,7 +462,7 @@ component provides Archive:targz requires io.Output out, data.IntUtil iu, data.S
 					{
 					byte dchunk[] = sbuf.read(5120)
 					crcCheck = crc32.makeCRC(crcCheck, dchunk)
-					processStreamChunk(dchunk, ucOffset)
+					if (processStreamChunk(dchunk, ucOffset) == SP_FAIL) throw new Exception("invalid tar file")
 					ucOffset += dchunk.arrayLength
 					ucSize += dchunk.arrayLength
 					}
@@ -468,7 +472,7 @@ component provides Archive:targz requires io.Output out, data.IntUtil iu, data.S
 				{
 				byte dchunk[] = sbuf.read(sbuf.getSize())
 				crcCheck = crc32.makeCRC(crcCheck, dchunk)
-				processStreamChunk(dchunk, ucOffset)
+				if (processStreamChunk(dchunk, ucOffset) == SP_FAIL) throw new Exception("invalid tar file")
 				ucSize += dchunk.arrayLength
 				}
 			
