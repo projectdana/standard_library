@@ -6,7 +6,7 @@ uses pal.Perception
 
 const int HOST_POST = 8008
 
-component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du, pal.Assembly, time.Timer timer, composition.RecursiveLoader loader, data.StringUtil stringUtil, net.TCPServerSocket, net.TCPSocket, data.json.JSONParser parser, composition.Search search {
+component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du, pal.Assembly, time.Timer timer, composition.RecursiveLoader loader, data.StringUtil stringUtil, net.TCPServerSocket, net.TCPSocket, data.json.JSONParser parser, composition.Search search, data.StringBuilder {
 	
 	bool running = true
 	char currentConfig[]
@@ -147,20 +147,24 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			if (rsc == "/meta/get_all_configs")
 				{
 				//construct JSON object of all available configurations
+				StringBuilder sb = new StringBuilder()
+				
 				char content[]
 				
-				content = new char[](content, "{")
-				content = new char[](content, "\"configs\" : [")
+				sb.add("{")
+				sb.add("\"configs\" : [")
+				
 				for (int i = 0; i < configs.arrayLength; i++)
 					{
-					content = new char[](content, "\"$(configs[i].string)\"")
-					if (i + 1 < configs.arrayLength) content = new char[](content, ", ")
+					sb.add("\"$(configs[i].string)\"")
+					
+					if (i + 1 < configs.arrayLength) sb.add(", ")
 					}
-				content = new char[](content, "]")
-				content = new char[](content, "}")
+				sb.add("]")
+				sb.add("}")
 				
 				//send response
-				sendOK(socket, "text/json", content)
+				sendOK(socket, "text/json", sb.get())
 				}
 				else if (rsc == "/meta/get_config")
 				{

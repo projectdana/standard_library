@@ -70,7 +70,7 @@ data StringList {
 	String list[]
 	}
 
-component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search asearch, composition.Adapter adapter, os.SystemInfo systemInfo, time.DateUtil dateUtil {
+component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search asearch, composition.Adapter adapter, os.SystemInfo systemInfo, time.DateUtil dateUtil, data.StringBuilder {
 	
 	App myApp
 	bool appStarted
@@ -450,25 +450,29 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 	
 	char[] flattenCB(ConfigBuilder cb)
 		{
-		char result[]
+		StringBuilder sb = new StringBuilder()
 		
 		for (int i = 0; i < cb.components.arrayLength; i++)
 			{
-			result = new char[](result, cb.components[i].string)
+			sb.add(cb.components[i].string)
 			
-			if (i + 1 < cb.components.arrayLength) result = new char[](result, ",")
+			if (i + 1 < cb.components.arrayLength) sb.add(",")
 			}
 		
-		result = new char[](result, "|")
+		sb.add("|")
 		
 		for (int i = 0; i < cb.bindings.arrayLength; i++)
 			{
-			result = new char[](result, cb.bindings[i].wiringName, ":", iu.makeString(cb.bindings[i].fromIndex), ":", iu.makeString(cb.bindings[i].toIndex))
+			sb.add(cb.bindings[i].wiringName)
+			sb.add(":")
+			sb.add(iu.makeString(cb.bindings[i].fromIndex))
+			sb.add(":")
+			sb.add(iu.makeString(cb.bindings[i].toIndex))
 			
-			if (i + 1 < cb.bindings.arrayLength) result = new char[](result, ",")
+			if (i + 1 < cb.bindings.arrayLength) sb.add(",")
 			}
 		
-		return result
+		return sb.get()
 		}
 	
 	Component componentLoaded(Component list, char comp[])
@@ -611,10 +615,12 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		//flatten config builders into plain strings for "configs"
 		char q[]
 		
+		configs = new String[exs.arrayLength]
+		
 		for (int i = 0; i < exs.arrayLength; i++)
 			{
 			q = flattenCB(exs[i])
-			configs = new String[](configs, new String(q))
+			configs[i] = new String(q)
 			}
 		}
 	
