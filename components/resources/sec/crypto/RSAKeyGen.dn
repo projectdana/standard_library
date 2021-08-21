@@ -17,7 +17,7 @@ data RSAKey {
 	}
 
 /* {"description" : "Key generator for RSA key pairs."} */
-interface RSA_KeyGen {
+interface RSAKeyGen {
 	
 	/*
 	{

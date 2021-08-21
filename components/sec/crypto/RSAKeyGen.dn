@@ -41,9 +41,9 @@ interface CipherLib {
 	bool rsa_convert_key(char public[], char private[], byte type, String newPublic, String newPrivate, byte newType)
 	}
 
-component provides RSA_KeyGen requires native CipherLib lib {
+component provides RSAKeyGen requires native CipherLib lib {
 	
-	RSAKey RSA_KeyGen:generateKey(int keyLength)
+	RSAKey RSAKeyGen:generateKey(int keyLength)
 		{
 		String public = new String()
 		String private = new String()
@@ -54,7 +54,7 @@ component provides RSA_KeyGen requires native CipherLib lib {
 			throw new Exception("key generation failed")
 		}
 	
-	RSAKey RSA_KeyGen:convertKey(RSAKey current, byte toType)
+	RSAKey RSAKeyGen:convertKey(RSAKey current, byte toType)
 		{
 		String public = new String()
 		String private = new String()

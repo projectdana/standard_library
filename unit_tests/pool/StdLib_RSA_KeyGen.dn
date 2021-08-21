@@ -1,4 +1,4 @@
-component provides UnitTest requires sec.crypto.RSA_KeyGen keygen {
+component provides UnitTest requires sec.crypto.RSAKeyGen keygen {
 	
 	bool UnitTest:runTest()
 		{
