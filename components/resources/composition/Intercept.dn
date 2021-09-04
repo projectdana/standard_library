@@ -1,0 +1,31 @@
+/*
+ {"description" : "Utility API to perform runtime adaptation on a required interface by inserting an intercept component between that required interface and its current providing interface side. Note that IDC references are typically gained via the use of Loader."}
+*/
+
+interface Intercept {
+	
+	/*
+	 { "@description" : "Insert an intercepting component between a required and provided interface. The intercepting component should already be wired against the current component implementing the provided interface of the existing wiring.",
+			
+			"ofComponent" : "The component with the required interface you want to intercept.",
+			"reqInterface" : "The string name of the required interface type that you want to intercept.",
+			"interceptor" : "The component which will be used as the interceptor. This component must either implement the reqInterface type or a proxy type.",
+			"icProvInterface" : "The name of the provided interface of interceptor to wire to (often the same as interfaceName).",
+			"icReqInterface" : "The name of the required interface of the interceptor to wire through to the original provider component (often the same as interfaceName).",
+			"@return" : "True if the adaptation was successful, false otherwise."}
+	*/
+	bool insertIntercept(IDC ofComponent, char reqInterface[], IDC interceptor, char icProvInterface[], char icReqInterface[])
+	
+	/*
+	 { "@description" : "Remove an intercepting component between a required and provided interface.",
+			
+			"ofComponent" : "The component with the required interface you want to remove the intercept from.",
+			"reqInterface" : "The string name of the required interface type that you want to from the intercept from.",
+			"toComponent" : "The component which is currently on the 'other' side of the interceptor, and to which ofComponent will be directly wired once the interceptor has been removed.",
+			"provInterface" : "The name of the provided interface of toComponent (often the same as interfaceName).",
+			"icReqInterface" : "The name of the required interface of the interceptor that was placed on this wiring (often the same as interfaceName).",
+			"@return" : "True if the adaptation was successful, false otherwise."}
+	*/
+	bool removeIntercept(IDC ofComponent, char reqInterface[], IDC toComponent, char provInterface[], char icReqInterface[])
+	
+	}

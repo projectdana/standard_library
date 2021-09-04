@@ -35,16 +35,19 @@ component provides composition.RecursiveLoader requires composition.Search searc
 		return result
 		}
 	
-	bool isAutoBinding(char package[])
+	bool isIgnore(String interfaces[], char package[])
 		{
-		String interfaces[] = system.getAutoBindings()
-		
 		for (int i = 0; i < interfaces.arrayLength; i++)
 			{
 			if (interfaces[i].string == package) return true
 			}
 		
 		return false
+		}
+	
+	bool isAutoBinding(char package[])
+		{
+		return isIgnore(system.getAutoBindings(), package)
 		}
 	
 	int loadSupportComponent(char path[], LoadedComponents lc)
@@ -81,11 +84,11 @@ component provides composition.RecursiveLoader requires composition.Search searc
 				lc.graph = new char[](lc.graph, ",")
 			lc.graph = new char[](lc.graph, "$alias:$comIndex:$index")
 			
-			loadComponents(index, np, lc)
+			loadComponents(index, np, lc, null)
 			}
 		}
 	
-	bool loadComponents(int comIndex, char path[], LoadedComponents lc)
+	bool loadComponents(int comIndex, char path[], LoadedComponents lc, String ignore[])
 		{
 		//get the required interfaces of path, and load each one (if not already in lc), then wire up the interfaces
 		IDC com = lc.loadedComponents[comIndex].class
@@ -93,7 +96,7 @@ component provides composition.RecursiveLoader requires composition.Search searc
 		
 		for (int i = 0; i < ri.arrayLength; i++)
 			{
-			if (!ri[i].isNative && !isAutoBinding(ri[i].package))
+			if (!ri[i].isNative && !isAutoBinding(ri[i].package) && !isIgnore(ignore, ri[i].package))
 				{
 				resolveDependency(lc, comIndex, ri[i].package, ri[i].alias)
 				}
@@ -114,12 +117,12 @@ component provides composition.RecursiveLoader requires composition.Search searc
 		return true
 		}
 	
-	LoadedComponents RecursiveLoader:load(char path[])
+	LoadedComponents RecursiveLoader:load(char path[], opt String ignoreIntfs[])
 		{
 		IDC main = loader.load(path)
 		LoadedComponents lc = new LoadedComponents(main, "", new LoadedComponent(main, path))
 		
-		loadComponents(0, path, lc)
+		loadComponents(0, path, lc, ignoreIntfs)
 		
 		//add components to graph
 		char cgraph[]

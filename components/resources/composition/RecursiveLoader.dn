@@ -1,10 +1,12 @@
+uses data.String
+
 /*
  {"description" : "Load and link (using default components) a component from a file into main memory."}
 */
 
 interface RecursiveLoader{
-	/* {"@description" : "Load a component from a file into main memory, plus all of its needed support components (recursively)."} */
-	LoadedComponents load(char path[])
+	/* {"@description" : "Load a component from a file into main memory, plus all of its needed support components (recursively). The set of required interfaces not to follow is given by ignoreIntfs."} */
+	LoadedComponents load(char path[], opt String ignoreIntfs[])
 	
 	}
 

@@ -1,0 +1,28 @@
+/*
+ {"description" : "Utility API to perform runtime adaptation on a required interface or on a specific object. Note that IDC references are typically gained via the use of Loader."}
+*/
+
+interface Adapt {
+	/*
+	 { "@description" : "Adapt a specific object to be sourced from a different component. This is typically used only on objects that have been dynamically sourced direct from a specified component, rather than for objects that have been sourced from a required interface.",
+			
+			"ofComponent" : "The component from which the object that you want to adapt was instantiated.",
+			"object" : "The object that you want to adapt. The primary interface of this object must be of the type given by interfaceName",
+			"newImplementation" : "The component that is to be the new implementation source of the object.",
+			"interfaceName" : "Name of the interface type. This must be the primary interface of object, and must be a provided interface of the component newImplementation.",
+			"@return" : "True if the adaptation was successful, false otherwise."}
+	*/
+	bool adaptObject(IDC ofComponent, Object object, IDC newImplementation, char interfaceName[])
+	
+	/*
+	 { "@description" : "Adapt a given required interface of a component to be wired to a different component Q. All objects sourced from that required interface are adapted to be sourced from Q. Note that toComponent must have a required interface of the given name, and toComponent must have a provided interface of the same name.",
+	 
+			"ofComponent" : "The component with the required interface you want to adapt.",
+			"interfaceName" : "The string name of the required interface type that you want to adapt.",
+			"toComponent" : "The component with the provided interface that you want to wire the required interface to.",
+			"toInterfaceName" : "The specific provided interface of toComponent to wire to, if different from interfaceName.",
+			"@return" : "True if the adaptation was successful, false otherwise."}
+	*/
+	bool adaptRequiredInterface(IDC ofComponent, char interfaceName[], IDC toComponent, opt char toInterfaceName[])
+	
+	}

@@ -18,6 +18,8 @@ interface FileLib{
 	
 	bool createDirectory(char dir[])
 	bool deleteDirectory(char dir[])
+	
+	char[] getFullPath(char dir[])
 	}
 
 data DCQ{
@@ -242,6 +244,11 @@ component provides io.File(Destructor), io.FileSystem requires native FileLib li
 		bool FileSystem:deleteDirectory(char path[])
 			{
 			return lib.deleteDirectory(path)
+			}
+		
+		char[] FileSystem:getFullPath(char path[])
+			{
+			return lib.getFullPath(path)
 			}
 		}
 	

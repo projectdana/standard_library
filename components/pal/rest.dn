@@ -125,6 +125,14 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				content = new char[](content, "{\"name\" : \"$(pd.events[i].name)\", \"source\" : \"$(pd.events[i].sourceComponent)\", \"value\" : $(iu.intToString(pd.events[i].totalValue)), \"count\" : $(iu.makeString(pd.events[i].totalCount)), \"startTime\" : \"$(dateToString(pd.events[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.events[i].timeLast))\"}")
 				if (i + 1 < pd.events.arrayLength) content = new char[](content, ",")
 				}
+			content = new char[](content, "], ")
+			
+			content = new char[](content, "\"trace\" : [")
+			for (int i = 0; i < pd.trace.arrayLength; i++)
+				{
+				content = new char[](content, "{\"content\" : \"$(pd.trace[i].content)\"}")
+				if (i + 1 < pd.trace.arrayLength) content = new char[](content, ",")
+				}
 			content = new char[](content, "]")
 			}
 		
@@ -384,6 +392,64 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 						else
 						{
 						sendError(socket, "text", "Content type must be an array of strings")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text/json")
+					}
+				}
+				else if (rsc == "/meta/add_intercept")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text/json" || contentType == "application/json")
+					{
+					char config[] = socket.recv(iu.intFromString(payloadSize))
+					
+					//parse the JSON data
+					JSONElement doc = parser.parseDocument(config)
+					char intf[] = parser.getValue(doc, "interface").value
+					char cmp[] = parser.getValue(doc, "interceptComponent").value
+					
+					if (assembly.addIntercept(intf, cmp))
+						{
+						//respond with HTTP OK
+						sendOK(socket, "text/html", null)
+						}
+						else
+						{
+						sendError(socket, "text", "Add intercept failed")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text/json")
+					}
+				}
+				else if (rsc == "/meta/rem_intercept")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text/json" || contentType == "application/json")
+					{
+					char config[] = socket.recv(iu.intFromString(payloadSize))
+					
+					//parse the JSON data
+					JSONElement doc = parser.parseDocument(config)
+					char intf[] = parser.getValue(doc, "interface").value
+					char cmp[] = parser.getValue(doc, "interceptComponent").value
+					
+					if (assembly.remIntercept(intf, cmp))
+						{
+						//respond with HTTP OK
+						sendOK(socket, "text/html", null)
+						}
+						else
+						{
+						sendError(socket, "text", "Add intercept failed")
 						}
 					}
 					else

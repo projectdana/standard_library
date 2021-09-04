@@ -245,5 +245,19 @@ component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONPar
 		
 		return post("/meta/upd_arch", "text/json", content)
 		}
+	
+	bool RestAPI:addIntercept(char intf[], char cmp[])
+		{
+		post("/meta/add_intercept", "text/json", "{\"interface\": \"$intf\", \"interceptComponent\": \"$cmp\"}")
+		
+		return true
+		}
+	
+	bool RestAPI:remIntercept(char intf[], char cmp[])
+		{
+		post("/meta/rem_intercept", "text/json", "{\"interface\": \"$intf\", \"interceptComponent\": \"$cmp\"}")
+		
+		return true
+		}
 
 }

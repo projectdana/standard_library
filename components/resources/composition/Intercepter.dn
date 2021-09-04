@@ -1,5 +1,5 @@
 /*
- {"description" : "Utility API to perform runtime adaptation on a required interface by inserting an intercept component between that required interface and its current providing interface side. Note that IDC references are typically gained via the use of Loader."}
+ {"description" : "Utility API to perform runtime adaptation on a required interface by inserting an intercept component between that required interface and its current providing interface side. Note that IDC references are typically gained via the use of Loader.", "@deprecated" : "true"}
 */
 
 interface Intercepter {

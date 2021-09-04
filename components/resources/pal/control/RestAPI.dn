@@ -26,4 +26,8 @@ interface RestAPI {
 	
 	char[] updArch(String intfs[])
 	
+	bool addIntercept(char intf[], char cmp[])
+	
+	bool remIntercept(char intf[], char cmp[])
+	
 	}

@@ -53,4 +53,16 @@ interface Assembly {
 	*/
 	char[] updArch(String newIntfs[])
 	
+	/*
+	{ "@description" : "Adds an intercepting component at every instance of the given interface (which should be specified using its full package). A new instance of the intercepting component is loaded at each injection site. The intercepting component can either provide the same interface type as that being intercepted, or can provide the dynamic proxy interfaces lang.Proxy and lang.Morph. The intercepting component can also optionally implement pal.ProxyInfo to receive information about its injection site.",
+		"@return" : "True if successful, false otherwise." }
+	*/
+	bool addIntercept(char intf[], char cmp[])
+	
+	/*
+	{ "@description" : "Removes an existing interception rule, and all active interceptors of that rule.",
+		"@return" : "True if successful, false otherwise." }
+	*/
+	bool remIntercept(char intf[], char cmp[])
+	
 	}

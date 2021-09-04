@@ -4,12 +4,21 @@ This is a very simple assembly module.
 
 uses Service
 uses App
+uses ProxyInfo
+
+data ActiveProxy {
+	char cmp[]
+	IDC class
+	char reqIntf[]
+	}
 
 data Interface {
 	//name of the required interface
 	char name[]
 	//path of the component to which this required interface is currently connected, if any
 	char currentWiring[]
+	//list of interceptors active on this required interface (currently we only support one)
+	ActiveProxy proxy
 	}
 
 data Component {
@@ -33,6 +42,14 @@ data Component {
 	Interface interfaces[]
 	
 	Component next
+	}
+
+data Interceptor {
+	char intf[]
+	char cmp[]
+	
+	char proIntf[]
+	char reqIntf[]
 	}
 
 //the below are used when building the list of configs
@@ -70,7 +87,7 @@ data StringList {
 	String list[]
 	}
 
-component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search asearch, composition.Adapter adapter, os.SystemInfo systemInfo, time.DateUtil dateUtil, data.StringBuilder {
+component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search asearch, composition.Adapt adaptAPI, composition.Intercept interceptAPI, composition.RecursiveLoader rLoader, os.SystemInfo systemInfo, time.DateUtil dateUtil, data.StringBuilder {
 	
 	App myApp
 	bool appStarted
@@ -99,6 +116,9 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 	//cached data to speed up initial search
 	RICache riCache[]
 	OptionsCache optionsCache[]
+	
+	//the list of registered interceptors
+	Interceptor interceptors[]
 	
 	IntfDef[] getRequiredInterfaces(char com[])
 		{
@@ -686,6 +706,15 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			
 			wiringsChanged ++
 			
+			//check if we need to inject a proxy from an intercept rule
+			Interceptor nic = interceptors.findFirst(Interceptor.[intf], new Interceptor(intfName))
+			
+			if (nic != null)
+				{
+				ActiveProxy prxInstance = loadProxy(nic, fromComponent.class, toComponent.class, intfName, fromComponent.path)
+				iq.proxy = prxInstance
+				}
+			
 			if (fromComponent.completeWirings == fromComponent.interfaces.arrayLength)
 				{
 				//service start?
@@ -703,7 +732,11 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			
 			if (verbose) out.println(" -- adapting $(fromComponent.path) :: $intfName >> $(toComponent.path)")
 			
-			adapter.adaptRequiredInterface(fromComponent.class, intfName, toComponent.class)
+			//check if there's a proxy on this interface, and adapt the proxy's RI if so
+			if (iq.proxy == null)
+				adaptAPI.adaptRequiredInterface(fromComponent.class, intfName, toComponent.class)
+				else
+				adaptAPI.adaptRequiredInterface(iq.proxy.class, iq.proxy.reqIntf, toComponent.class, intfName)
 			
 			wiringsChanged ++
 			}
@@ -1367,6 +1400,127 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			}
 		
 		return null
+		}
+	
+	ActiveProxy loadProxy(Interceptor nic, IDC wireFrom, IDC wireTo, char wireToIntf[], char site[])
+		{
+		IDC prx = rLoader.load(nic.cmp, new String[](new String("lang.Morph"), new String("pal.Perception"))).mainComponent
+		//IDC prx = loader.load(nic.cmp)
+		prx.wire(nic.reqIntf, wireTo, wireToIntf)
+		interceptAPI.insertIntercept(wireFrom, wireToIntf, prx, nic.proIntf, nic.reqIntf)
+		
+		//check if the proxy component is expecting additional info, via the ProxyInfo interface
+		if (prx.hasProvides("pal.ProxyInfo"))
+			{
+			ProxyInfo pinfo = new ProxyInfo() from prx
+			pinfo.setInjectSite(site, wireToIntf)
+			}
+		
+		//check if the proxy component is expected to be connected to Perception
+		if (prx.hasRequires("pal.Perception"))
+			{
+			prx.wire("pal.Perception", perception, "pal.Perception")
+			}
+		
+		return new ActiveProxy(nic.cmp, prx, nic.reqIntf)
+		}
+	
+	bool Assembly:addIntercept(char intf[], char cmp[])
+		{
+		//load copies of the given interceptor cmp at each location required interface "intf" appears
+		// - if interceptors already exist at that location, this one is added to the end of the chain
+		
+		mutex(configLock)
+			{
+			//this implementation currently supports only a single interceptor per interface
+			if (interceptors.findFirst(Interceptor.[intf], new Interceptor(intf, cmp)) != null)
+				throw new Exception("an interceptor on $intf is already registered")
+			
+			if (!fileSystem.exists(cmp))
+				{
+				throw new Exception("intercept component not found at '$cmp'")
+				}
+			
+			Interceptor nic = new Interceptor(intf, cmp)
+			
+			//detect which interfaces the proxy has (generic lang.Proxy/Morph, or specific)
+			IDC prxCheck = loader.load(cmp)
+			
+			if (prxCheck.hasProvides("lang.Proxy"))
+				nic.proIntf = "lang.Proxy"
+				else if (prxCheck.hasProvides(intf))
+				nic.proIntf = intf
+				else
+				throw new Exception("intercept component does not provide a proxy-able interface for '$intf'")
+			
+			if (prxCheck.hasRequires("lang.Morph"))
+				nic.reqIntf = "lang.Morph"
+				else if (prxCheck.hasRequires(intf))
+				nic.reqIntf = intf
+				else
+				throw new Exception("intercept component does not require a proxy-able interface for '$intf'")
+			
+			interceptors = new Interceptor[](interceptors, nic)
+			
+			//add this intercept to any interfaces that match
+			for (Component cw = components; cw != null; cw = cw.next)
+				{
+				for (int i = 0; i < cw.interfaces.arrayLength; i++)
+					{
+					if (cw.interfaces[i].name == intf)
+						{
+						//load a copy of the interceptor cmp, and inject it
+						Component wireTo = componentLoaded(components, cw.interfaces[i].currentWiring)
+						ActiveProxy prxInst = loadProxy(nic, cw.class, wireTo.class, cw.interfaces[i].name, cw.path)
+						cw.interfaces[i].proxy = prxInst
+						}
+					}
+				}
+			}
+		
+		return true
+		}
+	
+	bool Assembly:remIntercept(char intf[], char cmp[])
+		{
+		//remove the given interceptor cmp at each location that the required interface "intf" appears
+		// - if multiple interceptors exist, the one closest to the end of the chain is removed
+		
+		mutex(configLock)
+			{
+			//remove the intercept rule
+			Interceptor nic = interceptors.findFirst(Interceptor.[intf], new Interceptor(intf, cmp))
+			
+			if (nic == null)
+				throw new Exception("interceptor $intf/$cmp is not registered")
+			
+			Interceptor nArray[] = new Interceptor[interceptors.arrayLength-1]
+			int j = 0
+			for (int i = 0; i < interceptors.arrayLength; i++)
+				{
+				if (interceptors[i] !== nic)
+					{
+					nArray[j] = interceptors[i]
+					j ++
+					}
+				}
+			
+			//remove each specific intercept
+			for (Component cw = components; cw != null; cw = cw.next)
+				{
+				for (int i = 0; i < cw.interfaces.arrayLength; i++)
+					{
+					if (cw.interfaces[i].name == intf && cw.interfaces[i].proxy != null)
+						{
+						Component wireTo = componentLoaded(components, cw.interfaces[i].currentWiring)
+						interceptAPI.removeIntercept(cw.class, cw.interfaces[i].name, wireTo.class, intf, nic.reqIntf)
+						cw.interfaces[i].proxy = null
+						}
+					}
+				}
+			}
+		
+		return false
 		}
 	
 	bool Assembly:runApp()

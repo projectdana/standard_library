@@ -71,4 +71,10 @@ interface FileSystem{
 			"@return" : "True if successful, false otherwise."}
 	*/
 	bool deleteDirectory(char path[])
+	
+	/*
+	 {"@description" : "Get the absolute path of the given (potentially relative) file path."}
+	*/
+	char[] getFullPath(char path[])
+	
 	}

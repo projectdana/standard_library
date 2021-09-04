@@ -1,0 +1,12 @@
+/*
+{ "description" : "Optional secondary component interface for PAL proxies, to receive information on where a proxy has been injected." }
+*/
+
+interface ProxyInfo {
+	
+	/*
+	{ "@description" : "This is function is called by PAL, after loading an intercept component, to notify that component of the location at which it has been injected." }
+	*/
+	void setInjectSite(char location[], char reqIntf[])
+	
+	}
