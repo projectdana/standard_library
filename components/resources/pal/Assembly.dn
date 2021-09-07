@@ -1,8 +1,14 @@
+uses data.String
+uses App
+
+data InterceptInfo {
+	char rule[]
+	char impl[]
+	}
+
 /*
 { "description" : "This is an interface from the PAL framework for emergent software systems. This interface controls the composition of a target program (starting at its 'main' component, which must implement the App interface) by discovering the possible ways in which it can be assembled and adapting it to one of those assemblies." }
 */
-
-uses data.String
 
 interface Assembly {
 	
@@ -64,5 +70,11 @@ interface Assembly {
 		"@return" : "True if successful, false otherwise." }
 	*/
 	bool remIntercept(char intf[], char cmp[])
+	
+	/*
+	{ "@description" : "Gets the list of currently installed intercept rules.",
+		"@return" : "True if successful, false otherwise." }
+	*/
+	InterceptInfo[] getIntercepts()
 	
 	}

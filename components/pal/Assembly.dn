@@ -1505,6 +1505,8 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 					}
 				}
 			
+			interceptors = nArray
+			
 			//remove each specific intercept
 			for (Component cw = components; cw != null; cw = cw.next)
 				{
@@ -1521,6 +1523,18 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			}
 		
 		return false
+		}
+	
+	InterceptInfo[] Assembly:getIntercepts()
+		{
+		InterceptInfo result[] = new InterceptInfo[interceptors.arrayLength]
+		
+		for (int i = 0; i < result.arrayLength; i++)
+			{
+			result[i] = new InterceptInfo(interceptors[i].intf, interceptors[i].cmp)
+			}
+		
+		return result
 		}
 	
 	bool Assembly:runApp()

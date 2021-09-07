@@ -259,5 +259,37 @@ component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONPar
 		
 		return true
 		}
+	
+	char[] RestAPI:getSystemPath()
+		{
+		char response[] = get("/meta/get_system_path")
+		
+		return response
+		}
+	
+	InterceptInfo[] RestAPI:getIntercepts()
+		{
+		InterceptInfo result[]
+		
+		char response[] = get("/meta/get_intercepts")
+		
+		JSONElement doc = parser.parseDocument(response)
+		
+		JSONElement lst = parser.getValue(doc, "intercepts")
+		
+		if (lst.children.arrayLength != 0)
+			{
+			result = new InterceptInfo[lst.children.arrayLength]
+			
+			for (int i = 0; i < lst.children.arrayLength; i++)
+				{
+				JSONElement item = lst.children[i]
+				
+				result[i] = new InterceptInfo(parser.getValue(item, "rule").value, parser.getValue(item, "impl").value)
+				}
+			}
+		
+		return result
+		}
 
 }

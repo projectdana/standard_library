@@ -82,6 +82,8 @@ component provides List requires ui.Font, io.Output out {
 	void List:clear()
 		{
 		listItems = null
+		
+		preferredSize.height = 0
 
 		postRepaint()
 		}

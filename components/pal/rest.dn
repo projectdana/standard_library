@@ -6,11 +6,12 @@ uses pal.Perception
 
 const int HOST_POST = 8008
 
-component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du, pal.Assembly, time.Timer timer, composition.RecursiveLoader loader, data.StringUtil stringUtil, net.TCPServerSocket, net.TCPSocket, data.json.JSONParser parser, composition.Search search, data.StringBuilder {
+component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du, pal.Assembly, time.Timer timer, composition.RecursiveLoader loader, data.StringUtil stringUtil, net.TCPServerSocket, net.TCPSocket, data.json.JSONParser parser, composition.Search search, data.StringBuilder, io.FileSystem fs {
 	
 	bool running = true
 	char currentConfig[]
 	String configs[]
+	char systemPath[]
 	
 	Assembly assembly
 	Perception perc
@@ -188,6 +189,35 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				
 				//send response
 				sendOK(socket, "text/json", content)
+				}
+				else if (rsc == "/meta/get_system_path")
+				{
+				//send response
+				sendOK(socket, "text", systemPath)
+				}
+				else if (rsc == "/meta/get_intercepts")
+				{
+				//construct JSON object of all available configurations
+				InterceptInfo iclist[] = assembly.getIntercepts()
+				
+				StringBuilder sb = new StringBuilder()
+				
+				char content[]
+				
+				sb.add("{")
+				sb.add("\"intercepts\" : [")
+				
+				for (int i = 0; i < iclist.arrayLength; i++)
+					{
+					sb.add("{\"rule\" : \"$(iclist[i].rule)\", \"impl\" : \"$(iclist[i].impl)\"}")
+					
+					if (i + 1 < iclist.arrayLength) sb.add(", ")
+					}
+				sb.add("]")
+				sb.add("}")
+				
+				//send response
+				sendOK(socket, "text/json", sb.get())
 				}
 				else if (rsc == "/meta/")
 				{
@@ -542,6 +572,19 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				subParams = new AppParam[](subParams, new AppParam(params[i].string))
 				}
 			}
+		
+		if (!fs.exists(objectFile))
+			{
+			out.println("object file $objectFile not found")
+			return 1
+			}
+		
+		int pathMod = 0
+		if (objectFile.startsWith("./")) pathMod = 2
+		systemPath = fs.getFullPath(objectFile)
+		systemPath = systemPath.subString(0, systemPath.arrayLength - (objectFile.arrayLength-pathMod))
+		
+		out.println("system home path: $systemPath")
 		
 		char perceptionPath[] = search.getDefaultComponent("pal.Perception")
 		LoadedComponents lc = loader.load(perceptionPath)
