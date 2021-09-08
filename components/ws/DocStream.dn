@@ -1,7 +1,18 @@
-uses net.TCPSocket
+data Part {
+	char content[]
+	Part next
+	}
 
-data IntH {
-	int i
+data ResponseContext {
+	int code
+	char reason[]
+	int length
+	Header headers[]
+	
+	Part responseParts
+	Part responseEnd
+	
+	ResponseContext stack
 	}
 
 component provides DocStream requires data.IntUtil intUtil, io.Output out, data.StringUtil stringUtil, encoding.Encoder:uri encoder {
@@ -10,15 +21,19 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 	Header sessionKeys[]
 	Header newSessionKeys[]
 	
-	TCPSocket socket
-	bool firstWrite = true
-	bool autoChunked = false
-	bool streamEnded = false
+	Stream socket
 	
-	DocStream:DocStream(TCPSocket s, Header headers[], Header responseHeaders[])
+	ResponseContext context = new ResponseContext(200, "OK")
+	
+	bool sentResponse
+	bool isStream
+	
+	DocStream:DocStream(Stream s, Header headers[])
 		{
 		socket = s
 		requestHeaders = headers
+		
+		//NOTE: we may want to always use the "Cache-Control: no-store" header for dynamic content...
 		
 		//extract session state from headers, by scanning for any "Cookie:" key and extracting sub-headers
 		for (int i = 0; i < requestHeaders.arrayLength; i++)
@@ -54,39 +69,31 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 		return headers
 		}
 	
-	char[] intToHex(int i, bool trim)
+	void DocStream:pushContext()
 		{
-		IntH id = new IntH(i)
-		byte bytes[] = dana.serial(id)
-		char res[]
+		ResponseContext newContext = new ResponseContext(200, "OK")
 		
-		for (int p = bytes.arrayLength - 1; p != INT_MAX; p--)
-			{
-			byte x = bytes[p] & 0xF
-			
-			res = new char[]("0123456789ABCDEF"[x], res)
-			
-			x = bytes[p] & 0xF0
-			x = x >> 4
-			
-			res = new char[]("0123456789ABCDEF"[x], res)
-			
-			//stop here, if in "trim" mode and p has reached 0
-			if (trim)
-				{
-				bytes[p] = 0
-				if (id.i == 0) break
-				}
-			}
+		newContext.stack = context
 		
-		return res
+		context = newContext
 		}
 	
-	void writeChunkHeader(char dt[])
+	void DocStream:popContext()
 		{
-		char q[] = intToHex(dt.arrayLength, true)
+		ResponseContext pop = context.stack
+		context.stack = null
 		
-		socket.send(new char[](q, "\r\n"))
+		if (pop.responseParts == null)
+			pop.responseParts = context.responseParts
+			else
+			pop.responseEnd.next = context.responseParts
+		
+		if (context.responseEnd != null)
+			pop.responseEnd = context.responseEnd
+		
+		pop.length += context.length
+		
+		context = pop
 		}
 	
 	Header[] DocStream:getRequestHeaders()
@@ -94,69 +101,60 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 		return requestHeaders
 		}
 	
-	void DocStream:write(char dt[])
+	void DocStream:setStatusCode(int code, char reason[], bool stream)
 		{
-		if (streamEnded)
-			throw new Exception("Stream end has been set; no further data can be written")
+		isStream = stream
 		
-		if (firstWrite)
-			{
-			writeStatus(200, "OK", new Header[](new Header("transfer-encoding", "chunked")))
-			
-			firstWrite = false
-			autoChunked = true
-			}
-		
-		if (autoChunked) writeChunkHeader(dt)
-		
-		socket.send(dt)
-		
-		if (autoChunked) socket.send("\r\n")
+		context.code = code
+		context.reason = reason
 		}
 	
-	void DocStream:writeStatus(int code, char reason[], Header headers[])
+	void DocStream:setHeaders(store Header headers[])
 		{
-		if (streamEnded)
-			throw new Exception("Stream end has been set; no further data can be written")
-		
-		if (firstWrite)
+		for (int i = 0; i < headers.arrayLength; i++)
 			{
-			char hdrLine[] = new char[]("HTTP/1.1 ", intUtil.makeString(code), " ", reason, "\r\n")
-			socket.send(hdrLine)
-			
-			for (int i = 0; i < headers.arrayLength; i++)
+			if (headers[i].key == "content-length")
 				{
-				socket.send(new char[](headers[i].key, ":", headers[i].value, "\r\n"))
+				//set a flag for this
+				break
 				}
-			
-			for (int i = 0; i < newSessionKeys.arrayLength; i++)
-				{
-				socket.send(new char[](newSessionKeys[i].key, ":", newSessionKeys[i].value, "\r\n"))
-				}
-			
-			socket.send("\r\n")
+			}
+		
+		context.headers = headers
+		}
+	
+	void DocStream:write(char dt[])
+		{
+		if (isStream)
+			{
+			socket.send(dt)
 			}
 			else
 			{
-			throw new Exception("Request status can only be written once")
+			Part p = new Part(dt)
+			
+			if (context.responseParts == null)
+				context.responseParts = p
+				else
+				context.responseEnd.next = p
+			
+			context.responseEnd = p
+			
+			context.length += dt.arrayLength
 			}
-		
-		firstWrite = false
 		}
 	
 	void DocStream:setSessionKey(char key[], char value[])
 		{
-		if (!firstWrite)
-			throw new Exception("Session keys cannot be modified after the start of a response")
-		
 		//NOTE: we only need to send back Set-Cookie if anything has actually changed...
-		
-		// https://en.wikipedia.org/wiki/HTTP_cookie
 		
 		for (int i = 0; i < sessionKeys.arrayLength; i++)
 			{
 			if (sessionKeys[i].key == key)
+				{
 				sessionKeys[i].value = value
+				break
+				}
 			}
 		
 		newSessionKeys = new Header[](newSessionKeys, new Header("Set-Cookie", "$key=$(encoder.encode(value))"))
@@ -175,9 +173,6 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 	
 	void DocStream:remSessionKey(char key[])
 		{
-		if (!firstWrite)
-			throw new Exception("Session keys cannot be modified after the start of a response")
-		
 		// the best way to attempt cookie deletion is to set an expiry date on that cookie, with the date in the past, though note that browsers can technically choose to ignore this
 		
 		for (int i = 0; i < sessionKeys.arrayLength; i++)
@@ -190,24 +185,48 @@ component provides DocStream requires data.IntUtil intUtil, io.Output out, data.
 			}
 		}
 	
-	void DocStream:endStream()
+	void DocStream:sendResponse()
 		{
-		if (!streamEnded)
+		if (!sentResponse)
 			{
-			if (!firstWrite)
+			char hdrLine[] = new char[]("HTTP/1.1 ", intUtil.makeString(context.code), " ", context.reason, "\r\n")
+			socket.send(hdrLine)
+			
+			if (!isStream)
 				{
-				if (autoChunked)
-					{
-					socket.send("0\r\n\r\n")
-					}
-				}
-				else
-				{
-				writeStatus(200, "OK", new Header("content-length", "0"))
+				//send the total length of our response
+				socket.send("content-length: $(context.length)\r\n")
 				}
 			
-			streamEnded = true
+			for (int i = 0; i < context.headers.arrayLength; i++)
+				{
+				socket.send(new char[](context.headers[i].key, ":", context.headers[i].value, "\r\n"))
+				}
+			
+			//we need to include a "path" subheader here, or the cookie will only be sent back for the exact URL that set it
+			for (int i = 0; i < newSessionKeys.arrayLength; i++)
+				{
+				socket.send(new char[](newSessionKeys[i].key, ":", newSessionKeys[i].value, "; Path=/\r\n"))
+				}
+			
+			socket.send("\r\n")
+			
+			if (!isStream)
+				{
+				//send all of the response chunks
+				for (Part p = context.responseParts; p!= null; p = p.next)
+					{
+					socket.send(p.content)
+					}
+				}
+			
+			sentResponse = true
 			}
+		}
+	
+	bool DocStream:responseSent()
+		{
+		return sentResponse
 		}
 	
 	}

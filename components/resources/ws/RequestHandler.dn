@@ -1,0 +1,23 @@
+uses net.TCPSocket
+uses net.TLS
+uses data.String
+
+data KeyVal {
+	char key[]
+	char val[]
+	}
+
+data ConfigData {
+	KeyVal mimeTypes[]
+	KeyVal subdomains[]
+	String landingPages[]
+	String staticServe[]
+	}
+
+interface RequestHandler {
+	
+	RequestHandler()
+	
+	void processStream(store TCPSocket client, store TLS tls, store ConfigData cfg)
+	
+	}

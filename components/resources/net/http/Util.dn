@@ -1,0 +1,7 @@
+uses time.DateTime
+
+interface Util {
+	
+	char[] getDateString(DateTime dt)
+	
+	}

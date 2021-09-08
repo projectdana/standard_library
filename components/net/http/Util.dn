@@ -1,0 +1,78 @@
+uses data.String
+
+component provides Util requires data.IntUtil iu {
+	
+	int monthCodes[] = new int[](0,3,3,6,1,4,6,2,5,0,3,5)
+	String dayNames[] = new String[](new String("Sun"), new String("Mon"),new String("Tue"),new String("Wed"),new String("Thu"), new String("Fri"), new String("Sat"))
+	
+	String monthNames[] = new String[](new String("Jan"), new String("Feb"),new String("Mar"),new String("Apr"), new String("May"), new String("Jun"), new String("Jul"), new String("Aug"), new String("Sep"), new String("Oct"), new String("Nov"), new String("Dec"))
+	
+	char[] dateToDay(DateTime date)
+		{
+		char yr[] = clone iu.makeString(date.year)
+		char decade[] = new char[2]
+		decade[0] = yr[2]
+		decade[1] = yr[3]
+		
+		yr[2] = "0"
+		yr[3] = "0"
+		
+		int shortYear = iu.intFromString(decade)
+		
+		int yearCode = (shortYear + (shortYear / 4)) % 7
+		
+		int monthCode = monthCodes[date.month - 1]
+		
+		int centuryKey = iu.intFromString(yr)
+		int centuryCode = 0
+		
+		while (centuryKey < 1700)
+			centuryKey += 400
+		
+		while (centuryKey > 2000)
+			centuryKey -= 400
+		
+		if (centuryKey == 1700)
+			centuryCode = 4
+			else if (centuryKey == 1800)
+			centuryCode = 2
+			else if (centuryKey == 1900)
+			centuryCode = 0
+			else if (centuryKey == 2000)
+			centuryCode = 6
+		
+		int leapYearCode = 0
+		
+		if (date.month == 1 || date.month == 2)
+			{
+			if ((date.year % 4) == 0 && (date.year % 100) != 0)
+				leapYearCode = 1
+			
+			if (date.year % 400 == 0)
+				leapYearCode = 1
+			}
+		
+		int day = date.day
+		
+		int code = ((yearCode + monthCode + centuryCode + day) - leapYearCode) % 7
+		
+		return dayNames[code].string
+		}
+	
+	char[] itsl(int i, int len)
+		{
+		char q[] = iu.makeString(i)
+		
+		while (q.arrayLength < len)
+			q = new char[]("0", q)
+		
+		return q
+		}
+	
+	char[] Util:getDateString(DateTime dt)
+		{
+		//must be in GMT, format: Fri, 31 Dec 1999 23:59:59 GMT
+		return "$(dateToDay(dt)), $(itsl(dt.day, 2)) $(monthNames[dt.month-1].string) $(dt.year) $(itsl(dt.hour, 2)):$(itsl(dt.minute, 2)):$(itsl(dt.second, 2)) GMT"
+		}
+	
+	}
