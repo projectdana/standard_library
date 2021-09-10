@@ -676,6 +676,12 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		emitevent requestFocus()
 		}
 	
+	void TextField:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
+	
 	HotKey[] TextField:recvFocus()
 		{
 		focus = true

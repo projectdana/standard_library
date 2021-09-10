@@ -109,5 +109,11 @@ component provides FileDrop requires ui.Font, io.Output out, data.IntUtil iu, da
 		{
 		emitevent requestFocus()
 		}
+	
+	void FileDrop:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
 
 	}

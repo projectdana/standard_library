@@ -514,5 +514,11 @@ component provides Panel requires io.Output out {
 				}
 			}
 		}
+	
+	void Panel:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
 
 	}

@@ -189,6 +189,8 @@ component provides List requires ui.Font, io.Output out {
 
 	void List:click(int x, int y, int button)
 		{
+		if (disabled) return
+		
 		int qY = 0
 		for (int i = 0; i < listItems.arrayLength; i++)
 			{
@@ -223,6 +225,12 @@ component provides List requires ui.Font, io.Output out {
 	void List:setFocus()
 		{
 		emitevent requestFocus()
+		}
+	
+	void List:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
 		}
 
 	}

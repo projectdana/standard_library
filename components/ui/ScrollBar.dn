@@ -302,4 +302,10 @@ component provides ScrollBar requires io.Output out, data.IntUtil iu {
 		return new WH(width, height)
 		}
 	
+	void ScrollBar:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
+	
 	}

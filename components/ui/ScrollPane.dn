@@ -371,5 +371,11 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 		{
 		return new WH(width, height)
 		}
+	
+	void ScrollPane:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
 
 }

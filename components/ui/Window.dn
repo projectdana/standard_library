@@ -805,6 +805,12 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			keyboardFocus.keyUp(keyCode)
 			}
 		}
+	
+	void Window:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
 
 	void Window:setFocus()
 		{

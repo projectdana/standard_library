@@ -15,6 +15,10 @@ component provides CheckBox requires ui.Font, os.SystemInfo sysInfo, io.Output o
 	Color checkColor = new Color(50, 50, 65, 255)
 	Color textColor = new Color(0, 0, 0, 255)
 	
+	Color backgroundDis = new Color(185, 185, 185, 255)
+	Color checkColorDis = new Color(50, 50, 50, 255)
+	Color textColorDis = new Color(20, 20, 20, 255)
+	
 	CheckBox:CheckBox(char label[])
 		{
 		labelFont = new Font(sysInfo.getSystemFont(false), 15)
@@ -24,9 +28,18 @@ component provides CheckBox requires ui.Font, os.SystemInfo sysInfo, io.Output o
 	
 	void CheckBox:paint(Canvas c)
 		{
-		c.drawRect(new Rect2D(xPosition, yPosition+2, CHECK_WIDTH, CHECK_HEIGHT, background))
-		if (checked) c.drawRect(new Rect2D(xPosition+3, yPosition+5, CHECK_WIDTH-6, CHECK_HEIGHT-6, checkColor))
-		c.drawText(new Point2D(xPosition+CHECK_WIDTH+TEXT_MARGIN, yPosition+1, textColor), labelFont, text)
+		if (!disabled)
+			{
+			c.drawRect(new Rect2D(xPosition, yPosition+2, CHECK_WIDTH, CHECK_HEIGHT, background))
+			if (checked) c.drawRect(new Rect2D(xPosition+3, yPosition+5, CHECK_WIDTH-6, CHECK_HEIGHT-6, checkColor))
+			c.drawText(new Point2D(xPosition+CHECK_WIDTH+TEXT_MARGIN, yPosition+1, textColor), labelFont, text)
+			}
+			else
+			{
+			c.drawRect(new Rect2D(xPosition, yPosition+2, CHECK_WIDTH, CHECK_HEIGHT, backgroundDis))
+			if (checked) c.drawRect(new Rect2D(xPosition+3, yPosition+5, CHECK_WIDTH-6, CHECK_HEIGHT-6, checkColorDis))
+			c.drawText(new Point2D(xPosition+CHECK_WIDTH+TEXT_MARGIN, yPosition+1, textColorDis), labelFont, text)
+			}
 		}
 	
 	bool CheckBox:isChecked()
@@ -47,6 +60,8 @@ component provides CheckBox requires ui.Font, os.SystemInfo sysInfo, io.Output o
 	
 	void CheckBox:click(int x, int y, int button)
 		{
+		if (disabled) return
+		
 		if (button == MouseButtons.BUTTON_LEFT)
 			{
 			checked = !checked
@@ -63,6 +78,12 @@ component provides CheckBox requires ui.Font, os.SystemInfo sysInfo, io.Output o
 	void CheckBox:setFocus()
 		{
 		emitevent requestFocus()
+		}
+	
+	void CheckBox:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
 		}
 	
 	void CheckBox:setText(char t[])

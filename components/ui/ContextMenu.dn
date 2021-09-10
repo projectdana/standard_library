@@ -116,6 +116,12 @@ component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Outpu
 		emitevent requestFocus()
 		}
 	
+	void ContextMenu:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
+	
 	Rect ContextMenu:getBounds()
 		{
 		return new Rect(xPosition, yPosition, width, height)

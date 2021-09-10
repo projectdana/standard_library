@@ -35,6 +35,8 @@ data HotKey {
 */
 interface ClickableObject extends GraphicsObject{
 	
+	transfer bool disabled
+	
 	/* {"@description" : "This application-level event is fired when a user clicks on this object."} */
 	event click()
 	
@@ -45,6 +47,9 @@ interface ClickableObject extends GraphicsObject{
 	
 	/* {"@description" : "This windowing event is intended for the windowing system only, and is fired when the object requests focus."} */
 	event requestFocus()
+	
+	/* {"@description" : "Set whether this interact-able graphics entity is disabled (graphics entities are enabled by default)."} */
+	void setDisabled(bool d){disabled = b}
 	
 	/* {"@description" : "Get the bounding rectangle for mouse click hit detection by the windowing system."} */
 	Rect getBounds()

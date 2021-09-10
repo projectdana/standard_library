@@ -301,4 +301,10 @@ component provides ScrollBar:h {
 		return new WH(width, height)
 		}
 	
+	void ScrollBar:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
+	
 	}
