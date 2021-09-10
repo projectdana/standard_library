@@ -49,7 +49,7 @@ interface ClickableObject extends GraphicsObject{
 	event requestFocus()
 	
 	/* {"@description" : "Set whether this interact-able graphics entity is disabled (graphics entities are enabled by default)."} */
-	void setDisabled(bool d){disabled = b}
+	void setDisabled(bool d){disabled = d}
 	
 	/* {"@description" : "Get the bounding rectangle for mouse click hit detection by the windowing system."} */
 	Rect getBounds()
