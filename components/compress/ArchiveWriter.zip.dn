@@ -200,6 +200,8 @@ component provides ArchiveWriter:zip requires io.Output out, data.IntUtil iu, da
 		
 		writeLFH(lfh, fd)
 		
+		fd.setPos(fd.getPos() + cdr.fileNameLen)
+		
 		fd.setPos(opos)
 		
 		return true
@@ -255,7 +257,7 @@ component provides ArchiveWriter:zip requires io.Output out, data.IntUtil iu, da
 		LFH lfh = new LFH()
 		lfh.sig = LFH.MAGIC
 		lfh.fileNameLen = path.arrayLength
-		lfh.compressionType = zipMethod
+		//lfh.compressionType = zipMethod //some archive readers require this to be zero on directories
 		lfh.versionNeeded = versionNeeded
 		lfh.lastModifiedDate = lastModifiedDate
 		lfh.lastModifiedTime = lastModifiedTime
@@ -266,7 +268,7 @@ component provides ArchiveWriter:zip requires io.Output out, data.IntUtil iu, da
 		
 		CDR cdr = new CDR()
 		cdr.sig = CDR.MAGIC
-		cdr.compressionType = zipMethod
+		//cdr.compressionType = zipMethod //some archive readers require this to be zero on directories
 		cdr.fileNameLen = path.arrayLength
 		cdr.headerOffset = opos
 		cdr.versionMaker = versionMaker
@@ -360,8 +362,8 @@ component provides ArchiveWriter:zip requires io.Output out, data.IntUtil iu, da
 			}
 		
 		//get a list of folders in which this file exists (i.e. each node in the sub-tree path), so we can update their sizes and CRCs as we go
-		// - TODO: decide what to do if the directory tree has not yet been added via addDirectory()...
-		FileIndex folders[] = getDirectories(path)
+		// - compatibility: some archive readers will fail if we do this, so we don't...
+		//FileIndex folders[] = getDirectories(path)
 		
 		if (compressMethod != ArchiveWriter.CM_NONE)
 			scom.compressInit()
@@ -372,10 +374,12 @@ component provides ArchiveWriter:zip requires io.Output out, data.IntUtil iu, da
 			
 			crc = crc32.makeCRC(crc, dat)
 			
+			/*
 			for (int i = 0; i < folders.arrayLength; i++)
 				{
 				folders[i].cdr.originCRC = crc32.makeCRC(folders[i].cdr.originCRC, dat)
 				}
+			*/
 			
 			byte cdata[] = null
 			
@@ -392,11 +396,13 @@ component provides ArchiveWriter:zip requires io.Output out, data.IntUtil iu, da
 		if (compressMethod != ArchiveWriter.CM_NONE)
 			scom.compressEnd()
 		
+		/*
 		for (int i = 0; i < folders.arrayLength; i++)
 			{
 			folders[i].cdr.compressedSize += compressLength
 			folders[i].cdr.originSize += originSize
 			}
+		*/
 		
 		int cpos = ifd.getPos()
 		
@@ -478,13 +484,6 @@ component provides ArchiveWriter:zip requires io.Output out, data.IntUtil iu, da
 		{
 		currentStreamLFH.originCRC = crc32.makeCRC(currentStreamLFH.originCRC, chunk)
 		
-		/*
-		for (int i = 0; i < folders.arrayLength; i++)
-			{
-			folders[i].cdr.originCRC = crc32.makeCRC(folders[i].cdr.originCRC, dat)
-			}
-		*/
-		
 		byte cdata[] = null
 		
 		if (compressMethod == ArchiveWriter.CM_NONE)
@@ -542,11 +541,14 @@ component provides ArchiveWriter:zip requires io.Output out, data.IntUtil iu, da
 		
 		for (int i = 0; i < archiveIndex.arrayLength; i++)
 			{
+			/*
 			if (archiveIndex[i].dir)
 				{
 				//update the local header, now that we know the total size and CRC values
-				updateLFH(ifd, archiveIndex[i].cdr)
+				// - compatibility: some archive readers fail if we do this
+				//updateLFH(ifd, archiveIndex[i].cdr)
 				}
+			*/
 			
 			writeCDR(archiveIndex[i].cdr, ifd)
 			ifd.write(archiveIndex[i].path)
