@@ -61,7 +61,7 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 		return null
 		}
 	
-	char[] checkRelativePath(char base[], char pkg[])
+	char[] checkRelativePath(char base[], char pkg[], char semantic[])
 		{
 		char test[]
 		
@@ -69,12 +69,14 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 		
 		if (test != null) return test
 		
+		if (semantic.arrayLength != 0) semantic = ".$semantic"
+		
 		test = pkg
 		if (fileSystem.exists(new char[](base, test)))
 			return test
 		
 		//local with .o?
-		test = new char[](pkg, ".o")
+		test = new char[](pkg, semantic, ".o")
 		if (fileSystem.exists(new char[](base, test)))
 			return test
 		
@@ -107,7 +109,7 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 			test = new char[](test, "/", parts[i].string)
 			}
 		
-		test = new char[](test, ".o")
+		test = new char[](test, semantic, ".o")
 		
 		if (fileSystem.exists(test))
 			return test
@@ -117,16 +119,16 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 	
 	//this function takes a "package path" (formatted with dots) and searches for a matching component
 	// - we assume the package path indicates an interface, so we check: local manifest; local absolute; central manifest; central absolute
-	char[] resolvePackagePath(char source[])
+	char[] resolvePackagePath(char source[], char semantic[])
 		{
 		char test[]
 		
-		test = checkRelativePath("", source)
+		test = checkRelativePath("", source, semantic)
 		
 		if (test != null) return test
 		
 		char danaHome[] = systemInfo.getVariable("DANA_HOME")
-		test = checkRelativePath(new char[](danaHome, "/components/"), source)
+		test = checkRelativePath(new char[](danaHome, "/components/"), source, semantic)
 		
 		return test
 		}
@@ -188,7 +190,7 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 					{
 					IDC newCom
 					
-					char newPath[] = resolvePackagePath(package)
+					char newPath[] = resolvePackagePath(package, semantic)
 					
 					if (newPath == null) throw new Exception("Failed to locate dependency $package of component $path")
 					
