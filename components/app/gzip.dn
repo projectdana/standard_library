@@ -50,15 +50,20 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 			}
 		}
 	
+	void printGuide()
+		{
+		out.println("Usage:")
+		out.println(" dana gzip -c  archiveName.gzip fileToCompress1 fileToCompress2 folderToCompress3")
+		out.println(" dana gzip -x  archiveToExtract.gzip -d extractToDirectory")
+		out.println(" dana gzip -l  archiveContentsToList.gzip")
+		out.println(" dana gzip -lr archiveContentsToListRecursively.gzip")
+		}
+	
 	int App:main(AppParam params[])
 		{
 		if (params.arrayLength == 0)
 			{
-			out.println("Usage:")
-			out.println(" dana gzip -c  archiveName.gz fileToCompress")
-			out.println(" dana gzip -x  archiveToExtract.gz -d extractToDirectory")
-			out.println(" dana gzip -l  archiveContentsToList.gz")
-			out.println(" dana gzip -lr archiveContentsToListRecursively.gz")
+			printGuide()
 			return 1
 			}
 		
@@ -107,6 +112,14 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 			char outpath[] = zip.getFileName(ifd)
 			
 			out.println(outpath)
+			}
+			else
+			{
+			out.println("Error: unknown command. See below for correct usage.")
+			
+			printGuide()
+			
+			return 1
 			}
 		
 		return 0

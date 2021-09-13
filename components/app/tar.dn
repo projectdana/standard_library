@@ -122,15 +122,20 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 			}
 		}
 	
+	void printGuide()
+		{
+		out.println("Usage:")
+		out.println(" dana tar -c  archiveName.tar fileToCompress1 fileToCompress2 folderToCompress3")
+		out.println(" dana tar -x  archiveToExtract.tar -d extractToDirectory")
+		out.println(" dana tar -l  archiveContentsToList.tar")
+		out.println(" dana tar -lr archiveContentsToListRecursively.tar")
+		}
+	
 	int App:main(AppParam params[])
 		{
 		if (params.arrayLength == 0)
 			{
-			out.println("Usage:")
-			out.println(" dana tar -c  archiveName.tar fileToCompress1 fileToCompress2 folderToCompress3")
-			out.println(" dana tar -x  archiveToExtract.tar -d extractToDirectory")
-			out.println(" dana tar -l  archiveContentsToList.tar")
-			out.println(" dana tar -lr archiveContentsToListRecursively.tar")
+			printGuide()
 			return 1
 			}
 		
@@ -209,6 +214,14 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 			Archive archive = new Archive:tar(archiveFD)
 			
 			printContents(archive, null)
+			}
+			else
+			{
+			out.println("Error: unknown command. See below for correct usage.")
+			
+			printGuide()
+			
+			return 1
 			}
 		
 		return 0

@@ -122,15 +122,20 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 			}
 		}
 	
+	void printGuide()
+		{
+		out.println("Usage:")
+		out.println(" dana zip -c  archiveName.zip fileToCompress1 fileToCompress2 folderToCompress3")
+		out.println(" dana zip -x  archiveToExtract.zip -d extractToDirectory")
+		out.println(" dana zip -l  archiveContentsToList.zip")
+		out.println(" dana zip -lr archiveContentsToListRecursively.zip")
+		}
+	
 	int App:main(AppParam params[])
 		{
 		if (params.arrayLength == 0)
 			{
-			out.println("Usage:")
-			out.println(" dana zip -c  archiveName.zip fileToCompress1 fileToCompress2 folderToCompress3")
-			out.println(" dana zip -x  archiveToExtract.zip -d extractToDirectory")
-			out.println(" dana zip -l  archiveContentsToList.zip")
-			out.println(" dana zip -lr archiveContentsToListRecursively.zip")
+			printGuide()
 			return 1
 			}
 		
@@ -209,6 +214,14 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 			Archive archive = new Archive:zip(archiveFD)
 			
 			printContents(archive, null)
+			}
+			else
+			{
+			out.println("Error: unknown command. See below for correct usage.")
+			
+			printGuide()
+			
+			return 1
 			}
 		
 		return 0
