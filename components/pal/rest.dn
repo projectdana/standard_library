@@ -573,6 +573,8 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				}
 			}
 		
+		objectFile = objectFile.explode("\\").implode("/")
+		
 		if (!fs.exists(objectFile))
 			{
 			out.println("object file $objectFile not found")
