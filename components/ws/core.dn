@@ -60,6 +60,10 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 			
 			config.staticServe = new String[](staticDirectories, parts)
 			}
+			else
+			{
+			config.staticServe = new String[](staticDirectories)
+			}
 		}
 	
 	void loadMIMETypes()
