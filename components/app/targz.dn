@@ -30,9 +30,11 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 		char apath[] = ce.localPath
 		if (relativePath != null) apath = "$(relativePath)/$(apath)"
 		
-		if (fileSystem.getInfo(ce.fullPath).type == FileInfo.TYPE_DIR)
+		FileInfo fInfo = fileSystem.getInfo(ce.fullPath)
+		
+		if (fInfo.type == FileInfo.TYPE_DIR)
 			{
-			aw.addDirectory(apath)
+			aw.addDirectory(apath, fInfo.modified)
 			
 			FileEntry files[] = fileSystem.getDirectoryContents(ce.fullPath)
 			
@@ -44,7 +46,7 @@ component provides App requires io.Output out, io.File,	io.FileSystem fileSystem
 			else
 			{
 			File fd = new File(ce.fullPath, File.READ)
-			aw.addFile(apath, fd)
+			aw.addFile(apath, fd, fInfo.modified)
 			}
 		}
 	
