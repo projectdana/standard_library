@@ -3,6 +3,7 @@ uses Service
 data ReqIntf {
 	char package[]
 	char alias[]
+	char semantic[]
 	bool isNative
 	}
 
@@ -27,8 +28,11 @@ component provides composition.RecursiveLoader requires composition.Search searc
 				char package[] = parser.getValue(ri, "package").value
 				char alias[] = parser.getValue(ri, "alias").value
 				bool isNative = parser.getValue(ri, "native") != null && parser.getValue(ri, "native").value == "true"
+				char semantic[]
+				if (parser.getValue(ri, "semantic") != null)
+					semantic = parser.getValue(ri, "semantic").value
 				
-				result = new ReqIntf[](result, new ReqIntf(package, alias, isNative))
+				result = new ReqIntf[](result, new ReqIntf(package, alias, semantic, isNative))
 				}
 			}
 		
@@ -98,7 +102,14 @@ component provides composition.RecursiveLoader requires composition.Search searc
 			{
 			if (!ri[i].isNative && !isAutoBinding(ri[i].package) && !isIgnore(ignore, ri[i].package))
 				{
-				resolveDependency(lc, comIndex, ri[i].package, ri[i].alias)
+				char pkg[] = ri[i].package
+				char alias[] = ri[i].alias
+				if (ri[i].semantic.arrayLength != 0)
+					{
+					pkg = "$pkg:$(ri[i].semantic)"
+					alias = "$alias:$(ri[i].semantic)"
+					}
+				resolveDependency(lc, comIndex, pkg, alias)
 				}
 				else if (ri[i].isNative && !com.isConnected(ri[i].alias))
 				{
