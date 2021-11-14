@@ -62,6 +62,10 @@ component provides List requires ui.Font, io.Output out {
 					newList[j] = listItems[i]
 					j ++
 					}
+					else if (selectedIndex == i)
+					{
+					selectedItem = null
+					}
 				}
 			
 			listItems = newList

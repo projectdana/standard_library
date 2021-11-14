@@ -586,7 +586,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		systemPath = fs.getFullPath(objectFile)
 		systemPath = systemPath.subString(0, systemPath.arrayLength - (objectFile.arrayLength-pathMod))
 		
-		out.println("system home path: $systemPath")
+		out.println("[system home path: $systemPath]")
 		
 		char perceptionPath[] = search.getDefaultComponent("pal.Perception")
 		LoadedComponents lc = loader.load(perceptionPath)
@@ -607,7 +607,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		//call assembly.runApp(), and launch the server stuff in a different thread...
 		asynch::serverThread(serverPort)
 		
-		assembly.runApp()
+		assembly.runApp(systemPath)
 		
 		return 0
 		}

@@ -746,9 +746,10 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		return wiringsChanged
 		}
 	
-	void launchMain(IDC class)
+	void launchMain(IDC class, char launchPath[])
 		{
 		myApp = new App() from class
+		myApp.setSourcePath(launchPath)
 		exitCode = myApp.main(subParams)
 		appFinished = true
 		appStarted = false
@@ -801,8 +802,11 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			if (verbose) out.println(" [setting config to '$conf']")
 			
 			// - walk through all wirings of the new configuration and apply them (using forwardWire to satisfy forward dependencies first)
-			String comps[] = stringUtil.explode(stringUtil.explode(conf, "|")[0].string, ",")
-			String wirings[] = clone stringUtil.explode(stringUtil.explode(conf, "|")[1].string, ",")
+			String els[] = stringUtil.explode(conf, "|")
+			String comps[] = stringUtil.explode(els[0].string, ",")
+			String wirings[] = null
+			if (els.arrayLength == 2)
+				wirings = clone stringUtil.explode(stringUtil.explode(conf, "|")[1].string, ",")
 			
 			//mark all loaded components as not-used
 			Component cw = components
@@ -1537,7 +1541,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		return result
 		}
 	
-	bool Assembly:runApp()
+	bool Assembly:runApp(char launchPath[])
 		{
 		mutex(configLock)
 			{
@@ -1556,7 +1560,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 				}
 			}
 		
-		launchMain(mainComponent.class)
+		launchMain(mainComponent.class, launchPath)
 		
 		return true
 		}

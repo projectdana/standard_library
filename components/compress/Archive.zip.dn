@@ -411,11 +411,11 @@ component provides Archive:zip requires io.Output out, data.IntUtil iu, data.Str
 			
 			int offset = 0
 			int rdAmt = 0
-			while (rdAmt < lfh.compressedSize)
+			while (rdAmt < fi.cdr.compressedSize)
 				{
 				int thisRead = CHUNK_SIZE
 				
-				if ((rdAmt + CHUNK_SIZE) > lfh.compressedSize) thisRead = lfh.compressedSize - rdAmt
+				if ((rdAmt + CHUNK_SIZE) > fi.cdr.compressedSize) thisRead = fi.cdr.compressedSize - rdAmt
 				
 				byte cdata[] = ifd.read(thisRead)
 				
@@ -478,12 +478,14 @@ component provides Archive:zip requires io.Output out, data.IntUtil iu, data.Str
 			if (lfh.compressionType != ZIP_CM_NONE)
 				scom.decompressInit()
 			
+			//the LFH is an unreliable source for compressedSize and CRC info, since that data may be absent and included in a "data descriptor" instead (in which case we'd need to decompress the data until deflate told us it's finished)
+			// - instead of having two different styles, however, we always read this data from the CDR (since we don't support multi-disk archives anyway at the moment)
 			int rdAmt = 0
-			while (rdAmt < lfh.compressedSize)
+			while (rdAmt < fi.cdr.compressedSize)
 				{
 				int thisRead = CHUNK_SIZE
 				
-				if ((rdAmt + CHUNK_SIZE) > lfh.compressedSize) thisRead = lfh.compressedSize - rdAmt
+				if ((rdAmt + CHUNK_SIZE) > fi.cdr.compressedSize) thisRead = fi.cdr.compressedSize - rdAmt
 				
 				byte cdata[] = ifd.read(thisRead)
 				

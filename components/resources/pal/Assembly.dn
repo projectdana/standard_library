@@ -34,7 +34,7 @@ interface Assembly {
 	/*
 	{ "@description" : "Launches the main method of the program, blocking until that function completes." }
 	*/
-	bool runApp()
+	bool runApp(char launchPath[])
 	
 	/*
 	{ "@description" : "Adds a new component to the pool of available alternatives. The component being added, and any new dependencies, must already be in the appropriate directory relative to the system it is being added to." }
