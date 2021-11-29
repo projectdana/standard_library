@@ -241,8 +241,35 @@ component provides io.File(Destructor), io.FileSystem requires native FileLib li
 			return lib.createDirectory(path)
 			}
 		
+		bool deleteContents(char path[])
+			{
+			FileEntry files[] = getDirectoryContents(path)
+			
+			for (int i = 0; i < files.arrayLength; i++)
+				{
+				char subPath[] = new char[](path, "/", files[i].name)
+				
+				if (getInfo(subPath).type == FileInfo.TYPE_DIR)
+					{
+					if (!deleteContents(subPath)) return false
+					if (!lib.deleteDirectory(path)) return false
+					}
+					else
+					{
+					if (!delete(subPath)) return false
+					}
+				}
+			
+			return true
+			}
+		
 		bool FileSystem:deleteDirectory(char path[])
 			{
+			if (getInfo(path).type != FileInfo.TYPE_DIR)
+				throw new Exception("path $path is not a directory")
+			
+			if (!deleteContents(path)) return false
+			
 			return lib.deleteDirectory(path)
 			}
 		
