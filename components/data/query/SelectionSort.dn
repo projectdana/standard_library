@@ -1,0 +1,29 @@
+// Selection sort
+// Author: Roberto Rodrigues Filho
+// Date: August @ 2021
+
+component provides data.query.Sort {
+
+	Data[] Sort:sort(Data list[], TypeField field, bool ascending) {
+		Data result[] = clone list
+		int temp = 0		
+		for (int i = 0; i < result.arrayLength-1; i++) {
+			temp = i
+			for (int j = i+1; j < result.arrayLength; j++) {
+				if (ascending) {
+					if (result[j]:.field < result[temp]:.field)
+						temp = j
+				} else {
+					if (result[j]:.field > result[temp]:.field)
+						temp = j
+				}
+			}
+			if (temp != i) {
+				Data swap = result[i]
+				result[i] = result[temp]
+				result[temp] = swap
+			}
+		}
+		return result
+	}
+}

@@ -1,0 +1,87 @@
+data Int {
+	int num
+}
+
+component provides UnitTest requires data.query.Sort sort {	
+	
+	Int[] getTestArray() {
+		Int testInt[] = new Int[10]
+		testInt[0] = new Int(29)
+		testInt[1] = new Int(1)
+		testInt[2] = new Int(9)
+		testInt[3] = new Int(30)
+		testInt[4] = new Int(60)
+		testInt[5] = new Int(2)
+		testInt[6] = new Int(5)
+		testInt[7] = new Int(12)
+		testInt[8] = new Int(14)
+		testInt[9] = new Int(13)
+		return testInt
+	}
+
+	Int[] getSortedArray() {
+		Int sorted[] = new Int[10]
+		sorted[0] = new Int(1)
+		sorted[1] = new Int(2)
+		sorted[2] = new Int(5)
+		sorted[3] = new Int(9)
+		sorted[4] = new Int(12)
+		sorted[5] = new Int(13)
+		sorted[6] = new Int(14)
+		sorted[7] = new Int(29)
+		sorted[8] = new Int(30)
+		sorted[9] = new Int(60)
+		return sorted
+	}
+
+	Int[] getDescendingArray() {
+		Int sortedDesc[] = new Int[10]
+		sortedDesc[9] = new Int(1)
+		sortedDesc[8] = new Int(2)
+		sortedDesc[7] = new Int(5)
+		sortedDesc[6] = new Int(9)
+		sortedDesc[5] = new Int(12)
+		sortedDesc[4] = new Int(13)
+		sortedDesc[3] = new Int(14)
+		sortedDesc[2] = new Int(29)
+		sortedDesc[1] = new Int(30)
+		sortedDesc[0] = new Int(60)
+		return sortedDesc
+	}
+
+	bool checkArrays(Int array1[], Int array2[]) {
+		if (array1.arrayLength != array2.arrayLength) {
+			return false
+		}
+		for (int count = 0; count < array1.arrayLength; count++) {
+			if (array1[count].num != array2[count].num) {
+				return false
+			}
+		}
+		return true
+	}
+
+	bool UnitTest:runTest() {
+		Int testInt[] 		= getTestArray()
+		Int sorted[] 		= getSortedArray()
+		Int sortedDesc[] 	= getDescendingArray()
+
+		testInt = sort.sort(testInt, Int.[num], true) // sorting
+		if (!checkArrays(testInt, sorted)) { throw new Exception("Failure in test 1") }
+		testInt = sort.sort(testInt, Int.[num], true) // sorting a sorted array
+		if (!checkArrays(testInt, sorted)) { throw new Exception("Failure in test 2") }
+		testInt = sort.sort(sortedDesc, Int.[num], true) // sorting a descending array
+		if (!checkArrays(testInt, sorted)) { throw new Exception("Failure in test 3") }
+
+		testInt = getTestArray()
+		testInt = sort.sort(testInt, Int.[num], false) // sorting descending order
+		if (!checkArrays(testInt, sortedDesc)) { throw new Exception("Failure in test 4") }
+		testInt = sort.sort(testInt, Int.[num], false) // sorting a sorted array
+		if (!checkArrays(testInt, sortedDesc)) { throw new Exception("Failure in test 5") }
+		testInt = sort.sort(sorted, Int.[num], false) // sorting a ascending array
+		if (!checkArrays(testInt, sortedDesc)) { throw new Exception("Failure in test 6") }
+		
+		return true
+	}
+
+}
