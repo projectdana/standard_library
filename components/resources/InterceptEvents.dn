@@ -5,12 +5,7 @@
 interface InterceptEvents {
 	
 	/*
-	 { "@description" : "This function is called to access the interceptor's internal reference to its required object (e.g. of type lang.Morph)." }
-	*/
-	Object getTarget()
-	
-	/*
 	 { "@description" : "This function is called when the interceptor's internal reference has been updated with an adapted version." }
 	*/
-	void setTarget(Object o)
+	void setTarget(store Object o)
 	}

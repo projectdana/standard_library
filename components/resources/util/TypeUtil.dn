@@ -1,0 +1,31 @@
+uses lang.Type
+
+/*
+ {"description" : "Basic utilities for querying type fields."}
+*/
+
+interface TypeUtil {
+	
+	const TypeField NOT_FOUND = INT_MAX
+	
+	/*
+	 {"@description" : "Get the index of a named field on a data instance, or NOT_FOUND if there is no such field."}
+	*/
+	TypeField getField(Data d, char fieldName[])
+	
+	/*
+	 {"@description" : "Get the index of a named transfer field on an object, or NOT_FOUND if there is no such field."}
+	*/
+	TypeField getObjectField(Object o, char fieldName[])
+	
+	/*
+	 {"@description" : "Get the index of a named event source on an object, or NOT_FOUND if there is no such event."}
+	*/
+	TypeField getObjectEvent(Object o, char fieldName[])
+	
+	/*
+	 {"@description" : "Get the index of a named function, with parameter types, on an object - or NOT_FOUND if there is no such function."}
+	*/
+	TypeField getObjectFunction(Object o, char fieldName[], Type signature)
+	
+	}

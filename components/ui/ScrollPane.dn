@@ -1,0 +1,381 @@
+const int SCR_BUTTON_HEIGHT = 20
+const int SCR_BUTTON_WIDTH = 20
+
+const int SLIDER_MIN_HEIGHT = 20
+
+component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar, ScrollBar:h {
+
+	int width
+	int height
+	
+	GraphicsObject clickDown
+	
+	GraphicsObject content
+	
+	Color gapColor = new Color(200, 200, 215, 255)
+	Color backgroundColor
+	
+	bool showScrollV = true
+	ScrollBar scrollV
+	
+	bool showScrollH = true
+	ScrollBar scrollH
+	
+	int scrollY = 0
+	int scrollX = 0
+
+	void updateScrollBarV()
+		{
+		if (content != null && showScrollV)
+			{
+			int contentH = content.getPreferredSize().height
+			
+			int effectiveHeight = height
+			if (showScrollH) effectiveHeight -= SCR_BUTTON_HEIGHT
+			
+			if (contentH > effectiveHeight)
+				contentH -= effectiveHeight
+				else
+				contentH = 0
+			
+			scrollV.setMaxValue(contentH)
+			}
+		}
+	
+	void updateScrollBarH()
+		{
+		if (content != null && showScrollH)
+			{
+			int contentW = content.getPreferredSize().width
+			
+			int effectiveWidth = width
+			if (showScrollV) effectiveWidth -= SCR_BUTTON_WIDTH
+			
+			if (contentW > effectiveWidth)
+				contentW -= effectiveWidth
+				else
+				contentW = 0
+			
+			scrollH.setMaxValue(contentW)
+			}
+		}
+
+	ScrollPane:ScrollPane(opt GraphicsObject g)
+		{
+		scrollV = new ScrollBar()
+		scrollV.setPosition(width - SCR_BUTTON_WIDTH, 0)
+		
+		scrollH = new ScrollBar:h()
+		scrollH.setPosition(0, height - SCR_BUTTON_WIDTH)
+		
+		sinkevent ScrollEvents(scrollV)
+		sinkevent ScrollEvents(scrollH)
+		
+		if (g != null)
+			{
+			setContent(g)
+			}
+		}
+	
+	eventsink ContentPaintEvents(EventData ed)
+		{
+		updateScrollBarV()
+		updateScrollBarH()
+
+		postRepaint()
+		}
+	
+	eventsink ScrollEvents(EventData ed)
+		{
+		if (ed.source === scrollV && ed.type == ScrollBar.[scrollMoved])
+			{
+			scrollY = scrollV.getScrollPos()
+			}
+			else if (ed.source === scrollV && ed.type == ScrollBar.[repaint])
+			{
+			postRepaint()
+			}
+			else if (ed.source === scrollH && ed.type == ScrollBar.[scrollMoved])
+			{
+			scrollX = scrollH.getScrollPos()
+			}
+			else if (ed.source === scrollH && ed.type == ScrollBar.[repaint])
+			{
+			postRepaint()
+			}
+		}
+	
+	void ScrollPane:setBackground(Color c)
+		{
+		backgroundColor = c
+		}
+	
+	void ScrollPane:setContent(GraphicsObject g)
+		{
+		if (content != null)
+			stopevent ContentPaintEvents(g)
+
+		content = g
+
+		updateScrollBarV()
+		updateScrollBarH()
+
+		sinkevent ContentPaintEvents(g)
+		}
+
+	void ScrollPane:setSize(int w, int h)
+		{
+		width = w
+		height = h
+		
+		if (showScrollV)
+			{
+			scrollV.setPosition(width - SCR_BUTTON_WIDTH, 0)
+			if (!showScrollH)
+				scrollV.setLength(height)
+				else
+				scrollV.setLength(height - SCR_BUTTON_HEIGHT)
+			}
+		
+		if (showScrollH)
+			{
+			scrollH.setPosition(0, height - SCR_BUTTON_WIDTH)
+			if (!showScrollV)
+				scrollH.setLength(width)
+				else
+				scrollH.setLength(width - SCR_BUTTON_WIDTH)
+			}
+		
+		updateScrollBarV()
+		updateScrollBarH()
+		}
+	
+	void ScrollPane:showScroll(bool v, bool h)
+		{
+		showScrollV = v
+		showScrollH = h
+		
+		if (!showScrollH)
+			scrollV.setLength(height)
+			else
+			scrollV.setLength(height - SCR_BUTTON_HEIGHT)
+		
+		if (!showScrollV)
+			scrollH.setLength(width)
+			else
+			scrollH.setLength(width - SCR_BUTTON_WIDTH)
+		
+		updateScrollBarV()
+		updateScrollBarH()
+		
+		postRepaint()
+		}
+
+	void ScrollPane:setFocus()
+		{
+		//pass-through to content
+		}
+
+	HotKey[] ScrollPane:recvFocus()
+		{
+		//pass-through to content
+		return null
+		}
+
+	void ScrollPane:loseFocus()
+		{
+		//pass-through to content
+		}
+
+	void ScrollPane:keyDown(int keyID)
+		{
+		//pass-through to content
+		}
+
+	void ScrollPane:keyUp(int keyID)
+		{
+		//pass-through to content
+		}
+
+	Rect ScrollPane:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, height)
+		}
+	
+	void ScrollPane:mouseDown(int x, int y, int button)
+		{
+		if (showScrollV && (x >= width-SCR_BUTTON_WIDTH && x <= width))
+			{
+			scrollV.mouseDown(x - (width-SCR_BUTTON_WIDTH), y, button)
+			clickDown = scrollV
+			}
+			else if (showScrollH && (y >= height-SCR_BUTTON_WIDTH && y <= height))
+			{
+			scrollH.mouseDown(x, y - (height-SCR_BUTTON_HEIGHT), button)
+			clickDown = scrollH
+			}
+			else
+			{
+			clickDown = content
+			
+			if (content hastype XYMouseObject)
+				{
+				XYMouseObject cco = content
+				cco.mouseDown(x+scrollX, y+scrollY, button)
+				}
+			}
+		}
+	
+	void ScrollPane:mouseMove(int x, int y)
+		{
+		if (showScrollV && (x >= width-SCR_BUTTON_WIDTH && x <= width))
+			{
+			scrollV.mouseMove(x, y)
+			}
+			else if (showScrollH && (y >= height-SCR_BUTTON_HEIGHT && y <= height))
+			{
+			scrollH.mouseMove(x, y)
+			}
+			else
+			{
+			if (content hastype XYMouseObject)
+				{
+				XYMouseObject cco = content
+				cco.mouseMove(x+scrollX, y+scrollY)
+				}
+			}
+		}
+	
+	void ScrollPane:mouseUp(int x, int y, int button)
+		{
+		if (showScrollV && (x >= width-SCR_BUTTON_WIDTH && x <= width))
+			{
+			scrollV.mouseUp(x - (width-SCR_BUTTON_WIDTH), y, button)
+			}
+			else if (showScrollH && (y >= height-SCR_BUTTON_HEIGHT && y <= height))
+			{
+			scrollH.mouseUp(x, y - (height-SCR_BUTTON_HEIGHT), button)
+			}
+			else
+			{
+			if (content hastype XYMouseObject)
+				{
+				XYMouseObject cco = content
+				cco.mouseUp(x+scrollX, y+scrollY, button)
+				}
+			
+			if (content hastype ClickableObject && clickDown === content)
+				{
+				ClickableObject cco = content
+				cco.click(x+scrollX, y+scrollY, button)
+				}
+			
+			clickDown = null
+			}
+		}
+	
+	void ScrollPane:mouseOut()
+		{
+		if (content != null && content hastype XYMouseObject)
+			{
+			XYMouseObject cco = content
+			cco.mouseOut()
+			}
+		}
+	
+	void ScrollPane:dropFile(int x, int y, char path[])
+		{
+		if (showScrollV && (x >= width-SCR_BUTTON_WIDTH && x <= width))
+			{
+			}
+			else if (showScrollH && (y >= height-SCR_BUTTON_HEIGHT && y <= height))
+			{
+			}
+			else
+			{
+			if (content hastype XYMouseObject)
+				{
+				XYMouseObject cco = content
+				cco.dropFile(x+scrollX, y+scrollY, path)
+				}
+			}
+		}
+	
+	void ScrollPane:click(int x, int y, int button)
+		{
+		//check if the click location is on a scroll widget, otherwise pass-through to content
+		if (showScrollV && x >= width-SCR_BUTTON_WIDTH && x <= width)
+			{
+			if (clickDown === scrollV)
+				scrollV.click(x, y, button)
+			}
+			else if (showScrollH && y >= height-SCR_BUTTON_WIDTH && y <= height)
+			{
+			if (clickDown === scrollH)
+				scrollH.click(x, y, button)
+			}
+			else
+			{
+
+			}
+		}
+
+	void ScrollPane:postRepaint()
+		{
+		emitevent repaint()
+		}
+
+	void ScrollPane:paint(Canvas c)
+		{
+		c.pushSurface(new Rect(xPosition, yPosition, width, height), 0, 0, 255)
+		
+		if (backgroundColor != null) c.drawRect(new Rect2D(0, 0, width, height, backgroundColor))
+		
+		c.pushSurface(new Rect(0, 0, width, height), scrollX, scrollY, 255)
+
+		content.paint(c)
+
+		c.popSurface()
+		
+		if (showScrollV)
+			{
+			scrollV.paint(c)
+			}
+		
+		if (showScrollH)
+			{
+			scrollH.paint(c)
+			}
+		
+		if (showScrollV && showScrollH)
+			{
+			//fill the square with something...
+			c.drawRect(new Rect2D(width-SCR_BUTTON_WIDTH, height-SCR_BUTTON_HEIGHT, SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, gapColor))
+			}
+		
+		c.popSurface()
+		}
+
+	void ScrollPane:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+
+	Point ScrollPane:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+
+	WH ScrollPane:getPreferredSize()
+		{
+		return new WH(width, height)
+		}
+	
+	void ScrollPane:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
+
+}

@@ -1,3 +1,7 @@
+/*
+{"description" : "This type is a container for constants which describe values for hardware-independent key codes. When receiving key presses in a graphical application you will need to use a keyboard map function to convert hardware key codes into abstract ones from this type."}
+*/
+
 data KeyCode {
 	
 	const byte UNKNOWN = 0
@@ -60,47 +64,48 @@ data KeyCode {
 	
 	const byte NUMPAD_RETURN = 52
 	
-	const byte RETURN = 53
-	const byte BACKSPACE = 54
-	const byte DELETE = 55
-	const byte INSERT = 56
-	const byte HOME = 57
-	const byte END = 58
-	const byte ESCAPE = 59
+	const byte SPACE = 53
+	const byte RETURN = 54
+	const byte BACKSPACE = 55
+	const byte DELETE = 56
+	const byte INSERT = 57
+	const byte HOME = 58
+	const byte END = 59
+	const byte ESCAPE = 60
 	
-	const byte SHIFT_LEFT = 60
-	const byte SHIFT_RIGHT = 61
-	const byte CTRL_LEFT = 62
-	const byte CTRL_RIGHT = 63
-	const byte ALT_LEFT = 64
-	const byte ALT_RIGHT = 65
+	const byte SHIFT_LEFT = 61
+	const byte SHIFT_RIGHT = 62
+	const byte CTRL_LEFT = 63
+	const byte CTRL_RIGHT = 64
+	const byte ALT_LEFT = 65
+	const byte ALT_RIGHT = 66
 	
-	const byte TAB = 66
+	const byte TAB = 67
 	
-	const byte PAGE_UP = 67
-	const byte PAGE_DOWN = 68
+	const byte PAGE_UP = 68
+	const byte PAGE_DOWN = 69
 	
-	const byte ARROW_UP = 69
-	const byte ARROW_DOWN = 70
-	const byte ARROW_LEFT = 71
-	const byte ARROW_RIGHT = 72
+	const byte ARROW_UP = 70
+	const byte ARROW_DOWN = 71
+	const byte ARROW_LEFT = 72
+	const byte ARROW_RIGHT = 73
 	
-	const byte CAPLOCK = 73
-	const byte NUMLOCK = 74
+	const byte CAPLOCK = 74
+	const byte NUMLOCK = 75
 	
-	const byte CMD = 75
+	const byte CMD = 76
 	
-	const byte F1 = 76
-	const byte F2 = 77
-	const byte F3 = 78
-	const byte F4 = 79
-	const byte F5 = 80
-	const byte F6 = 81
-	const byte F7 = 82
-	const byte F8 = 83
-	const byte F9 = 84
-	const byte F10 = 85
-	const byte F11 = 86
-	const byte F12 = 87
+	const byte F1 = 77
+	const byte F2 = 78
+	const byte F3 = 79
+	const byte F4 = 80
+	const byte F5 = 81
+	const byte F6 = 82
+	const byte F7 = 83
+	const byte F8 = 84
+	const byte F9 = 85
+	const byte F10 = 86
+	const byte F11 = 87
+	const byte F12 = 88
 	
 	}

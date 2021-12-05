@@ -1,0 +1,236 @@
+data Sample {
+	dec values[]
+	char category[]
+	}
+
+//marker length in pixels (the "ticks" on the axes)
+const int MARKER_LENGTH = 3
+
+component provides Category:boxH requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font {
+	
+	Sample samples[]
+	
+	Color seriesColor = new Color(0, 0, 0, 255)
+	Color seriesFillColor = new Color(255, 255, 255, 255)
+	Color medianColor = new Color(200, 100, 100, 255)
+	Color axisColor = new Color(0, 0, 0, 255)
+	Color gridColor = new Color(220, 220, 220, 255)
+	Color bgColor = new Color(255, 255, 255, 255)
+	
+	Font axisFont
+	Font labelFont
+	
+	dec highestX
+	dec lowestX
+	dec highestY
+	dec lowestY
+	
+	dec numberIntervalX = 1.0
+	dec markerIntervalX = 1.0
+	
+	dec numberIntervalY
+	dec markerIntervalY
+	dec gridIntervalY
+	
+	dec xAxMax
+	dec xAxMin
+	dec yAxMax
+	dec yAxMin
+	
+	//bar width, in percentage of category area
+	dec barWidth = 50.0
+	int barPad = 0
+	
+	//w/h in pixels
+	int width
+	int height
+	
+	Category:Category()
+		{
+		super()
+		
+		axisFont = new Font("SourceSansPro.ttf", 12)
+		
+		setYMarkerInterval(1.0)
+		}
+	
+	void Category:addSample(char cat[], dec yvalues[])
+		{
+		//update our highest and lowest X and Y points, to use in normalising coordinates
+		dec hy = stcore.max(yvalues)
+		dec ly = stcore.min(yvalues)
+		
+		yAxMax += 1.0
+		
+		if (samples == null)
+			{
+			highestX = hy
+			lowestX = ly
+			}
+			else
+			{
+			if (hy > highestX) highestX = hy
+			if (ly < lowestX) lowestX = ly
+			}
+		
+		//add sample
+		samples = new Sample[](samples, new Sample(yvalues, cat))
+		
+		// -- automated calculation of the highest and lowest points on the axis --
+		
+		//update the axis endpoints, if the series values are now outside the bounds of whatever endpoints have been set
+		if (highestX > xAxMax) xAxMax = highestX
+		if (lowestX < xAxMin) xAxMin = lowestX
+		
+		setXMinMax(xAxMin, xAxMax)
+		setYMinMax(yAxMin, yAxMax)
+		
+		postRepaint()
+		}
+	
+	void Category:setYMinMax(dec min, dec max)
+		{
+		//TODO: disallow values that can't contain all of the graph points...
+		yAxMin = min
+		yAxMax = max
+		
+		super(min, max)
+		}
+	
+	void Category:setSeriesColor(Color c)
+		{
+		seriesColor = c
+		}
+	
+	void Category:showErrorBars(bool on)
+		{
+		
+		}
+	
+	void Category:clampErrorBars(dec low, dec high)
+		{
+		
+		}
+	
+	void Category:setCatDisplayWidth(dec percent)
+		{
+		if (percent <= 0.0 || percent > 100.0)
+			throw new Exception("display width must be a percentage, between 1 and 100")
+		
+		barWidth = percent
+		}
+	
+	void Category:setCatDisplayPadding(int pixels)
+		{
+		barPad = pixels
+		}
+	
+	void Category:drawToCanvas(Canvas c)
+		{
+		paint(c)
+		}
+	
+	int getMaxCatTextWidth()
+		{
+		int high = 0
+		for (int i = 0; i < samples.arrayLength; i++)
+			{
+			int textWidth = axisFont.getTextWidth(samples[i].category)
+			
+			if (textWidth > high) high = textWidth
+			}
+		
+		return high
+		}
+	
+	// -- rendering --
+	
+	void Category:paint(Canvas c)
+		{
+		Point pos = getPosition()
+		WH wh = getSize()
+		
+		c.pushSurface(new Rect(pos.x, pos.y, wh.width, wh.height), 0, 0, 255)
+		
+		setAxisLabelSpace(ChartCore.AXIS_Y, getMaxCatTextWidth())
+		
+		//TODO: calculate the 5num of every sample, and check if our chart is large enough to show the outlier whiskers
+		// (by using setYMinMax())
+		
+		preparePlotArea()
+		
+		//background
+		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		
+		//grid lines, if any
+		drawGrid(c)
+		
+		//data
+		
+		int ySpacing = (getPlotPoint(0.0, 0.0)[1] - getPlotPoint(0.0, 1.0)[1]+1) - (barPad * 2)
+		
+		int barHeightPX = (barWidth / 100.0) * ySpacing
+		
+		dec thisY = 0.0
+		for (int i = 0; i < samples.arrayLength; i++)
+			{
+			//get 5-number-summary, generate box and whiskers + median, and draw...
+			dec fn[] = stcore.fiveNum(samples[i].values)
+			
+			//this kind of graph plots the mean of the set
+			dec thisX = stcore.mean(samples[i].values)
+			
+			//top-left
+			int xy[] = getPlotPoint(fn[1], thisY+1.0)
+			
+			//top-right
+			int xyTR[] = getPlotPoint(fn[3], thisY+1.0)
+			
+			//bottom-left
+			int xyBL[] = getPlotPoint(thisX, thisY)
+			
+			//median
+			int xyMedian[] = getPlotPoint(fn[2], thisY)
+			
+			//low whisker
+			int xyLowWhisker[] = getPlotPoint(fn[0], thisY)
+			
+			//high whisker
+			int xyHighWhisker[] = getPlotPoint(fn[4], thisY)
+			
+			//x-axis location
+			int xyXA[] = getPlotPoint(thisX, 0.0)
+			
+			int centreY = xyBL[1] + ((xyTR[1] - xyBL[1]) / 2)
+			
+			//box spanning 1st and 3rd quartiles (interquartile range)
+			c.drawRectOutline(new Rect2D(xy[0], centreY - (barHeightPX / 2), xyTR[0] - xy[0], barHeightPX, seriesColor))
+			if (xyTR[0] - xy[0] > 2) c.drawRect(new Rect2D(xy[0]+1, (centreY - (barHeightPX / 2))+1, (xyTR[0] - xy[0])-2, barHeightPX-2, seriesFillColor))
+			
+			//median line
+			c.drawLine(new Rect2D(xyMedian[0], centreY - (barHeightPX / 2), xyMedian[0], (centreY + (barHeightPX / 2))-1, medianColor))
+			
+			//low whisker
+			c.drawLine(new Rect2D(xyLowWhisker[0], centreY, xy[0], centreY, seriesColor))
+			c.drawLine(new Rect2D(xyLowWhisker[0], centreY - (barHeightPX / 2), xyLowWhisker[0], (centreY + (barHeightPX / 2))-1, seriesColor))
+			
+			//high whisker
+			c.drawLine(new Rect2D(xyHighWhisker[0], centreY, xyTR[0], centreY, seriesColor))
+			c.drawLine(new Rect2D(xyHighWhisker[0], centreY - (barHeightPX / 2), xyHighWhisker[0], (centreY + (barHeightPX / 2))-1, seriesColor))
+			
+			//category label
+			int textWidth = axisFont.getTextWidth(samples[i].category)
+			int textHeight = axisFont.getFontMetrics().height
+			
+			c.drawText(new Point2D(getPlotArea().x - MARKER_LENGTH - textWidth, centreY - (textHeight / 2), axisColor), axisFont, samples[i].category)
+			
+			thisY += 1.0
+			}
+		
+		//axes and labels
+		drawAxes(c)
+		
+		c.popSurface()
+		}
+	
+	}

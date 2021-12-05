@@ -4,11 +4,13 @@ data Record{
 	char notes[]
 	}
 
-component provides UnitTest requires data.csv.CSVParser parser {
+component provides UnitTest requires io.File, data.csv.CSVParser parser {
 	
 	bool UnitTest:runTest()
 		{
-		Record rows[] = parser.parseDocument("ext-files/test.csv", ",", new Record())
+		File fd = new File("ext-files/test.csv", File.READ)
+		Record rows[] = parser.parseDocument(fd, false, ",", new Record())
+		fd.close()
 		
 		if (rows[1].number != 5000)
 			throw new Exception("Failure in test 1")

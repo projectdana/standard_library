@@ -1,0 +1,240 @@
+data ListItem {
+	char label[]
+	}
+
+const int ITEM_HEIGHT = 20
+const int ITEM_GAP = 4
+
+component provides List requires ui.Font, io.Output out {
+
+	ListItem listItems[]
+
+	char selectedItem[]
+	int selectedIndex
+	
+	int filterList[]
+
+	Color bgColor = new Color(200, 200, 215, 255)
+
+	Color itemColor = new Color(170, 170, 185, 255)
+	Color selectedColor = new Color(210, 210, 200, 255)
+
+	WH preferredSize = new WH()
+
+	int width
+
+	Font textFont
+
+	List:List()
+		{
+		textFont = new Font("SourceSansPro.ttf", 14)
+		}
+
+	void List:addItem(char item[])
+		{
+		listItems = new ListItem[](listItems, new ListItem(item))
+
+		preferredSize.height += ITEM_HEIGHT + ITEM_GAP
+
+		postRepaint()
+		}
+
+	void List:updateItem(int index, char name[])
+		{
+		if (index < listItems.arrayLength)
+			{
+			listItems[index].label = name
+			postRepaint()
+			}
+		}
+	
+	void List:deleteItem(int index)
+		{
+		if (index < listItems.arrayLength)
+			{
+			ListItem newList[] = new ListItem[listItems.arrayLength-1]
+			
+			int j = 0
+			for (int i = 0; i < listItems.arrayLength; i++)
+				{
+				if (i != index)
+					{
+					newList[j] = listItems[i]
+					j ++
+					}
+					else if (selectedIndex == i)
+					{
+					selectedItem = null
+					}
+				}
+			
+			listItems = newList
+			
+			preferredSize.height -= (ITEM_HEIGHT+ITEM_GAP)
+			
+			postRepaint()
+			}
+		}
+	
+	void List:filter(int indices[])
+		{
+		//note the filter list, then repaint
+		filterList = indices
+		postRepaint()
+		}
+	
+	void List:clear()
+		{
+		listItems = null
+		
+		preferredSize.height = 0
+
+		postRepaint()
+		}
+	
+	bool isIn(int lst[], int n)
+		{
+		for (int i = 0; i < lst.arrayLength; i++)
+			{
+			if (lst[i] == n)
+				return true
+			}
+		
+		return false
+		}
+	
+	void List:paint(Canvas c)
+		{
+		c.pushSurface(new Rect(xPosition, yPosition, width, preferredSize.height-ITEM_GAP), 0, 0, 255)
+
+		c.drawRect(new Rect2D(0, 0, width, preferredSize.height-ITEM_GAP, bgColor))
+
+		int nextItemY = 0
+		for (int i = 0; i < listItems.arrayLength; i++)
+			{
+			if (filterList == null || isIn(filterList, i))
+				{
+				Color nextColor = itemColor
+
+				if (selectedItem != null && i == selectedIndex)
+					nextColor = selectedColor
+
+				c.drawRect(new Rect2D(0, nextItemY, width, ITEM_HEIGHT, nextColor))
+				c.drawText(new Point2D(10, nextItemY, new Color(0, 0, 0, 255)), textFont, listItems[i].label)
+
+				nextItemY += (ITEM_HEIGHT+ITEM_GAP)
+				}
+			}
+
+		c.popSurface()
+		}
+
+	char[] List:getSelectedItem()
+		{
+		return selectedItem
+		}
+
+	int List:getSelectedIndex()
+		{
+		return selectedIndex
+		}
+	
+	void List:setSelectedIndex(int index)
+		{
+		if (index < listItems.arrayLength)
+			{
+			selectedIndex = index
+			selectedItem = listItems[index].label
+			postRepaint()
+			}
+			else
+			{
+			throw new Exception("index out of bounds")
+			}
+		}
+
+	Rect List:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, preferredSize.height)
+		}
+
+	void List:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+
+	Point List:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+
+	WH List:getPreferredSize()
+		{
+		if (filterList == null)
+			{
+			return preferredSize
+			}
+			else
+			{
+			if (filterList.arrayLength > 0)
+				return new WH(preferredSize.width, (24 * filterList.arrayLength)-ITEM_GAP)
+				else
+				return new WH(preferredSize.width, 0)
+			}
+		}
+
+	void List:setWidth(int w)
+		{
+		width = w
+
+		preferredSize.width = w
+		}
+
+	void List:click(int x, int y, int button)
+		{
+		if (disabled) return
+		
+		int qY = 0
+		for (int i = 0; i < listItems.arrayLength; i++)
+			{
+			if (filterList == null || isIn(filterList, i))
+				{
+				if (y >= qY && y <= (qY+20))
+					{
+					selectedIndex = i
+					selectedItem = listItems[i].label
+
+					emitevent selectItem()
+					emitevent repaint()
+
+					break
+					}
+
+				qY += 24
+				}
+			}
+		}
+	
+	void List:dropFile(int x, int y, char path[])
+		{
+		emitevent fileDrop(new String(path))
+		}
+	
+	void List:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	void List:setFocus()
+		{
+		emitevent requestFocus()
+		}
+	
+	void List:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
+
+	}

@@ -1,22 +1,23 @@
 /*
- {"description" : "A context menu, for example triggered from a right-click."}
+ {"description" : "A context menu, for example triggered from a right-click. This widget is usually created/used only by the internal logic of a windowing system."}
 */
 
 uses os.KeyState
 
-data MenuItem {
-	char name[]
-	}
-
 interface ContextMenu extends XYMouseObject {
 	
+	/* {"@description" : "This event is fired when a user clicks on an item in the menu."} */
 	event menuClick(MenuItem mi)
 	
+	/* {"@description" : "Instantiate a new menu."} */
 	ContextMenu()
 	
-	void addItem(char name[], int keyCode, byte keyStatus)
-	void remItem(char name[])
+	/* {"@description" : "Add an item to the menu."} */
+	void addItem(store MenuItem item)
+	/* {"@description" : "Remove an item from the menu."} */
+	void remItem(MenuItem item)
 	
-	bool keyPress(int keyCode, byte keyStatus)
+	/* {"@description" : "Set the list of menu items."} */
+	void setItems(store MenuItem items[])
 	
 	}

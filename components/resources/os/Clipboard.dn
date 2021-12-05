@@ -1,7 +1,22 @@
+/*
+ {"description" : "This API provides access to the copy/paste clipboard of the operating system."
+	}
+*/
+
 interface Clipboard {
 	
+	/*
+	 {"@description" : "Sets the clipboard to contain the given text content.",
+	 	"content" : "The text content to place on the clipboard."
+		}
+	*/
 	void setContent(char content[])
-	
+
+	/*
+	 {"@description" : "Gets the current clipboard content, if it can be represented as text (or null otherwise).",
+	 	"@return" : "The text content on the clipboard."
+		}
+	*/
 	char[] getContent()
 	
 	}

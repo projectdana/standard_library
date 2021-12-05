@@ -1,0 +1,857 @@
+//border size in pixels
+const int BORDER_SIZE = 5
+
+//marker length in pixels (the "ticks" on the axes)
+const int MARKER_LENGTH = 3
+
+const int CHART_AUTO = 1
+const int CHART_BOTTOM = 2
+const int CHART_TOP = 3
+const int CHART_LEFT = 4
+const int CHART_RIGHT = 5
+
+component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu, io.Output out, util.Math math, data.StringUtil stringUtil {
+	
+	Color seriesColor = new Color(100, 100, 255, 255)
+	Color axisColor = new Color(0, 0, 0, 255)
+	Color gridColor = new Color(220, 220, 220, 255)
+	Color bgColor = new Color(255, 255, 255, 255)
+	
+	Font axisFont
+	Font labelFont
+	
+	dec numberIntervalX
+	dec markerIntervalX
+	dec gridIntervalX
+	dec numberIntervalY
+	dec markerIntervalY
+	dec gridIntervalY
+	
+	dec xAxMaxUser
+	dec xAxMinUser
+	dec yAxMaxUser
+	dec yAxMinUser
+	
+	dec xAxMax
+	dec xAxMin
+	dec yAxMax
+	dec yAxMin
+	
+	char xAxisLabel[]
+	char yAxisLabel[]
+	
+	// - how our axes behave, in terms of the spacing between markers for integer projection
+	//  - i.e., do we ensure the integer gap between each marker is even, and is that even-ness between markers, numbers, or grid lines
+	int xAxisEvenLock = ChartCore.ATTR_NONE
+	int yAxisEvenLock = ChartCore.ATTR_NONE
+	
+	int xAxisFinish = ChartCore.ATTR_NONE
+	int yAxisFinish = ChartCore.ATTR_NONE
+	
+	int xAxisLabelPos = CHART_BOTTOM
+	int yAxisLabelPos = CHART_LEFT
+	
+	int xAxisDP = INT_MAX
+	int yAxisDP = INT_MAX
+	
+	//w/h in pixels
+	int width
+	int height
+	
+	// - temporary variables configured by preparePlotArea(), which must be called before any draw functions:
+	int padLeft = BORDER_SIZE
+	int padRight = BORDER_SIZE
+	
+	int padTop = BORDER_SIZE
+	int padBottom = BORDER_SIZE
+	
+	int plotWidth
+	int plotHeight
+	
+	int xAxisLabelSpace
+	int yAxisLabelSpace
+	
+	int largestYNumWidth
+	
+	ChartCore:ChartCore()
+		{
+		axisFont = new Font("SourceSansPro.ttf", 12)
+		labelFont = new Font("SourceSansPro.ttf", 16)
+		}
+	
+	void ChartCore:setSize(int w, int h)
+		{
+		width = w
+		height = h
+		}
+	
+	WH ChartCore:getSize()
+		{
+		return getPreferredSize()
+		}
+	
+	void ChartCore:setAxisFont(Font f)
+		{
+		axisFont = f
+		postRepaint()
+		}
+	
+	void ChartCore:setLabelFont(Font f)
+		{
+		labelFont = f
+		postRepaint()
+		}
+	
+	void ChartCore:setXMinMax(dec min, dec max)
+		{
+		xAxMinUser = min
+		xAxMaxUser = max
+		}
+	
+	void ChartCore:setXLabelInterval(dec ivr)
+		{
+		numberIntervalX = ivr
+		}
+	
+	void ChartCore:setXMarkerInterval(dec ivr)
+		{
+		markerIntervalX = ivr
+		}
+	
+	void ChartCore:setXGridInterval(dec ivr)
+		{
+		gridIntervalX = ivr
+		}
+	
+	void ChartCore:setYMinMax(dec min, dec max)
+		{
+		yAxMinUser = min
+		yAxMaxUser = max
+		}
+	
+	void ChartCore:setYLabelInterval(dec ivr)
+		{
+		numberIntervalY = ivr
+		}
+	
+	void ChartCore:setYMarkerInterval(dec ivr)
+		{
+		markerIntervalY = ivr
+		}
+	
+	void ChartCore:setYGridInterval(dec ivr)
+		{
+		gridIntervalY = ivr
+		}
+	
+	void ChartCore:setAxisLabels(char x[], char y[])
+		{
+		xAxisLabel = x
+		yAxisLabel = y
+		}
+	
+	dec getPercentOfRange(dec v, dec low, dec high)
+		{
+		dec range = high - low
+		dec val = v - low
+		
+		dec p = (val / range) * 100.0
+		
+		return p
+		}
+	
+	int[] ChartCore:getPlotPoint(dec x, dec y)
+		{
+		//get the pixel x/y point of the given decimal x/y point
+		// - when this function is called, we know the exact plot width, plus its pad values for all sides, so we know exactly where the point is
+		
+		//first we get x as a percentage of xAxMin...xAxMax, then we get this percentage of plotWidth, which is our pixel location
+		// - we then do the same for the y value
+		dec v = getPercentOfRange(x, xAxMin, xAxMax)
+		dec res = (0.01 * v) * plotWidth
+		
+		//we use math.round() here to counter precision loss
+		int xPoint = math.round(res)
+		xPoint += padLeft
+		
+		v = getPercentOfRange(y, yAxMin, yAxMax)
+		res = (0.01 * v) * plotHeight
+		int yPoint = math.round(res)
+		yPoint = plotHeight - yPoint
+		yPoint += padTop
+		
+		return new int[](xPoint, yPoint)
+		}
+	
+	dec[] calculateAttributeSpacing(dec min, dec max, dec interval)
+		{
+		dec result[]
+		
+		if (min == 0.0)
+			{
+			dec mv = min
+			
+			while (mv <= max)
+				{
+				result = new dec[](result, mv)
+				mv += interval
+				}
+			}
+			else if (max == 0.0)
+			{
+			dec mv = max
+			
+			while (mv >= min)
+				{
+				result = new dec[](mv, result)
+				mv -= interval
+				}
+			}
+			else if (max > 0.0 && min < 0.0)
+			{
+			dec mv = 0.0
+			
+			while (mv <= max)
+				{
+				result = new dec[](result, mv)
+				mv += interval
+				}
+			
+			mv = 0.0 - interval
+			
+			while (mv >= min)
+				{
+				result = new dec[](mv, result)
+				mv -= interval
+				}
+			}
+			else
+			{
+			dec mv = min
+			
+			while (mv <= max)
+				{
+				result = new dec[](result, mv)
+				mv += interval
+				}
+			}
+		
+		return result
+		}
+	
+	dec[] getXMarkers()
+		{
+		dec result[]
+		
+		if (markerIntervalX != 0.0)
+			{
+			result = calculateAttributeSpacing(xAxMin, xAxMax, markerIntervalX)
+			}
+		
+		return result
+		}
+	
+	dec[] getXNumbers()
+		{
+		dec result[]
+		
+		if (numberIntervalX != 0.0)
+			{
+			result = calculateAttributeSpacing(xAxMin, xAxMax, numberIntervalX)
+			}
+		
+		return result
+		}
+	
+	dec[] getXGridLines()
+		{
+		dec result[]
+		
+		if (gridIntervalX != 0.0)
+			{
+			result = calculateAttributeSpacing(xAxMin, xAxMax, gridIntervalX)
+			}
+		
+		return result
+		}
+	
+	dec[] getYMarkers()
+		{
+		dec result[]
+		
+		if (markerIntervalY != 0.0)
+			{
+			result = calculateAttributeSpacing(yAxMin, yAxMax, markerIntervalY)
+			}
+		
+		return result
+		}
+	
+	dec[] getYNumbers()
+		{
+		dec result[]
+		
+		if (numberIntervalY != 0.0)
+			{
+			result = calculateAttributeSpacing(yAxMin, yAxMax, numberIntervalY)
+			}
+		
+		return result
+		}
+	
+	String[] getNumbersDP(dec list[], int dp)
+		{
+		String result[]
+		
+		for (int i = 0; i < list.arrayLength; i++)
+			{
+			char num[] = du.decToString(list[i])
+			
+			if (dp != INT_MAX)
+				{
+				String parts[] = num.explode(".")
+				
+				if (parts.arrayLength == 2)
+					{
+					if (dp == 0)
+						{
+						num = parts[0].string
+						}
+						else if (parts[1].string.arrayLength > dp)
+						{
+						//substr
+						num = new char[](parts[0].string, parts[1].string.subString(0, dp))
+						
+						//round up the last number?
+						char rn = parts[1].string[dp]
+						
+						if (iu.intFromString(rn) >= 5)
+							{
+							//TODO.
+							}
+						}
+						else if (parts[1].string.arrayLength > dp)
+						{
+						//fill with zeros
+						char la[] = new char[dp]
+						for (int j = 0; j < la.arrayLength; j++)
+							{
+							if (j < parts[1].string.arrayLength)
+								la[j] = parts[1].string[j]
+								else
+								la[j] = "0"
+							}
+						
+						num = new char[](parts[0].string, parts[1].string.subString(0, dp))
+						}
+					}
+				}
+			
+			result = new String[](result, new String(num))
+			}
+		
+		return result
+		}
+	
+	dec[] getYGridLines()
+		{
+		dec result[]
+		
+		if (gridIntervalY != 0.0)
+			{
+			result = calculateAttributeSpacing(yAxMin, yAxMax, gridIntervalY)
+			}
+		
+		return result
+		}
+	
+	int getWidestAxisNumberY()
+		{
+		int result = 0
+		
+		dec yNumbers[] = getYNumbers()
+		
+		for (int i = 0; i < yNumbers.arrayLength; i++)
+			{
+			int textWidth = axisFont.getTextWidth(du.decToString(yNumbers[i]))
+			
+			if (textWidth > result) result = textWidth
+			}
+		
+		return result
+		}
+	
+	void ChartCore:evenAxisSpacing(byte axis, byte attributeType)
+		{
+		if (attributeType != ChartCore.ATTR_NONE
+			&& attributeType != ChartCore.ATTR_AUTO
+			&& attributeType != ChartCore.ATTR_GRID
+			&& attributeType != ChartCore.ATTR_MARKERS
+			&& attributeType != ChartCore.ATTR_NUMBERS)
+			throw new Exception("attributeType type must be one of the allowed values")
+		
+		if (axis == ChartCore.AXIS_X)
+			{
+			xAxisEvenLock = attributeType
+			}
+			else if (axis == ChartCore.AXIS_Y)
+			{
+			yAxisEvenLock = attributeType
+			}
+		
+		postRepaint()
+		}
+	
+	void applyEvenAxisLocks()
+		{
+		// if we're in auto mode we choose the smallest interval
+		
+		int activeLockX = xAxisEvenLock
+		int activeLockY = yAxisEvenLock
+		
+		if (activeLockX == ChartCore.ATTR_AUTO)
+			{
+			dec smallest
+			
+			if (markerIntervalX != 0.0)
+				{
+				smallest = markerIntervalX
+				activeLockX = ChartCore.ATTR_MARKERS
+				}
+			
+			if (numberIntervalX != 0.0 && (smallest == 0.0 || numberIntervalX < smallest))
+				{
+				smallest = numberIntervalX
+				activeLockX = ChartCore.ATTR_NUMBERS
+				}
+			
+			if (gridIntervalX != 0.0 && (smallest == 0.0 || gridIntervalX < smallest))
+				{
+				smallest = gridIntervalX
+				activeLockX = ChartCore.ATTR_GRID
+				}
+			}
+		
+		if (activeLockY == ChartCore.ATTR_AUTO)
+			{
+			dec smallest
+			
+			if (markerIntervalY != 0.0)
+				{
+				smallest = markerIntervalY
+				activeLockY = ChartCore.ATTR_MARKERS
+				}
+			
+			if (numberIntervalY != 0.0 && (smallest == 0.0 || numberIntervalY < smallest))
+				{
+				smallest = numberIntervalY
+				activeLockY = ChartCore.ATTR_NUMBERS
+				}
+			
+			if (gridIntervalY != 0.0 && (smallest == 0.0 || gridIntervalY < smallest))
+				{
+				smallest = gridIntervalY
+				activeLockY = ChartCore.ATTR_GRID
+				}
+			}
+		
+		// if we're using an even scaling mode, calculate the scale
+		
+		if (activeLockX == ChartCore.ATTR_MARKERS && markerIntervalX != 0.0)
+			{
+			int markerCount = (xAxMax - xAxMin) / markerIntervalX
+			int markerWidth = plotWidth / markerCount
+			int baseWidth = markerCount * markerWidth
+			plotWidth = baseWidth
+			}
+			else if (activeLockX == ChartCore.ATTR_NUMBERS)
+			{
+			int markerCount = (xAxMax - xAxMin) / numberIntervalX
+			int markerWidth = plotWidth / markerCount
+			int baseWidth = markerCount * markerWidth
+			plotWidth = baseWidth
+			}
+			else if (activeLockX == ChartCore.ATTR_GRID)
+			{
+			int markerCount = (xAxMax - xAxMin) / gridIntervalX
+			int markerWidth = plotWidth / markerCount
+			int baseWidth = markerCount * markerWidth
+			plotWidth = baseWidth
+			}
+		
+		if (activeLockY == ChartCore.ATTR_MARKERS)
+			{
+			int markerCount = (yAxMax - yAxMin) / markerIntervalY
+			int markerHeight = plotHeight / markerCount
+			int baseHeight = markerCount * markerHeight
+			plotHeight = baseHeight
+			}
+			else if (activeLockY == ChartCore.ATTR_NUMBERS)
+			{
+			dec diff = (yAxMax - yAxMin) / numberIntervalY
+			int markerCount = diff
+			//int markerCount = (yAxMax - yAxMin) / numberIntervalY //TODO: bug, if these numbers are 1100.0, 0.0, and 100.0 -- WTF?
+			int markerHeight = plotHeight / markerCount
+			int baseHeight = markerCount * markerHeight
+			plotHeight = baseHeight
+			}
+			else if (activeLockY == ChartCore.ATTR_GRID)
+			{
+			int markerCount = (yAxMax - yAxMin) / gridIntervalY
+			int markerHeight = plotHeight / markerCount
+			int baseHeight = markerCount * markerHeight
+			plotHeight = baseHeight
+			}
+		}
+	
+	void ChartCore:setAxisFinish(byte axisType, byte attributeType)
+		{
+		if (attributeType != ChartCore.ATTR_NONE
+			&& attributeType != ChartCore.ATTR_AUTO
+			&& attributeType != ChartCore.ATTR_GRID
+			&& attributeType != ChartCore.ATTR_MARKERS
+			&& attributeType != ChartCore.ATTR_NUMBERS)
+			throw new Exception("attributeType type must be one of the allowed values")
+		
+		if (axisType == ChartCore.AXIS_X)
+			{
+			xAxisFinish = attributeType
+			}
+			else if (axisType == ChartCore.AXIS_Y)
+			{
+			yAxisFinish = attributeType
+			}
+		
+		postRepaint()
+		}
+	
+	void ChartCore:setAxisLabelSpace(byte axis, int space)
+		{
+		if (axis == ChartCore.AXIS_X)
+			xAxisLabelSpace = space
+			else if (axis == ChartCore.AXIS_Y)
+			yAxisLabelSpace = space
+		}
+	
+	void calculateEffectiveAxisLimits()
+		{
+		// take the user-set min/max first
+		
+		xAxMin = xAxMinUser
+		xAxMax = xAxMaxUser
+		
+		yAxMin = yAxMinUser
+		yAxMax = yAxMaxUser
+		
+		// now account for axis finish criteria (grid, markers, numbers...)
+		
+		dec xFinishSpace = 0.0
+		dec yFinishSpace = 0.0
+		
+		if (xAxisFinish == ChartCore.ATTR_GRID)
+			{
+			xFinishSpace = gridIntervalX
+			}
+			else if (xAxisFinish == ChartCore.ATTR_MARKERS)
+			{
+			xFinishSpace = markerIntervalX
+			}
+			else if (xAxisFinish == ChartCore.ATTR_NUMBERS)
+			{
+			xFinishSpace = numberIntervalX
+			}
+		
+		if (yAxisFinish == ChartCore.ATTR_GRID)
+			{
+			yFinishSpace = gridIntervalY
+			}
+			else if (yAxisFinish == ChartCore.ATTR_MARKERS)
+			{
+			yFinishSpace = markerIntervalY
+			}
+			else if (yAxisFinish == ChartCore.ATTR_NUMBERS)
+			{
+			yFinishSpace = numberIntervalY
+			}
+		
+		if (xFinishSpace != 0.0)
+			{
+			//TODO.
+			}
+		
+		if (yFinishSpace != 0.0)
+			{
+			//TODO: deal with all other +ve/-ve cases
+			if (yAxMax > 0.0)
+				{
+				dec endY = 0.0
+				while (endY < yAxMax) endY += yFinishSpace
+				yAxMax = endY
+				}
+			}
+		}
+	
+	void ChartCore:setDecimalPlaces(byte axisType, int num)
+		{
+		//TODO: also update the way that the list of x/y numbers are generated by checking the decimal place count there and using a String[] for the list
+		
+		if (axisType == ChartCore.AXIS_X)
+			xAxisDP = num
+			else if (axisType == ChartCore.AXIS_Y)
+			yAxisDP = num
+		}
+	
+	void ChartCore:preparePlotArea()
+		{
+		//final calculations now, on location of everything
+		
+		//our high and low end-points for both axes are stored in xAxMax, yAxMin etc.
+		// - we may need to adjust these here to account for the marker interval, but otherwise this information allows us to calculate every other aspect of the graph, including the actual plot area to fit everything within our width/height bounds
+		
+		//reset to standard plot area, before adjusting this based on number height / width for axis labels...
+		padLeft = BORDER_SIZE
+		padRight = BORDER_SIZE
+		
+		padTop = BORDER_SIZE
+		padBottom = BORDER_SIZE
+		
+		plotWidth = width - (padLeft + padRight)
+		plotHeight = height - (padTop + padBottom)
+		
+		calculateEffectiveAxisLimits()
+		
+		int fontHeight = axisFont.getFontMetrics().height
+		
+		largestYNumWidth = getWidestAxisNumberY()
+		
+		//we now add to the padding on each side of the graph depending on numbering, labels, and title
+		
+		// :: top
+		//calculate the position of the top-most Y-axis number; if it's < (TEXT_HEIGHT/2), increase padTop by whatever that number is...
+		// - unless we're going to print X-axis numbers above the axis, in which case check if these numbers get printed higher
+		// (it's tempting to just fix the number positions for now (always at very bottom / far left), then get more complex later...?)
+		dec yNum[] = getYNumbers()
+		if (yNum != null)
+			{
+			int yPos = getPlotPoint(0.0, yNum[yNum.arrayLength-1])[1]
+			
+			if (yPos < (fontHeight/2))
+				{
+				padTop += (fontHeight/2)
+				}
+				else if (yPos - (fontHeight/2) < padTop)
+				{
+				padTop += padTop - (yPos - (fontHeight/2))
+				}
+			}
+		
+		// :: right side
+		dec xNum[] = getXNumbers()
+		if (xNum != null)
+			{
+			int xPos = getPlotPoint(xNum[xNum.arrayLength-1], 0.0)[0]
+			if (xPos + (axisFont.getTextWidth("$(xNum[xNum.arrayLength-1])") / 2) > padLeft + plotWidth)
+				{
+				padRight += (xPos + axisFont.getTextWidth("$(xNum[xNum.arrayLength-1])") / 2) - (padLeft + plotWidth)
+				}
+			}
+		
+		// :: left
+		//plot area adjustment calculation for y-axis, if axis numbers and label are outside plot area at left of graph (need to check this first...)
+		// (actually it's tempting, for simplicity, to *always* have labels and numbers in these locations, even if the axes aren't there - TODO?)
+		padLeft += MARKER_LENGTH
+		padLeft += largestYNumWidth
+		if (yAxisLabel != null) padLeft += labelFont.getFontMetrics().height
+		
+		padLeft += yAxisLabelSpace
+		
+		// :: bottom
+		//plot area adjustment calculation for x-axis, if axis numbers and label are at very bottom of graph (we need to check this first...)
+		padBottom += MARKER_LENGTH
+		padBottom += axisFont.getFontMetrics().height
+		if (xAxisLabel != null) padBottom += labelFont.getFontMetrics().height
+		
+		padBottom += xAxisLabelSpace
+		
+		//calculate total plot area
+		plotWidth = width - (padLeft + padRight)
+		plotHeight = height - (padTop + padBottom)
+		
+		//consider xAxisEvenLock here, to adjust apparent plotWidth
+		// - the calculation here is just to divide plotWidth by the number of (markers, numbers, or grid lines) to get the width of each one; we then multiply that number by the number of (markers, numbers, or grid lines) to get Q, then set plotWidth as Q
+		// - we then need another number to track the "outer" plot width to which we'll draw the actual axis line out to
+		// - the inner number is used by getPlotPoint()...
+		applyEvenAxisLocks()
+		}
+	
+	Rect ChartCore:getPlotArea()
+		{
+		return new Rect(padLeft, padTop, plotWidth, plotHeight)
+		}
+	
+	void ChartCore:drawGrid(Canvas c)
+		{
+		//grid lines, if any
+		dec xLines[] = getXGridLines()
+		dec yLines[] = getYGridLines()
+		
+		// - x-axis
+		
+		for (int i = 0; i < xLines.arrayLength; i++)
+			{
+			int xyTop[] = getPlotPoint(xLines[i], yAxMax)
+			int xyBot[] = getPlotPoint(xLines[i], yAxMin)
+			
+			c.drawLine(new Line2D(xyTop[0], xyTop[1], xyBot[0], xyBot[1], gridColor))
+			}
+		
+		// - y-axis
+		
+		for (int i = 0; i < yLines.arrayLength; i++)
+			{
+			int xyTop[] = getPlotPoint(xAxMax, yLines[i])
+			int xyBot[] = getPlotPoint(xAxMin, yLines[i])
+			
+			c.drawLine(new Line2D(xyTop[0], xyTop[1], xyBot[0], xyBot[1], gridColor))
+			}
+		}
+	
+	void ChartCore:drawAxes(Canvas c)
+		{
+		//get all marker, number, and grid line position
+		int zeroXY[] = getPlotPoint(0.0, 0.0)
+		int yAxisX = zeroXY[0]
+		int xAxisY = zeroXY[1]
+		
+		dec yMarkers[] = getYMarkers()
+		dec yNumbers[] = getYNumbers()
+		String yNumStr[] = getNumbersDP(yNumbers, yAxisDP)
+		
+		dec xMarkers[] = getXMarkers()
+		dec xNumbers[] = getXNumbers()
+		String xNumStr[] = getNumbersDP(xNumbers, xAxisDP)
+		
+		//out.println("PP. $(zeroXY[0]):$(zeroXY[1])")
+		
+		//axes
+		
+		// - calculate whether the x and y axes have positive or negative biases, and use this to determine where we draw labels
+		
+		bool xPositiveBias = zeroXY[0] < (width / 2)
+		bool yPositiveBias = zeroXY[1] > (height / 2) 
+		
+		bool xMarkersBelow = yPositiveBias
+		bool yMarkersLeft = xPositiveBias
+		
+		bool xLabelBelow = xMarkersBelow
+		bool yLabelLeft = yMarkersLeft
+		
+		// - Y-axis
+		
+		c.drawLine(new Line2D(zeroXY[0], padTop, zeroXY[0], padTop + plotHeight, axisColor))
+		
+		// - markers
+		
+		for (int i = 0; i < yMarkers.arrayLength; i++)
+			{
+			int xy[] = getPlotPoint(0.0, yMarkers[i])
+			
+			c.drawLine(new Line2D(yAxisX, xy[1], yAxisX - MARKER_LENGTH, xy[1], axisColor))
+			}
+		
+		// - numbers
+		
+		for (int i = 0; i < yNumbers.arrayLength; i++)
+			{
+			//draw the number vertically centered against the marker
+			int xy[] = getPlotPoint(0.0, yNumbers[i])
+			
+			int textWidth = axisFont.getTextWidth(yNumStr[i].string)
+			int textHeight = axisFont.getFontMetrics().height
+			
+			c.drawText(new Point2D(padLeft - textWidth - MARKER_LENGTH, xy[1] - (textHeight / 2), axisColor), axisFont, yNumStr[i].string)
+			}
+		
+		// - X-axis
+		
+		c.drawLine(new Line2D(padLeft, xAxisY, padLeft + plotWidth, xAxisY, axisColor))
+		
+		// - markers
+		
+		for (int i = 0; i < xMarkers.arrayLength; i++)
+			{
+			int xy[] = getPlotPoint(xMarkers[i], 0.0)
+			
+			if (xMarkersBelow)
+				c.drawLine(new Line2D(xy[0], xAxisY, xy[0], xAxisY + MARKER_LENGTH, axisColor))
+				else
+				c.drawLine(new Line2D(xy[0], xAxisY, xy[0], xAxisY - MARKER_LENGTH, axisColor))
+			}
+		
+		// - numbers
+		for (int i = 0; i < xNumbers.arrayLength; i++)
+			{
+			//draw the number horizontally centered against the marker
+			int xy[] = getPlotPoint(xNumbers[i], 0.0)
+			
+			int textWidth = axisFont.getTextWidth(xNumStr[i].string)
+			int textHeight = axisFont.getFontMetrics().height
+			
+			c.drawText(new Point2D(xy[0] - (textWidth / 2), padTop + plotHeight + MARKER_LENGTH, axisColor), axisFont, xNumStr[i].string)
+			}
+		
+		//axis text labels
+		if (xAxisLabel != null)
+			{
+			int textWidth = labelFont.getTextWidth(xAxisLabel)
+			int textHeight = axisFont.getFontMetrics().height
+			
+			//find whichever is larger, the +ve or -ve side of the y-intercept, get the centre-point and draw our text centered on that point
+			int xpos = padLeft + (plotWidth / 2)
+			
+			xpos -= (textWidth / 2)
+			
+			c.drawText(new Point2D(xpos, padTop + plotHeight + MARKER_LENGTH + textHeight, axisColor), labelFont, xAxisLabel)
+			}
+		
+		if (yAxisLabel != null)
+			{
+			int textWidth = labelFont.getTextWidth(yAxisLabel)
+			int textHeight = labelFont.getFontMetrics().height
+			
+			int xpos = (padLeft - MARKER_LENGTH - largestYNumWidth - (textHeight)) - yAxisLabelSpace
+			int ypos = padTop + (plotHeight / 2)
+			ypos += (textWidth / 2)
+			
+			c.drawTextEx(new Point2D(xpos, ypos, axisColor), labelFont, yAxisLabel, 270)
+			}
+		}
+	
+	void ChartCore:paint(Canvas c)
+		{
+		drawGrid(c)
+		drawAxes(c)
+		}
+	
+	void ChartCore:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+	
+	Point ChartCore:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+	
+	WH ChartCore:getPreferredSize()
+		{
+		return new WH(width, height)
+		}
+	
+	void ChartCore:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	}

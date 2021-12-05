@@ -6,6 +6,9 @@ component provides KeyMapping {
 		bool upper = shift || (keyState & KeyState.KEY_CAPLOCK) == KeyState.KEY_CAPLOCK
 		bool altgr = (keyState & KeyState.KEY_ALTGR) == KeyState.KEY_ALTGR
 		
+		if (((keyState & KeyState.KEY_ALT) == KeyState.KEY_ALT) && ((keyState & KeyState.KEY_CTRL) == KeyState.KEY_CTRL))
+			altgr = true
+		
 		if (n >= 4 && n < 30)
 			{
 			if (upper)
@@ -38,6 +41,8 @@ component provides KeyMapping {
 			{
 			if (shift)
 				return "\$"
+				else if (altgr)
+				return "€"
 				else
 				return "4"
 			}
@@ -210,6 +215,7 @@ component provides KeyMapping {
 			else if (n == 68) return KeyCode.F11
 			else if (n == 69) return KeyCode.F12
 			else if (n == 41) return KeyCode.ESCAPE
+			else if (n == 44) return KeyCode.SPACE
 			else if (n == 57) return KeyCode.CAPLOCK
 			else if (n == 4) return KeyCode.A
 			else if (n == 5) return KeyCode.B

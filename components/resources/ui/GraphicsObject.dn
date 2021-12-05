@@ -1,6 +1,6 @@
 /*
-* GraphicsObject interface
-* This is an API that represents a generic graphical object. All other graphical object types should inherit from this one.
+ {"description" : "This is an API that represents a generic graphical object. All other graphical object types should inherit from this one."
+	}
 */
 
 uses Window
@@ -13,12 +13,39 @@ interface GraphicsObject{
 	transfer int xPosition
 	transfer int yPosition
 	
+	/*
+	 {"@description" : "An event of this type can be emitted to request the graphical region hosting this object to call the paint function of the object."
+		}
+	*/
 	event repaint()
 	
+	/*
+	 {"@description" : "Request a graphics object to redraw itself."
+		}
+	*/
 	void postRepaint()
 	
+	/*
+	 {"@description" : "This function is called by the rendering system when it is time to draw this object."
+		}
+	*/
 	void paint(Canvas c)
+	
+	/*
+	 {"@description" : "Set the location of this object, in pixels, from the top-left of the containing entity."
+		}
+	*/
 	void setPosition(int x, int y)
+	
+	/*
+	 {"@description" : "Get the location of this object, in pixels, from the top-left of the containing entity."
+		}
+	*/
 	Point getPosition()
+	
+	/*
+	 {"@description" : "This function is called when another graphics entity would like to know the preferred size of this object, for example to help with layout calculations."
+		}
+	*/
 	WH getPreferredSize()
 	}

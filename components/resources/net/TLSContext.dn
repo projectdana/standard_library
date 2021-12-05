@@ -1,0 +1,28 @@
+uses data.String
+
+/* {"description" : "This API represents a context entity for a TLS session. The configuration parameters of a session are set here, and passed into a session when instantiating it."} */
+
+interface TLSContext {
+	
+	/* {"@description" : "Configure this context for use in client mode."} */
+	const byte CLIENT = 0x1
+	/* {"@description" : "Configure this context for use in server mode."} */
+	const byte SERVER = 0x2
+	
+	/* {"@description" : "Create a new context object, specifying whether this is for a server or client mode."} */
+	TLSContext(byte mode)
+	
+	/* {"@description" : "Set the certificate and private key to be used by this node. The certificate should be supplied in a base64-encoded PEM format, and they key is assumed to be RSA encoded in PKCS1 format."} */
+	bool setCertificate(char cert[], byte key[])
+	
+	/* {"@description" : "Set the certificate chain to be used by this node. The certificate chain is a list of base64-encoded PEM certificates."} */
+	bool setCertificateChain(String chain[])
+	
+	/* {"@description" : "Use the default cipher set of the library (a good balance between compatibility and security)."} */
+	const int CIPHER_DEFAULT = 1
+	/* {"@description" : "Use all ciphers available in the library (maximise compatibility)."} */
+	const int CIPHER_ALL	 = 2
+	/* {"@description" : "Configure the cipher set to tbe used by this node for encryption (both nodes involved in a channel must have at least one available cipher in common)."} */
+	void setCipherSet(int mode)
+	
+	}

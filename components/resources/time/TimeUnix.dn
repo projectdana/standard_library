@@ -1,0 +1,15 @@
+uses time.DateTime
+
+/*
+{ "description" : "Utility interface to convert between DateTime instances and the Unix time format."}
+*/
+
+interface TimeUnix {
+	
+	/* { "@description" : "Convert a DateTime instance to an MS-DOS-format date."} */
+	int toUnixTime(DateTime dt)
+	
+	/* { "@description" : "Convert from a Unix-format time value to a DateTime instance."} */
+	DateTime fromUnixTime(int utime)
+	
+	}

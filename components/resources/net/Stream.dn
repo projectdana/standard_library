@@ -1,0 +1,13 @@
+interface Stream {
+	
+	/*
+	{"@description" : "Wait for n bytes of data to be received, or for the connection to be terminated."}
+	*/
+	byte[] recv(int n)
+	
+	/*
+	{"@description" : "Send the given data on the stream; the return value is how many bytes have been successfully buffered by the protocol."}
+	*/
+	int send(byte dat[])
+	
+	}

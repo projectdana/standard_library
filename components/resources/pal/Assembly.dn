@@ -1,17 +1,23 @@
+uses data.String
+uses App
+
+data InterceptInfo {
+	char rule[]
+	char impl[]
+	}
+
 /*
 { "description" : "This is an interface from the PAL framework for emergent software systems. This interface controls the composition of a target program (starting at its 'main' component, which must implement the App interface) by discovering the possible ways in which it can be assembled and adapting it to one of those assemblies." }
 */
-
-uses data.String
 
 interface Assembly {
 	
 	/*
 	{ "@description" : "Constructor function which discovers the set of possible assemblies for a given 'main' component.",
-		"main" : "Path to a compiled Dana component which impements the App interface.",
+		"main" : "Path to a compiled Dana component which implements the App interface.",
 		"perceptionModule" : "A loaded Dana component which implements the pal.Perception interface." }
 	*/
-	Assembly(char main[], IDC perceptionModule)
+	Assembly(char main[], store AppParam params[], store IDC perceptionModule)
 	
 	/*
 	{ "@description" : "Gets a list of all valid assemblies of the software system being managed, where each assembly is identified with a unique string." }
@@ -26,8 +32,49 @@ interface Assembly {
 	bool setConfig(char conf[])
 	
 	/*
-	{ "@description" : "Checks if the main method of the program has exited, returning true if so." }
+	{ "@description" : "Launches the main method of the program, blocking until that function completes." }
 	*/
-	bool appFinished()
+	bool runApp(char launchPath[])
+	
+	/*
+	{ "@description" : "Adds a new component to the pool of available alternatives. The component being added, and any new dependencies, must already be in the appropriate directory relative to the system it is being added to." }
+	*/
+	bool addComponent(char path[])
+	
+	/*
+	{ "@description" : "Removes an existing component from the pool of available alternatives. The currently selected composition must not be using this component)." }
+	*/
+	bool remComponent(char path[])
+	
+	/*
+	{ "@description" : "Updates an existing component to a new version. The component passed into this function must support the same provided interface type as its current version, but otherwise can have both implementation and sub-architecture changes. No other components that already exist in the running system, besides that passed as a parameter to this function, can have architecture changes of their own. The component being updated, and any new dependencies, must already be in the appropriate directory relative to the system being updated. The list of all configurations may be re-ordered following this operation, even if dependencies have not changed within the updated component.",
+		"path" : "The specific component for which a new compiled version is now in the appropriate directory relative to the managed system.",
+		"@return" : "Returns the configuration identifier that is now active (or null if the operation failed)." }
+	*/
+	char[] updComponent(char path[])
+	
+	/*
+	{ "@description" : "Updates the architecture of the running system. The set of interfaces passed in to this function define a frontier beyond which the system's architecture may have been completely changed in updated components. All of the necessary components for the newly updated system must already be present in the appropriate directory relative to the running system. The list of all configurations may be re-ordered following this operation, even if no architecture changes actually occurred in the updated system.",
+		"@return" : "Returns the configuration identifier that is now active (or null if the operation failed)." }
+	*/
+	char[] updArch(String newIntfs[])
+	
+	/*
+	{ "@description" : "Adds an intercepting component at every instance of the given interface (which should be specified using its full package). A new instance of the intercepting component is loaded at each injection site. The intercepting component can either provide the same interface type as that being intercepted, or can provide the dynamic proxy interfaces lang.Proxy and lang.Morph. The intercepting component can also optionally implement pal.ProxyInfo to receive information about its injection site.",
+		"@return" : "True if successful, false otherwise." }
+	*/
+	bool addIntercept(char intf[], char cmp[])
+	
+	/*
+	{ "@description" : "Removes an existing interception rule, and all active interceptors of that rule.",
+		"@return" : "True if successful, false otherwise." }
+	*/
+	bool remIntercept(char intf[], char cmp[])
+	
+	/*
+	{ "@description" : "Gets the list of currently installed intercept rules.",
+		"@return" : "True if successful, false otherwise." }
+	*/
+	InterceptInfo[] getIntercepts()
 	
 	}

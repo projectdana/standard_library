@@ -1,0 +1,64 @@
+/*
+	{
+	"description" : "API to create a single-category graph, where one axis is used to show evenly-spaced categories, such as a bar chart or histogram. Use one of the semantic variants of this interface to select a particular type of graph."
+	}
+*/
+
+uses ui.Color
+uses ui.Canvas
+
+interface Category extends ChartCore {
+
+	Category()
+	
+	/*
+	 {"@description" : "Add a new sample (or set of samples) for a specific category.",
+		"cat" : "The category in which this series data will appear.",
+		"values" : "The values for this series data for this category."
+		}
+	*/
+	void addSample(char cat[], dec values[])
+	
+	/*
+	 {"@description" : "Sets a color used to display this series.",
+		"c" : "The color for this series."
+		}
+	*/
+	void setSeriesColor(store Color c)
+	
+	/*
+	 {"@description" : "Display error bars on the graph (if the specific implementation supports it).",
+	 	"on" : "True to show error bars, false otherwise."
+		}
+	*/
+	void showErrorBars(bool on)
+	
+	/*
+	 {"@description" : "Display a legend on the graph, using the display names for series.",
+	 	"on" : "True to show legend, false otherwise."
+		}
+	*/
+	void clampErrorBars(dec low, dec high)
+	
+	/*
+	 {"@description" : "Set the width of category display rendering as a percentage of the category space available (for example, the relative width of bars on a bar chart).",
+	 	"percent" : "A number between 0.0 and 100.0."
+		}
+	*/
+	void setCatDisplayWidth(dec percent)
+	
+	/*
+	 {"@description" : "Set a level of padding between the edge of the category space available and the category rendering.",
+	 	"pixels" : "Number of pixels to pad each side of a category."
+		}
+	*/
+	void setCatDisplayPadding(int pixels)
+	
+	/*
+	 {"@description" : "Render the graph to a specific canvas, such as an SVGCanvas.",
+	 	"c" : "The canvas to draw to."
+		}
+	*/
+	void drawToCanvas(Canvas c)
+	
+	}

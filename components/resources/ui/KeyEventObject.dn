@@ -4,14 +4,6 @@
 */
 
 interface KeyEventObject extends XYMouseObject {
-	
-	event requestFocus()
-	
-	void setFocus()
-	
-	void recvFocus()
-	void loseFocus()
-	
 	void keyDown(int keyID)
 	void keyUp(int keyID)
 	}

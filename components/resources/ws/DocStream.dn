@@ -1,25 +1,23 @@
-uses net.TCPSocket
+uses net.Stream
 uses net.http.Header
 
-/*
- {"description" : "Interface to write HTTP response data to a client request, including setting session cookie state."}
-*/
+/* {"description" : "Interface to write HTTP response data to a client request, including setting session cookie state."} */
 
 interface DocStream {
 	
-	/*
-	 {"@description" : "Construct a new doc stream. This is done automatically by a web framework."}
-	*/
-	DocStream(TCPSocket s, Header headers[], bool autoCloseSocket)
+	/* {"@description" : "Construct a new doc stream. This is done automatically by a web framework."} */
+	DocStream(store Stream s, store Header headers[])
 	
-	/*
-	 {"@description" : "Get the list of request headers send by the client."}
-	*/
+	/* {"@description" : "Get the list of request headers sent by the client."} */
 	Header[] getRequestHeaders()
 	
-	/*
-	 {"@description" : "Set a piece of session state, identified by a given key, to equal a given value. This causes a cookie to be set, so that this session state is available on subsequent web requests. This function must be called before any use of write() or writeStatus()."}
-	*/
+	/* {"@description" : "Push a context onto the stack, collect content without sending anything."} */
+	void pushContext()
+	
+	/* {"@description" : "Pop headers to next context on the stack."} */
+	void popContext()
+	
+	/* {"@description" : "Set a piece of session state, identified by a given key, to equal a given value. This causes a cookie to be set, so that this session state is available on subsequent web requests. This function must be called before any use of write() or writeStatus()."} */
 	void setSessionKey(char key[], char value[])
 	
 	/*
@@ -36,15 +34,23 @@ interface DocStream {
 	/*
 	 {"@description" : "Send data to the connected client. By default, content is assumed to be text (HTML) and uses chunked encoding; other content types should be indicated by first using writeStatus()."}
 	*/
-	void write(char str[])
+	void setStatusCode(int code, char reason[], bool directStream)
 	
 	/*
-	 {"@description" : "Set status code of the request, set all headers (such as 'content-type' and 'content-length') and send them to the client. This function is only effective the first time that it is used per request."}
+	 {"@description" : "Send data to the connected client. By default, content is assumed to be text (HTML) and uses chunked encoding; other content types should be indicated by first using writeStatus()."}
 	*/
-	void writeStatus(int code, char reason[], Header headers[])
+	void setHeaders(store Header headers[])
+	
+	/*
+	 {"@description" : "Send data to the connected client. By default, content is assumed to be text (HTML) and uses chunked encoding; other content types should be indicated by first using writeStatus()."}
+	*/
+	void write(char str[])
 	
 	/*
 	 {"@description" : "Indicate that sending of response data is complete. This function is automatically called by the web framework and so does not need to be used by the web app. After this function has been called, no further data can be sent in response to this request."}
 	*/
-	void endStream()
+	void sendResponse()
+	
+	/* {"@description" : "Framework function to check if anything was sent by this stream."} */
+	bool responseSent()
 	}

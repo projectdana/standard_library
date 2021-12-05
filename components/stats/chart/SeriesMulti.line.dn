@@ -1,0 +1,350 @@
+data Sample {
+	dec values[]
+	dec seriesValue
+	char label[]
+	}
+
+data Series {
+	char name[]
+	char displayName[]
+	Sample samples[]
+	Color color
+	byte markerStyle
+	}
+
+//size of markers, in pixels
+const int MARKER_SIZE = 7
+
+const int LEGEND_PAD_SIZE = 5
+const int LEGEND_SQ_SIZE = 10
+
+component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font, data.query.Search search {
+	
+	Series series[]
+	
+	Color axisColor = new Color(0, 0, 0, 255)
+	Color gridColor = new Color(220, 220, 220, 255)
+	Color bgColor = new Color(255, 255, 255, 255)
+	
+	Font axisFont
+	
+	dec highestX
+	dec lowestX
+	dec highestY
+	dec lowestY
+	
+	dec numberIntervalX
+	dec markerIntervalX
+	dec gridIntervalX
+	dec numberIntervalY
+	dec markerIntervalY
+	dec gridIntervalY
+	
+	dec xAxMax
+	dec xAxMin
+	dec yAxMax
+	dec yAxMin
+	
+	bool showStdDev
+	bool showLegend
+	
+	SeriesMulti:SeriesMulti()
+		{
+		super()
+		
+		axisFont = new Font("SourceSansPro.ttf", 12)
+		}
+	
+	void SeriesMulti:addSeries(char name[])
+		{
+		series = new Series[](series, new Series(name, name, null, new Color(100, 200, 200, 255)))
+		}
+	
+	void SeriesMulti:setSeriesName(char name[], char displayName[])
+		{
+		Series n = series.search(Series.[name], new Series(name))[0]
+		
+		n.displayName = displayName
+		}
+	
+	void SeriesMulti:addSample(char name[], dec xv, dec yvalues[])
+		{
+		//update our highest and lowest X and Y points, to use in normalising coordinates
+		Series sr = search.search(series, Series.[name], new Series(name))[0]
+		
+		dec hy = stcore.max(yvalues)
+		dec ly = stcore.min(yvalues)
+		
+		if (series.arrayLength == 1 && sr.samples == null)
+			{
+			highestX = xv
+			lowestX = xv
+			highestY = hy
+			lowestY = ly
+			}
+			else
+			{
+			if (xv > highestX) highestX = xv
+			if (xv < lowestX) lowestX = xv
+			if (hy > highestY) highestY = hy
+			if (ly < lowestY) lowestY = ly
+			}
+		
+		//add sample
+		sr.samples = new Sample[](sr.samples, new Sample(yvalues, xv))
+		
+		// -- automated calculation of the highest and lowest points on the axis --
+		
+		//update the axis endpoints, if the series values are now outside the bounds of whatever endpoints have been set
+		if (highestX > xAxMax) xAxMax = highestX
+		if (lowestX < xAxMin) xAxMin = lowestX
+		if (highestY > yAxMax) yAxMax = highestY
+		if (lowestY < yAxMin) yAxMin = lowestY
+		
+		setXMinMax(xAxMin, xAxMax)
+		setYMinMax(yAxMin, yAxMax)
+		
+		postRepaint()
+		}
+	
+	void SeriesMulti:setXMinMax(dec min, dec max)
+		{
+		//TODO: disallow values that can't contain all of the graph points...
+		xAxMin = min
+		xAxMax = max
+		
+		super(min, max)
+		}
+	
+	void SeriesMulti:setYMinMax(dec min, dec max)
+		{
+		//TODO: disallow values that can't contain all of the graph points...
+		yAxMin = min
+		yAxMax = max
+		
+		super(min, max)
+		}
+	
+	void SeriesMulti:setSeriesColor(char name[], Color c)
+		{
+		Series sr = search.search(series, Series.[name], new Series(name))[0]
+		
+		sr.color = c
+		}
+	
+	void SeriesMulti:setSeriesMarkers(char name[], byte b)
+		{
+		Series sr = search.search(series, Series.[name], new Series(name))[0]
+		
+		sr.markerStyle = b
+		}
+	
+	void SeriesMulti:showErrorBars(bool b)
+		{
+		showStdDev = b
+		}
+	
+	void SeriesMulti:clampErrorBars(dec low, dec high)
+		{
+		
+		}
+	
+	void SeriesMulti:showLegend(bool on)
+		{
+		showLegend = true
+		}
+	
+	void SeriesMulti:setAxisFont(Font f)
+		{
+		axisFont = f
+		super(f)
+		}
+	
+	// -- SVG rendering --
+	
+	void SeriesMulti:drawToCanvas(Canvas c)
+		{
+		return paint(c)
+		}
+	
+	void prepAxisLimits()
+		{
+		dec highX
+		dec lowX
+		dec highY
+		dec lowY
+		
+		for (int k = 0; k < series.arrayLength; k++)
+			{
+			Sample samples[] = series[k].samples
+			
+			//calculate what our min/max should be, and account for stdDev
+			for (int i = 0; i < samples.arrayLength; i++)
+				{
+				dec mean = stcore.mean(samples[i].values)
+				
+				if (showStdDev)
+					{
+					dec stdDev = stcore.stdDev(samples[i].values)
+					
+					if (mean - stdDev < lowY) lowY = mean - stdDev
+					if (mean + stdDev > highY) highY = mean + stdDev
+					}
+					else
+					{
+					if (mean < lowY) lowY = mean
+					if (mean > highY) highY = mean
+					}
+				
+				if (samples[i].seriesValue < lowX) lowX = samples[i].seriesValue
+				if (samples[i].seriesValue > highX) highX = samples[i].seriesValue
+				}
+			}
+		
+		setXMinMax(lowX, highX)
+		setYMinMax(lowY, highY)
+		}
+	
+	int getLongestSeriesName()
+		{
+		int result = 0
+		
+		for (int i = 0; i < series.arrayLength; i++)
+			{
+			int wd = axisFont.getTextWidth(series[i].displayName)
+			
+			if (wd > result) result = wd
+			}
+		
+		return result
+		}
+	
+	void drawLegend(Canvas c)
+		{
+		//calculate the longest series name, and offset the legend by this much from the right (plus the legend color square width)
+		int longestTxt = getLongestSeriesName()
+		
+		int yPos = 10
+		int xStart = getSize().width - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		
+		int textHeight = axisFont.getFontMetrics().height
+		
+		int totalLegendHeight = ((textHeight + 5) * (series.arrayLength-1)) + textHeight
+		int totalLegendWidth = (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		
+		c.drawRect(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), bgColor))
+		c.drawRectOutline(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), axisColor))
+		
+		yPos += (axisFont.getFontMetrics().descent)
+		
+		for (int i = series.arrayLength - 1; i != INT_MAX; i--)
+			{
+			drawMarker(c, series[i].markerStyle, series[i].color, new int[](xStart + (LEGEND_SQ_SIZE/2), yPos + (LEGEND_SQ_SIZE/2)))
+			
+			c.drawLine(new Line2D(xStart, yPos + (LEGEND_SQ_SIZE/2), xStart + LEGEND_SQ_SIZE, yPos + (LEGEND_SQ_SIZE/2), series[i].color))
+			
+			int yOffset = (yPos + (LEGEND_SQ_SIZE / 2)) - (textHeight / 2)
+			c.drawText(new Point2D(xStart + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE, yOffset, axisColor), axisFont, series[i].displayName)
+			
+			yPos += textHeight + 5
+			}
+		}
+	
+	// -- screen rendering (temporary?) --
+	
+	void drawMarker(Canvas c, byte type, Color color, int centreXY[])
+		{
+		if (type == SeriesMulti.M_SQUARE)
+			{
+			c.drawRect(new Rect2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, MARKER_SIZE, MARKER_SIZE, color))
+			}
+			else if (type == SeriesMulti.M_SQUARE_OUTLINE)
+			{
+			c.drawRectOutline(new Rect2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, MARKER_SIZE, MARKER_SIZE, color))
+			}
+			else if (type == SeriesMulti.M_PLUS)
+			{
+			c.drawLine(new Line2D(centreXY[0], centreXY[1] - MARKER_SIZE/2, centreXY[0], centreXY[1] + MARKER_SIZE/2, color))
+			c.drawLine(new Line2D(centreXY[0] - MARKER_SIZE/2, centreXY[1], centreXY[0] + MARKER_SIZE/2, centreXY[1], color))
+			}
+			else if (type == SeriesMulti.M_CROSS)
+			{
+			c.drawLine(new Line2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, centreXY[0] + MARKER_SIZE/2, centreXY[1] + MARKER_SIZE/2, color))
+			c.drawLine(new Line2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] + MARKER_SIZE/2, centreXY[0] + MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, color))
+			}
+		}
+	
+	void SeriesMulti:paint(Canvas c)
+		{
+		Point pos = getPosition()
+		WH wh = getSize()
+		
+		prepAxisLimits()
+		
+		c.pushSurface(new Rect(pos.x, pos.y, wh.width, wh.height), 0, 0, 255)
+		
+		preparePlotArea()
+		
+		//graph background
+		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		
+		//grid lines, if any
+		drawGrid(c)
+		
+		//data
+		
+		for (int k = 0; k < series.arrayLength; k++)
+			{
+			// - TODO: sort data by seriesValue first???
+			Sample samples[] = series[k].samples
+			Color seriesColor = series[k].color
+			byte markerStyle = series[k].markerStyle
+			
+			int lastX
+			int lastY
+			for (int i = 0; i < samples.arrayLength; i++)
+				{
+				//this kind of graph plots the mean of the set
+				dec thisX = samples[i].seriesValue
+				dec thisY = stcore.mean(samples[i].values)
+				
+				int xy[] = getPlotPoint(thisX, thisY)
+				
+				drawMarker(c, markerStyle, seriesColor, xy)
+				
+				if (i > 0)
+					{
+					c.drawLine(new Line2D(lastX, lastY, xy[0], xy[1], seriesColor))
+					}
+				
+				if (showStdDev)
+					{
+					dec stdDev = stcore.stdDev(samples[i].values)
+					
+					if (stdDev != 0.0)
+						{
+						int xyHigh[] = getPlotPoint(thisX, thisY+stdDev)
+						int xyLow[] = getPlotPoint(thisX, thisY-stdDev)
+						
+						c.drawLine(new Line2D(xyHigh[0], xyHigh[1], xyLow[0], xyLow[1], seriesColor))
+						
+						c.drawLine(new Line2D(xyHigh[0]-MARKER_SIZE/2, xyHigh[1], xyHigh[0]+MARKER_SIZE/2, xyHigh[1], seriesColor))
+						c.drawLine(new Line2D(xyLow[0]-MARKER_SIZE/2, xyLow[1], xyLow[0]+MARKER_SIZE/2, xyLow[1], seriesColor))
+						}
+					}
+				
+				lastX = xy[0]
+				lastY = xy[1]
+				}
+			}
+		
+		//draw axes and labels
+		drawAxes(c)
+		
+		//legend
+		if (showLegend) drawLegend(c)
+		
+		c.popSurface()
+		}
+	
+	}

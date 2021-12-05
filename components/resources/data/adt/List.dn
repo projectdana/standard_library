@@ -3,16 +3,15 @@
 */
 
 interface List{
-	/*
-	 {"@description" : "The contents of the list."}
-	*/
+	/* {"@description" : "The contents of the list."} */
 	transfer Data content[]
+	/* {"@description" : "The current iterator index."} */
 	transfer int iteratorIndex
 	
 	/*
 	 {"@description" : "Add a new item to the list; this function adds a reference (shallow copy) of the given item onto the list."}
 	*/
-	void add(Data item)
+	void add(store Data item)
 	
 	/*
 	 {"@description" : "Remove an item from the list; this function locates the given item using a reference (===) check."}
@@ -22,7 +21,7 @@ interface List{
 	/*
 	 {"@description" : "Update an existing list item to a new version. This locates the given item using a reference (===) check, then replaces that reference with the reference to newVersion."}
 	*/
-	void update(Data item, Data newVersion)
+	void update(Data item, store Data newVersion)
 	
 	/*
 	 {"@description" : "Iterator: call this function to begin iterating over the list. Note that this function, together with getNext(), are not thread-safe: if getFirst() is called by thread A, which then begins using getNext() to iterate through the list, a second call of getFirst() by thread B will reset thread A's iterator.",
@@ -42,6 +41,27 @@ interface List{
 	*/
 	bool isEnd()
 	
+	/*
+	 {"@description" : "Get the data instance at this index in the list.",
+			"@return" : "The data instance at this index, if any, or null if the index is out of bounds or empty."}
+	*/
+	Data getIndex(int n)
+	
+	/*
+	 {"@description" : "Set the given index of the list to stored the given data instance."}
+	*/
+	void setIndex(int n, store Data d)
+	
+	/*
+	 {"@description" : "Get the number of items currently stored in the list.",
+			"@return" : "The number of items in the list."}
+	*/
 	int getLength()
-	Data[] getContents()
+	
+	/*
+	 {"@description" : "Get all items in the list as an array of type Data[].",
+			"t" : "The specific type for the resulting array.",
+			"@return" : "An array of type Data[] containing all items in the list, in order."}
+	*/
+	Data[] getContents(opt Type t)
 	}

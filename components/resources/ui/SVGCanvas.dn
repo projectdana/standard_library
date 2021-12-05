@@ -1,0 +1,32 @@
+/*
+ {"description" : "This API represents a drawing canvas which captures all rendering in scalable vector graphics format, which for example can then be written to a file."
+	}
+*/
+
+interface SVGCanvas extends Canvas {
+	
+	/*
+	 {"@description" : "Set whether or not the canvas should embed all fonts into the SVG, so that the resulting SVG is self-contained. If this is not set, the SVG will instead link to the font files on disk."
+		}
+	*/
+	void setEmbedFonts(bool on)
+	
+	/*
+	 {"@description" : "Set the canvas size for the SVG document."
+		}
+	*/
+	void setSize(int w, int h)
+	
+	/*
+	 {"@description" : "Clear all data on the canvas."
+		}
+	*/
+	void clear()
+	
+	/*
+	 {"@description" : "Get the SVG representing everything drawn to this canvas."
+		}
+	*/
+	char[] getSVG()
+	
+	}

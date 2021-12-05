@@ -1,0 +1,12 @@
+component provides UnitTest requires io.File, media.image.ImageEncoder:png {
+	
+	bool UnitTest:runTest()
+		{
+		ImageEncoder src = new ImageEncoder:png()
+		
+		if (!src.loadImage(new File("ext-files/logo2.png", File.READ))) throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

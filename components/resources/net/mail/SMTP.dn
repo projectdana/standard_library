@@ -1,0 +1,57 @@
+uses net.TCPSocket
+uses net.TLS
+uses data.String
+
+/*
+{"description" : "This API supports connections to SMTP (send-mail) servers, which can be used to send emails. This is a low-level protocol API which expects the caller to do some of the work of making connections and verifying hosts. A typical secure use of this API would either use SSL/TLS or STARTTLS, depending on what the remote server supports (which one you use is often indicated by the port on which the server is listening, but should also be documented in your server configuration). An SSL/TLS server initiates connections in secure mode via connectTLS(), while a STARTTLS server initiates connections in plain-text mode via connect() and then requires the use of startTLS() to convert the channel to an encrypted one."}
+*/
+
+interface SMTP {
+	
+	SMTP()
+	
+	/*
+	{"@description" : "Connect to an SMTP server which starts in plain text mode (this is usually a server on port 587). Communication over this connection will not be encrypted, and you will usually want to upgrade the connection to a secure one using the startTLS() function. The TCP socket given here must already be connected to the remote host, but no data should have been sent or received from that socket."}
+	*/
+	bool connect(store TCPSocket s)
+	
+	/*
+	{"@description" : "Connect to an SMTP server which starts in secure/encrypted (this is usually a server on port 465). This function only establishes an encrypted channel. You are responsible for authenticating that the host you are talking to is really what it claims to be, by verifying certificates and the associated hostname. The TCP socket given here must already be connected to the remote host, but no data should have been sent or received from that socket. The TLS instance should be instantiated but not connected."}
+	*/
+	bool connectTLS(store TCPSocket s, store TLS tls)
+	
+	/*
+	{"@description" : "Request an upgrade from plain text mode to an encrypted channel. As above, this function only establishes an encrypted channel. You are responsible for authenticating that the host you are talking to is really what it claims to be, by verifying certificates and the associated hostname. The TLS instance passed in should be instantiated but not connected."}
+	*/
+	bool startTLS(store TLS s)
+	
+	/*
+	{"@description" : "Get the list of extensions offered by this SMTP server. For a plain text connection, note that this list may change after startTLS()."}
+	*/
+	String[] getServerOptions()
+	
+	const byte AUTH_DEFAULT	= 0
+	const byte AUTH_PLAIN	= 1
+	const byte AUTH_LOGIN	= 2
+	
+	/*
+	{"@description" : "Get the list of authentication types available on this SMTP server. When you use authenticate() you must specify an entry from this list, or AUTH_DEFAULT."}
+	*/
+	byte[] getAuthTypes()
+	
+	/*
+	{"@description" : "Attempt to authenticate on this server using the supplied username and password. Most SMTP servers will require this to be done before email can be sent. Note that you should never use this function unless your communication channel has been secured using one of the TLS functions on this interface. The authType specified must be one of those on the list returned by getAuthTypes(); if AUTH_DEFAULT is specified the implementation will automatically select an available authentication method."}
+	*/
+	bool authenticate(char username[], char password[], byte authType)
+	
+	/*
+	{"@description" : "Send an email. The content given here can either be plain ASCII text, or can be a MIME-encoded collection of message parts."}
+	*/
+	byte send(char fromAddr[], String to[], String cc[], String bcc[], char subject[], char content[])
+	
+	/*
+	{"@description" : "Properly close the protocol with the server (you *should* do this according to the protocol specification, though many servers are 'ok' if you don't)."}
+	*/
+	void close()
+	
+	}

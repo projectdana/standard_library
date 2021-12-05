@@ -1,2 +1,0 @@
-GLViewer=ui.GraphicsListView.o
-ui.Panel->Panel

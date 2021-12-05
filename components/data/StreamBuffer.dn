@@ -1,0 +1,93 @@
+data Chunk {
+	byte content[]
+	Chunk next
+	}
+
+component provides StreamBuffer {
+	
+	int totalLen
+	int chunkStart
+	
+	Chunk chunks
+	Chunk lastChunk
+	
+	void copyBytes(byte dest[], int destOffset, byte src[], int srcOffset, int len)
+		{
+		for (int i = 0; i < len; i++)
+			{
+			dest[destOffset+i] 
+			= src[srcOffset+i]
+			}
+		}
+	
+	void StreamBuffer:write(byte ar[], opt int len)
+		{
+		Chunk newChunk = new Chunk()
+		
+		if (isset len)
+			{
+			newChunk.content = new byte[len]
+			copyBytes(newChunk.content, 0, ar, 0, len)
+			}
+			else
+			{
+			newChunk.content = ar
+			}
+		
+		if (lastChunk == null)
+			chunks = newChunk
+			else
+			chunks.next = newChunk
+		
+		lastChunk = newChunk
+		
+		totalLen += newChunk.content.arrayLength
+		}
+	
+	byte[] StreamBuffer:read(int len)
+		{
+		byte result[]
+		if (len > totalLen)
+			result = new byte[totalLen]
+			else
+			result = new byte[len]
+		
+		int sf = 0
+		int rem = result.arrayLength
+		
+		while (sf < result.arrayLength)
+			{
+			int rdAmt = rem
+			
+			if (rdAmt > (chunks.content.arrayLength - chunkStart))
+				rdAmt = chunks.content.arrayLength - chunkStart
+			
+			copyBytes(result, sf, chunks.content, chunkStart, rdAmt)
+			
+			sf += rdAmt
+			rem -= rdAmt
+			chunkStart += rdAmt
+			
+			if (chunkStart == chunks.content.arrayLength)
+				{
+				chunks = chunks.next
+				chunkStart = 0
+				
+				if (chunks == null)
+					lastChunk = null
+				}
+			
+			if (sf == result.arrayLength) break
+			}
+		
+		totalLen -= result.arrayLength
+		
+		return result
+		}
+	
+	int StreamBuffer:getSize()
+		{
+		return totalLen
+		}
+	
+	}

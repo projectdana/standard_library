@@ -3,12 +3,17 @@
 */
 
 data FunctionCall {
+	/* {"@description" : "The name of this function call."} */
 	char name[]
+	/* {"@description" : "The index of this function header in its interface type."} */
 	int index
 	
+	/* {"@description" : "The type of this function header (including its return type and parameter types)."} */
 	Type type
-	
+	/* {"@description" : "The parameters that were passed to this function call."} */
 	Data params
+	/* {"@description" : "Bit mask indicating which parameters were given a value by the caller (where optional parameters may not have been given a value)."} */
+	int pSetMask
 	}
 
 /*
@@ -16,9 +21,15 @@ data FunctionCall {
 */
 
 interface Proxy {
+
+	/*
+	 {"@description" : "This function is called whenever an object is instantiated, when that object does not have an explicitly declared constructor function."}
+	*/
+	
+	void init(){}
 	
 	/*
-	 {"@description" : "This function is called whenever a constructor is called against the required interface wired to this provided interface. Constructors return a boolean value which indicates whether or not the object could be successfully constructed; this return value is set within the returnValue instance, which has a single field of the type returned by the actual function call. If you do not set this value to true, construction will always fail. Note that this function is only called for interfaces which explicitly have a constructor declared; for interfaces with no explicit function the proxy does not receive a notification for the act of instantiation."}
+	 {"@description" : "This function is called whenever a constructor is called against the required interface wired to this provided interface. Constructors return a boolean value which indicates whether or not the object could be successfully constructed; this return value is set within the returnValue instance, which has a single field of the type returned by the actual function call. If you do not set this value to true, construction will always fail. Note that this function is only called for interfaces which explicitly have a constructor declared."}
 	*/
 	
 	void construct(FunctionCall callData, Data returnValue)

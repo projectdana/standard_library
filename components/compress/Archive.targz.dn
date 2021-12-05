@@ -1,0 +1,757 @@
+// https://www.gnu.org/software/tar/manual/html_node/Standard.html
+
+uses time.DateTime
+
+const int CHUNK_SIZE = 5120
+
+const int SP_FAIL = 0
+const int SP_CONTINUE = 1
+const int SP_END = 2
+
+data GZHeader {
+	byte ID1
+	byte ID2
+	byte CM
+const byte FLG_FTEXT = 0x1
+const byte FLG_FHCRC = 0x2
+const byte FLG_FEXTRA = 0x4
+const byte FLG_FNAME = 0x8
+const byte FLG_FCOMMENT = 0x10
+	byte FLG
+	int4 mtime
+	byte XFL
+	byte OS
+	}
+
+data Int4 {
+	int4 val
+	}
+
+data Int2 {
+	int2 val
+	}
+
+const byte REGTYPE = "0"          /* regular file */
+const byte AREGTYPE = 0           /* regular file */
+const byte LNKTYPE = "1"          /* link */
+const byte SYMTYPE = "2"          /* reserved */
+const byte CHRTYPE = "3"          /* character special */
+const byte BLKTYPE = "4"          /* block special */
+const byte DIRTYPE = "5"          /* directory */
+const byte FIFOTYPE = "6"         /* FIFO special */
+const byte CONTTYPE = "7"         /* reserved */
+const byte XHDTYPE = "x"          /* Extended header referring to the next file in the archive */
+const byte XGLTYPE = "g"          /* Global extended header */
+
+//500-byte block
+data TarHeader {
+	byte fileName[100]
+	byte fileMode[8]
+	byte ownerID[8]
+	byte groupID[8]
+	byte fileSize[12]
+	byte lastModified[12]
+	byte checksum[8]
+	int1 fileType
+	byte linkedFileName[100] //last field of original TAR format
+	byte ustar[6]
+	byte ustarVersion[2]
+	byte ownerUsername[32]
+	byte ownerGroupname[32]
+	int8 devNoMajor
+	int8 devNoMinor
+	byte fileNamePrefix[155]
+	}
+
+data FileIndex {
+	TarHeader header
+	ArchiveFile record
+	int offset
+	char path[]
+	}
+
+data FileTree {
+	char name[]
+	bool dir
+	ArchiveFile record
+	FileTree children[]
+	}
+
+component provides Archive:targz requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, time.TimeUnix timeUnix, data.query.Search search, compress.algorithm.StreamCompression:deflate, data.checksum.CRC32 crc32, data.StreamBuffer {
+	
+	File ifd
+	FileIndex archiveIndex[]
+	ArchiveFile publicIndex[]
+	FileTree fileTree
+	
+	int compressedDataOffset
+	
+	void reverseEndian(byte num[])
+		{
+		int j = num.arrayLength - 1
+		for (int i = 0; i < num.arrayLength / 2; i++)
+			{
+			byte tmp = num[j]
+			num[j] = num[i]
+			num[i] = tmp
+			j --
+			}
+		}
+	
+	void copyBytes(byte dest[], int destOffset, byte src[], int srcOffset, int len)
+		{
+		for (int i = 0; i < len; i++)
+			{
+			dest[destOffset+i] = src[srcOffset+i]
+			}
+		}
+	
+	//return a Dana char[] from a null-terminated char[]
+	char[] getNTString(char nt[])
+		{
+		char c = 0
+		int ndx = 0
+		if ((ndx = nt.find(c)) != StringUtil.NOT_FOUND)
+			{
+			return nt.subString(c, ndx)
+			}
+			else
+			{
+			return nt
+			}
+		}
+	
+	int8 i8FromOctal(byte ar[])
+		{
+		int8 res = 0
+		
+		int n = 0
+		for (int i = ar.arrayLength-2; i != INT_MAX; i--)
+			{
+			if (ar[i] != 0)
+				{
+				int8 rq = ar[i] - 48
+				res = res | (rq << (n*3))
+				}
+			n ++
+			}
+		
+		return res
+		}
+	
+	int4 i4FromOctal(byte ar[], int topIndex)
+		{
+		int4 res = 0
+		
+		int n = 0
+		for (int i = topIndex; i != INT_MAX; i--)
+			{
+			if (ar[i] != 0)
+				{
+				char cn = ar[i]
+				int4 rq = ar[i] - 48
+				
+				res = res | (rq << (n*3))
+				}
+			n ++
+			}
+		
+		return res
+		}
+	
+	//there appear to be two different ways of storing a tar checksum; we accept both
+	int4 i4FromChecksum(byte ar[])
+		{
+		if (ar[ar.arrayLength-1] == " ")
+			{
+			//standard checksum, terminated by a nul then a space
+			int4 res = 0
+			
+			int n = 0
+			for (int i = ar.arrayLength-3; i != INT_MAX; i--)
+				{
+				if (ar[i] != 0)
+					{
+					char cn = ar[i]
+					int4 rq = ar[i] - 48
+					
+					res = res | (rq << (n*3))
+					}
+				n ++
+				}
+			
+			return res
+			}
+			else
+			{
+			//alternative checksum, which is terminated only by a nul
+			int4 res = 0
+			
+			int n = 0
+			for (int i = ar.arrayLength-2; i != INT_MAX; i--)
+				{
+				if (ar[i] != 0)
+					{
+					char cn = ar[i]
+					int4 rq = ar[i] - 48
+					
+					res = res | (rq << (n*3))
+					}
+				n ++
+				}
+			
+			return res
+			}
+		}
+	
+	TarHeader readFileHeader(File fd, int offset)
+		{
+		TarHeader record = new TarHeader()
+		
+		byte srd[] = dana.serial(record)
+		
+		fd.setPos(offset)
+		
+		srd =[] fd.read(srd.arrayLength)
+		
+		return record
+		}
+	
+	TarHeader readArrayHeader(byte array[], int offset)
+		{
+		TarHeader record = new TarHeader()
+		
+		byte srd[] = dana.serial(record)
+		
+		copyBytes(srd, 0, array, offset, srd.arrayLength)
+		
+		return record
+		}
+	
+	bool checksumOK(TarHeader record)
+		{
+		int4 chk = i4FromChecksum(record.checksum)
+		
+		byte srd[] = dana.serial(record)
+		
+		int4 ver = 0
+		
+		for (int i = 0; i < srd.arrayLength; i++)
+			{
+			ver += srd[i]
+			}
+		
+		for (int i = 0; i < record.checksum.arrayLength; i++)
+			{
+			ver -= record.checksum[i]
+			ver += 32
+			}
+		
+		return chk == ver
+		}
+	
+	bool blankHeader(TarHeader record)
+		{
+		byte srd[] = dana.serial(record)
+		
+		for (int i = 0; i < srd.arrayLength; i++)
+			{
+			if (srd[i] != 0) return false
+			}
+		
+		return true
+		}
+	
+	void addToTree(char path[], ArchiveFile info, bool isDir)
+		{
+		String parts[] = stringUtil.explode(path, "/")
+		
+		FileTree node = fileTree
+		
+		for (int i = 0; i < parts.arrayLength; i++)
+			{
+			FileTree nextNode = null
+			if ((nextNode = node.children.findFirst(FileTree.[name], new FileTree(parts[i].string))) == null)
+				{
+				nextNode = new FileTree(parts[i].string)
+				nextNode.dir = (i < parts.arrayLength-1) || isDir
+				nextNode.record = new ArchiveFile(parts[i].string, nextNode.dir)
+				
+				//check if it's a leaf node, and fill in its details if so...
+				if (!isDir && i == parts.arrayLength-1)
+					{
+					nextNode.record.compressedSize = info.compressedSize
+					nextNode.record.uncompressedSize = info.uncompressedSize
+					nextNode.record.modified = info.modified
+					}
+				
+				node.children = new FileTree[](node.children, nextNode)
+				node = nextNode
+				}
+				else
+				{
+				node = nextNode
+				}
+			}
+		}
+	
+	void buildTree()
+		{
+		fileTree = new FileTree(dir = true)
+		
+		for (int i = 0; i < archiveIndex.arrayLength; i++)
+			{
+			addToTree(archiveIndex[i].path, archiveIndex[i].record, archiveIndex[i].header.fileType == DIRTYPE)
+			}
+		}
+	
+	void processHeader(TarHeader hdr, int dataOffset)
+		{
+		char fileName[] = getNTString(hdr.fileName)
+		char fileNamePre[] = getNTString(hdr.fileNamePrefix)
+		
+		//we should only use fileNamePrefix, and other extended fields, if hdr.ustar is set to the string "ustar\0"
+		bool ustar = hdr.ustar == "ustar"
+		
+		int8 sz = i8FromOctal(hdr.fileSize)
+		
+		int8 mod = i8FromOctal(hdr.lastModified)
+		
+		//add to directory
+		char fn[] = null
+		
+		if (ustar)
+			fn = new char[](fileNamePre, fileName)
+			else
+			fn = fileName
+		
+		int4 mode = i4FromOctal(hdr.fileMode, hdr.fileMode.arrayLength-2)
+		
+		ArchiveFile naf = new ArchiveFile(fn)
+		naf.dir = hdr.fileType == DIRTYPE
+		naf.modified = timeUnix.fromUnixTime(mod)
+		naf.compressedSize = sz
+		naf.uncompressedSize = sz
+		
+		publicIndex = new ArchiveFile[](publicIndex, naf)
+		
+		FileIndex nfi = new FileIndex(hdr, naf)
+		nfi.offset = dataOffset
+		nfi.path = fn
+		
+		archiveIndex = new FileIndex[](archiveIndex, nfi)
+		}
+	
+	int2 readInt2(File fd)
+		{
+		Int2 i2 = new Int2()
+		byte copyBuf[] = dana.serial(i2)
+		
+		byte buf[] = fd.read(copyBuf.arrayLength)
+		
+		copyBuf =[] buf
+		
+		//deal with endianness
+		byte swap
+		
+		swap = copyBuf[1]
+		copyBuf[1] = copyBuf[0]
+		copyBuf[0] = swap
+		
+		return i2.val
+		}
+	
+	int4 readInt4(byte buf[])
+		{
+		Int4 i4 = new Int4()
+		byte copyBuf[] = dana.serial(i4)
+		
+		copyBuf =[] buf
+		
+		//deal with endianness
+		byte swap
+		
+		swap = copyBuf[3]
+		copyBuf[3] = copyBuf[0]
+		copyBuf[0] = swap
+		
+		swap = copyBuf[2]
+		copyBuf[2] = copyBuf[1]
+		copyBuf[1] = swap
+		
+		return i4.val
+		}
+	
+	byte[] readOptionalHeader(File fd)
+		{
+		//2 byte length header, then the data
+		int2 len = readInt2(fd)
+		
+		return fd.read(len)
+		}
+	
+	char[] readToZero(File fd)
+		{
+		byte buf[] = null
+		byte b[] = 1
+		while (!fd.eof() && b != 0)
+			{
+			b = fd.read(1)
+			if (b != 0) buf = new byte[](buf, b)
+			}
+		
+		return buf
+		}
+	
+	int nextTarHeader = 0
+	
+	int processStreamChunk(byte chunk[], int offset)
+		{
+		while (nextTarHeader < (offset + chunk.arrayLength))
+			{
+			TarHeader hdr = null
+			
+			hdr = readArrayHeader(chunk, nextTarHeader - offset)
+			
+			//NOTE: we're supposed to get two empty headers in a row, to indicate end-of-stream, but we stop at one
+			if (blankHeader(hdr)) return SP_END
+			
+			if (!checksumOK(hdr))
+				{
+				throw new Exception("invalid tar file (checksum failure)")
+				}
+			
+			if (hdr == null) return SP_END
+			
+			int8 sz = i8FromOctal(hdr.fileSize)
+			processHeader(hdr, nextTarHeader + 512)
+			
+			//locate the next record
+			nextTarHeader = nextTarHeader + 512 + sz
+			
+			int add = 0
+			if (nextTarHeader % 512 != 0) add = 512 - (nextTarHeader % 512)
+			
+			nextTarHeader = nextTarHeader + add
+			}
+			//else: wait for the next chunk that's in the range I want
+		
+		return SP_CONTINUE
+		}
+	
+	Archive:Archive(File fd)
+		{
+		StreamCompression alg = new StreamCompression:deflate()
+		
+		//TODO: assume a gzip header first, then inside that we'll have compressed content which when uncompressed has the tar format
+		// - we need to decompress data in at least chunks of 512, but really should pick a larger number (that's a multiple of 512) for efficiency and then scan within that decompressed data
+		
+		//the first thing in the file should be a TarHeader with a correctly calculated checksum
+		// - (calculate and check the checksum inside readFileHeader, returning null if it fails)
+		
+		GZHeader mainHeader = new GZHeader()
+		char fileName[]
+		char memberComment[]
+		byte copyBuf[] = dana.serial(mainHeader)
+		
+		//read the standard header
+		byte buf[] = fd.read(copyBuf.arrayLength)
+		
+		if (buf.arrayLength != copyBuf.arrayLength)
+			{
+			throw new Exception("insufficient header bytes (file corrupted?)")
+			}
+		
+		copyBuf =[] buf
+		
+		//check for magic gzip header bytes
+		if (mainHeader.ID1 == 31 && mainHeader.ID2 == 139)
+			{
+			//read optional section, if present
+			if ((mainHeader.FLG & GZHeader.FLG_FEXTRA) == GZHeader.FLG_FEXTRA)
+				fileName = readOptionalHeader(fd)
+			
+			//read filename, if present
+			if ((mainHeader.FLG & GZHeader.FLG_FNAME) == GZHeader.FLG_FNAME)
+				fileName = readToZero(fd)
+			
+			//read comment, if present
+			if ((mainHeader.FLG & GZHeader.FLG_FCOMMENT) == GZHeader.FLG_FCOMMENT)
+				memberComment = readToZero(fd)
+			
+			//now comes the compressed content
+			compressedDataOffset = fd.getPos()
+			
+			int4 crcCheck
+			byte chunk[]
+			int ucOffset = 0
+			int ucSize = 0
+			
+			//decompress chunks that are a multiple of 512, and pass each chunk in to a Tar stream decoder to read any things from that stream chunk...
+			
+			//a StreamBuffer allows us to buffer up data of a given length, for reading out
+			// - this is useful because we don't know what size a decompressed chunk will end up as
+			StreamBuffer sbuf = new StreamBuffer()
+			
+			alg.decompressInit()
+			
+			while (!fd.eof() && alg.decompressStatus() == StreamCompression.DS_CONTINUE)
+				{
+				buf = fd.read(CHUNK_SIZE)
+				
+				chunk = alg.decompress(buf)
+				
+				sbuf.write(chunk)
+				
+				while (sbuf.getSize() >= 5120)
+					{
+					byte dchunk[] = sbuf.read(5120)
+					crcCheck = crc32.makeCRC(crcCheck, dchunk)
+					if (processStreamChunk(dchunk, ucOffset) == SP_FAIL) throw new Exception("invalid tar file")
+					ucOffset += dchunk.arrayLength
+					ucSize += dchunk.arrayLength
+					}
+				}
+			
+			if (sbuf.getSize() != 0)
+				{
+				byte dchunk[] = sbuf.read(sbuf.getSize())
+				crcCheck = crc32.makeCRC(crcCheck, dchunk)
+				if (processStreamChunk(dchunk, ucOffset) == SP_FAIL) throw new Exception("invalid tar file")
+				ucSize += dchunk.arrayLength
+				}
+			
+			int lcSize = alg.decompressEnd()
+			
+			//adjust the file read head to wherever the last compressed chunk actually ended
+			fd.setPos(fd.getPos() - (buf.arrayLength - lcSize))
+			
+			//read CRC and ISIZE (original size of uncompressed data, mod 2^32)
+			int4 crc = readInt4(fd.read(4))
+			
+			int4 isize = readInt4(fd.read(4))
+			
+			buildTree()
+			}
+			else
+			{
+			throw new Exception("file does not have a gzip header")
+			}
+		
+		ifd = fd
+		}
+	
+	ArchiveFile[] Archive:getAllContents()
+		{
+		return publicIndex
+		}
+	
+	ArchiveFile[] Archive:getContents(char path[])
+		{
+		FileTree node = null
+		if (path == null)
+			{
+			node = fileTree
+			}
+			else
+			{
+			String parts[] = path.explode("/")
+			
+			node = fileTree
+			
+			for (int i = 0; i < parts.arrayLength; i++)
+				{
+				FileTree nextNode = null
+				if ((nextNode = node.children.findFirst(FileTree.[name], new FileTree(parts[i].string))) == null)
+					{
+					throw new Exception("directory '$path' not found in archive")
+					}
+					else
+					{
+					node = nextNode
+					}
+				}
+			}
+		
+		if (node == null) return null
+		
+		if (!node.dir) throw new Exception("path '$path' is not a directory")
+		
+		ArchiveFile result[] = new ArchiveFile[node.children.arrayLength]
+		
+		for (int i = 0; i < result.arrayLength; i++)
+			{
+			result[i] = node.children[i].record
+			}
+		
+		return result
+		}
+	
+	bool Archive:exists(char path[])
+		{
+		return archiveIndex.findFirst(FileIndex.[path], new FileIndex(path = path)) != null
+		}
+	
+	ArchiveFile Archive:getInfo(char path[])
+		{
+		return publicIndex.findFirst(ArchiveFile.[path], new ArchiveFile(path = path))
+		}
+	
+	void copyArray(byte dest[], byte src[], int start)
+		{
+		int j = start
+		for (int i = 0; i < src.arrayLength; i++)
+			{
+			dest[j] = src[i]
+			j++
+			}
+		}
+	
+	byte[] getStreamSection(int ucOffset, byte ucData[], int fileOffset, int fileSize, int written)
+		{
+		byte writeChunk[] = null
+		
+		if (fileOffset > ucOffset)
+			{
+			//from > 0
+			int start = fileOffset - ucOffset
+			int end = 0
+			
+			if (start + fileSize > ucData.arrayLength)
+				end = ucData.arrayLength
+				else
+				end = start + fileSize
+			
+			writeChunk = new byte[end-start]
+			
+			copyBytes(writeChunk, 0, ucData, start, end-start)
+			}
+			else
+			{
+			//from zero
+			int total = fileSize - written
+			int end = 0
+			
+			if (total > ucData.arrayLength)
+				end = ucData.arrayLength
+				else
+				end = total
+			
+			writeChunk = new byte[end]
+			
+			copyBytes(writeChunk, 0, ucData, 0, end)
+			}
+		
+		return writeChunk
+		}
+	
+	byte[] Archive:extractFile(char path[])
+		{
+		FileIndex fi = archiveIndex.findFirst(FileIndex.[path], new FileIndex(path = path))
+		
+		if (fi != null)
+			{
+			ifd.setPos(compressedDataOffset)
+			
+			int size = fi.record.uncompressedSize
+			int4 crcCheck
+			byte chunk[]
+			int ucOffset = 0
+			int written = 0
+			
+			byte result[] = new byte[size]
+			
+			StreamCompression alg = new StreamCompression:deflate()
+			
+			alg.decompressInit()
+			
+			while (!ifd.eof() && alg.decompressStatus() == StreamCompression.DS_CONTINUE)
+				{
+				byte buf[] = ifd.read(CHUNK_SIZE)
+				
+				chunk = alg.decompress(buf)
+				
+				byte writeChunk[] = null
+				
+				if (fi.offset < ucOffset + chunk.arrayLength)
+					{
+					//decide how much to write
+					
+					writeChunk = getStreamSection(ucOffset, chunk, fi.offset, size, written)
+					
+					copyBytes(result, written, writeChunk, 0, writeChunk.arrayLength)
+					
+					written += writeChunk.arrayLength
+					}
+				
+				ucOffset += chunk.arrayLength
+				
+				if (written == size) break
+				}
+			
+			int lcSize = alg.decompressEnd()
+			
+			return result
+			}
+			else
+			{
+			throw new Exception("file '$path' not found in archive")
+			}
+		
+		return null
+		}
+	
+	bool Archive:extractFileTo(char path[], File ofd)
+		{
+		FileIndex fi = archiveIndex.findFirst(FileIndex.[path], new FileIndex(path = path))
+		
+		if (fi != null)
+			{
+			ifd.setPos(compressedDataOffset)
+			
+			int size = fi.record.uncompressedSize
+			int4 crcCheck
+			byte chunk[]
+			int ucOffset = 0
+			int written = 0
+			
+			StreamCompression alg = new StreamCompression:deflate()
+			
+			alg.decompressInit()
+			
+			while (!ifd.eof() && alg.decompressStatus() == StreamCompression.DS_CONTINUE)
+				{
+				byte buf[] = ifd.read(CHUNK_SIZE)
+				
+				chunk = alg.decompress(buf)
+				
+				byte writeChunk[] = null
+				
+				if (fi.offset < ucOffset + chunk.arrayLength)
+					{
+					//decide how much to write
+					
+					writeChunk = getStreamSection(ucOffset, chunk, fi.offset, size, written)
+					written += writeChunk.arrayLength
+					
+					ofd.write(writeChunk)
+					}
+				
+				ucOffset += chunk.arrayLength
+				
+				if (written == size) break
+				}
+			
+			int lcSize = alg.decompressEnd()
+			
+			return true
+			}
+			else
+			{
+			throw new Exception("file '$path' not found in archive")
+			}
+		
+		return false
+		}
+	
+	}

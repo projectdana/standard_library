@@ -1,0 +1,191 @@
+component provides MarkdownToHTML requires data.IntUtil iu, data.StringBuilder, data.query.Search search, data.StringUtil stringUtil, parsing.Tokeniser {
+	
+	void styleCode(char src[], char lang[], MDCodeStyle styles[], StringBuilder bld)
+		{
+		//if lang exists in styles, use it, otherwise use styles[0] (if any)
+		MDCodeStyle style = null
+		if (((style = styles.findFirst(MDCodeStyle.[languageName], new MDCodeStyle(lang))) != null) || styles.arrayLength > 0)
+			{
+			if (style == null) style = styles[0]
+			
+			Tokeniser tokeniser = new Tokeniser(style.syntaxTokens)
+			
+			if (style.lineComment != null)
+				tokeniser.setLineComment(style.lineComment)
+			
+			if (style.blockComment.arrayLength == 2)
+				tokeniser.setBlockComment(style.blockComment[0].string, style.blockComment[1].string)
+			
+			//use parsing.Tokeniser to help...
+			ParseToken tokens[] = tokeniser.tokenise(src)
+			
+			int offset = 0
+			for (int i = 0; i < tokens.arrayLength; i++)
+				{
+				bld.add(stringUtil.subString(src, offset, (tokens[i].sourceStart - offset)))
+				
+				if (tokens[i].type == ParseToken.TYPE_PARTICLE)
+					{
+					//possible keyword
+					bool found = false
+					for (int j = 0; j < style.keywords.arrayLength; j ++)
+						{
+						if (style.keywords[j].keywords.findFirst(String.[string], new String(tokens[i].content)) != null)
+							{
+							bld.add("<span class = \"$(style.keywords[j].style)\">$(tokens[i].content)</span>")
+							found = true
+							break
+							}
+						}
+					
+					if (!found) bld.add(tokens[i].content)
+					}
+					else if (tokens[i].type == ParseToken.TYPE_LINE_COMMENT)
+					{
+					bld.add("<span class = \"$(style.commentStyle)\">//$(tokens[i].content)</span>")
+					}
+					else if (tokens[i].type == ParseToken.TYPE_BLOCK_COMMENT)
+					{
+					bld.add("<span class = \"$(style.commentStyle)\">/*$(tokens[i].content)*/</span>")
+					}
+					else if (tokens[i].type == ParseToken.TYPE_LITERAL_STRING)
+					{
+					bld.add("<span class = \"$(style.stringStyle)\">\"$(tokens[i].content)\"</span>")
+					}
+					else
+					{
+					bld.add(tokens[i].content)
+					}
+				
+				offset = tokens[i].sourceStart + tokens[i].sourceLength
+				}
+			}
+			else
+			{
+			bld.add(src)
+			}
+		}
+	
+	void docToHTML(MDElement doc, MDCodeStyle codeStyling[], StringBuilder bld)
+		{
+		if (doc.type == MDElement.PARAGRAPH)
+			{
+			bld.add("<p>")
+			}
+			else if (doc.type == MDElement.PLAIN)
+			{
+			if (doc.extType & MDElement.BOLD == MDElement.BOLD)
+				{
+				bld.add("<strong>")
+				}
+			if (doc.extType & MDElement.ITALIC == MDElement.ITALIC)
+				{
+				bld.add("<em>")
+				}
+			if (doc.extType & MDElement.CODE == MDElement.CODE)
+				{
+				bld.add("<code>")
+				}
+			
+			bld.add(doc.content)
+			
+			if (doc.extType & MDElement.CODE == MDElement.CODE)
+				{
+				bld.add("</code>")
+				}
+			if (doc.extType & MDElement.ITALIC == MDElement.ITALIC)
+				{
+				bld.add("</em>")
+				}
+			if (doc.extType & MDElement.BOLD == MDElement.BOLD)
+				{
+				bld.add("</strong>")
+				}
+			}
+			else if (doc.type == MDElement.CODE_BLOCK)
+			{
+			bld.add("<code><pre>")
+			styleCode(doc.content, doc.extInfo, codeStyling, bld)
+			bld.add("</code></pre>")
+			}
+			else if (doc.type == MDElement.HEADING)
+			{
+			bld.add("<h$(doc.extType)>")
+			bld.add(doc.content)
+			bld.add("</h$(doc.extType)>")
+			}
+			else if (doc.type == MDElement.LIST_UNORDERED)
+			{
+			bld.add("<ul>")
+			}
+			else if (doc.type == MDElement.LIST_ORDERED)
+			{
+			bld.add("<ol>")
+			}
+			else if (doc.type == MDElement.LIST_ITEM)
+			{
+			bld.add("<li>")
+			}
+			else if (doc.type == MDElement.HLINE)
+			{
+			bld.add("<hr>")
+			}
+			else if (doc.type == MDElement.LINK)
+			{
+			if (doc.extInfo != null)
+				bld.add("<a href = \"$(doc.content)\" title = \"$(doc.extInfo)\">")
+				else
+				bld.add("<a href = \"$(doc.content)\">")
+			}
+			else if (doc.type == MDElement.IMAGE)
+			{
+			if (doc.extInfo != null)
+				bld.add("<img src = \"$(doc.content)\" alt = \"$(doc.extInfo)\">")
+				else
+				bld.add("<img src = \"$(doc.content)\">")
+			}
+			else if (doc.type == MDElement.QUOTE_BLOCK)
+			{
+			bld.add("<blockquote>")
+			}
+		
+		for (int i = 0; i < doc.children.arrayLength; i++)
+			{
+			docToHTML(doc.children[i], codeStyling, bld)
+			}
+		
+		if (doc.type == MDElement.PARAGRAPH)
+			{
+			bld.add("</p>")
+			}
+			else if (doc.type == MDElement.LIST_UNORDERED)
+			{
+			bld.add("</ul>")
+			}
+			else if (doc.type == MDElement.LIST_ORDERED)
+			{
+			bld.add("</ol>")
+			}
+			else if (doc.type == MDElement.LIST_ITEM)
+			{
+			bld.add("</li>")
+			}
+			else if (doc.type == MDElement.LINK)
+			{
+			bld.add("</a>")
+			}
+			else if (doc.type == MDElement.QUOTE_BLOCK)
+			{
+			bld.add("</blockquote>")
+			}
+		}
+	
+	char[] MarkdownToHTML:process(MDElement doc, opt MDCodeStyle codeStyling[])
+		{
+		StringBuilder sbld = new StringBuilder()
+		docToHTML(doc, codeStyling, sbld)
+		
+		return sbld.get()
+		}
+	
+	}

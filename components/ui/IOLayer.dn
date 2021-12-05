@@ -1,0 +1,472 @@
+data WindowEventData {
+	int button_id
+	int x
+	int y
+}
+
+data DropEventData {
+	int x
+	int y
+	char path[]
+}
+
+interface UIPlaneLib {
+	
+	event ready()
+	
+	event mouseUp(WindowEventData wed)
+	event mouseDown(WindowEventData wed)
+	event mouseMove(WindowEventData wed)
+	event keyDown(WindowEventData wed)
+	event keyUp(WindowEventData wed)
+	event resize(WindowEventData wed)
+	event drop(DropEventData ded)
+	event close()
+	
+	event post_shutdown()
+	
+	int makeWindow()
+	
+	void startPoly()
+	void addPolyPoint(int x, int y, byte r, byte g, byte b, byte a)
+	void endPoly()
+	
+	void addRect(int phandle, int x, int y, int w, int h, byte r, byte g, byte b, byte a)
+	
+	void addLine(int phandle, int sx, int sy, int ex, int ey, byte r, byte g, byte b, byte a)
+	
+	void addPoint(int phandle, int x, int y, byte r, byte g, byte b, byte a)
+	void addBitmap(int phandle, PixelMap pixels, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
+	
+	void addTextWith(int phandle, int fontHandle, int x, int y, int rotation, char text[], byte r, byte g, byte b, byte a)
+	
+	void pushSurface(int phandle, int x, int y, int w, int h, int sx, int sy, byte a)
+	void popSurface(int phandle)
+	
+	void setSize(int phandle, int x, int y)
+
+	void setPosition(int phandle, int x, int y)
+	
+	void setVisible(int phandle, bool b)
+	
+	void setResizable(int phandle, bool b)
+	
+	void setFullScreen(int phandle, bool b)
+	
+	void setTitle(int phandle, char t[])
+	
+	void setIcon(int phandle, PixelMap p)
+	
+	void commitBuffer(int phandle)
+	
+	void getResolution(int phandle, WH wh)
+	
+	void setBackgroundColor(int phandle, byte r, byte g, byte b, byte a)
+	
+	void maximiseWindow(int phandle)
+	void minimiseWindow(int phandle)
+	
+	void getMaximisedScreenRect(int phandle, Rect r)
+	
+	void closeWindow(int phandle)
+	
+	bool initMediaLayer()
+	void runSystemLoop()
+	void shutdown()
+	
+	// -- fonts --
+	int loadFont(char path[], int size)
+	int getTextWidth(int phandle, char text[])
+	void getFontMetrics(int phandle, FontMetrics metrics)
+	char[] getFontName(int phandle)
+	bool isFontFixedWidth(int phandle)
+	void getTextBitmapWith(int phandle, char text[], PixelMap pixels, byte r, byte g, byte b, byte a)
+	void unloadFont(int fd)
+	}
+
+component provides IOLayer, IOWindow(Destructor), Font(Destructor) requires native UIPlaneLib lib, io.Output out, data.IntUtil iu
+	{
+	static bool initDone = false
+	static Mutex qlock = new Mutex()
+	
+	implementation IOWindow {
+		
+		int platformHandle
+		Mutex windowStateLock = new Mutex()
+		
+		eventsink LibEvents(EventData ed)
+			{
+			if (ed.type == UIPlaneLib.[mouseUp])
+				{
+				WindowEventData wed = ed.details
+				emitevent mouseUp(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.[mouseDown])
+				{
+				WindowEventData wed = ed.details
+				emitevent mouseDown(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.[mouseMove])
+				{
+				WindowEventData wed = ed.details
+				emitevent mouseMove(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.[keyDown])
+				{
+				WindowEventData wed = ed.details
+				emitevent keyDown(new KeyEvent(wed.button_id))
+				}
+				else if (ed.type == UIPlaneLib.[keyUp])
+				{
+				WindowEventData wed = ed.details
+				emitevent keyUp(new KeyEvent(wed.button_id))
+				}
+				else if (ed.type == UIPlaneLib.[resize])
+				{
+				WindowEventData wed = ed.details
+				emitevent resizeWindow(new WH(wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.[drop])
+				{
+				DropEventData wed = ed.details
+				emitevent fileDrop(new DropEvent(wed.x, wed.y, wed.path))
+				}
+				else if (ed.type == UIPlaneLib.[close])
+				{
+				emitevent closeWindow()
+				}
+			}
+		
+		IOWindow:IOWindow()
+			{
+			mutex(qlock)
+				{
+				if (!initDone)
+					{
+					throw new Exception("IOLayer must be initialised before windows are created")
+					}
+				}
+			
+			platformHandle = lib.makeWindow()
+			if (platformHandle == 0) throw new Exception("Platform window creation failed")
+			
+			sinkevent LibEvents(lib)
+			}
+		
+		void IOWindow:setVisible(bool b)
+			{
+			mutex(windowStateLock)
+				{
+				lib.setVisible(platformHandle, b)
+				}
+			}
+		
+		void IOWindow:setResizable(bool v)
+			{
+			mutex(windowStateLock)
+				{
+				lib.setResizable(platformHandle, v)
+				}
+			}
+		
+		void IOWindow:setFullScreen(bool v)
+			{
+			mutex(windowStateLock)
+				{
+				lib.setFullScreen(platformHandle, v)
+				}
+			}
+		
+		WH IOWindow:getResolution()
+			{
+			mutex(windowStateLock)
+				{
+				WH wh = new WH()
+				lib.getResolution(platformHandle, wh)
+				
+				return wh
+				}
+			}
+		
+		void IOWindow:setTitle(char title[])
+			{
+			mutex(windowStateLock)
+				{
+				lib.setTitle(platformHandle, title)
+				}
+			}
+		
+		void IOWindow:setIcon(PixelMap p)
+			{
+			mutex(windowStateLock)
+				{
+				lib.setIcon(platformHandle, p)
+				}
+			}
+		
+		void IOWindow:close()
+			{
+			mutex(windowStateLock)
+				{
+				if (platformHandle != 0)
+					{
+					lib.closeWindow(platformHandle)
+					platformHandle = 0
+					}
+				}
+			}
+		
+		void IOWindow:paint()
+			{
+			mutex(windowStateLock)
+				{
+				lib.commitBuffer(platformHandle)
+				}
+			}
+		
+		void IOWindow:drawRect(Rect2D r)
+			{
+			mutex(windowStateLock)
+				{
+				lib.addRect(platformHandle, r.x, r.y, r.width, r.height, r.color.r, r.color.g, r.color.b, r.color.a)
+				}
+			}
+		
+		void IOWindow:drawRectOutline(Rect2D r)
+			{
+			drawLine(new Line2D(r.x, r.y, (r.x + r.width) - 1, r.y, r.color))
+			
+			drawLine(new Line2D(r.x, r.y, r.x, (r.y + r.height) - 1, r.color))
+			
+			drawLine(new Line2D((r.x + r.width) - 1, r.y, (r.x + r.width) - 1, (r.y + r.height) - 1, r.color))
+			
+			drawLine(new Line2D(r.x, (r.y + r.height) - 1, (r.x + r.width) - 1, (r.y + r.height) - 1, r.color))
+			}
+		
+		void IOWindow:drawLine(Line2D l)
+			{
+			mutex(windowStateLock)
+				{
+				lib.addLine(platformHandle, l.sx, l.sy, l.ex, l.ey, l.color.r, l.color.g, l.color.b, l.color.a)
+				}
+			}
+		
+		void IOWindow:drawPoint(Point2D p)
+			{
+			mutex(windowStateLock)
+				{
+				lib.addPoint(platformHandle, p.x, p.y, p.color.r, p.color.g, p.color.b, p.color.a)
+				}
+			}
+		
+		void IOWindow:drawPixels(PixelMap map, int x, int y, int rotation)
+			{
+			mutex(windowStateLock)
+				{
+				lib.addBitmap(platformHandle, map, null, x, y, map.size.width, map.size.height, rotation)
+				}
+			}
+		
+		void IOWindow:drawPixelsEx(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
+			{
+			mutex(windowStateLock)
+				{
+				lib.addBitmap(platformHandle, map, subRect, x, y, scaledWidth, scaledHeight, rotation)
+				}
+			}
+		
+		void IOWindow:drawText(Point2D origin, Font f, char text[])
+			{
+			//check if f is implemented by this component and if so we use its internal font handle; otherwise we fall back on Font.getBitmap() (which is slow)
+			mutex(windowStateLock)
+				{
+				if (implements f)
+					{
+					lib.addTextWith(platformHandle, f.platformHandle, origin.x, origin.y, 0, text, origin.color.r, origin.color.g, origin.color.b, origin.color.a)
+					}
+					else
+					{
+					PixelMap px = f.getPixels(text, origin.color)
+					lib.addBitmap(platformHandle, px, null, origin.x, origin.y, px.size.width, px.size.height, 0)
+					}
+				}
+			}
+		
+		void IOWindow:drawTextEx(Point2D origin, Font f, char text[], int rotation)
+			{
+			//check if f is implemented by this component and if so we use its internal font handle; otherwise we fall back on Font.getBitmap() (which is slow)
+			mutex(windowStateLock)
+				{
+				if (implements f)
+					{
+					lib.addTextWith(platformHandle, f.platformHandle, origin.x, origin.y, rotation, text, origin.color.r, origin.color.g, origin.color.b, origin.color.a)
+					}
+					else
+					{
+					PixelMap px = f.getPixels(text, origin.color)
+					lib.addBitmap(platformHandle, px, null, origin.x, origin.y, px.size.width, px.size.height, rotation)
+					}
+				}
+			}
+		
+		void IOWindow:pushSurface(Rect rect, int xscr, int yscr, byte alpha)
+			{
+			mutex(windowStateLock)
+				{
+				lib.pushSurface(platformHandle, rect.x, rect.y, rect.width, rect.height, xscr, yscr, alpha)
+				}
+			}
+		
+		void IOWindow:popSurface()
+			{
+			mutex(windowStateLock)
+				{
+				lib.popSurface(platformHandle)
+				}
+			}
+		
+		void IOWindow:setPosition(int x, int y)
+			{
+			mutex(windowStateLock)
+				{
+				lib.setPosition(platformHandle, x, y)
+				}
+			}
+		
+		void IOWindow:setSize(int x, int y)
+			{
+			mutex(windowStateLock)
+				{
+				lib.setSize(platformHandle, x, y)
+				}
+			}
+		
+		void IOWindow:setBackground(Color c)
+			{
+			mutex(windowStateLock)
+				{
+				lib.setBackgroundColor(platformHandle, c.r, c.g, c.b, c.a)
+				}
+			}
+		
+		void Destructor:destroy()
+			{
+			//if we're being destroyed, we need to free the window handle in the UI framework, otherwise it will have a bad reference
+			close()
+			}
+		}
+	
+	implementation IOLayer {
+		
+		eventsink LibSysEvents(EventData ed)
+			{
+			if (ed.type == UIPlaneLib.[ready])
+				{
+				emitevent ready()
+				}
+				else if (ed.type == UIPlaneLib.[post_shutdown])
+				{
+				emitevent recvShutdown()
+				}
+			}
+		
+		bool IOLayer:init()
+			{
+			mutex(qlock)
+				{
+				if (initDone)
+					{
+					throw new Exception("initialisation has already been done")
+					}
+					else
+					{
+					initDone = true
+					}
+				}
+			
+			sinkevent LibSysEvents(lib)
+			
+			return lib.initMediaLayer()
+			}
+		
+		void IOLayer:run()
+			{
+			mutex(qlock)
+				{
+				if (!initDone)
+					{
+					throw new Exception("system must first be initialised via init()")
+					}
+				}
+			
+			lib.runSystemLoop()
+			}
+		
+		void IOLayer:shutdown()
+			{
+			lib.shutdown()
+			
+			initDone = false
+			}
+		
+		}
+	
+	implementation Font{
+		int platformHandle
+		int fontSize
+		char source[]
+		
+		Font:Font(char path[], int size)
+			{
+			fontSize = size
+			source = path
+			platformHandle = lib.loadFont(path, size)
+			
+			if (platformHandle == 0) throw new Exception("Failed to load font $path")
+			}
+		
+		int Font:getSize()
+			{
+			return fontSize
+			}
+		
+		char[] Font:getSource()
+			{
+			return source
+			}
+		
+		FontMetrics Font:getFontMetrics()
+			{
+			FontMetrics result = new FontMetrics()
+			lib.getFontMetrics(platformHandle, result)
+			return result
+			}
+		
+		char[] Font:getFontName()
+			{
+			return lib.getFontName(platformHandle)
+			}
+		
+		bool Font:isFixedCharacterWidth()
+			{
+			return lib.isFontFixedWidth(platformHandle)
+			}
+		
+		int Font:getTextWidth(char text[])
+			{
+			return lib.getTextWidth(platformHandle, text)
+			}
+		
+		PixelMap Font:getPixels(char string[], Color textColor)
+			{
+			PixelMap result = new PixelMap(new WH())
+			lib.getTextBitmapWith(platformHandle, string, result, textColor.r, textColor.g, textColor.b, textColor.a)
+			return result
+			}
+		
+		void Destructor:destroy()
+			{
+			lib.unloadFont(platformHandle)
+			}
+		}
+	}

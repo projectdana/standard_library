@@ -1,4 +1,4 @@
-const int BLOCK_SIZE = 3
+const int BLOCK_SIZE = 2048
 
 data FileBlock {
 	byte content[]
@@ -90,7 +90,8 @@ component provides io.File:mem requires data.IntUtil iu, io.Output out {
 				
 				if (curBlock.next == null)
 					{
-					int ns = (BLOCK_SIZE * blockCount-1) + curBlock.pos
+					int ns = (BLOCK_SIZE * (blockCount-1)) + curBlock.pos
+					
 					if (ns > size) size = ns
 					}
 				}
@@ -144,6 +145,11 @@ component provides io.File:mem requires data.IntUtil iu, io.Output out {
 			
 			return content
 			}
+		}
+	
+	bool File:flush()
+		{
+		return true
 		}
 	
 	bool File:eof()

@@ -1,0 +1,39 @@
+/* {"description" : "This data type represents and RSA key pair."} */
+data RSAKey {
+	
+	/* {"@description" : "Possible value for 'type', indicating that this key is in the PKCS_PEM format."} */
+	const byte PKCS_PEM = 0x1
+	/* {"@description" : "Possible value for 'type', indicating that this key is in the RSA_PEM format."} */
+	const byte RSA_PEM = 0x2
+	/* {"@description" : "Possible value for 'type', indicating that this key is in the ASN1_DER format."} */
+	const byte ASN1_DER = 0x4
+	
+	/* {"@description" : "The characters which encode the public key of the key pair. The public key can be shared with others."} */
+	char public[]
+	/* {"@description" : "The characters which encode the private key of the key pair. The private key should never be shared with others."} */
+	char private[]
+	/* {"@description" : "The encoding type of the key pair."} */
+	byte type
+	}
+
+/* {"description" : "Key generator for RSA key pairs."} */
+interface RSAKeyGen {
+	
+	/*
+	{
+	 "@description" : "Generate an RSA public/private key pair.",
+		"keyLength" : "Desired length, in bits, of the generated key."
+	}
+	*/
+	RSAKey generateKey(int keyLength)
+	
+	/*
+	{
+	 "@description" : "Convert an RSA public/private key pair to a different format.",
+		"current" : "The current RSA key pair.",
+		"toType" : "The key encoding type to return (one of the types available on RSAKey)."
+	}
+	*/
+	RSAKey convertKey(RSAKey current, byte toType)
+	
+	}

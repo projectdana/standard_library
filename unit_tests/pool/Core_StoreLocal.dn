@@ -1,0 +1,125 @@
+uses io.Output
+uses data.String
+
+data Thing {
+	Data q
+	}
+
+data Item {
+	String q
+	char str[]
+	}
+
+component provides UnitTest requires Store st, io.Output out {
+	
+	int alpha
+	
+	void humana(int a)
+		{
+		alpha = a
+		}
+	
+	Data globalA
+	Data globalAR[]
+	
+	bool functionA(char a[], Item b)
+		{
+		store Thing ma = new Thing()
+		
+		Thing wa = ma
+		
+		wa.q = b
+		
+		globalA = ma
+		
+		return true
+		}
+	
+	bool functionB(char a[], Item b)
+		{
+		store Thing ma = new Thing(b)
+		
+		return true
+		}
+	
+	bool functionC(char a[], Item b)
+		{
+		store Thing ma = new Thing(new Thing(b))
+		
+		return true
+		}
+	
+	bool functionD(char a[], Item b)
+		{
+		store Item q[] = new Item[](b)
+		
+		return true
+		}
+	
+	bool functionE(char a[], Item b)
+		{
+		store Item q[] = new Item[1]
+		
+		q[0] = b
+		
+		return true
+		}
+	
+	bool functionF(char a[], Item b)
+		{
+		store Item q[] = new Item[](new Item[](b))
+		
+		return true
+		}
+	
+	bool functionG(char a[], Item b)
+		{
+		store Item q[] = new Item[1]
+		
+		Item lq[] = new Item[](b)
+		
+		q[0] = lq[0]
+		
+		return true
+		}
+	
+	bool UnitTest:runTest()
+		{
+		humana(99)
+		
+		if (st.fail1(new String("one"))) throw new Exception("Failure in test 1")
+		
+		if (st.fail2(new String("one"))) throw new Exception("Failure in test 2")
+		
+		if (st.fail3(new String("one"))) throw new Exception("Failure in test 3")
+		
+		if (st.fail4(new String("one"))) throw new Exception("Failure in test 4")
+		
+		if (st.fail5(new String("one"))) throw new Exception("Failure in test 5")
+		
+		if (st.fail6(new String("one"))) throw new Exception("Failure in test 6")
+		
+		if (st.fail7(new String("one"))) throw new Exception("Failure in test 7")
+		
+		if (st.fail8(new String("one"))) throw new Exception("Failure in test 8")
+		
+		if (st.fail9(new String("one"))) throw new Exception("Failure in test 9")
+		
+		if (st.fail10(new String("one"))) throw new Exception("Failure in test 10")
+		
+		String test = new String("one")
+		
+		if (st.fail11(test)) throw new Exception("Failure in test 11")
+		
+		if (!st.pass1("one")) throw new Exception("Failure in test 12")
+		
+		if (!st.pass2("one")) throw new Exception("Failure in test 13")
+		
+		if (!st.pass3(new String[](new String("one")))) throw new Exception("Failure in test 14")
+		
+		if (!st.pass4(new String[](new String("one")))) throw new Exception("Failure in test 14")
+		
+		return true
+		}
+	
+	}

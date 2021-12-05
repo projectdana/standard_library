@@ -3,21 +3,38 @@
 */
 
 interface Object{
+	
+	/*
+	 {"@description" : "Make this object a copy of the given object, such that equals would return true."
+		}
+	*/
 	bool clone(Object rhs)
 		{
 		return false
 		}
 	
+	/*
+	 {"@description" : "Determine whether this object is equivalent to the given object. This function is automatically called as a result of the == operator on two objects."
+		}
+	*/
 	bool equals(Object rhs)
 		{
 		return dana.equalObjectReference(rhs)
 		}
 	
+	/*
+	 {"@description" : "Return a string-ified version of this object."
+		}
+	*/
 	char[] toString()
 		{
 		return "<object>"
 		}
 	
+	/*
+	 {"@description" : "Return the unique identifier of this object as managed by the language runtime."
+		}
+	*/
 	char[] getID()
 		{
 		return dana.getSelfID()

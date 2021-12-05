@@ -11,11 +11,12 @@ data ParseToken {
 	int type
 	char content[]
 	
+	int sourceStart
 	int sourceLength
 	}
 
 /*
-{"description" : "This interface is used to tokenise a text document, using a given set of tokens, and supporting both line and block comments."}
+{"description" : "This interface is used to tokenise a text document, using a given set of tokens, and supporting both line and block comments.", "@deprecated" : "true"}
 */
 
 interface Tokeniser {
@@ -23,7 +24,7 @@ interface Tokeniser {
 	{"@description" : "Initialise a tokeniser instance with the given set of tokens.",
 		"tokens" : "The tokens that will be used by the tokeniser to separate text."}
 	*/
-	Tokeniser(String tokens[])
+	Tokeniser(store String tokens[])
 	
 	/*
 	{"@description" : "Set the string that indicates the remainder of a line is a comment.",

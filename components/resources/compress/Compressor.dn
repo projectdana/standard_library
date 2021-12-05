@@ -14,7 +14,7 @@ interface Compressor {
 	 	"@return" : "True if successful, false otherwise."
 		}
 	*/
-	bool compress(File ifd, File ofd)
+	bool compress(File ifd, File ofd, opt char filename[])
 	
 	/*
 	 {"@description" : "Reads compressed data from ifd, starting from the current read position, and decompresses it into ofd.",
@@ -24,5 +24,13 @@ interface Compressor {
 		}
 	*/
 	bool decompress(File ifd, File ofd)
+	
+	/*
+	 {"@description" : "Reads the filename of the compressed data from ifd (if the compression format supports filenames).",
+	 	"ifd" : "The file from which compressed input data is read.",
+	 	"@return" : "The filename of the compressed file (if any)."
+		}
+	*/
+	char[] getFileName(File ifd)
 	
 	}

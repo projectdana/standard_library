@@ -15,7 +15,7 @@ component provides Queue(Destructor, AdaptEvents) {
 		{
 		mutex(listLock)
 			{
-			ListItem ni = new ListItem(item)
+			store ListItem ni = new ListItem(item)
 			
 			if (list == null)
 				{

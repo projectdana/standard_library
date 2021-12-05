@@ -11,7 +11,7 @@ component provides Parser:urlencoded requires io.Output out, data.StringUtil str
 			String sparts[] = stringUtil.explode(parts[i].string, "=")
 			
 			char key[] = sparts[0].string
-			char value[]
+			char value[] = null
 			
 			if (sparts.arrayLength == 2) value = sparts[1].string
 			

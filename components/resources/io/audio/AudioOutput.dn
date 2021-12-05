@@ -1,0 +1,46 @@
+uses Track
+uses Format
+
+/* {"description" : "Data type used by audio events, to deliver which audio track object is being referred to."} */
+data TrackInfo {
+	/* {"@description" : "The audio track object."} */
+	Track track
+	}
+
+/*
+ {"description" : "Audio output API. This interface allows you to play audio tracks, and mix tracks together. Note that the audio format of all data sources for tracks playing on a device must be the same as the audio format of the device itself."}
+*/
+
+interface AudioOutput {
+	
+	/*
+	 {"@description" : "Provides notifications of audio tracks reaching the end and stopping. Events are only delivered if the audio track has had its setFinishEvent() status set to true."}
+	*/
+	event trackFinished(TrackInfo ti)
+	
+	/*
+	 {"@description" : "Initialise audio output, using the system's default audio output device. Output will use the specified audio format, or will use a default format is none is specified."}
+	*/
+	AudioOutput(opt store Format f)
+	
+	/*
+	 {"@description" : "Plays an audio track on this output device and stops the track when it reaches the end. The track will be mixed together with any other tracks already playing on the device. Each audio track instance can only be played once on any device. If the given track is already playing, this function does nothing; if the track is playing in loop mode this function removes the loop mode from the track."}
+	*/
+	bool play(Track source)
+	
+	/*
+	 {"@description" : "Plays an audio track on this output device and loops the track back to the beginning to play again when it reaches the end. The track will be mixed together with any other tracks already playing on the device. Each audio track instance can only be played once on any device; if it is already playing this function does nothing."}
+	*/
+	bool loop(Track source)
+	
+	/*
+	 {"@description" : "Stops playing of an audio track on this output device."}
+	*/
+	bool stop(Track source)
+	
+	/*
+	 {"@description" : "Stops playing all audio tracks on this output device."}
+	*/
+	void stopAll()
+	
+	}

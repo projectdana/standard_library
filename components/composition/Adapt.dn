@@ -1,0 +1,90 @@
+uses AdaptEvents
+
+component provides Adapt requires io.Output out {
+	
+	void adaptStatefulObject(IDC ofComponent, Object object, IDC source, char type[])
+		{
+		if (dana.pauseObject(ofComponent, object))
+			{
+			// - wait for all in-progress calls to finish in the old object
+			dana.waitForObject(object)
+			// - initialise a new object, without calling its constructor
+			Object a = source.initObject(type)
+			// - notify the object that it's now the "inactive" copy
+			ofComponent.callInterface(object, "AdaptEvents", null, AdaptEvents.[inactive()], null)
+			// - get the object's state
+			Data transferState = ofComponent.getTransferState(object)
+			// - rewire live object so calls now go to the new one (a becomes null)
+			Object b = dana.rewireObject(object, a)
+			// - set the object's state
+			source.setTransferState(object, transferState)
+			// - notify the object that it's now the "active" copy
+			source.callInterface(object, "AdaptEvents", null, AdaptEvents.[active()], null)
+			// - allow new calls to proceed in the new object
+			dana.resumeObject(object)
+			// - wait for any in-progress asynchronous threads to finish
+			dana.waitForObjectThreads(b)
+			}
+		}
+	
+	void adaptStatelessObject(IDC ofComponent, Object object, IDC source, char type[])
+		{
+		if (dana.pauseObject(ofComponent, object))
+			{
+			// - initialise a new object, without calling its constructor
+			Object a = source.initObject(type)
+			// - notify the object that it's now the "inactive" copy
+			ofComponent.callInterface(object, "AdaptEvents", null, AdaptEvents.[inactive()], null)
+			// - rewire live object so calls now go to the new one (a becomes null)
+			Object b = dana.rewireObject(object, a)
+			// - notify the object that it's now the "active" copy
+			source.callInterface(object, "AdaptEvents", null, AdaptEvents.[active()], null)
+			// - allow new calls to proceed in the new object
+			dana.resumeObject(object)
+			// - wait for all in-progress calls to finish in the old object
+			dana.waitForObject(b)
+			// - wait for any in-progress asynchronous threads to finish
+			dana.waitForObjectThreads(b)
+			}
+		}
+	
+	bool Adapt:adaptObject(IDC ofComponent, Object object, IDC newImplementation, char typeName[])
+		{
+		if (ofComponent.hasTransferState(object))
+			adaptStatefulObject(ofComponent, object, newImplementation, typeName)
+			else
+			adaptStatelessObject(ofComponent, object, newImplementation, typeName)
+		
+		return true
+		}
+	
+	bool Adapt:adaptRequiredInterface(IDC ofComponent, char interfaceName[], IDC toComponent, opt char toInterfaceName[])
+		{
+		if (ofComponent.hasRequires(interfaceName))
+			{
+			IDC oldTarget = ofComponent.getComponent(interfaceName)
+			
+			if (toInterfaceName == null) toInterfaceName = interfaceName
+			
+			//temporarily prevent new object instances being created or destroyed, and snapshot the current set of objects
+			ofComponent.pause(interfaceName)
+			//switch the binding from this role to the new component (all new objects will be sourced from the new component)
+			ofComponent.wire(interfaceName, toComponent, toInterfaceName)
+			Object objects[] = ofComponent.getObjects(interfaceName)
+			ofComponent.resume(interfaceName)
+			
+			//switch all existing objects to the new class
+			for (int i = 0; i < objects.arrayLength; i++)
+				{
+				adaptObject(oldTarget, objects[i], toComponent, toInterfaceName)
+				}
+			}
+			else
+			{
+			throw new Exception("No bindport of type '$interfaceName' found on component")
+			}
+		
+		return true
+		}
+	
+	}

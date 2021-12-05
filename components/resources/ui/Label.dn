@@ -5,9 +5,11 @@
 uses GraphicsObject
 uses Rect
 uses Color
+uses Font
 
 interface Label extends GraphicsObject{
-	Label(char text[], char font[], int size)
+	Label(char text[])
+	void setFont(store Font f)
 	void setText(char text[])
-	void setColor(Color c)
+	void setColor(store Color c)
 	}

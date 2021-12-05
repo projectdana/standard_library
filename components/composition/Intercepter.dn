@@ -1,10 +1,13 @@
 uses InterceptEvents
 
+data ObjectWrap {
+	Object o
+	}
+
 component provides Intercepter {
 
 	void interceptStatefulObject(IDC ofComponent, Object object, IDC source, char type[], char icReqInterface[])
 		{
-		InterceptEvents ie
 		if (dana.pauseObject(ofComponent, object))
 			{
 			// - wait for all in-progress calls to finish in the old object
@@ -17,9 +20,9 @@ component provides Intercepter {
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			if ((ie = source.getInterface(object, "InterceptEvents", typeof(InterceptEvents))) != null)
+			if (source.hasInterface(object, "InterceptEvents", null))
 				{
-				ie.setTarget(b)
+				source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b))
 				source.adoptObject(icReqInterface, b)
 				}
 			ofComponent.setTransferState(b, transferState)
@@ -39,9 +42,9 @@ component provides Intercepter {
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			if ((ie = source.getInterface(object, "InterceptEvents", typeof(InterceptEvents))) != null)
+			if (source.hasInterface(object, "InterceptEvents", null))
 				{
-				ie.setTarget(b)
+				source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b))
 				source.adoptObject(icReqInterface, b)
 				}
 			// - allow new calls to proceed in the new object
@@ -88,7 +91,7 @@ component provides Intercepter {
 		return true
 		}
 	
-	void deinterceptStatefulObject(IDC ofComponent, Object object, IDC source, char type[])
+	void deinterceptStatefulObject(IDC ofComponent, Object object, IDC source, char type[], char icReqInterface[])
 		{
 		InterceptEvents ie
 		Object a
@@ -99,10 +102,14 @@ component provides Intercepter {
 			
 			Data transferState
 			
-			if ((ie = ofComponent.getInterface(object, "InterceptEvents", typeof(InterceptEvents))) != null)
+			if (ofComponent.hasInterface(object, "InterceptEvents", null))
 				{
-				a = ie.getTarget()
-				transferState = source.getTransferState(a)
+				Object lst[] = ofComponent.getObjects(icReqInterface)
+				if (lst != null)
+					{
+					a = lst[0]
+					transferState = source.getTransferState(a)
+					}
 				}
 			
 			// - rewire live object so calls now go to the new one (a becomes null)
@@ -115,15 +122,19 @@ component provides Intercepter {
 			}
 		}
 	
-	void deinterceptStatelessObject(IDC ofComponent, Object object, IDC source, char type[])
+	void deinterceptStatelessObject(IDC ofComponent, Object object, IDC source, char type[], char icReqInterface[])
 		{
 		InterceptEvents ie
 		Object a
 		if (dana.pauseObject(ofComponent, object))
 			{
-			if ((ie = ofComponent.getInterface(object, "InterceptEvents", typeof(InterceptEvents))) != null)
+			if (ofComponent.hasInterface(object, "InterceptEvents", null))
 				{
-				a = ie.getTarget()
+				Object lst[] = ofComponent.getObjects(icReqInterface)
+				if (lst != null)
+					{
+					a = lst[0]
+					}
 				}
 			
 			// - rewire live object so calls now go to the new one (a becomes null)
@@ -136,17 +147,17 @@ component provides Intercepter {
 			}
 		}
 	
-	bool remObjectIntercept(IDC ofComponent, Object object, IDC newImplementation, char typeName[])
+	bool remObjectIntercept(IDC ofComponent, Object object, IDC newImplementation, char typeName[], char icReqInterface[])
 		{
 		if (ofComponent.hasTransferState(object))
-			deinterceptStatefulObject(ofComponent, object, newImplementation, typeName)
+			deinterceptStatefulObject(ofComponent, object, newImplementation, typeName, icReqInterface)
 			else
-			deinterceptStatelessObject(ofComponent, object, newImplementation, typeName)
+			deinterceptStatelessObject(ofComponent, object, newImplementation, typeName, icReqInterface)
 		
 		return true
 		}
 	
-	bool Intercepter:removeInterceptor(IDC ofComponent, char reqInterface[], IDC toComponent, char toInterface[])
+	bool Intercepter:removeInterceptor(IDC ofComponent, char reqInterface[], IDC toComponent, char toInterface[], char icReqInterface[])
 		{
 		if (ofComponent.hasRequires(reqInterface))
 			{
@@ -162,7 +173,7 @@ component provides Intercepter {
 			//switch all existing objects to the new class
 			for (int i = 0; i < objects.arrayLength; i++)
 				{
-				remObjectIntercept(oldTarget, objects[i], toComponent, toInterface) //TODO.
+				remObjectIntercept(oldTarget, objects[i], toComponent, toInterface, icReqInterface)
 				}
 			}
 			else

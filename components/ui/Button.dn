@@ -6,6 +6,13 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 	Font labelFont
 	int width
 	
+	Color borderColor = new Color(157, 188, 220, 255)
+	Color buttonColor = new Color(195, 195, 215, 255)
+	Color textColor = new Color(0, 0, 0, 255)
+	
+	Color buttonColorDisabled = new Color(195, 195, 195, 255)
+	Color textColorDisabled = new Color(10, 10, 10, 255)
+	
 	Button:Button(char myLabel[])
 		{
 		text = myLabel
@@ -28,12 +35,22 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 	
 	void Button:paint(Canvas c)
 		{
-		c.drawRect(new Rect2D(xPosition, yPosition, width, 20, new Color(157, 188, 220, 255)))
-		c.drawText(new Point2D(xPosition+TEXT_MARGIN, yPosition+1, new Color(0, 0, 0, 255)), labelFont, text)
+		if (!disabled)
+			{
+			c.drawRect(new Rect2D(xPosition, yPosition, width, 20, buttonColor))
+			c.drawText(new Point2D(xPosition+TEXT_MARGIN, yPosition+1, textColor), labelFont, text)
+			}
+			else
+			{
+			c.drawRect(new Rect2D(xPosition, yPosition, width, 20, buttonColorDisabled))
+			c.drawText(new Point2D(xPosition+TEXT_MARGIN, yPosition+1, textColorDisabled), labelFont, text)
+			}
 		}
 	
 	void Button:click(int x, int y, int button)
 		{
+		if (disabled) return
+		
 		if (button == MouseButtons.BUTTON_LEFT)
 			{
 			emitevent click()
@@ -43,6 +60,17 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 	void Button:postRepaint()
 		{
 		emitevent repaint()
+		}
+	
+	void Button:setFocus()
+		{
+		emitevent requestFocus()
+		}
+	
+	void Button:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
 		}
 	
 	void Button:setText(char t[])

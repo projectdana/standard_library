@@ -1,0 +1,187 @@
+uses InterceptEvents
+
+data ObjectWrap {
+	Object o
+	}
+
+component provides Intercept {
+
+	void interceptStatefulObject(IDC ofComponent, Object object, IDC source, char type[], char icReqInterface[])
+		{
+		if (dana.pauseObject(ofComponent, object))
+			{
+			// - wait for all in-progress calls to finish in the old object
+			dana.waitForObject(object)
+			
+			Data transferState = ofComponent.getTransferState(object)
+			
+			// - initialise a new object, without calling its constructor
+			Object a = source.initObject(type)
+			// - rewire live object so calls now go to the new one (a becomes null)
+			Object b = dana.rewireObject(object, a)
+			// - notify the object that it's now the "active" copy
+			if (source.hasInterface(object, "InterceptEvents", null))
+				{
+				source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b))
+				source.adoptObject(icReqInterface, b)
+				}
+			ofComponent.setTransferState(b, transferState)
+			
+			// - allow new calls to proceed in the new object
+			dana.resumeObject(object)
+			}
+		}
+	
+	void interceptStatelessObject(IDC ofComponent, Object object, IDC source, char type[], char icReqInterface[])
+		{
+		InterceptEvents ie
+		if (dana.pauseObject(ofComponent, object))
+			{
+			// - initialise a new object, without calling its constructor
+			Object a = source.initObject(type)
+			// - rewire live object so calls now go to the new one (a becomes null)
+			Object b = dana.rewireObject(object, a)
+			// - notify the object that it's now the "active" copy
+			if (source.hasInterface(object, "InterceptEvents", null))
+				{
+				source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b))
+				source.adoptObject(icReqInterface, b)
+				}
+			// - allow new calls to proceed in the new object
+			dana.resumeObject(object)
+			// - wait for all in-progress calls to finish in the old object
+			dana.waitForObject(b)
+			}
+		}
+	
+	bool addObjectIntercept(IDC ofComponent, Object object, IDC newImplementation, char typeName[], char icReqInterface[])
+		{
+		if (ofComponent.hasTransferState(object))
+			interceptStatefulObject(ofComponent, object, newImplementation, typeName, icReqInterface)
+			else
+			interceptStatelessObject(ofComponent, object, newImplementation, typeName, icReqInterface)
+		
+		return true
+		}
+	
+	bool Intercept:insertIntercept(IDC ofComponent, char reqInterface[], IDC toComponent, char icProvInterface[], char icReqInterface[])
+		{
+		if (ofComponent.hasRequires(reqInterface))
+			{
+			IDC oldTarget = ofComponent.getComponent(reqInterface)
+			
+			//temporarily prevent new object instances being created or destroyed, and snapshot the current set of objects
+			ofComponent.pause(reqInterface)
+			//switch the binding from this role to the new component (all new objects will be sourced from the new component)
+			ofComponent.wire(reqInterface, toComponent, icProvInterface)
+			Object objects[] = ofComponent.getObjects(reqInterface)
+			ofComponent.resume(reqInterface)
+			
+			//switch all existing objects to the new class
+			for (int i = 0; i < objects.arrayLength; i++)
+				{
+				addObjectIntercept(oldTarget, objects[i], toComponent, icProvInterface, icReqInterface)
+				}
+			}
+			else
+			{
+			throw new Exception("No bindport of type '$reqInterface' found on component")
+			}
+		
+		return true
+		}
+	
+	void deinterceptStatefulObject(IDC ofComponent, Object object, IDC source, char type[], char icReqInterface[])
+		{
+		InterceptEvents ie
+		Object a
+		if (dana.pauseObject(ofComponent, object))
+			{
+			// - wait for all in-progress calls to finish in the old object
+			dana.waitForObject(object)
+			
+			Data transferState
+			
+			if (ofComponent.hasInterface(object, "InterceptEvents", null))
+				{
+				Object lst[] = ofComponent.getObjects(icReqInterface)
+				if (lst != null)
+					{
+					a = lst[0]
+					transferState = source.getTransferState(a)
+					}
+				}
+			
+			// - rewire live object so calls now go to the new one (a becomes null)
+			Object b = dana.rewireObject(object, a)
+			
+			source.setTransferState(object, transferState)
+			
+			// - allow new calls to proceed in the new object
+			dana.resumeObject(object)
+			}
+		}
+	
+	void deinterceptStatelessObject(IDC ofComponent, Object object, IDC source, char type[], char icReqInterface[])
+		{
+		InterceptEvents ie
+		Object a
+		if (dana.pauseObject(ofComponent, object))
+			{
+			if (ofComponent.hasInterface(object, "InterceptEvents", null))
+				{
+				Object lst[] = ofComponent.getObjects(icReqInterface)
+				if (lst != null)
+					{
+					a = lst[0]
+					}
+				}
+			
+			// - rewire live object so calls now go to the new one (a becomes null)
+			Object b = dana.rewireObject(object, a)
+			
+			// - allow new calls to proceed in the new object
+			dana.resumeObject(object)
+			// - wait for all in-progress calls to finish in the old object
+			dana.waitForObject(b)
+			}
+		}
+	
+	bool remObjectIntercept(IDC ofComponent, Object object, IDC newImplementation, char typeName[], char icReqInterface[])
+		{
+		if (ofComponent.hasTransferState(object))
+			deinterceptStatefulObject(ofComponent, object, newImplementation, typeName, icReqInterface)
+			else
+			deinterceptStatelessObject(ofComponent, object, newImplementation, typeName, icReqInterface)
+		
+		return true
+		}
+	
+	bool Intercept:removeIntercept(IDC ofComponent, char reqInterface[], IDC toComponent, char toInterface[], char icReqInterface[])
+		{
+		if (ofComponent.hasRequires(reqInterface))
+			{
+			IDC oldTarget = ofComponent.getComponent(reqInterface)
+			
+			//temporarily prevent new object instances being created or destroyed, and snapshot the current set of objects
+			ofComponent.pause(reqInterface)
+			//switch the binding from this role to the new component (all new objects will be sourced from the new component)
+			ofComponent.wire(reqInterface, toComponent, toInterface)
+			Object objects[] = ofComponent.getObjects(reqInterface)
+			ofComponent.resume(reqInterface)
+			
+			//switch all existing objects to the new class
+			for (int i = 0; i < objects.arrayLength; i++)
+				{
+				remObjectIntercept(oldTarget, objects[i], toComponent, toInterface, icReqInterface)
+				}
+			}
+			else
+			{
+			throw new Exception("No bindport of type '$reqInterface' found on component")
+			}
+		
+		return true
+		}
+	
+	}

@@ -51,6 +51,18 @@ component provides pal.Perception requires time.Calendar calendar {
 			}
 		}
 	
+	void Perception:addTrace(char content[])
+		{
+		mutex(plock)
+			{
+			if (perception == null)
+				perception = new PerceptionData()
+			
+			Trace e = new Trace(content)
+			perception.trace = new Trace[](perception.trace, e)
+			}
+		}
+	
 	PerceptionData Perception:getPerception()
 		{
 		mutex(plock)

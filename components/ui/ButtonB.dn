@@ -40,6 +40,17 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 		emitevent repaint()
 		}
 	
+	void Button:setFocus()
+		{
+		emitevent requestFocus()
+		}
+	
+	void Button:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
+	
 	void Button:setText(char t[])
 		{
 		text = t

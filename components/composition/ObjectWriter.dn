@@ -44,7 +44,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 			throw new Exception("File not found")
 		
 		SourceHeader hdr = new SourceHeader()
-		byte serialHDR[] = dana.getByteArrayOf(hdr)
+		byte serialHDR[] = dana.serial(hdr)
 		
 		byte buf[]
 		
@@ -100,7 +100,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 			byte serialData[]
 			
 			DanaInfoSection is = new DanaInfoSection()
-			serialData = dana.getByteArrayOf(is)
+			serialData = dana.serial(is)
 			serialData =[] fd.read(serialData.arrayLength)
 			
 			fd.read(is.size)
@@ -129,7 +129,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 			
 			DanaInfoSection is = new DanaInfoSection()
 			is.size = 0
-			serialData = dana.getByteArrayOf(is)
+			serialData = dana.serial(is)
 			serialData =[] fd.read(serialData.arrayLength)
 			
 			byte contents[] = fd.read(is.size)
@@ -192,7 +192,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 		
 		// - write an updated header (editing the count and size of infosections)
 		SourceHeader hdr = new SourceHeader()
-		byte serialHDR[] = dana.getByteArrayOf(hdr)
+		byte serialHDR[] = dana.serial(hdr)
 		
 		byte buf[]
 		
@@ -208,7 +208,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 		int iss = hdr.infoSectionsSize
 		
 		hdr.infoSectionsCount ++
-		hdr.infoSectionsSize += newSection.content.arrayLength + dana.getByteArrayOf(dis).arrayLength
+		hdr.infoSectionsSize += newSection.content.arrayLength + dana.serial(dis).arrayLength
 		
 		info.infoSectionCount ++
 		
@@ -223,7 +223,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 		dis.contentType =[] newSection.contentType
 		dis.size = newSection.content.arrayLength
 		
-		buf = dana.getByteArrayOf(dis)
+		buf = dana.serial(dis)
 		
 		output.write(buf)
 		
@@ -257,7 +257,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 		
 		// - write an updated header (editing the count and size of infosections)
 		SourceHeader hdr = new SourceHeader()
-		byte serialHDR[] = dana.getByteArrayOf(hdr)
+		byte serialHDR[] = dana.serial(hdr)
 		
 		byte buf[]
 		
@@ -291,7 +291,7 @@ component provides ObjectWriter requires io.File, io.FileSystem fileSystem, data
 			byte serialData[]
 			
 			DanaInfoSection dis = new DanaInfoSection()
-			serialData = dana.getByteArrayOf(dis)
+			serialData = dana.serial(dis)
 			serialData =[] input.read(serialData.arrayLength)
 			
 			byte contents[] = input.read(dis.size)

@@ -1,0 +1,128 @@
+data CompressEntry {
+	char fullPath[]
+	char localPath[]
+	}
+
+component provides App requires io.Output out, io.File,	io.FileSystem fileSystem, data.StringUtil stringUtil, compress.Compressor:gzip zip {
+	
+	char[] normalisePath(char path[])
+		{
+		return path.explode("\\").implode("/")
+		}
+	
+	char[] getFileName(char path[])
+		{
+		if (path.rfind("/") != StringUtil.NOT_FOUND)
+			path = path.subString(path.rfind("/")+1, path.arrayLength - (path.rfind("/")+1))
+		
+		return path
+		}
+	
+	CompressEntry[] getFilesToCompress(char param[])
+		{
+		param = normalisePath(param)
+		
+		return new CompressEntry(param, getFileName(param))
+		}
+	
+	void makeDirectory(char path[])
+		{
+		//check this directory exists
+		
+		String parts[] = path.explode("/")
+		
+		char cpath[]
+		
+		if (path[0] == "/")
+			cpath = "/$(parts[0].string)"
+			else
+			cpath = parts[0].string
+		
+		if (!fileSystem.exists(cpath))
+			fileSystem.createDirectory(cpath)
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			cpath = new char[](cpath, "/", parts[i].string)
+			
+			if (!fileSystem.exists(cpath))
+				fileSystem.createDirectory(cpath)
+			}
+		}
+	
+	void printGuide()
+		{
+		out.println("Usage:")
+		out.println(" dana gzip -c  archiveName.gzip fileToCompress1 fileToCompress2 folderToCompress3")
+		out.println(" dana gzip -x  archiveToExtract.gzip -d extractToDirectory")
+		out.println(" dana gzip -l  archiveContentsToList.gzip")
+		out.println(" dana gzip -lr archiveContentsToListRecursively.gzip")
+		}
+	
+	int App:main(AppParam params[])
+		{
+		if (params.arrayLength == 0)
+			{
+			printGuide()
+			return 1
+			}
+		
+		if (params[0].string == "-c")
+			{
+			char archiveName[] = params[1].string
+			
+			if (params.arrayLength > 3) throw new Exception("gzip files can only store a single compressed file")
+			
+			CompressEntry files[] = getFilesToCompress(params[2].string)
+			
+			if (files.arrayLength > 1) throw new Exception("gzip files can only store a single compressed file")
+			
+			if (fileSystem.getInfo(files[0].fullPath).type == FileInfo.TYPE_DIR) throw new Exception("gzip files can only store a single compressed file")
+			
+			File ifd = new File(files[0].fullPath, File.READ)
+			File ofd = new File(archiveName, File.CREATE)
+			
+			zip.compress(ifd, ofd, files[0].fullPath)
+			}
+			else if (params[0].string == "-x")
+			{
+			char archiveName[] = params[1].string
+			char extractPath[] = "."
+			
+			if (params.arrayLength == 4 && params[2].string == "-d")
+				{
+				extractPath = params[3].string
+				makeDirectory(extractPath)
+				}
+			
+			File ifd = new File(archiveName, File.READ)
+			
+			char outpath[] = zip.getFileName(ifd)
+			
+			File ofd = new File("$extractPath/$outpath", File.CREATE)
+			
+			zip.decompress(ifd, ofd)
+			}
+			else if (params[0].string == "-l" || params[0].string == "-lr")
+			{
+			char archiveName[] = params[1].string
+			
+			File ifd = new File(archiveName, File.READ)
+			
+			char outpath[] = zip.getFileName(ifd)
+			
+			out.println(outpath)
+			}
+			else
+			{
+			out.println("Error: unknown command. See below for correct usage.")
+			
+			printGuide()
+			
+			return 1
+			}
+		
+		return 0
+		}
+	
+	}

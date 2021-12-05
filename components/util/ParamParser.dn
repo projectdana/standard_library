@@ -1,0 +1,67 @@
+data KV {
+	char key[]
+	char value[]
+	}
+
+component provides ParamParser requires data.query.Search search {
+	
+	KV keys[]
+	String freeValues[]
+	String switches[]
+	
+	bool isSwitch(char str[])
+		{
+		if (str.arrayLength > 1 && str[0] == "-")
+			return true
+		
+		return false
+		}
+	
+	ParamParser:ParamParser(AppParam params[], opt String vswitches[])
+		{
+		for (int i = 0; i < params.arrayLength; i++)
+			{
+			//it's a switch if it's the last thing on the list, or the thing after it is a -param, or it's listed as a switch
+			if (isSwitch(params[i].string) && (i + 1 == params.arrayLength || isSwitch(params[i+1].string) || switches.findFirst(String.[string], new String(params[i].string)) != null))
+				{
+				switches = new String[](switches, new String(params[i].string))
+				}
+				else if (isSwitch(params[i].string) && i + 1 < params.arrayLength)
+				{
+				KV nkv = new KV(params[i].string, params[i+1].string)
+				keys = new KV[](keys, nkv)
+				i ++
+				}
+				else
+				{
+				freeValues = new String[](freeValues, new String(params[i].string))
+				}
+			}
+		}
+	
+	char[] ParamParser:getValue(char key[])
+		{
+		KV val
+		
+		if ((val = keys.findFirst(KV.[key], new KV(key))) != null)
+			return val.value
+		
+		return null
+		}
+	
+	bool ParamParser:hasSwitch(char key[])
+		{
+		return switches.findFirst(String.[string], new String(key)) != null
+		}
+	
+	String[] ParamParser:getFreeValues()
+		{
+		return freeValues
+		}
+	
+	bool ParamParser:hasFreeValue(char val[])
+		{
+		return freeValues.findFirst(String.[string], new String(val)) != null
+		}
+	
+	}

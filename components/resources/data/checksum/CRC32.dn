@@ -1,5 +1,17 @@
+/*
+ {"description" : "API to compute a 32-bit checksum on some binary data."
+	}
+*/
+
 interface CRC32 {
 	
+	/*
+	 {"@description" : "Compute the CRC32 value for the given binary data. Note that this function can be called repeatedly on sequential fragments of a stream of data to iteratively compute the overall checksum.",
+	 	"crc" : "The value of a checksum computer so far, or 0 if this is the first time that the function is being called for this data stream.",
+		"buf" : "A chunk of the data stream (or the entire data) on which to compute the checksum.",
+		"@return" : "The checksum value for this data."
+		}
+	*/
 	int4 makeCRC(int4 crc, byte buf[])
 	
 	}

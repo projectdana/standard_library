@@ -1,5 +1,9 @@
+/* {"description" : "Transfer state type for hash table content."} */
+
 data HashTableItem{
+	/* {"@description" : "The key associated with this hash table item."} */
 	char key[]
+	/* {"@description" : "The value associated with this hash table item."} */
 	Data value
 	}
 
@@ -15,12 +19,12 @@ interface HashTable{
 	/*
 	 {"@description" : "Add a new key:value pair to the hash table."}
 	*/
-	void put(char key[], Data value)
+	void put(char key[], store Data value)
 	
 	/*
 	 {"@description" : "Update an existing key:value pair to have a new value."}
 	*/
-	void update(char key[], Data newValue)
+	void update(char key[], store Data newValue)
 	
 	/*
 	 {"@description" : "Get the value of a given key."}

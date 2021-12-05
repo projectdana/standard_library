@@ -1,0 +1,61 @@
+uses data.String
+
+/*
+{"description" : "Data type representing a parsed entity."}
+*/
+data ParseToken {
+	/* {"@description" : "Possible value for 'type', indicating that this is a something other than a syntax token, literal, or comment."} */
+	const int TYPE_PARTICLE			= 0
+	/* {"@description" : "Possible value for 'type', indicating that this is string literal."} */
+	const int TYPE_LITERAL_STRING 	= 1
+	/* {"@description" : "Possible value for 'type', indicating that this is a literal number."} */
+	const int TYPE_LITERAL_NUMBER 	= 2
+	/* {"@description" : "Possible value for 'type', indicating that this is a line comment."} */
+	const int TYPE_LINE_COMMENT 	= 3
+	/* {"@description" : "Possible value for 'type', indicating that this is a block comment."} */
+	const int TYPE_BLOCK_COMMENT 	= 4
+	/* {"@description" : "Possible value for 'type', indicating that this is a syntax token."} */
+	const int TYPE_TOKEN 			= 5
+	
+	/* {"@description" : "The type of this parsed entity, such as token or string literal."} */
+	int type
+	/* {"@description" : "The contents of this parsed entity (i.e., the syntax token, or the comment)."} */
+	char content[]
+	
+	/* {"@description" : "The position at which this parsed entity starts, as an index into the original unparsed text."} */
+	int sourceStart
+	/* {"@description" : "The length of the original unparsed text from which this parsed entity was derived."} */
+	int sourceLength
+	}
+
+/*
+{"description" : "This interface is used to tokenise a text document, using a given set of tokens, and supporting both line and block comments."}
+*/
+
+interface Tokeniser {
+	/*
+	{"@description" : "Initialise a tokeniser instance with the given set of tokens.",
+		"tokens" : "The tokens that will be used by the tokeniser to separate text."}
+	*/
+	Tokeniser(store String tokens[])
+	
+	/*
+	{"@description" : "Set the string that indicates the remainder of a line is a comment.",
+		"lineComment" : "A string that indicates the remainder of a line is a comment."}
+	*/
+	void setLineComment(char lineComment[])
+	
+	/*
+	{"@description" : "Set the starting and ending string that indicate the enclosed text is a comment.",
+		"start" : "A string that indicates the start of a block comment.",
+		"end" : "A string that indicates the end of a block comment."}
+	*/
+	void setBlockComment(char start[], char end[])
+	
+	/*
+	{"@description" : "Run the tokeniser, returning an array of all tokens.",
+		"content" : "The text to split into tokens.",
+		"@return" : "An array of tokens."}
+	*/
+	ParseToken[] tokenise(char content[])
+	}

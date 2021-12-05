@@ -1,0 +1,35 @@
+uses data.String
+
+interface Store {
+	
+	bool fail1(String str)
+	
+	bool fail2(String str)
+	
+	bool fail3(String str)
+	
+	bool fail4(String str)
+	
+	bool fail5(String str)
+	
+	bool fail6(String str)
+	
+	bool fail7(String str)
+	
+	bool fail8(String str[])
+	
+	bool fail9(String str[])
+	
+	bool fail10(String str[])
+	
+	bool fail11(String str)
+	
+	bool pass1(char in[])
+	
+	bool pass2(char in[])
+	
+	bool pass3(String str[])
+	
+	bool pass4(String str[])
+	
+	}

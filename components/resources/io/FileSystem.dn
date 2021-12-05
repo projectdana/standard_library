@@ -1,15 +1,23 @@
 uses time.DateTime
 
+/* {"description" : "This is a container type to represent the path of a file system element."} */
 data FileEntry{
+	/* {"@description" : "The path of this file system element."} */
 	char name[]
 	}
 
+/* {"description" : "Data type to represent information about a filesystem element."} */
 data FileInfo{
+	/* {"@description" : "Possible value of the 'type' field, indicating that this element is a regular file."} */
 	const byte TYPE_FILE = 1
+	/* {"@description" : "Possible value of the 'type' field, indicating that this element is a directory."} */
 	const byte TYPE_DIR = 2
 	
+	/* {"@description" : "The type of this filesystem element (e.g. a file or directory)."} */
 	byte type
+	/* {"@description" : "The size of this filesystem element on disk, if it is a regular file (this field will be zero for directories)."} */
 	int size
+	/* {"@description" : "The last-modified time of this filesystem element on disk, if it is a regular file."} */
 	DateTime modified
 	}
 
@@ -63,4 +71,10 @@ interface FileSystem{
 			"@return" : "True if successful, false otherwise."}
 	*/
 	bool deleteDirectory(char path[])
+	
+	/*
+	 {"@description" : "Get the absolute path of the given (potentially relative) file path."}
+	*/
+	char[] getFullPath(char path[])
+	
 	}

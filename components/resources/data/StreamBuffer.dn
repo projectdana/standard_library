@@ -1,0 +1,9 @@
+interface StreamBuffer {
+	
+	void write(byte ar[], opt int len)
+	
+	byte[] read(int len)
+	
+	int getSize()
+	
+	}

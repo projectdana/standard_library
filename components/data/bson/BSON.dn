@@ -53,14 +53,14 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
   **/
   JSONElement BSON:deserialise(BSONDocument bson){
-    return new JSONElement(JSON_ELEMENT_OBJECT, "", "", digestBSONDocument(bson,false))
+    return new JSONElement(JSONElement.TYPE_OBJECT, "", "", digestBSONDocument(bson,false))
   }
 
   int4 buildInt4(byte array[])
 	{
 	Int4 q = new Int4()
 	
-	byte x[] = dana.getByteArrayOf(q)
+	byte x[] = dana.serial(q)
 	
 	x =[] array
 	
@@ -92,7 +92,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
 
   byte[] toLittleEndian(int4 value){
 	Int4 q = new Int4(value)
-	byte x[] = dana.getByteArrayOf(q)
+	byte x[] = dana.serial(q)
     return bu.reverse(x)
   }
 
@@ -185,7 +185,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
       return bson
     }
 
-    if(element.type == JSON_ELEMENT_OBJECT){
+    if(element.type == JSONElement.TYPE_OBJECT){
       /*
         if this element doesn't have a name - we can presume we are digesting
         for the first time.
@@ -230,7 +230,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
       return bson
     }
 
-    if(element.type == JSON_ELEMENT_STRING){
+    if(element.type == JSONElement.TYPE_STRING){
       //add our type
       bson.value = new byte[](bson.value, BSON_UTF8)
 
@@ -249,7 +249,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
       return bson
     }
 
-    if(element.type == JSON_ELEMENT_NUMBER){
+    if(element.type == JSONElement.TYPE_NUMBER){
 
       bson.value = new byte[](bson.value, BSON_INT_32)
 
@@ -260,7 +260,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
       return bson
     }
 
-    if(element.type == JSON_ELEMENT_BOOLEAN){
+    if(element.type == JSONElement.TYPE_BOOLEAN){
 
       bson.value = new byte[](bson.value, BSON_BOOL)
 
@@ -271,7 +271,7 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
       return bson
     }
 
-    if(element.type == JSON_ELEMENT_ARRAY){
+    if(element.type == JSONElement.TYPE_ARRAY){
 
       bson.value = new byte[](bson.value, BSON_ARRAY)
 
@@ -368,9 +368,9 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
         int4 objectSize = buildInt4(bu.reverse(su.subString(content,count,4)))
 
         if(isInArray)
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_OBJECT, "", "", digestBSONDocument(new BSONDocument(su.subString(content,count,objectSize)),false)))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_OBJECT, "", "", digestBSONDocument(new BSONDocument(su.subString(content,count,objectSize)),false)))
         else
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_OBJECT, name, "", digestBSONDocument(new BSONDocument(su.subString(content,count,objectSize)),false)))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_OBJECT, name, "", digestBSONDocument(new BSONDocument(su.subString(content,count,objectSize)),false)))
 
         count += objectSize
       }
@@ -392,9 +392,9 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
         }
 
         if(isInArray)
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_STRING, "", value, new JSONElement()))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_STRING, "", value, new JSONElement()))
         else
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_STRING, name, value, new JSONElement()))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_STRING, name, value, new JSONElement()))
       }
 
       if(type == BSON_OBJECT_ID){
@@ -411,9 +411,9 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
         }
 
         if(isInArray)
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_STRING, "", bu.toHexString(value), new JSONElement()))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_STRING, "", bu.toHexString(value), new JSONElement()))
         else
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_STRING, name, bu.toHexString(value), new JSONElement()))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_STRING, name, bu.toHexString(value), new JSONElement()))
       }
 
       if(type == BSON_INT_32){
@@ -424,9 +424,9 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
         count += 4
 
         if(isInArray)
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_NUMBER, "", iu.makeString(value), new JSONElement()))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_NUMBER, "", iu.makeString(value), new JSONElement()))
         else
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_NUMBER, name, iu.makeString(value), new JSONElement()))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_NUMBER, name, iu.makeString(value), new JSONElement()))
       }
 
       if(type == BSON_BOOL){
@@ -443,9 +443,9 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
           value = "false"
           
         if(isInArray)
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_BOOLEAN, "", value, new JSONElement()))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_BOOLEAN, "", value, new JSONElement()))
         else
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_BOOLEAN, name, value, new JSONElement()))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_BOOLEAN, name, value, new JSONElement()))
       }
 
       if(type == BSON_ARRAY){
@@ -455,9 +455,9 @@ component provides BSON requires io.Output out, data.IntUtil iu, data.StringUtil
         JSONElement children[] = digestBSONDocument(new BSONDocument(su.subString(content,count,arraySize)),true)
 
         if(isInArray)
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_ARRAY, "", "", children))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_ARRAY, "", "", children))
         else
-          elements = new JSONElement[](elements, new JSONElement(JSON_ELEMENT_ARRAY, name, "", children))
+          elements = new JSONElement[](elements, new JSONElement(JSONElement.TYPE_ARRAY, name, "", children))
 
         count += arraySize
       }

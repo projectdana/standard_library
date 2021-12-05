@@ -1,5 +1,0 @@
-conf/app_fonts.txt
-conf/window.txt
-conf/label.txt
-conf/canvas.txt
-conf/sys_info.txt

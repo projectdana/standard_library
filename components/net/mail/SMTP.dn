@@ -1,0 +1,409 @@
+data ResponseData {
+	int code
+	String lines[]
+	}
+
+component provides SMTP requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, encoding.Encoder:base64 enc64 {
+	
+	TCPSocket socket
+	TLS ssl
+	Stream mstream
+	
+	String options[]
+	byte authOptions[]
+	
+	SMTP:SMTP()
+		{
+		}
+	
+	char[] readLine(Stream s)
+		{
+		char buf[]
+		char ln[]
+		
+		while ((buf = s.recv(1)) != null)
+			{
+			ln = new char[](ln, buf)
+			
+			if (buf == "\n")
+				break
+			}
+		
+		return ln
+		}
+	
+	ResponseData readLines(Stream s)
+		{
+		ResponseData response = new ResponseData()
+		
+		char ln[]
+		
+		//read all response lines
+		while ((ln = readLine(s)) != null)
+			{
+			//basic syntax checks
+			if (ln.arrayLength < 5 || (ln.arrayLength > 5 && ln[3] != " " && ln[3] != "-") || ln[ln.arrayLength-2] != "\r" || ln[ln.arrayLength-1] != "\n")
+				{
+				return new ResponseData(0, new String("syntax error in response from server"))
+				}
+			
+			//strip the response code, then trim the line, and check the response code is numeric
+			// - if so, check the response code is consistent with the continuation code
+			char num[] = stringUtil.subString(ln, 0, 3)
+			char str[] = null
+			
+			if (ln.arrayLength > 5)
+				{
+				str = stringUtil.trim(stringUtil.subString(ln, 4, ln.arrayLength-4))
+				}
+			
+			if (!stringUtil.isNumeric(num))
+				{
+				return new ResponseData(0, new String("syntax error in response from server"))
+				}
+			
+			int ccode = iu.intFromString(num)
+			
+			if (response.code != 0 && response.code != ccode)
+				{
+				return new ResponseData(0, new String("syntax error in response from server"))
+				}
+			
+			response.code = ccode
+			
+			response.lines = new String[](response.lines, new String(str))
+			
+			if (ln.arrayLength == 3 || ln[3] == " ")
+				break
+			}
+		
+		return response
+		}
+	
+	bool writeLine(Stream s, char ln[])
+		{
+		s.send("$ln\r\n")
+		
+		return true
+		}
+	
+	void addAuthType(char type[])
+		{
+		if (type == "PLAIN")
+			authOptions = new byte[](authOptions, SMTP.AUTH_PLAIN)
+			else if (type == "LOGIN")
+			authOptions = new byte[](authOptions, SMTP.AUTH_LOGIN)
+		}
+	
+	void parseAuthOptions()
+		{
+		//find any options lines starting with AUTH, then detect any known authentication types and put them in our list
+		for (int i = 0; i < options.arrayLength; i++)
+			{
+			String parts[] = stringUtil.explode(stringUtil.uppercase(options[i].string), " ")
+			
+			if (parts[0].string == "AUTH")
+				{
+				//scan the remaining words for any known authentication types
+				for (int j = 1; j < parts.arrayLength; j++)
+					{
+					addAuthType(parts[j].string)
+					}
+				}
+			}
+		}
+	
+	bool doHello(Stream s, char addr[])
+		{
+		ResponseData rd
+		
+		//send hello message, depending on server type
+		writeLine(s, "EHLO $addr")
+		
+		rd = readLines(s)
+		
+		options = rd.lines
+		
+		//find and parse "auth" option, if present
+		if (rd.code == 250)
+			{
+			parseAuthOptions()
+			}
+		
+		if (rd.code == 250)
+			return true
+			else
+			return false
+		}
+	
+	//say hello (not this is a bit awkward; we expect a user to connect the socket, but NOT read any data)
+	bool SMTP:connect(TCPSocket s)
+		{
+		ResponseData rd
+		
+		socket = s
+		
+		mstream = socket
+		
+		//read server greeting & type
+		
+		rd = readLines(s)
+		
+		if (rd.code != 220)
+			throw new Exception("unexpected response code to connect")
+		
+		return doHello(mstream, socket.getLocalEndpoint().address)
+		}
+	
+	bool SMTP:connectTLS(TCPSocket s, TLS tls)
+		{
+		ResponseData rd
+		
+		socket = s
+		ssl = tls
+		if (!tls.connect(socket)) throw new Exception("failed to perform TLS handshake")
+		
+		mstream = tls
+		
+		//read server greeting & type
+		
+		rd = readLines(tls)
+		
+		if (rd.code != 220)
+			throw new Exception("unexpected response code to connect")
+		
+		return doHello(mstream, socket.getLocalEndpoint().address)
+		}
+	
+	String[] SMTP:getServerOptions()
+		{
+		return options
+		}
+	
+	//signal upgrade to TLS
+	bool SMTP:startTLS(TLS s)
+		{
+		ssl = s
+		
+		writeLine(socket, "STARTTLS")
+		
+		readLines(socket)
+		
+		if (!s.connect(socket)) throw new Exception("failed to perform TLS handshake")
+		
+		mstream = s
+		
+		//do the standard hello and parse the response lines, exactly as in a non-TLS hello...
+		doHello(mstream, socket.getLocalEndpoint().address)
+		
+		return true
+		}
+	
+	byte[] SMTP:getAuthTypes()
+		{
+		return authOptions
+		}
+	
+	bool authLogin(char username[], char password[])
+		{
+		ResponseData rd
+		
+		//LOGIN:
+		writeLine(mstream, "AUTH LOGIN")
+		
+		rd = readLines(mstream) //this is just the line "username" in base64
+		
+		if (rd.code != 334 || rd.lines[0].string != "VXNlcm5hbWU6") throw new Exception("syntax error in response from server")
+		
+		//send username, in base64
+		writeLine(mstream, enc64.encode(username))
+		
+		rd = readLines(mstream) //this is just the line "password" in base64
+		
+		if (rd.code != 334 || rd.lines[0].string != "UGFzc3dvcmQ6") throw new Exception("syntax error in response from server")
+		
+		//send password, in base64
+		writeLine(mstream, enc64.encode(password))
+		
+		rd = readLines(mstream) //result of our auth attempt
+		
+		return rd.code == 235
+		}
+	
+	bool authPlain(char username[], char password[])
+		{
+		//RFC 4616
+		ResponseData rd
+		
+		char sep[] = new char[1]
+		char triple[] = new char[](username, sep, username, sep, password)
+		
+		char encoded[] = enc64.encode(triple)
+		
+		//PLAIN:
+		writeLine(mstream, "AUTH PLAIN $encoded")
+		
+		rd = readLines(mstream) //result of our auth attempt
+		
+		return rd.code == 235
+		}
+	
+	bool knownAuthType(byte t)
+		{
+		for (int i = 0; i < authOptions.arrayLength; i++)
+			{
+			if (t == authOptions[i]) return true
+			}
+		
+		return false
+		}
+	
+	bool SMTP:authenticate(char username[], char password[], byte authType)
+		{
+		if (authType == 0)
+			{
+			//pick a default (currently first on list)
+			if (authOptions.arrayLength == 0)
+				throw new Exception("no known authentication options available")
+			
+			authType = authOptions[0]
+			}
+			else
+			{
+			//check if authType is in the list of known auth types
+			if (!knownAuthType(authType)) throw new Exception("supplied authentication type is not available")
+			}
+		
+		if (authType == SMTP.AUTH_LOGIN)
+			{
+			return authLogin(username, password)
+			}
+			else if (authType == SMTP.AUTH_PLAIN)
+			{
+			return authPlain(username, password)
+			}
+		
+		throw new Exception("unknown authentication type")
+		}
+	
+	char[] dotStuff(char content[])
+		{
+		//the RFC for this (2821) says we look for "\r\n." and convert to "\r\n.."
+		int dots = 0
+		
+		for (int i = 0; i < content.arrayLength; i++)
+			{
+			if (i + 3 < content.arrayLength && content[i] == "\r" && content[i+1] == "\n" && content[i+2] == ".")
+				dots ++
+			}
+		
+		if (dots == 0)
+			{
+			return content
+			}
+			else
+			{
+			char ncontent[] = new char[content.arrayLength+dots]
+			
+			int j = 0
+			for (int i = 0; i < content.arrayLength; i++)
+				{
+				if (i + 3 < content.arrayLength && content[i] == "\r" && content[i+1] == "\n" && content[i+2] == ".")
+					{
+					ncontent[j] = content[i]
+					ncontent[j+1] = content[i+1]
+					ncontent[j+2] = content[i+2]
+					ncontent[j+3] = "."
+					
+					i += 3
+					j += 4
+					}
+					else
+					{
+					ncontent[j] = content[i]
+					}
+				
+				j ++
+				}
+			
+			return ncontent
+			}
+		}
+	
+	//content here can be plain text, or can be MIME-encoded (use a MIME encoder API to generate this)
+	byte SMTP:send(char fromAddr[], String to[], String cc[], String bcc[], char subject[], char content[])
+		{
+		ResponseData rd
+		
+		//dot-stuff the content
+		content = dotStuff(content)
+		
+		//envelope
+		writeLine(mstream, "MAIL FROM:<$fromAddr>")
+		
+		rd = readLines(mstream)
+		
+		if (rd.code != 250) throw new Exception("mail send failed")
+		
+		for (int i = 0; i < to.arrayLength; i++)
+			{
+			writeLine(mstream, "RCPT TO:<$(to[i].string)>")
+			rd = readLines(mstream)
+			}
+		for (int i = 0; i < cc.arrayLength; i++)
+			{
+			writeLine(mstream, "RCPT TO:<$(cc[i].string)>")
+			rd = readLines(mstream)
+			}
+		for (int i = 0; i < bcc.arrayLength; i++)
+			{
+			writeLine(mstream, "RCPT TO:<$(bcc[i].string)>")
+			rd = readLines(mstream)
+			}
+		
+		writeLine(mstream, "DATA")
+		
+		rd = readLines(mstream)
+		
+		if (rd.code != 354) throw new Exception("mail send failed")
+		
+		//message
+		writeLine(mstream, "From:<$fromAddr>")
+		
+		for (int i = 0; i < to.arrayLength; i++)
+			{
+			writeLine(mstream, "To:<$(to[i].string)>")
+			}
+		for (int i = 0; i < cc.arrayLength; i++)
+			{
+			writeLine(mstream, "Cc:<$(cc[i].string)>")
+			}
+		for (int i = 0; i < bcc.arrayLength; i++)
+			{
+			writeLine(mstream, "Bcc:<$(bcc[i].string)>")
+			}
+		
+		//writeLine(mstream, "Date: $()") //TODO, but we need timezone!
+		
+		writeLine(mstream, "Subject: $subject")
+		
+		writeLine(mstream, "")
+		
+		writeLine(mstream, content)
+		
+		writeLine(mstream, "\r\n.")
+		
+		rd = readLines(mstream)
+		
+		if (rd.code == 250)
+			return 1
+			else
+			return 0
+		}
+	
+	//this properly closes the protocol with the server (you *should* do this, though many servers are "ok" if you don't)
+	void SMTP:close()
+		{
+		writeLine(mstream, "QUIT")
+		}
+	}

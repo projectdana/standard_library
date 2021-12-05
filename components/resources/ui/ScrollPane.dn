@@ -1,0 +1,22 @@
+/*
+ {"description" : "A scroll area, which contains another graphical widget, and allows the user to scroll around that contained widget if its width or height is greater than the scroll pane's width/height."}
+*/
+
+interface ScrollPane extends KeyEventObject {
+	
+	/* {"@description" : "Instantiate a new scroll pane."} */
+	ScrollPane(opt store GraphicsObject content)
+	
+	/* {"@description" : "Set the graphics object to place inside the scroll pane."} */
+	void setContent(store GraphicsObject g)
+	
+	/* {"@description" : "Set the background color used by the scroll pane, where the content doesn't fill the whole panel."} */
+	void setBackground(store Color c)
+	
+	/* {"@description" : "Set the width and height of the scroll pane."} */
+	void setSize(int w, int h)
+	
+	/* {"@description" : "Set whether the scroll pane shows its vertical and/or horizontal scroll widgets."} */
+	void showScroll(bool v, bool h)
+	
+	}

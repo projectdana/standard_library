@@ -16,39 +16,76 @@ component provides StreamCompression:deflate requires native ZLib zl {
 	int cstreamID
 	int dstreamID
 	
+	Mutex compressLock = new Mutex()
+	Mutex decompressLock = new Mutex()
+	
 	void StreamCompression:compressInit()
 		{
-		cstreamID = zl.deflateInit()
+		mutex(compressLock)
+			{
+			if (cstreamID != 0)
+				{
+				throw new Exception("compression instance already initialised")
+				}
+			
+			cstreamID = zl.deflateInit()
+			}
 		}
 	
 	byte[] StreamCompression:compress(byte chunk[], bool lastChunk)
 		{
-		return zl.deflate(cstreamID, chunk, lastChunk)
+		mutex(compressLock)
+			{
+			return zl.deflate(cstreamID, chunk, lastChunk)
+			}
 		}
 	
 	void StreamCompression:compressEnd()
 		{
-		zl.deflateEnd(cstreamID)
+		mutex(compressLock)
+			{
+			zl.deflateEnd(cstreamID)
+			cstreamID = 0
+			}
 		}
 
 	void StreamCompression:decompressInit()
 		{
-		dstreamID = zl.inflateInit()
+		mutex(decompressLock)
+			{
+			if (dstreamID != 0)
+				{
+				throw new Exception("decompression instance already initialised")
+				}
+			
+			dstreamID = zl.inflateInit()
+			}
 		}
 	
 	byte[] StreamCompression:decompress(byte chunk[])
 		{
-		return zl.inflate(dstreamID, chunk)
+		mutex(decompressLock)
+			{
+			return zl.inflate(dstreamID, chunk)
+			}
 		}
 	
 	byte StreamCompression:decompressStatus()
 		{
-		return zl.inflateStatus(dstreamID)
+		mutex(decompressLock)
+			{
+			return zl.inflateStatus(dstreamID)
+			}
 		}
 	
 	int StreamCompression:decompressEnd()
 		{
-		return zl.inflateEnd(dstreamID)
+		mutex(decompressLock)
+			{
+			int q = zl.inflateEnd(dstreamID)
+			dstreamID = 0
+			return q
+			}
 		}
 	
 	}

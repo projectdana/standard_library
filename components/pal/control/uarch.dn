@@ -1,0 +1,31 @@
+/* This is a simple program which connects to the PAL REST API and alters its component pool. */
+
+uses data.String
+
+uses pal.Perception
+
+const char DEFAULT_SERVER_IP[] = "localhost"
+const int DEFAULT_SERVER_PORT = 8008
+
+component provides App requires pal.control.RestAPI, io.Output out, data.StringUtil stringUtil {
+	
+	int App:main(AppParam params[])
+		{
+		if (params.arrayLength != 1)
+			{
+			out.println("usage: uarch intf,list")
+			out.println("  intf,list   a comma-separated list of interfaces, with fully-qualified package paths, at which to start the architecture update")
+			return 0
+			}
+		
+		String parts[] = params[0].string.explode(",")
+		
+		RestAPI restAPI = new RestAPI(DEFAULT_SERVER_IP, DEFAULT_SERVER_PORT)
+		
+		char res[] = restAPI.updArch(parts)
+		out.println("system now in config $res")
+		
+		return 0
+		}
+	
+	}

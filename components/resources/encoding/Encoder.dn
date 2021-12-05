@@ -1,4 +1,23 @@
+/*
+ {"description" : "API to encode or decode data to/from a particular encoding format. Use one of the semantic variants of this interface to select the desired encoding format."
+	}
+*/
+
 interface Encoder {
+	
+	/*
+	 {"@description" : "Encode a chunk of data using an encoding format.",
+	 	"x" : "The plain text input data to encode.",
+		"@return" : "The encoded data."
+		}
+	*/
 	char[] encode(char x[])
+	
+	/*
+	 {"@description" : "Decode a chunk of data using an encoding format.",
+	 	"x" : "The encoded data.",
+		"@return" : "The decoded plain text data."
+		}
+	*/
 	char[] decode(char x[])
 	}

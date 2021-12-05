@@ -2,6 +2,7 @@ interface FileLib{
 	int open(char file[], byte mode)
 	int write(int fd, byte content[])
 	byte[] read(int fd, int length)
+	bool flush(int fd)
 	bool setPos(int fd, int pos)
 	int getSize(int fd)
 	bool eof(int fd)
@@ -17,13 +18,15 @@ interface FileLib{
 	
 	bool createDirectory(char dir[])
 	bool deleteDirectory(char dir[])
+	
+	char[] getFullPath(char dir[])
 	}
 
 data DCQ{
 	FileEntry entries[]
 	}
 
-component provides io.File, io.FileSystem requires native FileLib lib, io.Output out {
+component provides io.File(Destructor), io.FileSystem requires native FileLib lib, io.Output out {
 	
 	implementation File {
 		int platformHandle
@@ -72,6 +75,14 @@ component provides io.File, io.FileSystem requires native FileLib lib, io.Output
 					{
 					throw new Exception("File is not open for read")
 					}
+				}
+			}
+		
+		bool File:flush()
+			{
+			mutex(rwLock)
+				{
+				return lib.flush(platformHandle)
 				}
 			}
 		
@@ -144,6 +155,14 @@ component provides io.File, io.FileSystem requires native FileLib lib, io.Output
 					{
 					throw new Exception("File is not open for closing")
 					}
+				}
+			}
+		
+		void Destructor:destroy()
+			{
+			if (platformHandle != 0)
+				{
+				lib.close(platformHandle)
 				}
 			}
 		}
@@ -222,9 +241,41 @@ component provides io.File, io.FileSystem requires native FileLib lib, io.Output
 			return lib.createDirectory(path)
 			}
 		
+		bool deleteContents(char path[])
+			{
+			FileEntry files[] = getDirectoryContents(path)
+			
+			for (int i = 0; i < files.arrayLength; i++)
+				{
+				char subPath[] = new char[](path, "/", files[i].name)
+				
+				if (getInfo(subPath).type == FileInfo.TYPE_DIR)
+					{
+					if (!deleteContents(subPath)) return false
+					if (!lib.deleteDirectory(path)) return false
+					}
+					else
+					{
+					if (!delete(subPath)) return false
+					}
+				}
+			
+			return true
+			}
+		
 		bool FileSystem:deleteDirectory(char path[])
 			{
+			if (getInfo(path).type != FileInfo.TYPE_DIR)
+				throw new Exception("path $path is not a directory")
+			
+			if (!deleteContents(path)) return false
+			
 			return lib.deleteDirectory(path)
+			}
+		
+		char[] FileSystem:getFullPath(char path[])
+			{
+			return lib.getFullPath(path)
 			}
 		}
 	

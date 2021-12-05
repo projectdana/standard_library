@@ -1,7 +1,4 @@
-/*
-* WH type
-* A utility type to describe the width and height of something.
-*/
+/* {"description" : "Data type used a represent the width and height of something, usually in pixels." } */
 
 data WH{
 	int width

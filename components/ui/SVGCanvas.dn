@@ -1,0 +1,161 @@
+data FontInclude {
+	char name[]
+	char source[]
+	}
+
+component provides SVGCanvas requires data.DecUtil du, data.IntUtil iu, encoding.Encoder:base64 b64, io.File, io.FileSystem fileSystem, os.SystemInfo sys, data.query.Search search {
+	
+	int width
+	int height
+	char svg[]
+	
+	bool embedFonts
+	
+	FontInclude fontTable[]
+	
+	void SVGCanvas:drawRect(Rect2D rect)
+		{
+		dec opacity = rect.color.a
+		opacity = opacity / 255.0
+		
+		svg = new char[](svg, "<rect x = \"$(rect.x)\" y = \"$(rect.y)\" width=\"$(rect.width)\" height=\"$(rect.height)\" style=\"fill:rgb($(rect.color.r),$(rect.color.g),$(rect.color.b)); fill-opacity: $opacity\"/>")
+		}
+	
+	void SVGCanvas:drawRectOutline(Rect2D rect)
+		{
+		dec opacity = rect.color.a
+		opacity = opacity / 255.0
+		
+		svg = new char[](svg, "<rect x = \"$(rect.x)\" y = \"$(rect.y)\" width=\"$(rect.width)\" height=\"$(rect.height)\" style=\"stroke-width:1;stroke:rgb($(rect.color.r),$(rect.color.g),$(rect.color.b)); stroke-opacity: $opacity; fill-opacity: 0.0\" />")
+		}
+	
+	void SVGCanvas:drawLine(Line2D line)
+		{
+		dec opacity = line.color.a
+		opacity = opacity / 255.0
+		
+		svg = new char[](svg, "<line x1=\"$(line.sx)\" y1=\"$(line.sy)\" x2=\"$(line.ex)\" y2=\"$(line.ey)\" style=\"stroke:rgb($(line.color.r),$(line.color.g),$(line.color.b));stroke-width:1; stroke-opacity: $opacity\" />")
+		}
+	
+	void SVGCanvas:drawPoint(Point2D point)
+		{
+		
+		}
+	
+	void SVGCanvas:drawPixels(PixelMap map, int x, int y, int rotation)
+		{
+		
+		}
+	
+	void SVGCanvas:drawPixelsEx(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
+		{
+		
+		}
+	
+	void SVGCanvas:drawText(Point2D position, Font f, char text[])
+		{
+		dec opacity = position.color.a
+		opacity = opacity / 255.0
+		
+		//SVG uses bottom-left anchoring for the text *baseline* location, but the screen renderer uses top-left absolute height anchoring, so here we adjust...
+		int adjustedY = position.y + f.getFontMetrics().ascent
+		
+		//note that Dana's screen-rendered fonts are effectively sized in pixels (sized in points at a fixed 72 DPI), so here we use pixels to avoid scaling issues with different DPI ranges
+		svg = new char[](svg, "<text x=\"$(position.x)\" y=\"$(adjustedY)\" fill=\"rgb($(position.color.r),$(position.color.g),$(position.color.b))\" style=\"font-family: '$(f.getFontName())'; font-size: $(f.getSize())px; fill-opacity: $opacity\">$text</text>")
+		
+		//note the font details as we'll need to define its source data in the header
+		if (fontTable.search(FontInclude.[name], new FontInclude(f.getFontName())) == null)
+			{
+			fontTable = new FontInclude[](fontTable, new FontInclude(f.getFontName(), f.getSource()))
+			}
+		}
+	
+	void SVGCanvas:drawTextEx(Point2D position, Font f, char text[], int rotation)
+		{
+		dec opacity = position.color.a
+		opacity = opacity / 255.0
+		
+		//SVG uses bottom-left anchoring for the text *baseline* location, but the screen renderer uses top-left absolute height anchoring, so here we adjust...
+		int adjustedY = position.y + f.getFontMetrics().ascent
+		
+		int rotationX = position.x
+		int rotationY = position.y
+		
+		//note that Dana's screen-rendered fonts are effectively sized in pixels (sized in points at a fixed 72 DPI), so here we use pixels to avoid scaling issues with different DPI ranges
+		svg = new char[](svg, "<text x=\"$(position.x)\" y=\"$(adjustedY)\" transform=\"rotate($rotation,$rotationX,$rotationY)\" fill=\"rgb($(position.color.r),$(position.color.g),$(position.color.b))\" style=\"font-family: '$(f.getFontName())'; font-size: $(f.getSize())px; fill-opacity: $opacity\">$text</text>")
+		
+		//note the font details as we'll need to define its source data in the header
+		if (fontTable.search(FontInclude.[name], new FontInclude(f.getFontName())) == null)
+			{
+			fontTable = new FontInclude[](fontTable, new FontInclude(f.getFontName(), f.getSource()))
+			}
+		}
+	
+	void SVGCanvas:pushSurface(Rect rect, int xscr, int yscr, byte alpha)
+		{
+		
+		}
+	
+	void SVGCanvas:popSurface()
+		{
+		
+		}
+	
+	void SVGCanvas:setSize(int w, int h)
+		{
+		width = w
+		height = h
+		}
+	
+	void SVGCanvas:clear()
+		{
+		svg = null
+		fontTable = null
+		}
+	
+	char[] resolveFontPath(char source[])
+		{
+		//first check if it exists as-is, then checking the core path
+		if (fileSystem.exists(source))
+			return source
+		
+		char DH[] = sys.getVariable("DANA_HOME")
+		
+		if (fileSystem.exists("$DH/resources-ext/fonts/$source"))
+			return "$DH/resources-ext/fonts/$source"
+		
+		return null
+		}
+	
+	void SVGCanvas:setEmbedFonts(bool b)
+		{
+		embedFonts = b
+		}
+	
+	char[] SVGCanvas:getSVG()
+		{
+		char fontDefs[] = "<defs><style type=\"text/css\">"
+		for (int i = 0; i < fontTable.arrayLength; i++)
+			{
+			char fontPath[] = resolveFontPath(fontTable[i].source)
+			
+			if (embedFonts)
+				{
+				File fd = new File(fontPath, File.READ)
+				byte buf[] = fd.read(fd.getSize())
+				char enc[] = b64.encode(buf)
+				fd.close()
+				
+				fontDefs = new char[](fontDefs, "@font-face{font-family: \"$(fontTable[i].name)\"; src: url(\"data:application/x-font-ttf;base64,$enc\")}")
+				}
+				else
+				{
+				fontDefs = new char[](fontDefs, "@font-face{font-family: \"$(fontTable[i].name)\"; src: url(\"$fontPath\")}")
+				}
+			}
+		fontDefs = new char[](fontDefs, "</style></defs>")
+		
+		return new char[]("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?> <svg height = \"$height\" width = \"$width\" xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns=\"http://www.w3.org/2000/svg\">", fontDefs, svg, "</svg>")
+		}
+	
+	}

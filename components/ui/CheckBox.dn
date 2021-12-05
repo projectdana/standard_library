@@ -1,0 +1,115 @@
+const int TEXT_MARGIN = 3
+const int TEXT_PAD = 6
+
+const int CHECK_WIDTH = 16
+const int CHECK_HEIGHT = 16
+
+component provides CheckBox requires ui.Font, os.SystemInfo sysInfo, io.Output out {
+	
+	bool checked
+	Font labelFont
+	
+	int width
+	
+	Color background = new Color(185, 185, 200, 255)
+	Color checkColor = new Color(50, 50, 65, 255)
+	Color textColor = new Color(0, 0, 0, 255)
+	
+	Color backgroundDis = new Color(185, 185, 185, 255)
+	Color checkColorDis = new Color(50, 50, 50, 255)
+	Color textColorDis = new Color(20, 20, 20, 255)
+	
+	CheckBox:CheckBox(char label[])
+		{
+		labelFont = new Font(sysInfo.getSystemFont(false), 15)
+		text = label
+		width = CHECK_WIDTH + labelFont.getTextWidth(text) + TEXT_PAD
+		}
+	
+	void CheckBox:paint(Canvas c)
+		{
+		if (!disabled)
+			{
+			c.drawRect(new Rect2D(xPosition, yPosition+2, CHECK_WIDTH, CHECK_HEIGHT, background))
+			if (checked) c.drawRect(new Rect2D(xPosition+3, yPosition+5, CHECK_WIDTH-6, CHECK_HEIGHT-6, checkColor))
+			c.drawText(new Point2D(xPosition+CHECK_WIDTH+TEXT_MARGIN, yPosition+1, textColor), labelFont, text)
+			}
+			else
+			{
+			c.drawRect(new Rect2D(xPosition, yPosition+2, CHECK_WIDTH, CHECK_HEIGHT, backgroundDis))
+			if (checked) c.drawRect(new Rect2D(xPosition+3, yPosition+5, CHECK_WIDTH-6, CHECK_HEIGHT-6, checkColorDis))
+			c.drawText(new Point2D(xPosition+CHECK_WIDTH+TEXT_MARGIN, yPosition+1, textColorDis), labelFont, text)
+			}
+		}
+	
+	bool CheckBox:isChecked()
+		{
+		return checked
+		}
+	
+	void CheckBox:setChecked(bool t)
+		{
+		checked = t
+		}
+	
+	void CheckBox:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+	
+	void CheckBox:click(int x, int y, int button)
+		{
+		if (disabled) return
+		
+		if (button == MouseButtons.BUTTON_LEFT)
+			{
+			checked = !checked
+			postRepaint()
+			emitevent click()
+			}
+		}
+	
+	void CheckBox:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	void CheckBox:setFocus()
+		{
+		emitevent requestFocus()
+		}
+	
+	void CheckBox:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
+	
+	void CheckBox:setText(char t[])
+		{
+		text = t
+		width = CHECK_WIDTH + labelFont.getTextWidth(text) + TEXT_PAD
+		}
+	
+	char[] CheckBox:getText()
+		{
+		return text
+		}
+	
+	Rect CheckBox:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, CHECK_HEIGHT)
+		}
+	
+	WH CheckBox:getPreferredSize()
+		{
+		return new WH(width, CHECK_HEIGHT)
+		}
+	
+	Point CheckBox:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+	
+	}

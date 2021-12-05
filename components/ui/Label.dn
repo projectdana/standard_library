@@ -1,4 +1,4 @@
-component provides Label requires Font {
+component provides Label requires os.SystemInfo sysInfo, ui.Font {
 	
 	char text[]
 	
@@ -6,15 +6,22 @@ component provides Label requires Font {
 	
 	Color color
 	
-	Label:Label(char txt[], char fontPath[], int fontSize)
+	Label:Label(char txt[])
 		{
-		font = new Font(fontPath, fontSize)
+		font = new Font(sysInfo.getSystemFont(false), 15)
 		
-		if (font == null) throw new Exception("Font '$fontPath' could not be loaded")
+		if (font == null) throw new Exception("System default font could not be loaded")
 		
 		text = txt
 		
 		color = new Color(0, 0, 0, 255)
+		}
+	
+	void Label:setFont(Font f)
+		{
+		font = f
+		
+		postRepaint()
 		}
 	
 	void Label:setText(char txt[])

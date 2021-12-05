@@ -211,5 +211,85 @@ component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONPar
 		
 		return pd
 		}
+	
+	bool RestAPI:addComponent(char str[])
+		{
+		post("/meta/add_component", "text", str)
+		
+		return true
+		}
+	
+	bool RestAPI:remComponent(char str[])
+		{
+		post("/meta/rem_component", "text", str)
+		
+		return true
+		}
+	
+	char[] RestAPI:updComponent(char str[])
+		{
+		return post("/meta/upd_component", "text", str)
+		}
+	
+	char[] RestAPI:updArch(String intfs[])
+		{
+		char content[] = "["
+		for (int i = 0; i < intfs.arrayLength; i ++)
+			{
+			if (i > 0)
+				content = new char[](content, ",", "\"", intfs[i].string, "\"")
+				else
+				content = new char[](content, "\"", intfs[i].string, "\"")
+			}
+		content = new char[](content, "]")
+		
+		return post("/meta/upd_arch", "text/json", content)
+		}
+	
+	bool RestAPI:addIntercept(char intf[], char cmp[])
+		{
+		post("/meta/add_intercept", "text/json", "{\"interface\": \"$intf\", \"interceptComponent\": \"$cmp\"}")
+		
+		return true
+		}
+	
+	bool RestAPI:remIntercept(char intf[], char cmp[])
+		{
+		post("/meta/rem_intercept", "text/json", "{\"interface\": \"$intf\", \"interceptComponent\": \"$cmp\"}")
+		
+		return true
+		}
+	
+	char[] RestAPI:getSystemPath()
+		{
+		char response[] = get("/meta/get_system_path")
+		
+		return response
+		}
+	
+	InterceptInfo[] RestAPI:getIntercepts()
+		{
+		InterceptInfo result[]
+		
+		char response[] = get("/meta/get_intercepts")
+		
+		JSONElement doc = parser.parseDocument(response)
+		
+		JSONElement lst = parser.getValue(doc, "intercepts")
+		
+		if (lst.children.arrayLength != 0)
+			{
+			result = new InterceptInfo[lst.children.arrayLength]
+			
+			for (int i = 0; i < lst.children.arrayLength; i++)
+				{
+				JSONElement item = lst.children[i]
+				
+				result[i] = new InterceptInfo(parser.getValue(item, "rule").value, parser.getValue(item, "impl").value)
+				}
+			}
+		
+		return result
+		}
 
 }

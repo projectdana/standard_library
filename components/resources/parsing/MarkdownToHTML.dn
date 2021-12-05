@@ -1,0 +1,39 @@
+uses Markdown
+uses data.String
+
+/* {"description" : "A keyword group specification, used to indicate a list of keywords for markdown-to-HTML source code styling."} */
+data KeywordGroup {
+	/* {"@description" : "Styling CSS class to use for span elements surrounding keywords in this group."} */
+	char style[]
+	/* {"@description" : "The list of keywords in this group."} */
+	String keywords[]
+	}
+
+/* {"description" : "A code styling instance, used to indicate style rules for code elements of a markdown document."} */
+data MDCodeStyle {
+	/* {"@description" : "The name of the programming language to which this styling should apply; this will match the language name used in a Markdown fenced code block."} */
+	char languageName[]
+	/* {"@description" : "List of syntax tokens used in the language, such as commas or equals signs."}	*/
+	String syntaxTokens[]
+	/* {"@description" : "Start and end markers used to indicate a block comment in the language."} */
+	String blockComment[]
+	/* {"@description" : "Start marker used to indicate a line comment in the language."} */
+	char lineComment[]
+	/* {"@description" : "Start and end markers used to indicate a string literal in the language."} */
+	String stringDelimiters[]
+	/* {"@description" : "Styling CSS class to use for span elements surrounding comments."} */
+	char commentStyle[]
+	/* {"@description" : "Styling CSS class to use for span elements surrounding string literals."} */
+	char stringStyle[]
+	/* {"@description" : "List of keyword groups, indicating the CSS class to use for span elements surrounding keywords in each group."} */
+	KeywordGroup keywords[]
+	}
+
+/* {"description" : "Converter for markdown documents to HTML. Optionally takes an array of code styling instances, to apply styling to code from different languages."} */
+
+interface MarkdownToHTML {
+	/*
+	 {"@description" : "Process a parsed markdown document, converting it to HTML. A set of source code styling options can optionally be provided, for different languages, to indicate the CSS classes to use for rendering source code from a given language. Where the source code language is not specified in the markdown document, the first styling option on this list will be used by default."}
+	*/
+	char[] process(MDElement doc, opt MDCodeStyle codeStyling[])
+	}

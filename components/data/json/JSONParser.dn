@@ -64,7 +64,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 			currentToken = stringUtil.subString(currentToken,0,open)
 			}
 
-		if (tree.type == JSON_ELEMENT_OBJECT)
+		if (tree.type == JSONElement.TYPE_OBJECT)
 			{
 			for (int i = 0; i < tree.children.arrayLength; i++)
 				{
@@ -88,7 +88,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 					}
 				}
 			}
-			else if (tree.type == JSON_ELEMENT_ARRAY && close != StringUtil.NOT_FOUND)
+			else if (tree.type == JSONElement.TYPE_ARRAY && close != StringUtil.NOT_FOUND)
 			{
 			//if we have no more tokens, we presume we can return the desired item
 			if(newTokens == null)
@@ -111,7 +111,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 	JSONElement JSONParser:getValue(JSONElement object, char name[])
 		{
 		//search object for a field matching "name" and return it
-		if (object.type == JSON_ELEMENT_OBJECT)
+		if (object.type == JSONElement.TYPE_OBJECT)
 			{
 			JSONElement jt = object
 			if (jt.children != null)
@@ -512,21 +512,21 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 		//now we detect the kind of value that we have (either a simple one or a complex one)
 		if (t.type == TOKEN_TYPE_STRING)
 			{
-			nt.type = JSON_ELEMENT_STRING
+			nt.type = JSONElement.TYPE_STRING
 			nt.value = t.token
 			
 			l.remove(t)
 			}
 			else if (t.type == TOKEN_TYPE_NUMBER)
 			{
-			nt.type = JSON_ELEMENT_NUMBER
+			nt.type = JSONElement.TYPE_NUMBER
 			nt.value = t.token
 			
 			l.remove(t)
 			}
 			else if (t.type == TOKEN_TYPE_BOOLEAN)
 			{
-			nt.type = JSON_ELEMENT_BOOLEAN
+			nt.type = JSONElement.TYPE_BOOLEAN
 			nt.value = t.token
 			
 			l.remove(t)
@@ -540,7 +540,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 			}
 			else if (t.type == TOKEN_TYPE_TOKEN && t.token == "[")
 			{
-			nt.type = JSON_ELEMENT_ARRAY
+			nt.type = JSONElement.TYPE_ARRAY
 			
 			List subList = extractArray(l)
 			
@@ -550,7 +550,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 			}
 			else if (t.type == TOKEN_TYPE_TOKEN && t.token == "{")
 			{
-			nt.type = JSON_ELEMENT_OBJECT
+			nt.type = JSONElement.TYPE_OBJECT
 			
 			List subList = extractObject(l)
 			
@@ -579,21 +579,21 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 		//now we detect the kind of value that we have (either a simple one or a complex one)
 		if (t.type == TOKEN_TYPE_STRING)
 			{
-			nt.type = JSON_ELEMENT_STRING
+			nt.type = JSONElement.TYPE_STRING
 			nt.value = t.token
 			
 			l.remove(t)
 			}
 			else if (t.type == TOKEN_TYPE_NUMBER)
 			{
-			nt.type = JSON_ELEMENT_NUMBER
+			nt.type = JSONElement.TYPE_NUMBER
 			nt.value = t.token
 			
 			l.remove(t)
 			}
 			else if (t.type == TOKEN_TYPE_BOOLEAN)
 			{
-			nt.type = JSON_ELEMENT_BOOLEAN
+			nt.type = JSONElement.TYPE_BOOLEAN
 			nt.value = t.token
 			
 			l.remove(t)
@@ -607,7 +607,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 			}
 			else if (t.type == TOKEN_TYPE_TOKEN && t.token == "[")
 			{
-			nt.type = JSON_ELEMENT_ARRAY
+			nt.type = JSONElement.TYPE_ARRAY
 			
 			List subList = extractArray(l)
 			
@@ -617,7 +617,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 			}
 			else if (t.type == TOKEN_TYPE_TOKEN && t.token == "{")
 			{
-			nt.type = JSON_ELEMENT_OBJECT
+			nt.type = JSONElement.TYPE_OBJECT
 			
 			List subList = extractObject(l)
 			
@@ -642,7 +642,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 	
 	JSONElement parseObject(List l)
 		{
-		JSONElement object = new JSONElement(JSON_ELEMENT_OBJECT)
+		JSONElement object = new JSONElement(JSONElement.TYPE_OBJECT)
 		
 		JSONElement nt
 		while ((nt = extractNextPair(l)) != null)
@@ -655,7 +655,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 	
 	JSONElement parseArray(List l, char vname[])
 		{
-		JSONElement array = new JSONElement(JSON_ELEMENT_ARRAY)
+		JSONElement array = new JSONElement(JSONElement.TYPE_ARRAY)
 		JSONElement nt
 		while ((nt = extractNextValue(l)) != null)
 			{
@@ -774,7 +774,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 		{
 		char content[] = ""
 		
-		if (element.type == JSON_ELEMENT_OBJECT)
+		if (element.type == JSONElement.TYPE_OBJECT)
 			{
 			if(element.name.arrayLength > 0)
 				content = new char[](content, "\"", element.name, "\"", ":", "{ ")
@@ -792,7 +792,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 			content = new char[](content," }")
 			}
 		
-		if (element.type == JSON_ELEMENT_STRING)
+		if (element.type == JSONElement.TYPE_STRING)
 			{
 			if(element.name.arrayLength > 0)
 				content = new char[](content,"\"", element.name,"\"", ":", "\"", element.value,"\"")
@@ -800,7 +800,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 				content = new char[](content,"\"", element.value, "\"")
 			}
 		
-		if (element.type == JSON_ELEMENT_NUMBER || element.type == JSON_ELEMENT_BOOLEAN)
+		if (element.type == JSONElement.TYPE_NUMBER || element.type == JSONElement.TYPE_BOOLEAN)
 			{
 			if(element.name.arrayLength > 0)
 				content = new char[](content, "\"", element.name,"\"", " : ", element.value)
@@ -808,7 +808,7 @@ component provides JSONParser requires io.Output out, data.adt.List, data.String
 				content = new char[](content, element.value)
 			}
 		
-		if (element.type == JSON_ELEMENT_ARRAY)
+		if (element.type == JSONElement.TYPE_ARRAY)
 			{
 			if (element.name.arrayLength > 0)
 				content = new char[](content, "\"", element.name, "\"", " : ", "[ ")

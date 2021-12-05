@@ -1,0 +1,33 @@
+/*
+ {"description" : "IOLayer is the system API to control an OS-level rendering framework, which is typically offered on a one-per-process basis."}
+*/
+
+interface IOLayer {
+	
+	/*
+	 {"@description" : "This event indicates that runSystem has correctly started up the framework-level rendering subsystem and is ready for window creation."}
+	*/
+	
+	event ready()
+	
+	/*
+	 {"@description" : "This event indicates that the operating system has received a signal to shut down the application; in some frameworks this is triggered by the last open window being closed, but can also occur due to a system-level quit operation. It is usually a good idea to respond to this event by shutting down your system."}
+	*/
+	
+	event recvShutdown()
+	
+	/*
+	 {"@description" : "Initialise the system-level rendering framework. This function must be called before any others on this API."}
+	*/
+	bool init()
+	
+	/*
+	 {"@description" : "Run the main event/render loop of the system-level rendering framework. This function will block until either shutdown is called, or until the last window is closed. This function must be running for any windows (and updates in those windows) to be drawn."}
+	*/
+	void run()
+	
+	/*
+	 {"@description" : "Shut down the main event/render loop being run by runSystem, causing runSystem to return. This will also close all windows launched on this framework."}
+	*/
+	void shutdown()
+	}

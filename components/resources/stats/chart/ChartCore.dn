@@ -1,0 +1,133 @@
+/*
+	{
+	"description" : "This is the base type for a set of different charts, which is responsible for drawing the axes / grid / markers of the chart, and also calculating how to project decimal values into the integer render space. Use one of the sub-types of this interface to instantiate a particular kind of chart."
+	}
+*/
+
+interface ChartCore extends ui.GraphicsObject {
+	
+	const byte AXIS_X = 1
+	const byte AXIS_Y = 2
+	
+	const int ATTR_NONE = 0x0
+	const int ATTR_MARKERS = 0x1
+	const int ATTR_NUMBERS = 0x2
+	const int ATTR_GRID = 0x4
+	const int ATTR_AUTO = 0x8
+	
+	ChartCore()
+	
+	/*
+	{"@description" : "Set the size of the chart in pixels."}
+	*/
+	void setSize(int w, int h)
+	
+	/*
+	{"@description" : "Get the size of the chart in pixels."}
+	*/
+	WH getSize()
+	
+	/*
+	{"@description" : "Set the font used for the axis numbering."}
+	*/
+	void setAxisFont(store Font f)
+	
+	/*
+	{"@description" : "Set the font used for the axis text labels."}
+	*/
+	void setLabelFont(store Font f)
+	
+	/*
+	{"@description" : "Set the minimum and maximum value of the X-axis. This range must be at least enough to render every value on the graph, plus error bars if in use."}
+	*/
+	void setXMinMax(dec min, dec max)
+	
+	/*
+	{"@description" : "Set the interval between numbers on the X-axis (if this is 0.0, no numbers will be shown)."}
+	*/
+	void setXLabelInterval(dec ivr)
+	
+	/*
+	{"@description" : "Set the interval between markers on the X-axis (if this is 0.0, no markers will be shown)."}
+	*/
+	void setXMarkerInterval(dec ivr)
+	
+	/*
+	{"@description" : "Set the interval between grid lines on the X-axis (if this is 0.0, no grid will be shown)."}
+	*/
+	void setXGridInterval(dec ivr)
+	
+	/*
+	{"@description" : "Set the minimum and maximum value of the Y-axis. This range must be at least enough to render every value on the graph, plus error bars if in use."}
+	*/
+	void setYMinMax(dec min, dec max)
+	
+	/*
+	{"@description" : "Set the interval between numbers on the Y-axis (if this is 0.0, no numbers will be shown)."}
+	*/
+	void setYLabelInterval(dec ivr)
+	
+	/*
+	{"@description" : "Set the interval between markers on the Y-axis (if this is 0.0, no markers will be shown)."}
+	*/
+	void setYMarkerInterval(dec ivr)
+	
+	/*
+	{"@description" : "Set the interval between grid lines on the Y-axis (if this is 0.0, no grid will be shown)."}
+	*/
+	void setYGridInterval(dec ivr)
+	
+	/*
+	{"@description" : "Set the number of decimal places to which numbers are displayed on axes."}
+	*/
+	void setDecimalPlaces(byte axisType, int num)
+	
+	/*
+	{"@description" : "Set the text labels to appear on the x-axis and y-axis of the graph."}
+	*/
+	void setAxisLabels(char x[], char y[])
+	
+	/*
+	{"@description" : "This function forces the given axis attribute (grid, markers, or numbers) to have even spacing when projected into an integer coordinate space. Using this feature may cause the effective plot area to be smaller than the pixel height/width given in setSize()."}
+	*/
+	void evenAxisSpacing(byte axisType, byte attributeType)
+	
+	/*
+	{"@description" : "This function ensures that the given axis finishes on the given attribute (grid, marker, or number)."}
+	*/
+	void setAxisFinish(byte axisType, byte attributeType)
+	
+	/*
+	{"@description" : "This function controls the amount of white space between the given axis and the axis title."}
+	*/
+	void setAxisLabelSpace(byte axisType, int pixels)
+	
+	/*
+	 {"@description" : "Get the integer coordinates on the plot area, in pixels, at which the given x/y decimal values would appear.",
+		"x" : "The decimal x value.",
+		"y" : "The decimal y value."
+		}
+	*/
+	int[] getPlotPoint(dec x, dec y)
+	
+	/*
+	{"@description" : "Requests the chart to configure its plot area, based on all parameters given to the chart, ready for getPlotPoint to be called."}
+	*/
+	void preparePlotArea()
+	
+	/*
+	{"@description" : "Draws the grid lines of the chart (if any)."}
+	*/
+	void drawGrid(Canvas c)
+	
+	/*
+	{"@description" : "Draws the axes of the chart."}
+	*/
+	void drawAxes(Canvas c)
+	
+	/*
+	{"@description" : "Returns the rect describing the area to which values will be plotted, excluding labels, numbers and markers."}
+	*/
+	Rect getPlotArea()
+	
+	}

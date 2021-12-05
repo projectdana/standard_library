@@ -1,0 +1,10 @@
+{
+"defaultLinks":	[
+				{"interface": "Source:raw", "component": "AudioOutput"},
+				{"interface": "Source:wav", "component": "AudioOutput"},
+				{"interface": "Source:mp3", "component": "AudioOutput"},
+				{"interface": "Source:ogg", "component": "AudioOutput"},
+				{"interface": "Source:flac", "component": "AudioOutput"},
+				{"interface": "Track", "component": "AudioOutput"}
+				]
+}

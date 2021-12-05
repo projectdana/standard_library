@@ -107,6 +107,25 @@ component provides util.Math requires native MathLib lib, io.Output out, data.De
 			}
 		}
 	
+	dec Math:round(dec val)
+		{
+		dec sign = 1.0
+		if (val < 0.0) sign = -1.0
+		
+		dec nval = val * sign
+		
+		int trunc = nval
+		
+		dec tdec = trunc
+		
+		dec frac = nval - tdec
+		
+		if (frac >= 0.5)
+			return (tdec + 1) * sign
+			else
+			return (tdec) * sign
+		}
+	
 	//NOTE: the below functions are all implemented using the C math library via double types, with associated precision differences
 	
 	dec Math:sqrt(dec n)

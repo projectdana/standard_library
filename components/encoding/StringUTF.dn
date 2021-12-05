@@ -1,0 +1,461 @@
+//UTF-8 implementation
+
+data Char {
+	char c[]
+	}
+
+component provides StringUTF {
+	
+	Char strEnc[]
+	char str[]
+	
+	Char[] parseRaw(char input[])
+		{
+		//NOTE: could init res to at least an array size of input.arrayLength, and only expand once we run out...
+		// - except that would usually be too *big*, so we'd have to track length separately...
+		Char res[] = null
+		
+		for (int i = 0; i < input.arrayLength; i++)
+			{
+			Char nxt = null
+			byte enb = input[i]
+			
+			byte enc4 = 0xF0
+			byte enc3 = 0xE0
+			byte enc2 = 0xC0
+			
+			if ((enb & enc4) == enc4)
+				{
+				//four-byte character
+				nxt = new Char(new char[4])
+				nxt.c[0] = input[i]
+				nxt.c[1] = input[i+1]
+				nxt.c[2] = input[i+2]
+				nxt.c[3] = input[i+3]
+				
+				i += 3
+				}
+				else if ((enb & enc3) == enc3)
+				{
+				//three-byte character
+				nxt = new Char(new char[3])
+				nxt.c[0] = input[i]
+				nxt.c[1] = input[i+1]
+				nxt.c[2] = input[i+2]
+				
+				i += 2
+				}
+				else if ((enb & enc2) == enc2)
+				{
+				//two-byte character
+				nxt = new Char(new char[2])
+				nxt.c[0] = input[i]
+				nxt.c[1] = input[i+1]
+				
+				i += 1
+				}
+				else
+				{
+				//one-byte character
+				nxt = new Char(new char[1])
+				nxt.c[0] = input[i]
+				}
+			
+			res = new Char[](res, nxt)
+			}
+		
+		return res
+		}
+	
+	StringUTF:StringUTF(char input[])
+		{
+		str = input
+		strEnc = parseRaw(input)
+		}
+	
+	char[] StringUTF:charAt(int i)
+		{
+		return strEnc[i].c
+		}
+	
+	void StringUTF:setCharAt(int i, char ch[])
+		{
+		strEnc[i].c = ch
+		}
+	
+	int4 StringUTF:charCode(char c[])
+		{
+		if (c.arrayLength == 4)
+			{
+			int4 code = 0
+			byte xx = 0
+			int4 xc = 0
+			
+			xx = c[3]
+			xx = xx & 0x3F
+			xc = xx
+			code |= xc
+			
+			xx = c[2]
+			xx = xx & 0x3F
+			xc = xx
+			code |= xc << 6
+			
+			xx = c[1]
+			xx = xx & 0x3F
+			xc = xx
+			code |= xc << 12
+			
+			xx = c[0]
+			xx = xx & 0xF
+			xc = xx
+			code |= xc << 18
+			
+			return code
+			}
+			else if (c.arrayLength == 3)
+			{
+			int4 code = 0
+			byte xx = 0
+			int4 xc = 0
+			
+			xx = c[2]
+			xx = xx & 0x3F
+			xc = xx
+			code |= xc
+			
+			xx = c[1]
+			xx = xx & 0x3F
+			xc = xx
+			code |= xc << 6
+			
+			xx = c[0]
+			xx = xx & 0xF
+			xc = xx
+			code |= xc << 12
+			
+			return code
+			}
+			else if (c.arrayLength == 2)
+			{
+			int4 code = 0
+			byte xx = 0
+			int4 xc = 0
+			
+			xx = c[1]
+			xx = xx & 0x3F
+			xc = xx
+			code |= xc
+			
+			xx = c[0]
+			xx = xx & 0xF
+			xc = xx
+			code |= xc << 6
+			
+			return code
+			}
+			else if (c.arrayLength == 1)
+			{
+			return c[0]
+			}
+		
+		return 0
+		}
+	
+	char[] StringUTF:codeChar(int4 c)
+		{
+		if (c <= 127)
+			{
+			//1 byte
+			char res[] = new char[1]
+			res[0] = c
+			return res
+			}
+			else if (c <= 2047)
+			{
+			//2 byte
+			char res[] = new char[2]
+			
+			int4 blank1 = 0xFFFFFFC0
+			
+			int4 sc = 0
+			
+			sc = c & ~blank1
+			sc = sc | 0x80
+			res[1] = sc
+			
+			sc = c >> 6
+			sc = sc | 0xC0
+			res[0] = sc
+			
+			return res
+			}
+			else if (c <= 65535)
+			{
+			//3 byte
+			char res[] = new char[3]
+			
+			int4 blank1 = 0xFFFFFFC0
+			int4 blank2 = 0xFFFFF000
+			
+			int4 sc = 0
+			
+			sc = c & ~blank1
+			sc = sc | 0x80
+			res[2] = sc
+			
+			sc = c & ~blank2
+			sc = c >> 6
+			sc = sc | 0x80
+			res[1] = sc
+			
+			sc = c >> 12
+			sc = sc | 0xE0
+			res[0] = sc
+			
+			return res
+			}
+			else if (c <= 1114111)
+			{
+			//4 byte
+			char res[] = new char[4]
+			
+			int4 blank1 = 0xFFFFFFC0
+			int4 blank2 = 0xFFFFF000
+			int4 blank3 = 0xFFFC0000
+			
+			int4 sc = 0
+			
+			sc = c & ~blank1
+			sc = sc | 0x80
+			res[3] = sc
+			
+			sc = c & ~blank2
+			sc = c >> 6
+			sc = sc | 0x80
+			res[2] = sc
+			
+			sc = c & ~blank3
+			sc = c >> 12
+			sc = sc | 0x80
+			res[1] = sc
+			
+			sc = c >> 18
+			sc = sc | 0xF0
+			res[0] = sc
+			
+			return res
+			}
+		
+		return null
+		}
+	
+	int StringUTF:length()
+		{
+		return strEnc.arrayLength
+		}
+	
+	char[] StringUTF:subString(int start, int length)
+		{
+		int total = 0
+		
+		for (int i = 0; i < length; i ++)
+			{
+			total += strEnc[start+i].c.arrayLength
+			}
+		
+		char res[] = new char[total]
+		
+		int offset = 0
+		for (int i = 0; i < length; i ++)
+			{
+			for (int j = 0; j < strEnc[start+i].c.arrayLength; j++)
+				{
+				res[offset+j] = strEnc[start+i].c[j]
+				}
+			
+			offset += strEnc[start+i].c.arrayLength
+			}
+		
+		return res
+		}
+	
+	void StringUTF:replace(int start, int length, char with[])
+		{
+		if (start > strEnc.arrayLength)
+			throw new Exception("delete index out of bounds")
+		
+		if ((start + length) > strEnc.arrayLength)
+			throw new Exception("delete range out of bounds")
+		
+		Char addend[] = parseRaw(with)
+		
+		int total = (strEnc.arrayLength - length) + addend.arrayLength
+		Char newEnc[] = new Char[total]
+		
+		int isrc = 0
+		int iins = 0
+		for (int i = 0; i < total; i++)
+			{
+			if (i >= start && iins < addend.arrayLength)
+				{
+				newEnc[i] = addend[iins]
+				iins ++
+				isrc = start + length
+				}
+				else
+				{
+				newEnc[i] = strEnc[isrc]
+				isrc ++
+				}
+			}
+		
+		strEnc = newEnc
+		}
+	
+	void StringUTF:delete(int start, int length)
+		{
+		if (start > strEnc.arrayLength)
+			throw new Exception("delete index out of bounds")
+		
+		if ((start + length) > strEnc.arrayLength)
+			throw new Exception("delete range out of bounds")
+		
+		int total = strEnc.arrayLength - length
+		Char newEnc[] = new Char[total]
+		
+		int isrc = 0
+		int iins = 0
+		for (int i = 0; i < strEnc.arrayLength; i++)
+			{
+			if (i >= start && iins < length)
+				{
+				iins ++
+				}
+				else
+				{
+				newEnc[isrc] = strEnc[i]
+				isrc ++
+				}
+			}
+		
+		strEnc = newEnc
+		}
+	
+	void StringUTF:insert(int index, char txt[])
+		{
+		if (index > strEnc.arrayLength)
+			throw new Exception("insert index out of bounds")
+		
+		if (index == strEnc.arrayLength)
+			append(txt)
+		
+		Char addend[] = parseRaw(txt)
+		
+		int total = strEnc.arrayLength + addend.arrayLength
+		Char newEnc[] = new Char[total]
+		
+		int isrc = 0
+		int iins = 0
+		for (int i = 0; i < total; i++)
+			{
+			if (i >= index && iins < addend.arrayLength)
+				{
+				newEnc[i] = addend[iins]
+				iins ++
+				}
+				else
+				{
+				newEnc[i] = strEnc[isrc]
+				isrc ++
+				}
+			}
+		
+		strEnc = newEnc
+		}
+	
+	void StringUTF:append(char txt[])
+		{
+		Char addend[] = parseRaw(txt)
+		
+		strEnc = new Char[](strEnc, addend)
+		}
+	
+	char[] StringUTF:getRaw()
+		{
+		//NOTE: could cache this in "str", and use a hasChanged global variable to indicate the need for a refresh of the cached value
+		
+		int total = 0
+		for (int i = 0; i < strEnc.arrayLength; i ++)
+			{
+			total += strEnc[i].c.arrayLength
+			}
+		
+		char res[] = new char[total]
+		
+		int offset = 0
+		for (int i = 0; i < strEnc.arrayLength; i ++)
+			{
+			for (int j = 0; j < strEnc[i].c.arrayLength; j++)
+				{
+				res[offset+j] = strEnc[i].c[j]
+				}
+			
+			offset += strEnc[i].c.arrayLength
+			}
+		
+		return res
+		}
+	
+	
+	int StringUTF:rawIndex(int charIndex)
+		{
+		if (charIndex > strEnc.arrayLength)
+			throw new Exception("character index out of bounds")
+		
+		int total = 0
+		for (int i = 0; i < charIndex; i ++)
+			{
+			total += strEnc[i].c.arrayLength
+			}
+		
+		return total
+		}
+	
+	int StringUTF:charIndex(int rawIndex)
+		{
+		int total = 0
+		for (int i = 0; i < strEnc.arrayLength; i ++)
+			{
+			if (total >= rawIndex) return i
+			
+			total += strEnc[i].c.arrayLength
+			}
+		
+		return 0
+		}
+	
+	int4[] StringUTF:getCodepoints()
+		{
+		int4 res[] = new int4[strEnc.arrayLength]
+		
+		for (int i = 0; i < strEnc.arrayLength; i++)
+			{
+			res[i] = charCode(strEnc[i].c)
+			}
+		
+		return res
+		}
+	
+	void StringUTF:setCodepoints(int4 code[])
+		{
+		strEnc = new Char[code.arrayLength]
+		
+		for (int i = 0; i < strEnc.arrayLength; i++)
+			{
+			strEnc[i] = new Char()
+			strEnc[i].c = codeChar(code[i])
+			}
+		}
+	
+	}

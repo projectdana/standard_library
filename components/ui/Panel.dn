@@ -28,13 +28,15 @@ component provides Panel requires io.Output out {
 	XYListener mouseListenersEnd
 
 	XYMouseObject mouseOver
+	
+	//we store the item on which a mouse button was pressed down, to know if the button is release on the same item (triggering a click)
+	GraphicsObject clickDown
 
 	bool backgroundSet
 	Color backgroundColor = new Color(190, 190, 200, 255)
-
+	
+	HotKey focusHotKeys[]
 	KeyEventObject keyboardFocus
-
-	GraphicsObject contextItem
 
 	eventsink Events(EventData ed)
 		{
@@ -51,32 +53,37 @@ component provides Panel requires io.Output out {
 			changeFocusTo(ed.source)
 			emitevent requestFocus()
 			}
-			else if (ed.type == ClickableObject.[contextItemOn])
+			else if (ed.type == ClickableObject.[contextMenuOn])
 			{
 			ClickableObject co = ed.source
-			contextItem = co.getContextItem()
-			emitevent contextItemOn()
+			ContextMenuSpec spec = ed.details
+			ClickableObject owner = spec.owner
+			if (owner == null) owner = co
+			emitevent contextMenuOn(new ContextMenuSpec(spec.xAnchor + co.getPosition().x, spec.yAnchor + co.getPosition().y, spec.items, owner))
 			}
-			else if (ed.type == ClickableObject.[contextItemOff])
+			else if (ed.type == ClickableObject.[contextMenuOff])
 			{
-			emitevent contextItemOff()
-			contextItem = null
+			emitevent contextMenuOff()
 			}
 		}
 
 	Panel:Panel()
 		{
 		}
-
+	
 	void Panel:setFocus()
 		{
 		emitevent requestFocus()
 		}
-
-	void Panel:recvFocus()
+	
+	HotKey[] Panel:recvFocus()
 		{
 		if (keyboardFocus != null)
-			keyboardFocus.recvFocus()
+			{
+			return keyboardFocus.recvFocus()
+			}
+		
+		return null
 		}
 
 	void Panel:loseFocus()
@@ -145,7 +152,7 @@ component provides Panel requires io.Output out {
 		{
 		for (GraphicsItem bi = objects; bi != null; bi = bi.next)
 			{
-			if (bi.object == go)
+			if (bi.object === go)
 				{
 				GraphicsItem td = bi
 
@@ -199,6 +206,19 @@ component provides Panel requires io.Output out {
 
 		clickObjects = null
 		lastClickObject = null
+		
+		XYListener mi = mouseListeners
+		while (mi != null)
+			{
+			XYListener td = mi
+			mi = mi.next
+
+			td.next = null
+			td.prev = null
+			}
+
+		mouseListeners = null
+		mouseListenersEnd = null
 
 		postRepaint()
 		}
@@ -245,18 +265,28 @@ component provides Panel requires io.Output out {
 		return new WH(width, height)
 		}
 
-	void changeFocusTo(KeyEventObject ko)
+	void changeFocusTo(store KeyEventObject ko)
 		{
 		if (keyboardFocus !== ko)
 			{
 			if (keyboardFocus != null) keyboardFocus.loseFocus()
-			ko.recvFocus()
 			}
+
+		focusHotKeys = ko.recvFocus()
 
 		keyboardFocus = ko
 		}
 
 	void Panel:click(int x, int y, int button)
+		{
+		}
+	
+	void Panel:hotKeyClick(HotKey h)
+		{
+		if (keyboardFocus != null) keyboardFocus.hotKeyClick(h)
+		}
+	
+	void clickOn(int x, int y, int button)
 		{
 		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
 			{
@@ -264,19 +294,22 @@ component provides Panel requires io.Output out {
 
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				ci.object.click(x - r.x, y - r.y, button)
-
-				if (ci.object hastype KeyEventObject)
+				if (clickDown === ci.object)
 					{
-					changeFocusTo(ci.object)
-					}
+					ci.object.click(x - r.x, y - r.y, button)
 
+					if (ci.object hastype KeyEventObject)
+						{
+						changeFocusTo(ci.object)
+						}
+					}
+				
 				break
 				}
 			}
 		}
 
-	void addClickTarget(ClickableObject co)
+	void addClickTarget(store ClickableObject co)
 		{
 		ClickableItem nci = new ClickableItem(co)
 
@@ -312,7 +345,7 @@ component provides Panel requires io.Output out {
 			}
 		}
 
-	void addMouseEventTarget(XYMouseObject m)
+	void addMouseEventTarget(store XYMouseObject m)
 		{
 		XYListener nci = new XYListener(m)
 
@@ -348,35 +381,45 @@ component provides Panel requires io.Output out {
 			}
 		}
 
-	GraphicsObject Panel:getContextItem()
-		{
-		return contextItem
-		}
-
-	void Panel:keyDown(int keyID)
+	void Panel:keyDown(int keyCode)
 		{
 		if (keyboardFocus != null)
 			{
-			keyboardFocus.keyDown(keyID)
+			keyboardFocus.keyDown(keyCode)
 			}
 		}
 
-	void Panel:keyUp(int keyID)
+	void Panel:keyUp(int keyCode)
 		{
 		if (keyboardFocus != null)
 			{
-			keyboardFocus.keyUp(keyID)
+			keyboardFocus.keyUp(keyCode)
 			}
 		}
 
 	void Panel:mouseDown(int x, int y, int button)
 		{
+		if (clickDown == null)
+			{
+			for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
+				{
+				Rect r = ci.object.getBounds()
+
+				if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+					{
+					clickDown = ci.object
+					break
+					}
+				}
+			}
+		
 		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
 			Rect r = ci.object.getBounds()
 
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
+				clickDown = ci.object
 				ci.object.mouseDown(x - r.x, y - r.y, button)
 				break
 				}
@@ -391,10 +434,24 @@ component provides Panel requires io.Output out {
 
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
-				ci.object.mouseUp(x - r.x, y - r.y, button)
+				//we only register a mouse-up if this was the thing that got the mouse-down
+				if (ci === clickDown)
+					{
+					ci.object.mouseUp(x - r.x, y - r.y, button)
+					}
+					else if (clickDown hastype XYMouseObject)
+					{
+					XYMouseObject co = clickDown
+					r = co.getBounds()
+					co.mouseUp(x - r.x, y - r.y, button)
+					}
 				break
 				}
 			}
+		
+		clickOn(x, y, button)
+		
+		clickDown = null
 		}
 
 	void Panel:mouseMove(int x, int y)
@@ -431,6 +488,37 @@ component provides Panel requires io.Output out {
 			mouseOver.mouseOut()
 			mouseOver = null
 			}
+		}
+	
+	void Panel:mouseOut()
+		{
+		if (mouseOver != null)
+			{
+			mouseOver.mouseOut()
+			mouseOver = null
+			}
+		}
+	
+	void Panel:dropFile(int x, int y, char path[])
+		{
+		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+			{
+			Rect r = ci.object.getBounds()
+
+			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+				{
+				XYMouseObject co = ci.object
+				co.dropFile(x - r.x, y - r.y, path)
+				
+				break
+				}
+			}
+		}
+	
+	void Panel:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
 		}
 
 	}

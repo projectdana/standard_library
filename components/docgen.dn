@@ -4,8 +4,9 @@ data PrimaryType{
 	}
 
 const char OUTPUT_DIR[] = "_docs"
+const bool SHOW_WARNINGS = true
 
-component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo, composition.Search csearch, composition.ObjectWriter, data.query.Search dsearch {
+component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo, composition.Search csearch, composition.ObjectWriter, data.query.Search dsearch {
 	
 	char[] getHTMLFileFor(char sourceFile[], char type[])
 		{
@@ -40,23 +41,29 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		//now check all secondary files used by sf
 		for (int i = 0; i < sf.supportFiles.arrayLength; i++)
 			{
-			char ts[]
-			
-			if ((ts = getTypeSource(sf.supportFiles[i], type)) != null)
-				return ts
+			for (int j = 0; j < sf.supportFiles[i].types.arrayLength; j++)
+				{
+				if (sf.supportFiles[i].types[j].name == type)
+					{
+					return getHTMLFileFor(sf.supportFiles[i].path, type)
+					}
+				}
 			}
 		
 		return null
 		}
 	
-	char[] formatType(SourceFile sf, char type[])
+	char[] formatType(SourceFile sf, char type[], opt bool optional)
 		{
 		//check if the type is declared anywhere in sf or any secondary file; if so create a hyperlink to its doc file
 		char sfn[] = getTypeSource(sf, type)
 		
 		if (sfn != null)
 			{
-			type = new char[]("<a href = \"$sfn\" class = \"doc_type_link\">$type</a>")
+			if (optional)
+				type = new char[]("<a href = \"$sfn\" class = \"doc_type_link_opt\">$type</a>")
+				else
+				type = new char[]("<a href = \"$sfn\" class = \"doc_type_link\">$type</a>")
 			}
 		
 		return type
@@ -70,12 +77,26 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 		
 		result = new char[](result, "(")
 		
+		bool optLatch = false
+		
 		for (int q = 0; q < f.params.arrayLength; q++)
 			{
-			result = new char[](result, formatType(sf, f.params[q].type), " ", f.params[q].displayName)
+			if (f.params[q].opt_param && !optLatch)
+				{
+				result = new char[](result, "<span class = \"doc_function_opt_group\"><span class = \"doc_function_param_opt\">optional</span> ")
+				optLatch = true
+				}
+			
+			if (f.params[q].scope_store)
+				result = new char[](result, "<span class = \"doc_function_param_store\">store</span>", formatType(sf, f.params[q].type, optLatch), " ", f.params[q].displayName)
+				else
+				result = new char[](result, formatType(sf, f.params[q].type, optLatch), " ", f.params[q].displayName)
 			
 			if (q + 1 < f.params.arrayLength) result = new char[](result, ", ")
 			}
+		
+		if (optLatch) result = new char[](result, "</span>")
+		
 		result = new char[](result, ")")
 		
 		return result
@@ -175,346 +196,371 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 				{
 				InterfaceDef id = sf.types[i]
 				
-				char tpath[] = new char[]("$OUTPUT_DIR/files/", getHTMLFileFor(sf.path, id.name))
-				
-				if (fileSystem.exists(tpath))
-					fileSystem.delete(tpath)
-				
-				File fd = new File(tpath, File.WRITE)
-				
-				if (fd != null)
+				if (!isDeprecated(id.doc_description))
 					{
-					fd.write("<html>")
-					fd.write("<link href=\"doc.css\" rel=\"stylesheet\" type=\"text/css\">")
-					fd.write("<body>")
+					char tpath[] = new char[]("$OUTPUT_DIR/files/", getHTMLFileFor(sf.path, id.name))
 					
-					fd.write("<div class = \"doc_heading_line\">")
-					fd.write("<span class = \"doc_heading_text\">Interface</span> <span class = \"doc_heading_type\">$(id.name)</span>")
-					fd.write("</div>")
+					if (fileSystem.exists(tpath))
+						fileSystem.delete(tpath)
 					
-					//what to include to use this type
-					fd.write("<div class = \"doc_include_line\">")
-					fd.write("<span class = \"doc_include_text\">access this type via:</span> <span class = \"doc_include_path\">$includePackage</span> (provides, requires or uses)")
-					fd.write("</div>")
+					File fd = new File(tpath, File.WRITE)
 					
-					//extends?
-					if (id.extendsType != null)
+					if (fd != null)
 						{
+						fd.write("<html>")
+						fd.write("<link href=\"doc.css\" rel=\"stylesheet\" type=\"text/css\">")
+						fd.write("<body>")
+						
+						fd.write("<div class = \"doc_heading_line\">")
+						fd.write("<span class = \"doc_heading_text\">Interface</span> <span class = \"doc_heading_type\">$(id.name)</span>")
+						fd.write("</div>")
+						
+						//what to include to use this type
 						fd.write("<div class = \"doc_include_line\">")
-						fd.write("<span class = \"doc_include_text\"> --- extends:</span>")
-						fd.write(formatType(sf, id.extendsType.name))
+						fd.write("<span class = \"doc_include_text\">access this type via:</span> <span class = \"doc_include_path\">$includePackage</span> (provides, requires or uses)")
 						fd.write("</div>")
-						}
-					
-					//semantic variants?
-					String implementations[] = new String[](csearch.getComponents(stringUtil.trim(includePackage)), csearch.getComponents("$(stringUtil.trim(includePackage)):*"))
-					String svars[] = getSemanticVariants(implementations, stringUtil.trim(includePackage))
-					
-					if (svars.arrayLength > 1 || (svars.arrayLength == 1 && svars[0].string != "&lt;default&gt;"))
-						{
-						fd.write("<div class = \"doc_semantic_line\">")
-						fd.write("<span class = \"doc_semantic_text\"> --- semantic variants:</span>")
 						
-						for (int j = 0; j < svars.arrayLength; j++)
+						//extends?
+						if (id.extendsType != null)
 							{
-							if (j > 0) fd.write(",")
+							fd.write("<div class = \"doc_include_line\">")
+							fd.write("<span class = \"doc_include_text\"> --- extends:</span>")
+							fd.write(formatType(sf, id.extendsType.name))
+							fd.write("</div>")
+							}
+						
+						//semantic variants?
+						String implementations[] = new String[](csearch.getComponents(stringUtil.trim(includePackage)), csearch.getComponents("$(stringUtil.trim(includePackage)):*"))
+						String svars[] = getSemanticVariants(implementations, stringUtil.trim(includePackage))
+						
+						if (svars.arrayLength > 1 || (svars.arrayLength == 1 && svars[0].string != "&lt;default&gt;"))
+							{
+							fd.write("<div class = \"doc_semantic_line\">")
+							fd.write("<span class = \"doc_semantic_text\"> --- semantic variants:</span>")
 							
-							fd.write(" ")
-							fd.write(svars[j].string)
-							}
-						
-						fd.write("</div>")
-						}
-					
-					//the overall interface description
-					if (id.doc_description != null)
-						{
-						JSONElement doc = parser.parseDocument(id.doc_description)
-						
-						fd.write("<div class = \"doc_description\">")
-						fd.write(parser.getValue(doc, "description").value)
-						fd.write("</div>")
-						}
-					
-					//summary of the interface
-					// - constants
-					
-					if (id.constants.arrayLength > 0)
-						{
-						fd.write("<div class = \"doc_const_list\">")
-						
-						fd.write("<div class = \"doc_const_list_hdr\">")
-						fd.write("Constants")
-						fd.write("</div>")
-						
-						for (int j = 0; j < id.constants.arrayLength; j++)
-							{
-							if (isDeprecated(id.constants[j].doc_description))
-								fd.write("<div class = \"doc_const_list_item_deprecated\">")
-								else
-								fd.write("<div class = \"doc_const_list_item\">")
+							for (int j = 0; j < svars.arrayLength; j++)
+								{
+								if (j > 0) fd.write(",")
+								
+								fd.write(" ")
+								fd.write(svars[j].string)
+								}
 							
-							fd.write(formatType(sf, id.constants[j].type))
-							fd.write(" ")
-							fd.write(id.constants[j].displayName)
 							fd.write("</div>")
 							}
-						fd.write("</div>")
-						}
-					
-					// - transfer fields
-					
-					if (id.transferFields.arrayLength > 0)
-						{
-						fd.write("<div class = \"doc_transfer_list\">")
 						
-						fd.write("<div class = \"doc_transfer_list_hdr\">")
-						fd.write("Transfer fields")
-						fd.write("</div>")
-						
-						for (int j = 0; j < id.transferFields.arrayLength; j++)
+						//the overall interface description
+						if (id.doc_description != null)
 							{
-							fd.write("<div class = \"doc_transfer_list_item\">")
-							fd.write(formatType(sf, id.transferFields[j].type))
-							fd.write(" ")
-							fd.write(id.transferFields[j].displayName)
+							JSONElement doc = parser.parseDocument(id.doc_description)
+							
+							if (doc == null) out.println("invalid docstring '$(id.doc_description)' for interface $(id.name) defined in $(sf.path)")
+							
+							fd.write("<div class = \"doc_description\">")
+							fd.write(parser.getValue(doc, "description").value)
 							fd.write("</div>")
 							}
-						fd.write("</div>")
-						}
-					
-					// - event sources
-					
-					if (id.eventSources.arrayLength > 0)
-						{
-						fd.write("<div class = \"doc_eventsource_list\">")
-						
-						fd.write("<div class = \"doc_eventsource_list_hdr\">")
-						fd.write("Events")
-						fd.write("</div>")
-						
-						for (int j = 0; j < id.eventSources.arrayLength; j++)
-							{
-							fd.write("<div class = \"doc_eventsource_list_item\">")
-							//fd.write(formatType(sf, id.eventSources[j].type))
-							//fd.write(" ")
-							//fd.write(id.eventSources[j].displayName)
-							//fd.write(id.eventSources[j].displayName)
-							fd.write(formatEventHeader(sf, id.eventSources[j]))
-							fd.write("</div>")
-							}
-						fd.write("</div>")
-						}
-					
-					// - the list of functions as a summary (with hyperlinks to their descriptions)
-					
-					fd.write("<div class = \"doc_function_list\">")
-					
-					fd.write("<div class = \"doc_function_list_hdr\">")
-					fd.write("Functions")
-					fd.write("</div>")
-					
-					for (int j = 0; j < id.functions.arrayLength; j++)
-						{
-						bool deprecated = isDeprecated(id.functions[j].doc_description)
-						
-						if (deprecated)
-							fd.write("<div class = \"doc_function_list_item_deprecated\">")
 							else
-							fd.write("<div class = \"doc_function_list_item\">")
-						fd.write(formatFunctionHeader(sf, id.functions[j]))
-						fd.write("</div>")
-						}
-					fd.write("</div>")
-					
-					//the list of constants in detail
-					if (id.constants.arrayLength > 0)
-						{
-						fd.write("<div class = \"doc_function_description\">")
-						
-						fd.write("<div class = \"doc_constant_fields_heading\">")
-						
-						fd.write("Constants")
-						
-						fd.write("</div>")
-						
-						fd.write("<div class = \"doc_function_description_parameters\">")
-						for (int j = 0; j < id.constants.arrayLength; j++)
 							{
-							char desc[] = null
+							if (SHOW_WARNINGS) out.println("[warning] type $(id.name) has no summary documentation")
+							}
+						
+						//summary of the interface
+						// - constants
+						
+						if (id.constants.arrayLength > 0)
+							{
+							fd.write("<div class = \"doc_const_list\">")
 							
-							if (id.constants[j].doc_description != null)
+							fd.write("<div class = \"doc_const_list_hdr\">")
+							fd.write("Constants")
+							fd.write("</div>")
+							
+							for (int j = 0; j < id.constants.arrayLength; j++)
 								{
-								JSONElement doc = parser.parseDocument(id.constants[j].doc_description)
-								if (parser.getValue(doc, "@description") != null)
-									desc = parser.getValue(doc, "@description").value
+								if (isDeprecated(id.constants[j].doc_description))
+									fd.write("<div class = \"doc_const_list_item_deprecated\">")
+									else
+									fd.write("<div class = \"doc_const_list_item\">")
+								
+								fd.write(formatType(sf, id.constants[j].type))
+								fd.write(" ")
+								fd.write(id.constants[j].displayName)
+								fd.write("</div>")
 								}
+							fd.write("</div>")
+							}
+						
+						// - transfer fields
+						
+						if (id.transferFields.arrayLength > 0)
+							{
+							fd.write("<div class = \"doc_transfer_list\">")
 							
-							if (isDeprecated(id.constants[j].doc_description))
-								fd.write("<div class = \"doc_constant_desc_deprecated\">")
+							fd.write("<div class = \"doc_transfer_list_hdr\">")
+							fd.write("Transfer fields")
+							fd.write("</div>")
+							
+							for (int j = 0; j < id.transferFields.arrayLength; j++)
+								{
+								fd.write("<div class = \"doc_transfer_list_item\">")
+								fd.write(formatType(sf, id.transferFields[j].type))
+								fd.write(" ")
+								fd.write(id.transferFields[j].displayName)
+								fd.write("</div>")
+								}
+							fd.write("</div>")
+							}
+						
+						// - event sources
+						
+						if (id.eventSources.arrayLength > 0)
+							{
+							fd.write("<div class = \"doc_eventsource_list\">")
+							
+							fd.write("<div class = \"doc_eventsource_list_hdr\">")
+							fd.write("Events")
+							fd.write("</div>")
+							
+							for (int j = 0; j < id.eventSources.arrayLength; j++)
+								{
+								fd.write("<div class = \"doc_eventsource_list_item\">")
+								//fd.write(formatType(sf, id.eventSources[j].type))
+								//fd.write(" ")
+								//fd.write(id.eventSources[j].displayName)
+								//fd.write(id.eventSources[j].displayName)
+								fd.write(formatEventHeader(sf, id.eventSources[j]))
+								fd.write("</div>")
+								}
+							fd.write("</div>")
+							}
+						
+						// - the list of functions as a summary (with hyperlinks to their descriptions)
+						
+						fd.write("<div class = \"doc_function_list\">")
+						
+						fd.write("<div class = \"doc_function_list_hdr\">")
+						fd.write("Functions")
+						fd.write("</div>")
+						
+						for (int j = 0; j < id.functions.arrayLength; j++)
+							{
+							bool deprecated = isDeprecated(id.functions[j].doc_description)
+							
+							if (deprecated)
+								fd.write("<div class = \"doc_function_list_item_deprecated\">")
 								else
-								fd.write("<div class = \"doc_constant_desc\">")
-							fd.write("<span class = \"doc_function_description_param_name\">$(id.constants[j].name)</span> ")
-							fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
-							fd.write("</div>")
-							}
-						fd.write("</div>")
-						
-						fd.write("</div>")
-						}
-					
-					//the list of transfer fields in detail
-					if (id.transferFields.arrayLength > 0)
-						{
-						fd.write("<div class = \"doc_function_description\">")
-						
-						fd.write("<div class = \"doc_transfer_fields_heading\">")
-						
-						fd.write("Transfer fields")
-						
-						fd.write("</div>")
-						
-						fd.write("<div class = \"doc_function_description_parameters\">")
-						for (int j = 0; j < id.transferFields.arrayLength; j++)
-							{
-							char desc[] = null
-							
-							if (id.transferFields[j].doc_description != null)
-								{
-								JSONElement doc = parser.parseDocument(id.transferFields[j].doc_description)
-								if (parser.getValue(doc, "@description") != null)
-									desc = parser.getValue(doc, "@description").value
-								}
-							
-							fd.write("<div class = \"doc_transfer_field\">")
-							fd.write("<span class = \"doc_function_description_param_name\">$(id.transferFields[j].name)</span> ")
-							fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
-							fd.write("</div>")
-							}
-						fd.write("</div>")
-						
-						fd.write("</div>")
-						}
-					
-					//the list of eventsource fields in detail
-					if (id.eventSources.arrayLength > 0)
-						{
-						fd.write("<div class = \"doc_function_description\">")
-						
-						fd.write("<div class = \"doc_event_sources_heading\">")
-						
-						fd.write("Events")
-						
-						fd.write("</div>")
-						
-						fd.write("<div class = \"doc_function_description_parameters\">")
-						for (int j = 0; j < id.eventSources.arrayLength; j++)
-							{
-							char desc[] = null
-							
-							if (id.eventSources[j].doc_description != null)
-								{
-								JSONElement doc = parser.parseDocument(id.eventSources[j].doc_description)
-								if (parser.getValue(doc, "@description") != null)
-									desc = parser.getValue(doc, "@description").value
-								}
-							
-							fd.write("<div class = \"doc_event_source\">")
-							fd.write("<span class = \"doc_function_description_param_name\">$(id.eventSources[j].name)</span> ")
-							fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
-							fd.write("</div>")
-							}
-						fd.write("</div>")
-						
-						fd.write("</div>")
-						}
-					
-					//the list of functions in detail, with parameter descriptions etc.
-					for (int j = 0; j < id.functions.arrayLength; j++)
-						{
-						bool deprecated = isDeprecated(id.functions[j].doc_description)
-						
-						if (deprecated)
-							fd.write("<div class = \"doc_function_description_deprecated\">")
-							else
-							fd.write("<div class = \"doc_function_description\">")
-						
-							fd.write("<div class = \"doc_function_description_heading\">")
+								fd.write("<div class = \"doc_function_list_item\">")
 							fd.write(formatFunctionHeader(sf, id.functions[j]))
 							fd.write("</div>")
+							}
+						fd.write("</div>")
+						
+						//the list of constants in detail
+						if (id.constants.arrayLength > 0)
+							{
+							fd.write("<div class = \"doc_function_description\">")
 							
-							if (id.functions[j].doc_description != null)
-								{
-								JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
-								
-								if (parser.getValue(doc, "@description") != null)
-									{
-									fd.write("<div>")
-									fd.write(parser.getValue(doc, "@description").value)
-									fd.write("</div>")
-									}
-								}
+							fd.write("<div class = \"doc_constant_fields_heading\">")
 							
-							//description of each parameter
+							fd.write("Constants")
+							
+							fd.write("</div>")
+							
 							fd.write("<div class = \"doc_function_description_parameters\">")
-							for (int q = 0; q < id.functions[j].params.arrayLength; q++)
+							for (int j = 0; j < id.constants.arrayLength; j++)
 								{
+								char desc[] = null
+								
+								if (id.constants[j].doc_description != null)
+									{
+									JSONElement doc = parser.parseDocument(id.constants[j].doc_description)
+									if (parser.getValue(doc, "@description") != null)
+										desc = parser.getValue(doc, "@description").value
+									}
+									else
+									{
+									if (SHOW_WARNINGS) out.println("[warning] element $(id.name).$(id.constants[j].name) has no documentation")
+									}
+								
+								if (isDeprecated(id.constants[j].doc_description))
+									fd.write("<div class = \"doc_constant_desc_deprecated\">")
+									else
+									fd.write("<div class = \"doc_constant_desc\">")
+								fd.write("<span class = \"doc_function_description_param_name\">$(id.constants[j].name)</span> ")
+								fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
+								fd.write("</div>")
+								}
+							fd.write("</div>")
+							
+							fd.write("</div>")
+							}
+						
+						//the list of transfer fields in detail
+						if (id.transferFields.arrayLength > 0)
+							{
+							fd.write("<div class = \"doc_function_description\">")
+							
+							fd.write("<div class = \"doc_transfer_fields_heading\">")
+							
+							fd.write("Transfer fields")
+							
+							fd.write("</div>")
+							
+							fd.write("<div class = \"doc_function_description_parameters\">")
+							for (int j = 0; j < id.transferFields.arrayLength; j++)
+								{
+								char desc[] = null
+								
+								if (id.transferFields[j].doc_description != null)
+									{
+									JSONElement doc = parser.parseDocument(id.transferFields[j].doc_description)
+									if (parser.getValue(doc, "@description") != null)
+										desc = parser.getValue(doc, "@description").value
+									}
+									else
+									{
+									if (SHOW_WARNINGS) out.println("[warning] element $(id.name).$(id.transferFields[j].name) has no documentation")
+									}
+								
+								fd.write("<div class = \"doc_transfer_field\">")
+								fd.write("<span class = \"doc_function_description_param_name\">$(id.transferFields[j].name)</span> ")
+								fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
+								fd.write("</div>")
+								}
+							fd.write("</div>")
+							
+							fd.write("</div>")
+							}
+						
+						//the list of eventsource fields in detail
+						if (id.eventSources.arrayLength > 0)
+							{
+							fd.write("<div class = \"doc_function_description\">")
+							
+							fd.write("<div class = \"doc_event_sources_heading\">")
+							
+							fd.write("Events")
+							
+							fd.write("</div>")
+							
+							fd.write("<div class = \"doc_function_description_parameters\">")
+							for (int j = 0; j < id.eventSources.arrayLength; j++)
+								{
+								char desc[] = null
+								
+								if (id.eventSources[j].doc_description != null)
+									{
+									JSONElement doc = parser.parseDocument(id.eventSources[j].doc_description)
+									if (parser.getValue(doc, "@description") != null)
+										desc = parser.getValue(doc, "@description").value
+									}
+									else
+									{
+									if (SHOW_WARNINGS) out.println("[warning] element $(id.name).$(id.eventSources[j].name) has no documentation")
+									}
+								
+								fd.write("<div class = \"doc_event_source\">")
+								fd.write("<span class = \"doc_function_description_param_name\">$(id.eventSources[j].name)</span> ")
+								fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
+								fd.write("</div>")
+								}
+							fd.write("</div>")
+							
+							fd.write("</div>")
+							}
+						
+						//the list of functions in detail, with parameter descriptions etc.
+						for (int j = 0; j < id.functions.arrayLength; j++)
+							{
+							bool deprecated = isDeprecated(id.functions[j].doc_description)
+							
+							if (deprecated)
+								fd.write("<div class = \"doc_function_description_deprecated\">")
+								else
+								fd.write("<div class = \"doc_function_description\">")
+							
+								fd.write("<div class = \"doc_function_description_heading\">")
+								fd.write(formatFunctionHeader(sf, id.functions[j]))
+								fd.write("</div>")
+								
+								if (id.functions[j].doc_description != null)
+									{
+									JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
+									
+									if (parser.getValue(doc, "@description") != null)
+										{
+										fd.write("<div>")
+										fd.write(parser.getValue(doc, "@description").value)
+										fd.write("</div>")
+										}
+									}
+									else
+									{
+									if (SHOW_WARNINGS) out.println("[warning] element $(id.name).$(id.functions[j].name) has no documentation")
+									}
+								
+								//description of each parameter
+								fd.write("<div class = \"doc_function_description_parameters\">")
+								for (int q = 0; q < id.functions[j].params.arrayLength; q++)
+									{
+									char desc[] = null
+									
+									if (id.functions[j].doc_description != null)
+										{
+										JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
+										if (parser.getValue(doc, id.functions[j].params[q].name) != null)
+											desc = parser.getValue(doc, id.functions[j].params[q].name).value
+										}
+									
+									if (desc != null)
+										{
+										fd.write("<div class = \"doc_function_description_param\">")
+										
+										fd.write("<span class = \"doc_function_description_param_name\">$(id.functions[j].params[q].name)</span> ")
+										
+										fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
+										
+										fd.write("</div>")
+										}
+									}
+								fd.write("</div>")
+								
+								//description of return value
+								fd.write("<div class = \"doc_function_description_return\">")
 								char desc[] = null
 								
 								if (id.functions[j].doc_description != null)
 									{
 									JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
-									if (parser.getValue(doc, id.functions[j].params[q].name) != null)
-										desc = parser.getValue(doc, id.functions[j].params[q].name).value
+									if (parser.getValue(doc, "@return") != null)
+										desc = parser.getValue(doc, "@return").value
 									}
 								
 								if (desc != null)
 									{
 									fd.write("<div class = \"doc_function_description_param\">")
 									
-									fd.write("<span class = \"doc_function_description_param_name\">$(id.functions[j].params[q].name)</span> ")
+									fd.write("<span class = \"doc_function_description_param_name\">returns:</span> ")
 									
 									fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
 									
 									fd.write("</div>")
 									}
-								}
-							fd.write("</div>")
-							
-							//description of return value
-							fd.write("<div class = \"doc_function_description_return\">")
-							char desc[] = null
-							
-							if (id.functions[j].doc_description != null)
-								{
-								JSONElement doc = parser.parseDocument(id.functions[j].doc_description)
-								if (parser.getValue(doc, "@return") != null)
-									desc = parser.getValue(doc, "@return").value
-								}
-							
-							if (desc != null)
-								{
-								fd.write("<div class = \"doc_function_description_param\">")
-								
-								fd.write("<span class = \"doc_function_description_param_name\">returns:</span> ")
-								
-								fd.write("<span class = \"doc_function_description_param_desc\">$desc</span>")
 								
 								fd.write("</div>")
-								}
-							
+								
 							fd.write("</div>")
-							
-						fd.write("</div>")
+							}
+						
+						//TODO: a list of known implementations, with any documentation that those specific implementations have
+						// ...
+						
+						fd.write("</body>")
+						fd.write("</html>")
+						
+						fd.close()
 						}
-					
-					//TODO: a list of known implementations, with any documentation that those specific implementations have
-					// ...
-					
-					fd.write("</body>")
-					fd.write("</html>")
-					
-					fd.close()
 					}
 				}
 			}
@@ -565,6 +611,10 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 						fd.write(parser.getValue(doc, "description").value)
 						fd.write("</div>")
 						}
+						else
+						{
+						if (SHOW_WARNINGS) out.println("[warning] type $(td.name) has no summary documentation")
+						}
 					
 					//the list of fields as a summary (with hyperlinks to their descriptions)
 					if (td.constants.arrayLength > 0)
@@ -577,10 +627,38 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 						
 						for (int j = 0; j < td.constants.arrayLength; j++)
 							{
+							char desc[] = null
+							
+							if (td.constants[j].doc_description != null)
+								{
+								JSONElement doc = parser.parseDocument(td.constants[j].doc_description)
+								if (parser.getValue(doc, "@description") != null)
+									desc = parser.getValue(doc, "@description").value
+								}
+							
+							/*
+							if (isDeprecated(td.constants[j].doc_description))
+								fd.write("<div class = \"doc_constant_desc_deprecated\">")
+								else
+								fd.write("<div class = \"doc_constant_desc\">")
+							*/
 							fd.write("<div class = \"doc_const_list_item\">")
+							fd.write("<span class = \"doc_data_field_entry\">")
+							
 							fd.write(formatType(sf, td.constants[j].type))
 							fd.write(" ")
 							fd.write(td.constants[j].displayName)
+							fd.write("</span>")
+							
+							if (desc != null)
+								{
+								fd.write(" <span class = \"doc_data_field_desc\">$desc</span>")
+								}
+								else
+								{
+								if (SHOW_WARNINGS) out.println("[warning] element $(td.name).$(td.constants[j].displayName) has no documentation")
+								}
+							
 							fd.write("</div>")
 							}
 						fd.write("</div>")
@@ -596,10 +674,31 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 						
 						for (int j = 0; j < td.fields.arrayLength; j++)
 							{
+							char desc[] = null
+							
+							if (td.fields[j].doc_description != null)
+								{
+								JSONElement doc = parser.parseDocument(td.fields[j].doc_description)
+								if (parser.getValue(doc, "@description") != null)
+									desc = parser.getValue(doc, "@description").value
+								}
+							
 							fd.write("<div class = \"doc_function_list_item\">")
+							fd.write("<span class = \"doc_data_field_entry\">")
 							fd.write(formatType(sf, td.fields[j].type))
 							fd.write(" ")
 							fd.write(td.fields[j].displayName)
+							fd.write("</span>")
+							
+							if (desc != null)
+								{
+								fd.write(" <span class = \"doc_data_field_desc\">$desc</span>")
+								}
+								else
+								{
+								if (SHOW_WARNINGS) out.println("[warning] element $(td.name).$(td.fields[j].displayName) has no documentation")
+								}
+							
 							fd.write("</div>")
 							}
 						fd.write("</div>")
@@ -709,7 +808,11 @@ component provides App requires doc.DocBuilder, io.File, io.FileSystem fileSyste
 						{
 						char xf[] = getHTMLFileFor(p.primaryFiles[i].path, type)
 						
-						types = new PrimaryType[](types, new PrimaryType(type, xf))
+						//check the file exists (it won't do if it's a deprecated API)
+						if (fileSystem.exists("$OUTPUT_DIR/files/$xf"))
+							{
+							types = new PrimaryType[](types, new PrimaryType(type, xf))
+							}
 						}
 					}
 				

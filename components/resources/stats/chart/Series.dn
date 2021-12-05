@@ -1,0 +1,63 @@
+/*
+	{
+	"description" : "API to create a single-series graph, where both axes are used to represent numeric ranges such as time. Use one of the semantic variants of this interface to select a particular type of graph."
+	}
+*/
+
+uses ui.Color
+uses ui.Canvas
+
+interface Series extends ChartCore {
+
+	Series()
+	
+	/*
+	 {"@description" : "Add a new sample (or set of samples).",
+		"xv" : "The x-axis value at which this sample appears.",
+		"yvalues" : "The values for this series data."
+		}
+	*/
+	void addSample(dec xv, dec yvalues[])
+	
+	/*
+	 {"@description" : "Sets a color used to display this series.",
+		"c" : "The color for this series."
+		}
+	*/
+	void setSeriesColor(store Color c)
+	
+	/*
+	 {"@description" : "Sets the marker style used to display this series.",
+		"type" : "One of the M_ constants."
+		}
+	*/
+	const byte M_NONE = 0
+	const byte M_SQUARE = 1
+	const byte M_SQUARE_OUTLINE = 2
+	const byte M_PLUS = 3
+	const byte M_CROSS = 4
+	void setSeriesMarkers(byte type)
+	
+	/*
+	 {"@description" : "Display error bars on the graph (if the specific implementation supports it).",
+	 	"on" : "True to show error bars, false otherwise."
+		}
+	*/
+	void showErrorBars(bool b)
+	
+	/*
+	 {"@description" : "This function can be used to clamp error bars at specific values. This can be useful for display purposes if a value could not be outside a certain range.",
+	 	"low" : "Lowest value allowed.",
+		"high" : "Highest value allowed."
+		}
+	*/
+	void clampErrorBars(dec low, dec high)
+	
+	/*
+	 {"@description" : "Render the graph to a specific canvas, such as an SVGCanvas.",
+	 	"c" : "The canvas to draw to."
+		}
+	*/
+	void drawToCanvas(Canvas c)
+	
+	}

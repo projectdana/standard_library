@@ -16,6 +16,8 @@ data ChangeLog {
 	char date[]
 	bool sourceBreak
 	bool objectBreak
+	char shortNote[]
+	char releaseNotes[]
 	String language[]
 	String compiler[]
 	String runtime[]
@@ -82,12 +84,15 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 			
 			if (changes[i].sourceBreak) sourceBreak = true
 			if (changes[i].objectBreak) objectBreak = true
+			
+			if (changes[i].shortNote.arrayLength != 0) printParagraph("\nQuick notes: $(changes[i].shortNote)", PARA_WIDTH, 0)
+			if (changes[i].releaseNotes.arrayLength != 0) out.println("Detailed notes: $(changes[i].releaseNotes)")
 			}
 		}
 	
 	ChangeLog[] getChangeLog(int version)
 		{
-		ChangeLog result[] = encoder.jsonToArray(req.get("http://www.projectdana.com/dana/timeline/$version", null).content, null)
+		ChangeLog result[] = encoder.jsonToArray(req.get("http://www.projectdana.com/dana/timeline/$version", null).content, typeof(ChangeLog[]), null)
 		
 		return result
 		}
@@ -109,8 +114,8 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 			out.println("[failed to connect to server (HTTP error $(r.responseCode))]")
 			return 1
 			}
-
-		VersionData vd = encoder.jsonToData(r.content, null)
+		
+		VersionData vd = encoder.jsonToData(r.content, typeof(VersionData), null)
 
 		if (vd == null)
 			{
@@ -151,10 +156,11 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		if (!fileSystem.exists("$home/resources-ext/update/"))
 			fileSystem.createDirectory("$home/resources-ext/update/")
 		
+		/*
 		File fd = new File("$home/resources-ext/update/status.json", File.CREATE)
 		fd.write(encoder.jsonFromData(ustatus, null))
 		fd.close()
-
+		*/
 		return 0
 		}
 

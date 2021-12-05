@@ -1,0 +1,571 @@
+/*
+This is a partial implementation of the ZIP file format. It is designed for maximum compatibility with other ZIP archive readers, uses only the most simple features of the ZIP format, and supports only the deflate (zlib) compression algorithm. It currently uses only "MS-DOS" (FAT) file system assumptions, and does not encode file attributes. This is sufficient for many common uses of ZIP files, but certainly doesn't cover all requirements.
+
+The most obvious future upgrades would be:
+ - support for other file system formats
+ - support for file attributes (if/when Dana's file system APIs support this)
+ - support for additional compression algorithms
+ - support for ZIP64, for archive sizes > 4GB
+*/
+
+// https://support.pkware.com/display/PKZIP/APPNOTE
+
+uses time.DateTime
+
+const int ZIP_CM_NONE = 0
+const int ZIP_CM_DEFLATE = 8
+
+const int CHUNK_SIZE = 5120
+
+data LFH {
+	const byte MAGIC[] = new byte[](0x50, 0x4b, 0x03, 0x04)
+	byte sig[4]
+	int2 versionNeeded
+	int2 flags
+	int2 compressionType
+	int2 lastModifiedTime
+	int2 lastModifiedDate
+	int4 originCRC
+	int4 compressedSize
+	int4 originSize
+	int2 fileNameLen
+	int2 exFieldLen
+	}
+
+data CDR {
+	const byte MAGIC[] = new byte[](0x50, 0x4b, 0x01, 0x02)
+	byte sig[4]
+	int2 versionMaker
+	int2 versionNeeded
+	int2 flags
+	int2 compressionType
+	int2 lastModifiedTime
+	int2 lastModifiedDate
+	int4 originCRC
+	int4 compressedSize
+	int4 originSize
+	int2 fileNameLen
+	int2 exFieldLen
+	int2 commentLen
+	int2 diskIndex
+	int2 intAttributes
+	int4 extAttributes
+	int4 headerOffset
+	}
+
+data EOCD {
+	const byte MAGIC[] = new byte[](0x50, 0x4b, 0x05, 0x06)
+	byte sig[4]
+	int2 diskNo
+	int2 cdStartDisk
+	int2 cdCountDisk
+	int2 cdCountTotal
+	int4 cdSizeBytes
+	int4 cdOffsetBytes
+	int2 commentLen
+	}
+
+data FileIndex {
+	CDR cdr
+	char path[]
+	bool dir
+	}
+
+data Int4 {
+	int4 n
+	}
+
+data Int2 {
+	int2 n
+	}
+
+component provides ArchiveWriter:zip requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, compress.algorithm.StreamCompression:deflate, data.checksum.CRC32 crc32, time.TimeDOS timeDOS {
+	
+	File ifd
+	FileIndex archiveIndex[]
+	int compressMethod
+	int2 versionNeeded
+	int2 versionMaker
+	
+	LFH currentStreamLFH
+	int currentStreamLFHPos
+	StreamCompression currentStreamSC
+	char currentStreamPath[]
+	
+	void reverseEndian(byte num[])
+		{
+		int j = num.arrayLength - 1
+		for (int i = 0; i < num.arrayLength / 2; i++)
+			{
+			byte tmp = num[j]
+			num[j] = num[i]
+			num[i] = tmp
+			j --
+			}
+		}
+	
+	int4 reverseInt4(int4 i4)
+		{
+		Int4 ct = new Int4(i4)
+		reverseEndian(dana.serial(ct))
+		return ct.n
+		}
+	
+	int2 reverseInt2(int2 i2)
+		{
+		Int2 ct = new Int2(i2)
+		reverseEndian(dana.serial(ct))
+		return ct.n
+		}
+	
+	bool writeEOCD(EOCD record, File fd)
+		{
+		byte srd[] = dana.serial(record)
+		
+		record.diskNo = reverseInt2(record.diskNo)
+		record.cdStartDisk = reverseInt2(record.cdStartDisk)
+		record.cdCountDisk = reverseInt2(record.cdCountDisk)
+		record.cdCountTotal = reverseInt2(record.cdCountTotal)
+		record.cdSizeBytes = reverseInt4(record.cdSizeBytes)
+		record.cdOffsetBytes = reverseInt4(record.cdOffsetBytes)
+		record.commentLen = reverseInt2(record.commentLen)
+		
+		return fd.write(srd) == srd.arrayLength
+		}
+	
+	bool writeCDR(CDR record, File fd)
+		{
+		byte srd[] = dana.serial(record)
+		
+		record.versionMaker = reverseInt2(record.versionMaker)
+		record.versionNeeded = reverseInt2(record.versionNeeded)
+		record.flags = reverseInt2(record.flags)
+		record.compressionType = reverseInt2(record.compressionType)
+		record.lastModifiedTime = reverseInt2(record.lastModifiedTime)
+		record.lastModifiedDate = reverseInt2(record.lastModifiedDate)
+		record.originCRC = reverseInt4(record.originCRC)
+		record.compressedSize = reverseInt4(record.compressedSize)
+		record.originSize = reverseInt4(record.originSize)
+		record.fileNameLen = reverseInt2(record.fileNameLen)
+		record.exFieldLen = reverseInt2(record.exFieldLen)
+		record.commentLen = reverseInt2(record.commentLen)
+		record.diskIndex = reverseInt2(record.diskIndex)
+		record.intAttributes = reverseInt2(record.intAttributes)
+		record.extAttributes = reverseInt4(record.extAttributes)
+		record.headerOffset = reverseInt4(record.headerOffset)
+		
+		return fd.write(srd) == srd.arrayLength
+		}
+	
+	bool writeLFH(LFH record, File fd)
+		{
+		byte srd[] = dana.serial(record)
+		
+		record.versionNeeded = reverseInt2(record.versionNeeded)
+		record.flags = reverseInt2(record.flags)
+		record.compressionType = reverseInt2(record.compressionType)
+		record.lastModifiedTime = reverseInt2(record.lastModifiedTime)
+		record.lastModifiedDate = reverseInt2(record.lastModifiedDate)
+		record.originCRC = reverseInt4(record.originCRC)
+		record.compressedSize = reverseInt4(record.compressedSize)
+		record.originSize = reverseInt4(record.originSize)
+		record.fileNameLen = reverseInt2(record.fileNameLen)
+		record.exFieldLen = reverseInt2(record.exFieldLen)
+		
+		return fd.write(srd) == srd.arrayLength
+		}
+	
+	char[] normalisePath(char path[])
+		{
+		return path.explode("\\").implode("/")
+		}
+	
+	bool updateLFH(File fd, CDR cdr)
+		{
+		int opos = fd.getPos()
+		
+		fd.setPos(cdr.headerOffset)
+		
+		LFH lfh = new LFH()
+		lfh.sig = LFH.MAGIC
+		lfh.versionNeeded = cdr.versionNeeded
+		lfh.flags = cdr.flags
+		lfh.compressionType = cdr.compressionType
+		lfh.lastModifiedTime = cdr.lastModifiedTime
+		lfh.lastModifiedDate = cdr.lastModifiedDate
+		lfh.originCRC = cdr.originCRC
+		lfh.compressedSize = cdr.compressedSize
+		lfh.originSize = cdr.originSize
+		lfh.fileNameLen = cdr.fileNameLen
+		
+		writeLFH(lfh, fd)
+		
+		fd.setPos(fd.getPos() + cdr.fileNameLen)
+		
+		fd.setPos(opos)
+		
+		return true
+		}
+	
+	ArchiveWriter:ArchiveWriter(File fd, opt byte cMethod)
+		{
+		ifd = fd
+		
+		if (isset cMethod)
+			compressMethod = cMethod
+			else
+			compressMethod = ArchiveWriter.CM_DEFLATE
+		
+		versionNeeded = 20 //note, this implies "deflate" compression; other kinds of compression (or encryption) imply different versionNeeded flags
+		// - versionNeeded can also be different on different files in the archive, depending on compression method / encryption applied to each file...
+		
+		versionMaker = 20 //20 is the zip format specification of the creator; a value of only 20 assumes that the "host OS" is "MS-DOS"
+		// - the host OS type in which the archive was created is encoded in the high byte of versionMaker, where a value of 0 is MS-DOS
+		// - the host OS type is relevant for how extAttributes are interpreted on each file (which Dana's file system APIs don't support, at the time of writing)
+		// - in the future we may want to have file system type constants as an optional parameter here, then allow file system attributes to be specified per-file
+		}
+	
+	bool ArchiveWriter:addDirectory(char path[], opt DateTime lastModified)
+		{
+		//check path format
+		if (path.arrayLength == 0) throw new Exception("empty directory path")
+		
+		path = normalisePath(path)
+		
+		if (path[path.arrayLength-1] != "/") path = new char[](path, "/")
+		
+		int2 lastModifiedDate = 0
+		int2 lastModifiedTime = 0
+		
+		if (lastModified != null)
+			{
+			lastModifiedDate = timeDOS.toDOSDate(lastModified)
+			lastModifiedTime = timeDOS.toDOSTime(lastModified)
+			}
+		
+		//add to archive
+		
+		int2 zipMethod = 0
+		
+		if (compressMethod == ArchiveWriter.CM_DEFLATE)
+			{
+			zipMethod = ZIP_CM_DEFLATE
+			}
+		
+		int opos = ifd.getPos()
+		
+		LFH lfh = new LFH()
+		lfh.sig = LFH.MAGIC
+		lfh.fileNameLen = path.arrayLength
+		//lfh.compressionType = zipMethod //some archive readers require this to be zero on directories
+		lfh.versionNeeded = versionNeeded
+		lfh.lastModifiedDate = lastModifiedDate
+		lfh.lastModifiedTime = lastModifiedTime
+		
+		writeLFH(lfh, ifd)
+		
+		ifd.write(path)
+		
+		CDR cdr = new CDR()
+		cdr.sig = CDR.MAGIC
+		//cdr.compressionType = zipMethod //some archive readers require this to be zero on directories
+		cdr.fileNameLen = path.arrayLength
+		cdr.headerOffset = opos
+		cdr.versionMaker = versionMaker
+		cdr.versionNeeded = versionNeeded
+		cdr.extAttributes = 16
+		cdr.lastModifiedDate = lastModifiedDate
+		cdr.lastModifiedTime = lastModifiedTime
+		
+		archiveIndex = new FileIndex[](archiveIndex, new FileIndex(cdr, path, true))
+		
+		return true
+		}
+	
+	char[] implodePath(String parts[], int start, int end)
+		{
+		char result[]
+		
+		for (int i = start; i < end; i++)
+			{
+			if (i != start)
+				result = new char[](result, "/", parts[i].string)
+				else
+				result = new char[](result, parts[i].string)
+			}
+		
+		return "$result/"
+		}
+	
+	FileIndex[] getDirectories(char path[])
+		{
+		//get all directories on this path
+		
+		FileIndex result[]
+		String parts[] = path.explode("/")
+		
+		for (int i = 1; i < parts.arrayLength-1; i++)
+			{
+			char qp[] = implodePath(parts, 0, i)
+			
+			for (int j = 0; j < archiveIndex.arrayLength; j++)
+				{
+				if (archiveIndex[j].path == qp)
+					{
+					result = new FileIndex[](result, archiveIndex[j])
+					break
+					}
+				}
+			}
+		
+		return result
+		}
+	
+	bool ArchiveWriter:addFile(char path[], File uncompressedData, opt DateTime lastModified)
+		{
+		int opos = ifd.getPos()
+		
+		path = normalisePath(path)
+		
+		int originSize = uncompressedData.getSize()
+		
+		int2 lastModifiedDate = 0
+		int2 lastModifiedTime = 0
+		
+		if (lastModified != null)
+			{
+			lastModifiedDate = timeDOS.toDOSDate(lastModified)
+			lastModifiedTime = timeDOS.toDOSTime(lastModified)
+			}
+		
+		//write the LFH, then the compressed data, and add a new CDR to our list for later
+		LFH lfh = new LFH()
+		lfh.sig = LFH.MAGIC
+		lfh.fileNameLen = path.arrayLength
+		lfh.originSize = originSize
+		
+		writeLFH(lfh, ifd)
+		
+		ifd.write(path)
+		
+		int compressLength = 0
+		
+		int4 crc = 0
+		
+		StreamCompression scom = null
+		int2 zipMethod = 0
+		
+		if (compressMethod == ArchiveWriter.CM_DEFLATE)
+			{
+			scom = new StreamCompression:deflate()
+			zipMethod = ZIP_CM_DEFLATE
+			}
+		
+		//get a list of folders in which this file exists (i.e. each node in the sub-tree path), so we can update their sizes and CRCs as we go
+		// - compatibility: some archive readers will fail if we do this, so we don't...
+		//FileIndex folders[] = getDirectories(path)
+		
+		if (compressMethod != ArchiveWriter.CM_NONE)
+			scom.compressInit()
+		
+		while (!uncompressedData.eof())
+			{
+			byte dat[] = uncompressedData.read(CHUNK_SIZE)
+			
+			crc = crc32.makeCRC(crc, dat)
+			
+			/*
+			for (int i = 0; i < folders.arrayLength; i++)
+				{
+				folders[i].cdr.originCRC = crc32.makeCRC(folders[i].cdr.originCRC, dat)
+				}
+			*/
+			
+			byte cdata[] = null
+			
+			if (compressMethod == ArchiveWriter.CM_NONE)
+				cdata = dat
+				else
+				cdata = scom.compress(dat, uncompressedData.eof())
+			
+			ifd.write(cdata)
+			
+			compressLength += cdata.arrayLength
+			}
+		
+		if (compressMethod != ArchiveWriter.CM_NONE)
+			scom.compressEnd()
+		
+		/*
+		for (int i = 0; i < folders.arrayLength; i++)
+			{
+			folders[i].cdr.compressedSize += compressLength
+			folders[i].cdr.originSize += originSize
+			}
+		*/
+		
+		int cpos = ifd.getPos()
+		
+		ifd.setPos(opos)
+		
+		//go back and re-write the local file header, now we know all of the fields
+		lfh = new LFH()
+		lfh.sig = LFH.MAGIC
+		lfh.fileNameLen = path.arrayLength
+		lfh.originSize = originSize
+		lfh.compressedSize = compressLength
+		lfh.originCRC = crc
+		lfh.compressionType = zipMethod
+		lfh.versionNeeded = versionNeeded
+		lfh.lastModifiedDate = lastModifiedDate
+		lfh.lastModifiedTime = lastModifiedTime
+		
+		writeLFH(lfh, ifd)
+		
+		ifd.setPos(cpos)
+		
+		CDR cdr = new CDR()
+		cdr.sig = CDR.MAGIC
+		cdr.originSize = originSize
+		cdr.compressedSize = compressLength
+		cdr.fileNameLen = path.arrayLength
+		cdr.originCRC = crc
+		cdr.compressionType = zipMethod
+		cdr.headerOffset = opos
+		cdr.versionMaker = versionMaker
+		cdr.versionNeeded = versionNeeded
+		cdr.extAttributes = 32
+		cdr.lastModifiedDate = lastModifiedDate
+		cdr.lastModifiedTime = lastModifiedTime
+		
+		archiveIndex = new FileIndex[](archiveIndex, new FileIndex(cdr, path))
+		
+		return true
+		}
+	
+	bool ArchiveWriter:addFileStreamStart(char path[])
+		{
+		//write the LFH, then the compressed data, and add a new CDR to our list for later
+		
+		currentStreamLFHPos = ifd.getPos()
+		
+		int2 zipMethod = 0
+		
+		if (compressMethod == ArchiveWriter.CM_DEFLATE)
+			{
+			currentStreamSC = new StreamCompression:deflate()
+			zipMethod = ZIP_CM_DEFLATE
+			}
+		
+		LFH lfh = new LFH()
+		lfh.sig = LFH.MAGIC
+		lfh.fileNameLen = path.arrayLength
+		lfh.compressionType = zipMethod
+		lfh.versionNeeded = versionNeeded
+		
+		currentStreamLFH = clone lfh
+		
+		writeLFH(lfh, ifd)
+		
+		ifd.write(path)
+		
+		if (zipMethod == ZIP_CM_DEFLATE)
+			{
+			currentStreamSC = new StreamCompression:deflate()
+			currentStreamSC.compressInit()
+			}
+		
+		currentStreamPath = path
+		
+		return true
+		}
+	
+	bool ArchiveWriter:addFileStreamChunk(byte chunk[], bool lastChunk)
+		{
+		currentStreamLFH.originCRC = crc32.makeCRC(currentStreamLFH.originCRC, chunk)
+		
+		byte cdata[] = null
+		
+		if (compressMethod == ArchiveWriter.CM_NONE)
+			cdata = chunk
+			else
+			cdata = currentStreamSC.compress(chunk, lastChunk)
+		
+		ifd.write(cdata)
+		
+		currentStreamLFH.compressedSize += cdata.arrayLength
+		currentStreamLFH.originSize += chunk.arrayLength
+		
+		if (lastChunk)
+			{
+			//update LFH, and write CDR
+			int opos = ifd.getPos()
+			
+			ifd.setPos(currentStreamLFHPos)
+			
+			writeLFH(currentStreamLFH, ifd)
+			
+			currentStreamSC.compressEnd()
+			
+			ifd.setPos(opos)
+			
+			currentStreamSC = null
+			
+			CDR cdr = new CDR()
+			cdr.sig = CDR.MAGIC
+			cdr.originSize = currentStreamLFH.originSize
+			cdr.compressedSize = currentStreamLFH.compressedSize
+			cdr.fileNameLen = currentStreamLFH.fileNameLen
+			cdr.originCRC = currentStreamLFH.originCRC
+			cdr.compressionType = currentStreamLFH.compressionType
+			cdr.headerOffset = currentStreamLFHPos
+			cdr.versionMaker = versionMaker
+			cdr.versionNeeded = versionNeeded
+			cdr.extAttributes = 32
+			cdr.lastModifiedDate = currentStreamLFH.lastModifiedDate
+			cdr.lastModifiedTime = currentStreamLFH.lastModifiedTime
+			
+			archiveIndex = new FileIndex[](archiveIndex, new FileIndex(cdr, currentStreamPath))
+			
+			currentStreamLFH = null
+			}
+		
+		return true
+		}
+	
+	bool ArchiveWriter:close()
+		{
+		//write all CDRs, then write the EOCD record
+		
+		int cdrStart = ifd.getPos()
+		
+		for (int i = 0; i < archiveIndex.arrayLength; i++)
+			{
+			/*
+			if (archiveIndex[i].dir)
+				{
+				//update the local header, now that we know the total size and CRC values
+				// - compatibility: some archive readers fail if we do this
+				//updateLFH(ifd, archiveIndex[i].cdr)
+				}
+			*/
+			
+			writeCDR(archiveIndex[i].cdr, ifd)
+			ifd.write(archiveIndex[i].path)
+			}
+		
+		int cdrLength = ifd.getPos() - cdrStart
+		
+		EOCD eocd = new EOCD()
+		eocd.sig = EOCD.MAGIC
+		eocd.cdOffsetBytes = cdrStart
+		eocd.cdSizeBytes = cdrLength
+		eocd.cdCountTotal = archiveIndex.arrayLength
+		eocd.cdCountDisk = archiveIndex.arrayLength
+		
+		writeEOCD(eocd, ifd)
+		
+		return true
+		}
+	
+	}

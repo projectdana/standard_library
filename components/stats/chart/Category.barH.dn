@@ -1,0 +1,278 @@
+data Sample {
+	dec values[]
+	char category[]
+	}
+
+//marker length in pixels (the "ticks" on the axes)
+const int MARKER_LENGTH = 3
+
+const int MARKER_SIZE = 7
+
+component provides Category:barH requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font {
+	
+	Sample samples[]
+	
+	Color seriesColor = new Color(100, 200, 200, 255)
+	Color stdDevColor = new Color(0, 0, 0, 255)
+	Color axisColor = new Color(0, 0, 0, 255)
+	Color gridColor = new Color(220, 220, 220, 255)
+	Color bgColor = new Color(255, 255, 255, 255)
+	
+	Font axisFont
+	Font labelFont
+	
+	dec highestX
+	dec lowestX
+	dec highestY
+	dec lowestY
+	
+	dec numberIntervalX = 1.0
+	dec markerIntervalX = 1.0
+	
+	dec numberIntervalY
+	dec markerIntervalY
+	dec gridIntervalY
+	
+	dec xAxMax
+	dec xAxMin
+	dec yAxMax
+	dec yAxMin
+	
+	//bar width, in percentage of category area
+	dec barWidth = 50.0
+	int barPad = 0
+	
+	bool showStdDev
+	
+	Category:Category()
+		{
+		super()
+		
+		axisFont = new Font("SourceSansPro.ttf", 12)
+		
+		setYMarkerInterval(1.0)
+		}
+	
+	void Category:addSample(char cat[], dec yvalues[])
+		{
+		//update our highest and lowest X and Y points, to use in normalising coordinates
+		dec hy = stcore.max(yvalues)
+		dec ly = stcore.min(yvalues)
+		
+		yAxMax += 1.0
+		
+		if (samples == null)
+			{
+			highestX = hy
+			lowestX = ly
+			}
+			else
+			{
+			if (hy > highestX) highestX = hy
+			if (ly < lowestX) lowestX = ly
+			}
+		
+		//add sample
+		samples = new Sample[](samples, new Sample(yvalues, cat))
+		
+		// -- automated calculation of the highest and lowest points on the axis --
+		
+		//update the axis endpoints, if the series values are now outside the bounds of whatever endpoints have been set
+		if (highestX > xAxMax) xAxMax = highestX
+		if (lowestX < xAxMin) xAxMin = lowestX
+		
+		setXMinMax(xAxMin, xAxMax)
+		setYMinMax(yAxMin, yAxMax)
+		
+		postRepaint()
+		}
+	
+	void Category:setYLabelInterval(dec ivr)
+		{
+		numberIntervalY = ivr
+		super(ivr)
+		}
+	
+	void Category:setYMinMax(dec min, dec max)
+		{
+		//TODO: disallow values that can't contain all of the graph points...
+		yAxMin = min
+		yAxMax = max
+		
+		super(min, max)
+		}
+	
+	void Category:setSeriesColor(Color c)
+		{
+		seriesColor = c
+		}
+	
+	void Category:showErrorBars(bool on)
+		{
+		showStdDev = on
+		}
+	
+	void Category:setAxisFont(Font f)
+		{
+		axisFont = f
+		super(f)
+		}
+	
+	void Category:clampErrorBars(dec low, dec high)
+		{
+		
+		}
+	
+	void Category:setCatDisplayWidth(dec percent)
+		{
+		if (percent <= 0.0 || percent > 100.0)
+			throw new Exception("display width must be a percentage, between 1 and 100")
+		
+		barWidth = percent
+		}
+	
+	void Category:setCatDisplayPadding(int pixels)
+		{
+		barPad = pixels
+		}
+	
+	// -- custom rendering --
+	
+	void Category:drawToCanvas(Canvas c)
+		{
+		paint(c)
+		}
+	
+	void prepAxisLimits()
+		{
+		dec highX
+		dec lowX
+		dec highY
+		dec lowY
+		
+		//calculate what our exact min/max should be, and account for stdDev
+		for (int i = 0; i < samples.arrayLength; i++)
+			{
+			dec mean = stcore.mean(samples[i].values)
+			
+			if (showStdDev)
+				{
+				dec stdDev = stcore.stdDev(samples[i].values)
+				
+				if (mean - stdDev < lowX) lowX = mean - stdDev
+				if (mean + stdDev > highX) highX = mean + stdDev
+				}
+				else
+				{
+				if (mean < lowX) lowX = mean
+				if (mean > highX) highX = mean
+				}
+			
+			highY += 1.0
+			}
+		
+		setXMinMax(lowX, highX)
+		setYMinMax(lowY, highY)
+		
+		//out.println("x limits: $lowX : $highX")
+		}
+	
+	int getMaxCatTextWidth()
+		{
+		int high = 0
+		for (int i = 0; i < samples.arrayLength; i++)
+			{
+			int textWidth = axisFont.getTextWidth(samples[i].category)
+			
+			if (textWidth > high) high = textWidth
+			}
+		
+		return high
+		}
+	
+	// -- screen rendering (temporary?) --
+	
+	void Category:paint(Canvas c)
+		{
+		prepAxisLimits()
+		
+		int maxCatWidth = getMaxCatTextWidth()
+		setAxisLabelSpace(ChartCore.AXIS_Y, maxCatWidth)
+		
+		Point pos = getPosition()
+		WH wh = getSize()
+		
+		c.pushSurface(new Rect(pos.x, pos.y, wh.width, wh.height), 0, 0, 255)
+		
+		preparePlotArea()
+		
+		//background
+		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		
+		//grid lines, if any
+		drawGrid(c)
+		
+		//data
+		
+		int ySpacing = (getPlotPoint(0.0, 0.0)[1] - getPlotPoint(0.0, 1.0)[1]+1) - (barPad * 2)
+		
+		int barHeightPX = (barWidth / 100.0) * ySpacing
+		
+		dec thisY = 0.0
+		for (int i = 0; i < samples.arrayLength; i++)
+			{
+			//this kind of graph plots the mean of the set
+			dec thisX = stcore.mean(samples[i].values)
+			
+			//top-right (if thisX > x-axis intercept)
+			int xy[] = getPlotPoint(thisX, thisY+1.0)
+			
+			//top-left (if thisX > x-axis intercept)
+			int xyTR[] = getPlotPoint(0.0, thisY+1.0)
+			
+			//bottom-right (if thisX > x-axis intercept)
+			int xyBL[] = getPlotPoint(thisX, thisY)
+			
+			int xHigh = xy[0]
+			if (xyTR[0] > xy[0])
+				xHigh = xyTR[0]
+			int xLow = xyTR[0]
+			if (xyTR[0] > xy[0])
+				xLow = xy[0]
+			
+			int centreY = xy[1] + ((xyBL[1] - xy[1]) / 2)
+			
+			c.drawRect(new Rect2D(xLow, (centreY - (barHeightPX / 2)) - barPad, xHigh - xLow, barHeightPX, seriesColor))
+			
+			if (showStdDev)
+				{
+				dec stdDev = stcore.stdDev(samples[i].values)
+				
+				if (stdDev != 0.0)
+					{
+					int xyHigh[] = getPlotPoint(thisX+stdDev, thisY)
+					int xyLow[] = getPlotPoint(thisX-stdDev, thisY)
+					
+					c.drawLine(new Line2D(xyHigh[0], centreY, xyLow[0], centreY, stdDevColor))
+					
+					c.drawLine(new Line2D(xyHigh[0], centreY-MARKER_SIZE/2, xyHigh[0], centreY+MARKER_SIZE/2, stdDevColor))
+					c.drawLine(new Line2D(xyLow[0], centreY-MARKER_SIZE/2, xyLow[0], centreY+MARKER_SIZE/2, stdDevColor))
+					}
+				}
+			
+			//category label
+			int textWidth = axisFont.getTextWidth(samples[i].category)
+			int textHeight = axisFont.getFontMetrics().height
+			
+			c.drawText(new Point2D(getPlotArea().x - MARKER_LENGTH - textWidth, centreY - (textHeight / 2), axisColor), axisFont, samples[i].category)
+			
+			thisY += 1.0
+			}
+		
+		//axes and labels
+		drawAxes(c)
+		
+		c.popSurface()
+		}
+	
+	}

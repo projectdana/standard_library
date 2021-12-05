@@ -1,8 +1,0 @@
-conf/app.txt
-conf/canvas.txt
-conf/window.txt
-conf/sys_info.txt
-conf/button.txt
-conf/colorbutton.txt
-conf/panel.txt
-conf/label.txt

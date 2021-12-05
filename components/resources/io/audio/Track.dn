@@ -1,0 +1,32 @@
+uses Source
+
+/*
+ {"description" : "Audio track object. This interface wraps an audio source data instance, and allows you to control elements of the track's playback of that audio source."}
+*/
+
+interface Track {
+	
+	/* {"@description" : "Instantiate a new audio track, using the given audio source object."} */
+	Track(store Source src)
+	
+	/* {"@description" : "Receive event notifications (through the audio output device) on which this track finishes playing. Default is false."} */
+	void setFinishEvent(bool on)
+	
+	/* {"@description" : "Set the volume level for this track, which must be between 0 and 100."} */
+	void setVolume(int volume)
+	
+	/* {"@description" : "Get the number of audio frames in this track."} */
+	int getLengthFrames()
+	/* {"@description" : "Set the read head of the track to the specified audio frame."} */
+	void setPosFrame(int frame)
+	/* {"@description" : "Get the current audio frame index of the read head of this track."} */
+	int getPosFrame()
+	
+	/* {"@description" : "Get the length of this track in milliseconds."} */
+	int getLengthMS()
+	/* {"@description" : "Set the read head of the track to the specified millisecond time index."} */
+	void setPosMS(int ms)
+	/* {"@description" : "Get the current millisecond index of the read head of this track."} */
+	int getPosMS()
+	
+	}

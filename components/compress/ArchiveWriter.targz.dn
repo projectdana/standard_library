@@ -1,0 +1,465 @@
+// https://www.gnu.org/software/tar/manual/html_node/Standard.html
+
+uses time.DateTime
+
+const int CHUNK_SIZE = 5120
+
+data GZHeader {
+	byte ID1
+	byte ID2
+	byte CM
+const byte FLG_FTEXT = 0x1
+const byte FLG_FHCRC = 0x2
+const byte FLG_FEXTRA = 0x4
+const byte FLG_FNAME = 0x8
+const byte FLG_FCOMMENT = 0x10
+	byte FLG
+	int4 mtime
+	byte XFL
+	byte OS
+	}
+
+data Int4 {
+	int4 val
+	}
+
+data Int2 {
+	int2 val
+	}
+
+const byte REGTYPE = "0"          /* regular file */
+const byte AREGTYPE = 0           /* regular file */
+const byte LNKTYPE = "1"          /* link */
+const byte SYMTYPE = "2"          /* reserved */
+const byte CHRTYPE = "3"          /* character special */
+const byte BLKTYPE = "4"          /* block special */
+const byte DIRTYPE = "5"          /* directory */
+const byte FIFOTYPE = "6"         /* FIFO special */
+const byte CONTTYPE = "7"         /* reserved */
+const byte XHDTYPE = "x"          /* Extended header referring to the next file in the archive */
+const byte XGLTYPE = "g"          /* Global extended header */
+
+const int MODE_FILE = 33279
+const int MODE_DIR = 16895
+
+//500-byte block
+data TarHeader {
+	byte fileName[100]
+	byte fileMode[8]
+	byte ownerID[8]
+	byte groupID[8]
+	byte fileSize[12]
+	byte lastModified[12]
+	byte checksum[8]
+	int1 fileType
+	byte linkedFileName[100] //last field of original TAR format
+	byte ustar[6]
+	byte ustarVersion[2]
+	byte ownerUsername[32]
+	byte ownerGroupname[32]
+	int8 devNoMajor
+	int8 devNoMinor
+	byte fileNamePrefix[155]
+	}
+
+data FileIndex {
+	char path[]
+	bool dir
+	}
+
+component provides ArchiveWriter:targz requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, time.TimeUnix timeUnix, compress.algorithm.StreamCompression:deflate, data.checksum.CRC32 crc32, data.StreamBuffer {
+	
+	File ifd
+	FileIndex archiveIndex[]
+	
+	StreamCompression alg
+	
+	int4 totalCRC
+	int4 totalSize
+	
+	StreamBuffer currentStreamBuffer
+	char currentStreamPath[]
+	
+	char[] normalisePath(char path[])
+		{
+		return path.explode("\\").implode("/")
+		}
+	
+	void writeInt4(File fd, int4 val)
+		{
+		Int4 i4 = new Int4()
+		i4.val = val
+		
+		byte copyBuf[] = dana.serial(i4)
+		
+		//deal with endianness
+		byte swap
+		
+		swap = copyBuf[3]
+		copyBuf[3] = copyBuf[0]
+		copyBuf[0] = swap
+		
+		swap = copyBuf[2]
+		copyBuf[2] = copyBuf[1]
+		copyBuf[1] = swap
+		
+		fd.write(copyBuf)
+		}
+	
+	ArchiveWriter:ArchiveWriter(File fd, opt byte cMethod)
+		{
+		ifd = fd
+		
+		if (isset cMethod && cMethod != ArchiveWriter.CM_NONE)
+			throw new Exception("tar archives accept only non-compressed data")
+		
+		alg = new StreamCompression:deflate()
+		
+		GZHeader mainHeader = new GZHeader()
+		
+		mainHeader.ID1 = 31
+		mainHeader.ID2 = 139
+		
+		mainHeader.CM = 8
+		
+		char filename[] = "archive.tar"
+		
+		mainHeader.FLG |= GZHeader.FLG_FNAME
+		
+		mainHeader.OS = 255
+		
+		byte copyBuf[] = dana.serial(mainHeader)
+		
+		//header
+		fd.write(copyBuf)
+		
+		//filename of the tar file
+		fd.write(filename)
+		//trailing \0
+		fd.write(0)
+		
+		alg.compressInit()
+		}
+	
+	byte[] i8ToOctal(int8 i8)
+		{
+		byte ar[] = new byte[12]
+		int n = 0
+		for (int i = ar.arrayLength-2; i != INT_MAX; i--)
+			{
+			int8 bits = i8 >> (n * 3)
+			bits = bits & 0x7
+			
+			ar[i] = bits + 48
+			
+			n ++
+			}
+		
+		return ar
+		}
+	
+	byte[] i4ToOctal(int4 i4)
+		{
+		byte ar[] = new byte[8]
+		int n = 0
+		for (int i = ar.arrayLength-2; i != INT_MAX; i--)
+			{
+			int4 bits = i4 >> (n * 3)
+			bits = bits & 0x7
+			
+			ar[i] = bits + 48
+			
+			n ++
+			}
+		
+		return ar
+		}
+	
+	void i4ToChecksum(int4 i4, TarHeader record)
+		{
+		int n = 0
+		for (int i = record.checksum.arrayLength-3; i != INT_MAX; i--)
+			{
+			int4 bits = i4 >> (n * 3)
+			bits = bits & 0x7
+			
+			record.checksum[i] = bits + 48
+			
+			n ++
+			}
+		
+		record.checksum[record.checksum.arrayLength-1] = " "
+		record.checksum[record.checksum.arrayLength-2] = 0
+		}
+	
+	int4 makeChecksum(TarHeader record)
+		{
+		record.checksum = "        "
+		
+		byte srd[] = dana.serial(record)
+		
+		int4 chk = 0
+		
+		for (int i = 0; i < srd.arrayLength; i++)
+			{
+			chk += srd[i]
+			}
+		
+		return chk
+		}
+	
+	void pad512(File fd, int cur, opt bool final)
+		{
+		if (cur % 512 != 0)
+			{
+			byte rdr[] = new byte[512 - (cur % 512)]
+			
+			totalCRC = crc32.makeCRC(totalCRC, rdr)
+			totalSize += rdr.arrayLength
+			
+			byte combuf[] = alg.compress(rdr, final)
+			
+			fd.write(combuf)
+			}
+		}
+	
+	bool ArchiveWriter:addDirectory(char path[], opt DateTime lastModified)
+		{
+		//check path format
+		if (path.arrayLength == 0) throw new Exception("empty directory path")
+		
+		path = normalisePath(path)
+		
+		if (path[path.arrayLength-1] != "/") path = new char[](path, "/")
+		
+		char fileNamePrefix[]
+		
+		TarHeader record = new TarHeader()
+		
+		//decide if path is too long for fileName, split across fileNamePrefix if so
+		if (path.arrayLength > 99)
+			{
+			fileNamePrefix = path.subString(0, 99)
+			path = path.subString(99, path.arrayLength-99)
+			}
+		
+		record.fileName = path
+		record.fileNamePrefix = fileNamePrefix
+		record.ustar = "ustar"
+		record.fileType = DIRTYPE
+		
+		record.fileSize = i8ToOctal(0)
+		record.ownerID = i4ToOctal(0)
+		record.groupID = i4ToOctal(0)
+		
+		if (lastModified != null)
+			{
+			int utime = timeUnix.toUnixTime(lastModified)
+			//convert to ascii-encoded octal with trailing 0
+			record.lastModified = i8ToOctal(utime)
+			}
+		
+		//set Unix permissions in fileMode
+		record.fileMode = i4ToOctal(MODE_DIR)
+		
+		//checksum
+		int4 chk = makeChecksum(record)
+		i4ToChecksum(chk, record)
+		
+		byte srd[] = dana.serial(record)
+		
+		totalCRC = crc32.makeCRC(totalCRC, srd)
+		byte combuf[] = alg.compress(srd, false)
+		
+		ifd.write(combuf)
+		
+		totalSize += srd.arrayLength
+		
+		//pad out to 512 bytes
+		pad512(ifd, srd.arrayLength)
+		
+		return true
+		}
+	
+	bool ArchiveWriter:addFile(char path[], File uncompressedData, opt DateTime lastModified)
+		{
+		path = normalisePath(path)
+		
+		char fileNamePrefix[]
+		
+		TarHeader record = new TarHeader()
+		
+		//decide if path is too long for fileName, split across fileNamePrefix if so
+		if (path.arrayLength > 99)
+			{
+			fileNamePrefix = path.subString(0, 99)
+			path = path.subString(99, path.arrayLength-99)
+			}
+		
+		record.fileName = path
+		record.fileNamePrefix = fileNamePrefix
+		record.ustar = "ustar"
+		record.fileType = REGTYPE
+		
+		record.ownerID = i4ToOctal(0)
+		record.groupID = i4ToOctal(0)
+		
+		//encode size in ascii-encoded octal
+		record.fileSize = i8ToOctal(uncompressedData.getSize())
+		
+		if (lastModified != null)
+			{
+			int utime = timeUnix.toUnixTime(lastModified)
+			//convert to ascii-encoded octal with trailing 0
+			record.lastModified = i8ToOctal(utime)
+			}
+		
+		//set Unix permissions in fileMode
+		record.fileMode = i4ToOctal(MODE_FILE)
+		
+		//checksum
+		int4 chk = makeChecksum(record)
+		i4ToChecksum(chk, record)
+		
+		byte srd[] = dana.serial(record)
+		
+		totalCRC = crc32.makeCRC(totalCRC, srd)
+		byte combuf[] = alg.compress(srd, false)
+		
+		ifd.write(combuf)
+		
+		totalSize += srd.arrayLength
+		
+		//pad out to 512 bytes
+		pad512(ifd, srd.arrayLength)
+		
+		//write the file
+		while (!uncompressedData.eof())
+			{
+			byte dat[] = uncompressedData.read(CHUNK_SIZE)
+			
+			totalCRC = crc32.makeCRC(totalCRC, dat)
+			
+			totalSize += dat.arrayLength
+			
+			byte cdata[] = alg.compress(dat, false)
+			
+			ifd.write(cdata)
+			}
+		
+		//pad out to 512 bytes
+		pad512(ifd, uncompressedData.getSize())
+		
+		return true
+		}
+	
+	//we have to stream this into a StreamBuffer, so we know the whole size, then can write the correct header info the first time around...
+	bool ArchiveWriter:addFileStreamStart(char path[])
+		{
+		path = normalisePath(path)
+		
+		currentStreamPath = path
+		
+		currentStreamBuffer = new StreamBuffer()
+		
+		return true
+		}
+	
+	bool ArchiveWriter:addFileStreamChunk(byte chunk[], bool lastChunk)
+		{
+		currentStreamBuffer.write(chunk)
+		
+		if (lastChunk)
+			{
+			//write the header
+			char fileNamePrefix[]
+			char path[] = currentStreamPath
+			
+			TarHeader record = new TarHeader()
+			
+			//decide if path is too long for fileName, split across fileNamePrefix if so
+			if (path.arrayLength > 99)
+				{
+				fileNamePrefix = path.subString(0, 99)
+				path = path.subString(99, path.arrayLength-99)
+				}
+			
+			record.fileName = path
+			record.fileNamePrefix = fileNamePrefix
+			record.ustar = "ustar"
+			record.fileType = REGTYPE
+			
+			record.ownerID = i4ToOctal(0)
+			record.groupID = i4ToOctal(0)
+			
+			//set Unix permissions in fileMode
+			record.fileMode = i4ToOctal(MODE_FILE)
+			
+			byte srd[] = dana.serial(record)
+			
+			totalCRC = crc32.makeCRC(totalCRC, srd)
+			
+			ifd.write(srd)
+			
+			//pad out to 512 bytes
+			pad512(ifd, srd.arrayLength)
+			
+			int dataSize = currentStreamBuffer.getSize()
+			
+			while (currentStreamBuffer.getSize() > 0)
+				{
+				byte udata[] = currentStreamBuffer.read(CHUNK_SIZE)
+				
+				totalCRC = crc32.makeCRC(totalCRC, udata)
+				
+				totalSize += udata.arrayLength
+				
+				byte cdata[] = alg.compress(udata, false)
+				
+				ifd.write(cdata)
+				}
+			
+			//pad out to 512 bytes
+			pad512(ifd, dataSize)
+			
+			currentStreamBuffer = null
+			currentStreamPath = null
+			}
+		
+		return true
+		}
+	
+	bool ArchiveWriter:close()
+		{
+		//write two blank records
+		
+		byte combuf[]
+		
+		TarHeader record = new TarHeader()
+		
+		byte srd[] = dana.serial(record)
+		
+		totalCRC = crc32.makeCRC(totalCRC, srd)
+		totalSize += srd.arrayLength
+		combuf = alg.compress(srd, false)
+		
+		ifd.write(combuf)
+		
+		pad512(ifd, srd.arrayLength)
+		
+		totalCRC = crc32.makeCRC(totalCRC, srd)
+		totalSize += srd.arrayLength
+		combuf = alg.compress(srd, false)
+		
+		ifd.write(combuf)
+		
+		pad512(ifd, srd.arrayLength, true)
+		
+		//write the gzip trailer
+		writeInt4(ifd, totalCRC)
+		writeInt4(ifd, totalSize)
+		
+		return true
+		}
+	
+	}

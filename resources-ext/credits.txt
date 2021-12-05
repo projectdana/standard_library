@@ -1,0 +1,12 @@
+Building a language like this wouldn't be possible without a huge amount of work from others. Our standard library is built on open-source native libraries written by a lot of different people.
+
+Behind the scenes, our current set of libraries uses:
+
+SDL2 (windows and graphics)
+Miniaudio (audio playback and capture)
+STBVorbis (OGG Vorbis audio decoding)
+OpenSSL (TLS, AES, RSA implementations)
+MySQL Client (MySQL driver)
+libpng (PNG image encoding)
+libjpg (JPEG image encoding)
+zlib (compression algorithm)

@@ -5,6 +5,7 @@
 uses data.String
 uses time.DateTime
 uses pal.Perception
+uses pal.Assembly
 
 interface RestAPI {
 	
@@ -17,5 +18,21 @@ interface RestAPI {
 	bool setConfig(char str[])
 	
 	PerceptionData getPerception()
+	
+	char[] getSystemPath()
+	
+	bool addComponent(char str[])
+	
+	bool remComponent(char str[])
+	
+	char[] updComponent(char str[])
+	
+	char[] updArch(String intfs[])
+	
+	bool addIntercept(char intf[], char cmp[])
+	
+	bool remIntercept(char intf[], char cmp[])
+	
+	InterceptInfo[] getIntercepts()
 	
 	}

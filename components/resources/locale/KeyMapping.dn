@@ -1,12 +1,14 @@
-//this API converts hardware key codes into the corresponding character (which may yield multiple bytes for UTF-8)
+/* {"description" : "This interface converts hardware key codes into the corresponding character (where some characters may be described by multiple bytes for UTF-8)." } */
 
 uses os.KeyState
 uses os.KeyCode
 
 interface KeyMapping {
 	
+	/* {"@description" : "Get the character for the given hardware key code." } */
 	char[] getCharacter(int keyCode, byte keyState)
 	
+	/* {"@description" : "Get the abstract key code for the given hardware key code." } */
 	byte getKeyCode(int keyCode)
 	
 	}

@@ -1,0 +1,19 @@
+uses Format
+
+/*
+ {"description" : "An audio source object, which stores the encoded data of some piece of audio. The audio is decoded during playback."}
+*/
+
+interface Source {
+	
+	/*
+	 {"@description" : "Initialise the audio source using the given data (e.g., MP3 data read from a file, by reading all bytes of the file into memory and passing them into this function as content). The audio format parameter can be null to use a default format, except for the 'raw' source variant where the format must specify what format is contained in the given audio content."}
+	*/
+	Source(byte content[], opt store Format f)
+	
+	/*
+	 {"@description" : "Get the length of the audio stream, in audio frames."}
+	*/
+	int getLength()
+	
+	}

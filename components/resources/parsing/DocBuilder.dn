@@ -1,0 +1,97 @@
+data TypeDef {
+	const int INTEGER	= 1
+	const int DECIMAL	= 2
+	const int RECORD	= 3
+	const int DATA		= 4
+	const int OBJECT	= 5
+	
+	int class
+	
+	char name[]
+	char type[]
+	
+	char doc_description[]
+	}
+
+data DataDef extends TypeDef {
+	FieldDef fields[]
+	FieldDef constants[]
+	
+	TypeDef extendsType
+	}
+
+data FieldDef {
+	char name[]
+	char displayName[]
+	char type[]
+	bool array
+	bool scope_store
+	bool opt_param
+	
+	char doc_description[]
+	}
+
+data EventSourceDef {
+	char name[]
+	char displayName[]
+	char type[]
+	bool array
+	
+	char doc_description[]
+	
+	FieldDef params[]
+	}
+
+data FunctionDef {
+	char name[]
+	char returnType[]
+	
+	char doc_description[]
+	
+	FieldDef params[]
+	}
+
+data InterfaceDef extends TypeDef {
+	FunctionDef functions[]
+	EventSourceDef eventSources[]
+	FieldDef transferFields[]
+	FieldDef constants[]
+	
+	InterfaceDef extendsType
+	}
+
+//a single parsed source file with all of the types that it contains, and references to all of the support files that it used
+data SourceFile {
+	char path[]
+	
+	TypeDef types[]
+	
+	SourceFile supportFiles[]
+	}
+
+//this structure contains ALL parsed files, and a cache of ALL files used by those parsed files
+data ParsedFiles {
+	SourceFile primaryFiles[]
+	SourceFile supportFiles[]
+	}
+
+/*
+ {"description" : "Generate a documentation structure which can then be written to HTML or another format."}
+*/
+
+interface DocBuilder {
+	/*
+	 {"@description" : "Initialise a new documentation builder."}
+	*/
+	DocBuilder()
+
+	/*
+	 {"@description" : "Parse a file, building a documentation structure for it."}
+	*/
+	bool parseFile(char path[])
+	
+	/*
+	 {"@description" : "Get a documentation structure for all files parsed so far."}
+	*/
+	ParsedFiles getParsedFiles()
+	}

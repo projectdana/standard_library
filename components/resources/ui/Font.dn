@@ -56,11 +56,11 @@ data FontMetrics{
 	*/
 	int height
 	/*
-	{ "@description" : "Of the height, how much is "ascent" above the "baseline" (which is an imaginary 1 pixel line)." }
+	{ "@description" : "Of the height, how much is 'ascent' above the 'baseline' (which is an imaginary 1 pixel line)." }
 	*/
 	int ascent
 	/*
-	{ "@description" : "Of the height, how much is "descent" below the "baseline" (which is an imaginary 1 pixel line)." }
+	{ "@description" : "Of the height, how much is 'descent' below the 'baseline' (which is an imaginary 1 pixel line)." }
 	*/
 	int descent
 	/*

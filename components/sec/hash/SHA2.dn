@@ -1,0 +1,18 @@
+interface SHALib {
+	
+	byte[] sha1_hashData(byte content[])
+	
+	byte[] sha2_hashData(byte content[], byte type)
+	
+	byte[] sha3_hashData(byte content[], byte type)
+	
+	}
+
+component provides SHA2 requires native SHALib lib {
+	
+	byte[] SHA2:hashData(byte content[], byte hashType)
+		{
+		return lib.sha2_hashData(content, hashType)
+		}
+	
+	}

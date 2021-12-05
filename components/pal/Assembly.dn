@@ -4,12 +4,21 @@ This is a very simple assembly module.
 
 uses Service
 uses App
+uses ProxyInfo
+
+data ActiveProxy {
+	char cmp[]
+	IDC class
+	char reqIntf[]
+	}
 
 data Interface {
 	//name of the required interface
 	char name[]
 	//path of the component to which this required interface is currently connected, if any
 	char currentWiring[]
+	//list of interceptors active on this required interface (currently we only support one)
+	ActiveProxy proxy
 	}
 
 data Component {
@@ -20,19 +29,38 @@ data Component {
 	int completeWirings
 	bool serviceStarted
 	
+	//for checking the need to reload
+	DateTime lastModified
+	
+	//for tagging components as not-used in a new config, and therefore open to unload
+	bool used
+	
+	//for tagging components as pending a reload, during the next setConfig
+	bool reload
+	
 	//the set of required interfaces of this component
 	Interface interfaces[]
+	
+	Component next
+	}
+
+data Interceptor {
+	char intf[]
+	char cmp[]
+	
+	char proIntf[]
+	char reqIntf[]
 	}
 
 //the below are used when building the list of configs
-data ReqIntf {
+data IntfDef {
 	char package[]
 	char alias[]
 	char semantic[]
 	bool isNative
 	}
 
-data Binding{
+data Binding {
 	char wiringName[]
 	int fromIndex
 	int toIndex
@@ -45,46 +73,62 @@ data ConfigBuilder {
 
 data RICache {
 	char com[]
-	ReqIntf ris[]
+	IntfDef ris[]
+	bool reload
 	}
 
 data OptionsCache {
 	char package[]
 	String options[]
+	bool reload
 	}
 
-component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, composition.Adapter adapter, os.SystemInfo systemInfo {
+data StringList {
+	String list[]
+	}
+
+component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search asearch, composition.Adapt adaptAPI, composition.Intercept interceptAPI, composition.RecursiveLoader rLoader, os.SystemInfo systemInfo, time.DateUtil dateUtil, data.StringBuilder {
 	
 	App myApp
 	bool appStarted
 	bool appFinished
 	bool exitCode
 	
+	AppParam subParams[]
+	
 	bool verbose = true
 	
-	//the cache of loaded components and their current wirings
-	Component components[]
+	//the list of loaded components and their current wirings
+	Component components
+	Component mainComponent
 	
 	//the set of all available complete compositions of components that each form a working system
 	String configs[]
+	int currentConfig
 	
 	//the search paths we'll be using to locate components
 	String searchPaths[]
 	
 	IDC perception
 	
+	Mutex configLock = new Mutex()
+	
 	//cached data to speed up initial search
 	RICache riCache[]
 	OptionsCache optionsCache[]
 	
-	ReqIntf[] getRequiredInterfaces(char com[])
+	//the list of registered interceptors
+	Interceptor interceptors[]
+	
+	IntfDef[] getRequiredInterfaces(char com[])
 		{
-		ReqIntf result[]
+		IntfDef result[]
 		
 		//check the cache first
-		for (int i = 0; i < riCache.arrayLength; i++)
+		RICache cacheEntry
+		if ((cacheEntry = asearch.findFirst(riCache, RICache.[com], new RICache(com))) != null)
 			{
-			if (riCache[i].com == com) return riCache[i].ris
+			if (!cacheEntry.reload) return cacheEntry.ris
 			}
 		
 		//not found - go to disk
@@ -107,11 +151,48 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 					semantic = parser.getValue(ri, "semantic").value
 				bool isNative = parser.getValue(ri, "native") != null && parser.getValue(ri, "native").value == "true"
 				
-				result = new ReqIntf[](result, new ReqIntf(package, alias, semantic, isNative))
+				result = new IntfDef[](result, new IntfDef(package, alias, semantic, isNative))
 				}
 			}
 		
-		riCache = new RICache[](riCache, new RICache(com, result))
+		if (cacheEntry != null)
+			{
+			cacheEntry.ris = result
+			cacheEntry.reload = false
+			}
+			else
+			riCache = new RICache[](riCache, new RICache(com, result))
+		
+		if (verbose) out.print("[$com] ")
+		
+		return result
+		}
+	
+	IntfDef[] getProvidedInterfaces(char com[])
+		{
+		IntfDef result[]
+		
+		ObjectWriter reader = new ObjectWriter(com)
+		InfoSection section = reader.getInfoSection("DNIL", "json")
+		
+		JSONElement document = parser.parseDocument(section.content)
+		
+		JSONElement requiredInterfaces = parser.getValue(document, "providedInterfaces")
+		
+		if (requiredInterfaces != null)
+			{
+			for (int i = 0; i < requiredInterfaces.children.arrayLength; i++)
+				{
+				JSONElement ri = requiredInterfaces.children[i]
+				char package[] = parser.getValue(ri, "package").value
+				char alias[] = parser.getValue(ri, "alias").value
+				char semantic[]
+				if (parser.getValue(ri, "semantic") != null)
+					semantic = parser.getValue(ri, "semantic").value
+				
+				result = new IntfDef[](result, new IntfDef(package, alias, semantic))
+				}
+			}
 		
 		if (verbose) out.print("[$com] ")
 		
@@ -213,7 +294,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		return cb
 		}
 	
-	bool hasRequiredInterfaces(ReqIntf ris[])
+	bool hasRequiredInterfaces(IntfDef ris[])
 		{
 		int ric = 0
 		
@@ -234,17 +315,28 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			package = new char[](package, ":", semantic)
 		
 		//check the cache
-		for (int i = 0; i < optionsCache.arrayLength; i++)
-			{
-			if (optionsCache[i].package == package) return optionsCache[i].options
-			}
+		OptionsCache oc = asearch.findFirst(optionsCache, OptionsCache.[package], new OptionsCache(package))
+		
+		if (oc != null && !oc.reload) return oc.options
 		
 		//not found - go to disk
 		String options[] = search.getComponentsIn(package, searchPaths)
 		
-		optionsCache = new OptionsCache[](optionsCache, new OptionsCache(package, options))
+		if (oc != null)
+			{
+			oc.options = options
+			oc.reload = false
+			}
+			else
+			optionsCache = new OptionsCache[](optionsCache, new OptionsCache(package, options))
 		
 		return options
+		}
+	
+	void clearInterfaceOptionsCache(char package[])
+		{
+		OptionsCache oc = asearch.findFirst(optionsCache, OptionsCache.[package], new OptionsCache(package))
+		if (oc != null) oc.reload = true
 		}
 	
 	bool containsBinding(ConfigBuilder cb, char com[], char intf[])
@@ -289,7 +381,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		return null
 		}
 	
-	char[] getInterfaceID(ReqIntf ri)
+	char[] getInterfaceID(IntfDef ri)
 		{
 		char result[] = ri.alias
 		if (ri.semantic.arrayLength != 0)
@@ -301,7 +393,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 	// - the "current" parameter to this function, and all use of it within the function, is purely to detect cycles
 	ConfigBuilder[] loadSystem(char com[], ConfigBuilder current)
 		{
-		ReqIntf ris[] = getRequiredInterfaces(com)
+		IntfDef ris[] = getRequiredInterfaces(com)
 		
 		ConfigBuilder result[]
 		
@@ -378,46 +470,55 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 	
 	char[] flattenCB(ConfigBuilder cb)
 		{
-		char result[]
+		StringBuilder sb = new StringBuilder()
 		
 		for (int i = 0; i < cb.components.arrayLength; i++)
 			{
-			result = new char[](result, cb.components[i].string)
+			sb.add(cb.components[i].string)
 			
-			if (i + 1 < cb.components.arrayLength) result = new char[](result, ",")
+			if (i + 1 < cb.components.arrayLength) sb.add(",")
 			}
 		
-		result = new char[](result, "|")
+		sb.add("|")
 		
 		for (int i = 0; i < cb.bindings.arrayLength; i++)
 			{
-			result = new char[](result, cb.bindings[i].wiringName, ":", iu.makeString(cb.bindings[i].fromIndex), ":", iu.makeString(cb.bindings[i].toIndex))
+			sb.add(cb.bindings[i].wiringName)
+			sb.add(":")
+			sb.add(iu.makeString(cb.bindings[i].fromIndex))
+			sb.add(":")
+			sb.add(iu.makeString(cb.bindings[i].toIndex))
 			
-			if (i + 1 < cb.bindings.arrayLength) result = new char[](result, ",")
+			if (i + 1 < cb.bindings.arrayLength) sb.add(",")
 			}
 		
-		return result
+		return sb.get()
 		}
 	
-	bool componentLoaded(char comp[])
+	Component componentLoaded(Component list, char comp[])
 		{
-		for (int i = 0; i < components.arrayLength; i++)
+		Component cw = list
+		while (cw != null)
 			{
-			if (components[i].path == comp)
-				return true
+			if (cw.path == comp)
+				return cw
+			
+			cw = cw.next
 			}
 		
-		return false
+		return null
 		}
 	
-	void loadComponent(char comp[])
+	Component loadComponent(char comp[])
 		{
 		//out.println(" -- loading '$comp'")
 		
 		Component c = new Component(comp)
 		c.class = loader.load(comp)
 		
-		ReqIntf ris[] = getRequiredInterfaces(comp)
+		c.lastModified = fileSystem.getInfo(comp).modified
+		
+		IntfDef ris[] = getRequiredInterfaces(comp)
 		for (int i = 0; i < ris.arrayLength; i++)
 			{
 			Interface iq = new Interface(getInterfaceID(ris[i]))
@@ -448,7 +549,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 				}
 			}
 		
-		components = new Component[](components, c)
+		return c
 		}
 	
 	char[] normalisePath(char path[])
@@ -514,9 +615,11 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		return result
 		}
 	
-	Assembly:Assembly(char main[], IDC perc)
+	Assembly:Assembly(char main[], AppParam params[], IDC perc)
 		{
 		main = normalisePath(main)
+		
+		subParams = params
 		
 		if (!fileSystem.exists(main))
 			throw new Exception("Main component '$main' not found")
@@ -532,40 +635,18 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		//flatten config builders into plain strings for "configs"
 		char q[]
 		
+		configs = new String[exs.arrayLength]
+		
 		for (int i = 0; i < exs.arrayLength; i++)
 			{
 			q = flattenCB(exs[i])
-			configs = new String[](configs, new String(q))
-			}
-		
-		//out.println("[pre-caching components into memory]")
-		
-		//load every component
-		for (int i = 0; i < configs.arrayLength; i++)
-			{
-			String comps[] = stringUtil.explode(stringUtil.explode(configs[i].string, "|")[0].string, ",")
-			
-			for (int j = 0; j < comps.arrayLength; j++)
-				{
-				if (!componentLoaded(comps[j].string))
-					loadComponent(comps[j].string)
-				}
+			configs[i] = new String(q)
 			}
 		}
 	
 	String[] Assembly:getConfigs()
 		{
 		return configs
-		}
-	
-	Component getComponent(char path[])
-		{
-		for (int i = 0; i < components.arrayLength; i++)
-			{
-			if (components[i].path == path) return components[i]
-			}
-		
-		return null
 		}
 	
 	Interface getInterface(Component c, char name[])
@@ -608,8 +689,8 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			}
 		
 		// - and now do this wiring
-		Component fromComponent = getComponent(comps[fromIndex].string)
-		Component toComponent = getComponent(comps[toIndex].string)
+		Component fromComponent = componentLoaded(components, comps[fromIndex].string)
+		Component toComponent = componentLoaded(components, comps[toIndex].string)
 		
 		Interface iq = getInterface(fromComponent, intfName)
 		
@@ -625,6 +706,15 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			
 			wiringsChanged ++
 			
+			//check if we need to inject a proxy from an intercept rule
+			Interceptor nic = interceptors.findFirst(Interceptor.[intf], new Interceptor(intfName))
+			
+			if (nic != null)
+				{
+				ActiveProxy prxInstance = loadProxy(nic, fromComponent.class, toComponent.class, intfName, fromComponent.path)
+				iq.proxy = prxInstance
+				}
+			
 			if (fromComponent.completeWirings == fromComponent.interfaces.arrayLength)
 				{
 				//service start?
@@ -636,13 +726,17 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 					}
 				}
 			}
-			else if (iq.currentWiring != toComponent.path)
+			else if (iq.currentWiring != toComponent.path || toComponent.reload || fromComponent.reload)
 			{
 			//it's already wired to something (and something different), so adapt it
 			
 			if (verbose) out.println(" -- adapting $(fromComponent.path) :: $intfName >> $(toComponent.path)")
 			
-			adapter.adaptRequiredInterface(fromComponent.class, intfName, toComponent.class)
+			//check if there's a proxy on this interface, and adapt the proxy's RI if so
+			if (iq.proxy == null)
+				adaptAPI.adaptRequiredInterface(fromComponent.class, intfName, toComponent.class)
+				else
+				adaptAPI.adaptRequiredInterface(iq.proxy.class, iq.proxy.reqIntf, toComponent.class, intfName)
 			
 			wiringsChanged ++
 			}
@@ -652,13 +746,36 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		return wiringsChanged
 		}
 	
-	Mutex configLock = new Mutex()
-	
-	void launchMain(IDC class)
+	void launchMain(IDC class, char launchPath[])
 		{
 		myApp = new App() from class
-		exitCode = myApp.main(null)
+		myApp.setSourcePath(launchPath)
+		exitCode = myApp.main(subParams)
 		appFinished = true
+		appStarted = false
+		}
+	
+	void removeUnusedComponents()
+		{
+		Component prev = null
+		Component cw = components
+		while (cw != null)
+			{
+			if (!cw.used)
+				{
+				if (prev == null)
+					{
+					components = cw.next
+					}
+					else
+					{
+					prev.next = cw.next
+					}
+				}
+			
+			prev = cw
+			cw = cw.next
+			}
 		}
 	
 	bool Assembly:setConfig(char conf[])
@@ -666,48 +783,786 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		//check if app has exited
 		if (appFinished) throw new Exception("Hosted application has completed execution")
 		
-		//validate configuration
-		bool found
-		for (int i = 0; i < configs.arrayLength; i++)
-			{
-			if (conf == configs[i].string)
-				found = true
-			}
-		
-		if (!found) throw new Exception("Configuration not known")
-		
-		//adapt to the configuration
-		if (verbose) out.println(" [setting config to '$conf']")
-		
-		// - walk through all wirings of the new configuration and apply them (using forwardWire to satisfy forward dependencies first)
-		String comps[] = stringUtil.explode(stringUtil.explode(conf, "|")[0].string, ",")
-		String wirings[] = clone stringUtil.explode(stringUtil.explode(conf, "|")[1].string, ",")
-		
 		mutex(configLock)
 			{
-			int wiringsChanged
+			//validate configuration
+			bool found
+			for (int i = 0; i < configs.arrayLength; i++)
+				{
+				if (conf == configs[i].string)
+					{
+					found = true
+					currentConfig = i
+					}
+				}
 			
+			if (!found) throw new Exception("Configuration not known")
+			
+			//adapt to the configuration
+			if (verbose) out.println(" [setting config to '$conf']")
+			
+			// - walk through all wirings of the new configuration and apply them (using forwardWire to satisfy forward dependencies first)
+			String els[] = stringUtil.explode(conf, "|")
+			String comps[] = stringUtil.explode(els[0].string, ",")
+			String wirings[] = null
+			if (els.arrayLength == 2)
+				wirings = clone stringUtil.explode(stringUtil.explode(conf, "|")[1].string, ",")
+			
+			//mark all loaded components as not-used
+			Component cw = components
+			while (cw != null)
+				{
+				cw.used = false
+				cw = cw.next
+				}
+			
+			//load all components that are not yet loaded
+			Component newComponents = null
+			Component end = null
+			
+			for (int j = 0; j < comps.arrayLength; j++)
+				{
+				Component ldc = null
+				if ((ldc = componentLoaded(components, comps[j].string)) == null)
+					{
+					if (componentLoaded(newComponents, comps[j].string) == null)
+						{
+						Component c = loadComponent(comps[j].string)
+						c.used = true
+						
+						if (end == null) end = c
+						
+						c.next = newComponents
+						newComponents = c
+						}
+					}
+					else
+					{
+					if (ldc.reload)
+						{
+						//do the "first load" steps that loadComponent normally does
+						Component nload = loadComponent(ldc.path)
+						ldc.class = nload.class
+						ldc.lastModified = nload.lastModified
+						ldc.interfaces = nload.interfaces
+						ldc.completeWirings = nload.completeWirings
+						ldc.serviceStarted = nload.serviceStarted
+						}
+					
+					ldc.used = true
+					}
+				}
+			
+			if (mainComponent == null)
+				{
+				mainComponent = end
+				}
+			
+			//add new components into the in-use list
+			// (note, this list can be empty if we're setting to the same config)
+			if (end != null)
+				{
+				end.next = components
+				components = newComponents
+				}
+			
+			//update wirings
 			for (int i = 0; i < wirings.arrayLength; i++)
 				{
 				if (wirings[i] != null)
 					{
-					wiringsChanged += forwardWire(comps, wirings, i)
+					forwardWire(comps, wirings, i)
 					}
 				}
 			
-			if (!appStarted)
+			//remove all components that aren't used
+			removeUnusedComponents()
+			}
+		
+		return true
+		}
+	
+	void populateCBStep(String comps[], String wirings[], ConfigBuilder cb, int cIndex, Interface frontier[])
+		{
+		int fromActualIndex = cb.components.arrayLength
+		cb.components = new String[](cb.components, new String(comps[cIndex].string))
+		
+		//out.println(" -- pop @ $(comps[cIndex].string)")
+		
+		for (int j = 0; j < wirings.arrayLength; j++)
+			{
+			String argsB[] = stringUtil.explode(wirings[j].string, ":")
+			
+			char intfNameB[] = argsB[0].string
+			int fromIndexB = iu.intFromString(argsB[1].string)
+			int toIndexB = iu.intFromString(argsB[2].string)
+			
+			if (fromIndexB == cIndex)
 				{
-				appStarted = true
-				asynch::launchMain(components[0].class)
+				//this req. intf belongs to the component we're dealing with
+				
+				Interface sr = null
+				if ((sr = asearch.findFirst(frontier, Interface.[name], new Interface(intfNameB))) != null)
+					{
+					toIndexB = cb.components.arrayLength
+					cb.components = new String[](cb.components, new String(sr.currentWiring))
+					
+					cb.bindings = new Binding[](cb.bindings, new Binding(intfNameB, fromActualIndex, toIndexB))
+					
+					//out.println(" -- [intf $intfNameB @ frontier]")
+					}
+					else
+					{
+					//out.println(" -- [intf $intfNameB NOT frontier]")
+					
+					//find this "wire to" component's index, if it already exists in cb, and recurse on it if it didn't exist
+					char searchFor[] = comps[toIndexB].string
+					
+					int searchedIndex = 0
+					
+					if ((searchedIndex = getStringArrayIndex(cb.components, searchFor)) != 0)
+						{
+						toIndexB = searchedIndex
+						cb.bindings = new Binding[](cb.bindings, new Binding(intfNameB, fromActualIndex, toIndexB))
+						
+						//out.println(" -- [adding wiring]")
+						}
+						else
+						{
+						int relativeIndex = cb.components.arrayLength
+						cb.bindings = new Binding[](cb.bindings, new Binding(intfNameB, fromActualIndex, relativeIndex))
+						
+						//out.println(" -- [adding wiring and recursing to $toIndexB from '$(wirings[j].string)']")
+						
+						populateCBStep(comps, wirings, cb, toIndexB, frontier)
+						}
+					}
+				}
+			}
+		}
+	
+	//"frontier" here is a list of ALL interfaces at which you want to stop, with the specific component to deploy as the stop for that interface
+	ConfigBuilder populatePartialCB(char conf[], Interface frontier[])
+		{
+		//out.println("::populate partCB from '$conf'")
+		
+		String comps[] = stringUtil.explode(stringUtil.explode(conf, "|")[0].string, ",")
+		String wirings[] = clone stringUtil.explode(stringUtil.explode(conf, "|")[1].string, ",")
+		
+		ConfigBuilder newCB = new ConfigBuilder()
+		
+		//get all of this component's required interfaces *from wirings*, and wire each one up except if they're "fromIntf"
+		// - then recursively follow those wired components to do the same thing, always stopping the recursion if we hit "fromIntf"
+		populateCBStep(comps, wirings, newCB, 0, frontier)
+		
+		return newCB
+		}
+	
+	ConfigBuilder mergeCB(ConfigBuilder a, ConfigBuilder b)
+		{
+		ConfigBuilder newCB = new ConfigBuilder()
+		newCB.components = new String[a.components.arrayLength + b.components.arrayLength-1]
+		
+		int j = 0
+		
+		for (int i = 0; i < a.components.arrayLength; i++)
+			{
+			newCB.components[j] = a.components[i]
+			j ++
+			}
+		
+		for (int i = 1; i < b.components.arrayLength; i++)
+			{
+			newCB.components[j] = b.components[i]
+			j ++
+			}
+		
+		newCB.bindings = new Binding[](a.bindings, b.bindings)
+		
+		//get the index of the component in "a" that was the source of expansion to create "b"
+		// - if any from/to indices in the wirings of "b" have an index of 0, replace with this index
+		int originCompIndex = getStringArrayIndex(a.components, b.components[0].string)
+		
+		for (int i = a.bindings.arrayLength; i < newCB.bindings.arrayLength; i++)
+			{
+			newCB.bindings[i] = clone newCB.bindings[i]
+			
+			if (newCB.bindings[i].fromIndex == 0)
+				newCB.bindings[i].fromIndex = originCompIndex
+				else
+				newCB.bindings[i].fromIndex += a.bindings.arrayLength - 1
+			
+			if (newCB.bindings[i].toIndex == 0)
+				newCB.bindings[i].toIndex = originCompIndex
+				else
+				newCB.bindings[i].toIndex += a.bindings.arrayLength - 1
+			}
+		
+		return newCB
+		}
+	
+	bool uniqueCB(ConfigBuilder test, ConfigBuilder list[])
+		{
+		for (int i = 0; i < list.arrayLength; i++)
+			{
+			if (list[i].components.arrayLength == test.components.arrayLength)
+				{
+				bool match = true
+				for (int j = 0; j < test.components.arrayLength; j ++)
+					{
+					if (asearch.findFirst(list[i].components, String.[string], test.components[j]) == null)
+						{
+						match = false
+						break
+						}
+					}
+				
+				if (match) return false
 				}
 			}
 		
 		return true
 		}
 	
-	bool Assembly:appFinished()
+	ConfigBuilder[] getExpansionFrontier(Interface frontier[])
 		{
-		return appFinished
+		//find all configs which have this interface, and so are going to be expanded with new options
+		// we later filter these results to exclude repeats
+		String expands[] = null
+		for (int i = 0; i < configs.arrayLength; i++)
+			{
+			//TODO: below should check for presence of anything in frontier, not just the 0'th entry
+			if (stringUtil.find(configs[i].string, frontier[0].name) != StringUtil.NOT_FOUND) //TODO: make this into a proper exact-interface search?
+				{
+				expands = new String[](expands, new String(configs[i].string))
+				}
+			}
+		
+		//a cache of all of the starting point configs we've used so far, so we can test for uniqueness
+		ConfigBuilder xpoints[]
+		
+		//for each found config, build the new set of options starting from this interface
+		// - ideally we call loadSystem from this new component, with a partial existing config, as long as the ConfigBuilder is correctly configured??
+		for (int i = 0; i < expands.arrayLength; i++)
+			{
+			ConfigBuilder cconf = populatePartialCB(expands[i].string, frontier)
+			
+			//check this cconf is distinct from any others done in this pass (its set of components and wirings, irrespective of order, must be different)
+			if (uniqueCB(cconf, xpoints))
+				{
+				xpoints = new ConfigBuilder[](xpoints, cconf)
+				}
+			}
+		
+		return xpoints
+		}
+	
+	ConfigBuilder[] getNewConfigsCB(ConfigBuilder xpoints[], char path[], char pi[])
+		{
+		ConfigBuilder result[] = null
+		
+		//for each found config, build the new set of options starting from this interface
+		// - ideally we call loadSystem from this new component, with a partial existing config, as long as the ConfigBuilder is correctly configured??
+		for (int i = 0; i < xpoints.arrayLength; i++)
+			{
+			//NOTE: I suspect the general "expandCB" operation is also not quite right, in how it handles repeated entries in the component list at recursion points...maybe one to test...
+			
+			ConfigBuilder cconf = xpoints[i]
+			
+			char k[] = flattenCB(cconf)
+			
+			ConfigBuilder nc[] = loadSystem(path, clone cconf) //does loadSystem modify "current"? why do we need the clone here?
+			
+			for (int j = 0; j < nc.arrayLength; j ++)
+				{
+				//use a kind of "merge" function for CBs here, to merge cconf with nc[j]
+				// - remove the first component from nc[j], then merge the two component sets together, and adjusting the wiring indices within nc[j]
+				ConfigBuilder merged = mergeCB(cconf, nc[j])
+				result = new ConfigBuilder[](result, merged)
+				}
+			}
+		
+		return result
+		}
+	
+	String[] getNewConfigs(ConfigBuilder xpoints[], char path[], char pi[])
+		{
+		ConfigBuilder nc[] = getNewConfigsCB(xpoints, path, pi)
+		String result[] = null
+		for (int i = 0; i < nc.arrayLength; i++) result = new String[](result, new String(flattenCB(nc[i])))
+		return result
+		}
+	
+	String[] flattenCBList(ConfigBuilder nc[])
+		{
+		String result[] = null
+		for (int i = 0; i < nc.arrayLength; i++) result = new String[](result, new String(flattenCB(nc[i])))
+		return result
+		}
+	
+	bool Assembly:addComponent(char path[])
+		{
+		mutex(configLock)
+			{
+			//get the primary interface of this component
+			IntfDef pro[] = getProvidedInterfaces(path)
+			
+			if (pro == null) throw new Exception("unable to read provided interfaces of '$path'")
+			
+			char pi[] = pro[0].package
+			
+			ConfigBuilder xpoints[] = getExpansionFrontier(new Interface(pi, path))
+			String novel[] = getNewConfigs(xpoints, path, pi)
+			
+			configs = new String[](configs, novel)
+			}
+		
+		return true
+		}
+	
+	void removeConfigIndex(int n)
+		{
+		String newConfigs[] = new String[configs.arrayLength-1]
+		
+		if (currentConfig > n) currentConfig --
+		
+		int j = 0
+		for (int i = 0; i < configs.arrayLength; i++)
+			{
+			if (i != n)
+				{
+				newConfigs[j] = configs[i]
+				j ++
+				}
+			}
+		
+		configs = newConfigs
+		}
+	
+	bool Assembly:remComponent(char path[])
+		{
+		mutex(configLock)
+			{
+			//check this component isn't in the currently-selected config
+			if (stringUtil.find(configs[currentConfig].string, path) != StringUtil.NOT_FOUND) throw new Exception("component for removal is in use")
+			
+			//remove every config in which this component appears
+			for (int i = 0; i < configs.arrayLength; i++)
+				{
+				if (stringUtil.find(configs[i].string, path) != StringUtil.NOT_FOUND)
+					{
+					removeConfigIndex(i)
+					i --
+					}
+				}
+			
+			return true
+			}
+		}
+	
+	int getSimilarity(char a[], char b[])
+		{
+		int score = 0
+		String compsA[] = stringUtil.explode(stringUtil.explode(a, "|")[0].string, ",")
+		String compsB[] = stringUtil.explode(stringUtil.explode(b, "|")[0].string, ",")
+		
+		for (int i = 0; i < compsA.arrayLength; i++)
+			{
+			if (asearch.find(compsB, String.[string], compsA[i]) != null)
+				{
+				score ++
+				}
+			}
+		
+		return score
+		}
+	
+	char[] getClosestConfig(char target[], String list[])
+		{
+		//select the config from list which has the highest number of identical components to those in target
+		int eqCount = 0
+		char best[] = null
+		
+		for (int i = 0; i < list.arrayLength; i ++)
+			{
+			int cc = 0
+			
+			if ((cc = getSimilarity(target, list[i].string)) > eqCount)
+				{
+				eqCount = cc
+				best = list[i].string
+				}
+			}
+		
+		return best
+		}
+	
+	char[] Assembly:updComponent(char path[])
+		{
+		mutex(configLock)
+			{
+			//this function is designed to update a *single* component only; all other components in the available pool should not have changed
+			// - this is because we do not alter configurations which do not feature the chosen component-to-update X, so we can't deal with architectural changes to any *other* components which *would* have featured in other configurations which don't feature X (though X itself can have arbitrary architectural changes as long as its primary interface is the same)
+			// - we in theory *can* accept updates to all components as long as they have no architectural changes (i.e., required interface set is the same, interfaces all have the same types)
+			// - we don't curently implement this, but could do so by invalidating cached copies of every component not on the "extends" list built during getNewConfigs(), in cases where those components appear to have changed on disk (e.g. if the last-modified date is newer *and* the file size is different)
+			
+			//here we do the exact "add" procedure, as if component at "path" is new; adapt to the new version; then remove everything in which it appeared
+			
+			//get the primary interface of this component
+			IntfDef pro[] = getProvidedInterfaces(path)
+			
+			if (pro == null) throw new Exception("unable to read provided interfaces of '$path'")
+			
+			char pi[] = pro[0].package
+			
+			//before we proceed, set riCache entry for 'path' to reload, so that we re-read the cached required interfaces from the object file on disk
+			RICache cacheEntry
+			if ((cacheEntry = asearch.findFirst(riCache, RICache.[com], new RICache(path))) != null) cacheEntry.reload = true
+			
+			ConfigBuilder xpoints[] = getExpansionFrontier(new Interface(pi, path))
+			String novel[] = getNewConfigs(xpoints, path, pi)
+			
+			int plength = configs.arrayLength
+			
+			configs = new String[](configs, novel)
+			
+			//if we're in a config of the adapted component, adapt to the new version, and change our config index
+			if (stringUtil.find(configs[currentConfig].string, path) != StringUtil.NOT_FOUND)
+				{
+				//find the entry in "novel" which is *most similar* to currentConfig (has the most components in common), and adapt to that
+				char changeTo[] = getClosestConfig(configs[currentConfig].string, novel)
+				
+				//set the specific component to "reload", during setConfig
+				Component ldc = componentLoaded(components, path)
+				ldc.reload = true
+				
+				//perform the adaptation
+				setConfig(changeTo)
+				
+				ldc.reload = false
+				}
+			
+			//remove "old" configs
+			int j = 0
+			for (int i = 0; j < plength; i++)
+				{
+				if (stringUtil.find(configs[i].string, path) != StringUtil.NOT_FOUND)
+					{
+					removeConfigIndex(i)
+					i --
+					}
+				
+				j ++
+				}
+			
+			return configs[currentConfig].string
+			}
+		}
+	
+	void setComponentReload()
+		{
+		Component cw = components
+		while (cw != null)
+			{
+			if (dateUtil.after(fileSystem.getInfo(cw.path).modified, cw.lastModified))
+				cw.reload = true
+			
+			cw = cw.next
+			}
+		}
+	
+	void unsetComponentReload()
+		{
+		Component cw = components
+		while (cw != null)
+			{
+			cw.reload = false
+			cw = cw.next
+			}
+		}
+	
+	bool anyStringIn(String list[], char in[])
+		{
+		for (int i = 0; i < list.arrayLength; i++)
+			{
+			if (stringUtil.find(in, list[i].string) != StringUtil.NOT_FOUND)
+				return true
+			}
+		
+		return false
+		}
+	
+	StringList[] permute(StringList list[])
+		{
+		if (list.arrayLength <= 1) return list
+		
+		int positions[] = new int[list.arrayLength]
+		
+		StringList result[] = new StringList[list.arrayLength]
+		for (int i = 0; i < result.arrayLength; i++) result[i] = new StringList()
+		
+		//run through each permutation of 'list', and make each unique permutation a new row in result
+		while (true)
+			{
+			//record this position
+			for (int i = 0; i < result.arrayLength; i++)
+				result[i].list = new String[](result[i].list, new String(list[i].list[positions[i]].string))
+			
+			//move the position on one
+			int x = 0
+			while (x < list.arrayLength && positions[x]+1 == list[x].list.arrayLength) x ++
+			
+			if (x == list.arrayLength) break
+			
+			positions[x] ++
+			
+			for (int j = 0; j < x; j++) positions[j] = 0
+			}
+		
+		return result
+		}
+	
+	char[] Assembly:updArch(String fromIntfs[])
+		{
+		mutex(configLock)
+			{
+			// - updArch() is given a set of *interfaces* that have *not* changed (i.e., a set of "pi"'s, and after building the corresponding "extends" frontier for that set of interfaces, we invalidate everything not in that extends list and then rebuild our set of configs) (actually the set of results of "populatePartialCB", once checked for uniqueness, are what we want...)
+			//   - we then run the build-and-merge process for each implementation variant of each unfilled interface, to create each full new config?
+			//   - and then remove all pre-existing configs which used those interfaces
+			
+			//get every permutation of components for each entry in fromIntfs, making an Interface instance for each option, so that we end up with arrays of Interface instances, one array per entry in fromIntfs
+			StringList baseOptions[] = new StringList[fromIntfs.arrayLength]
+			for (int i = 0; i < fromIntfs.arrayLength; i ++)
+				{
+				clearInterfaceOptionsCache(fromIntfs[i].string)
+				baseOptions[i] = new StringList(getComponentsIn(fromIntfs[i].string, null))
+				}
+			
+			int plength = configs.arrayLength
+			
+			// - then get every permutation of this set of permutations
+			StringList permutations[] = permute(baseOptions)
+			
+			// - for each of these full permutations, use getExpansionFrontier() and from there build the full set of forward configurations
+			//  - the added complication is that we build forward from *every* component, rather than just one, and then merge the results as we go [TODO]
+			String novel[] = null
+			
+			// - set riCache entries to null for all components ? and optionsCache entries ? TODO: can we do anything less brute-force?
+			riCache = null
+			optionsCache = null
+			
+			for (int i = 0; i < permutations[0].list.arrayLength; i++)
+				{
+				//the below is the *list* of intf/comp pairs for this permutation, passed all together in to getExpansionFrontier()
+				Interface set[] = new Interface[permutations.arrayLength]
+				for (int j = 0; j < set.arrayLength; j++) set[j] = new Interface(fromIntfs[j].string, permutations[j].list[i].string)
+				ConfigBuilder xpoints[] = getExpansionFrontier(set)
+				
+				//iteratively follow the *list* of intf/comp pairs for this permutation, expanding the set for each fresh getNewConfigs
+				for (int j = 0; j < set.arrayLength; j++)
+					{
+					xpoints = getNewConfigsCB(xpoints, set[j].currentWiring, set[j].name)
+					}
+				
+				novel = new String[](novel, flattenCBList(xpoints))
+				}
+			
+			configs = new String[](configs, novel)
+			
+			//if we're in a config of the adapted component, adapt to the new version, and change our config index
+			if (anyStringIn(fromIntfs, configs[currentConfig].string))
+				{
+				//find the entry in "novel" which is *most similar* to currentConfig (has the most components in common), and adapt to that
+				char changeTo[] = getClosestConfig(configs[currentConfig].string, novel)
+				
+				//set all components to "reload" if they're different on disk (TODO: ideally only consider those that are beyond the uarch frontier)
+				setComponentReload()
+				
+				//perform the adaptation
+				setConfig(changeTo)
+				
+				unsetComponentReload()
+				}
+			
+			// - in addition to that we need to do a scan at the start of (a) loaded components; and (b) the riCache, to mark anything as "reload" that isn't in the expands starting group
+			// - we ALSO likely need to update (and/or mark as reload) the optionsCache before we do anything here
+			
+			//remove "old" configs
+			int j = 0
+			for (int i = 0; j < plength; i++)
+				{
+				if (anyStringIn(fromIntfs, configs[i].string))
+					{
+					removeConfigIndex(i)
+					i --
+					}
+				
+				j ++
+				}
+			
+			return configs[currentConfig].string
+			}
+		
+		return null
+		}
+	
+	ActiveProxy loadProxy(Interceptor nic, IDC wireFrom, IDC wireTo, char wireToIntf[], char site[])
+		{
+		IDC prx = rLoader.load(nic.cmp, new String[](new String("lang.Morph"), new String("pal.Perception"))).mainComponent
+		//IDC prx = loader.load(nic.cmp)
+		prx.wire(nic.reqIntf, wireTo, wireToIntf)
+		interceptAPI.insertIntercept(wireFrom, wireToIntf, prx, nic.proIntf, nic.reqIntf)
+		
+		//check if the proxy component is expecting additional info, via the ProxyInfo interface
+		if (prx.hasProvides("pal.ProxyInfo"))
+			{
+			ProxyInfo pinfo = new ProxyInfo() from prx
+			pinfo.setInjectSite(site, wireToIntf)
+			}
+		
+		//check if the proxy component is expected to be connected to Perception
+		if (prx.hasRequires("pal.Perception"))
+			{
+			prx.wire("pal.Perception", perception, "pal.Perception")
+			}
+		
+		return new ActiveProxy(nic.cmp, prx, nic.reqIntf)
+		}
+	
+	bool Assembly:addIntercept(char intf[], char cmp[])
+		{
+		//load copies of the given interceptor cmp at each location required interface "intf" appears
+		// - if interceptors already exist at that location, this one is added to the end of the chain
+		
+		mutex(configLock)
+			{
+			//this implementation currently supports only a single interceptor per interface
+			if (interceptors.findFirst(Interceptor.[intf], new Interceptor(intf, cmp)) != null)
+				throw new Exception("an interceptor on $intf is already registered")
+			
+			if (!fileSystem.exists(cmp))
+				{
+				throw new Exception("intercept component not found at '$cmp'")
+				}
+			
+			Interceptor nic = new Interceptor(intf, cmp)
+			
+			//detect which interfaces the proxy has (generic lang.Proxy/Morph, or specific)
+			IDC prxCheck = loader.load(cmp)
+			
+			if (prxCheck.hasProvides("lang.Proxy"))
+				nic.proIntf = "lang.Proxy"
+				else if (prxCheck.hasProvides(intf))
+				nic.proIntf = intf
+				else
+				throw new Exception("intercept component does not provide a proxy-able interface for '$intf'")
+			
+			if (prxCheck.hasRequires("lang.Morph"))
+				nic.reqIntf = "lang.Morph"
+				else if (prxCheck.hasRequires(intf))
+				nic.reqIntf = intf
+				else
+				throw new Exception("intercept component does not require a proxy-able interface for '$intf'")
+			
+			interceptors = new Interceptor[](interceptors, nic)
+			
+			//add this intercept to any interfaces that match
+			for (Component cw = components; cw != null; cw = cw.next)
+				{
+				for (int i = 0; i < cw.interfaces.arrayLength; i++)
+					{
+					if (cw.interfaces[i].name == intf)
+						{
+						//load a copy of the interceptor cmp, and inject it
+						Component wireTo = componentLoaded(components, cw.interfaces[i].currentWiring)
+						ActiveProxy prxInst = loadProxy(nic, cw.class, wireTo.class, cw.interfaces[i].name, cw.path)
+						cw.interfaces[i].proxy = prxInst
+						}
+					}
+				}
+			}
+		
+		return true
+		}
+	
+	bool Assembly:remIntercept(char intf[], char cmp[])
+		{
+		//remove the given interceptor cmp at each location that the required interface "intf" appears
+		// - if multiple interceptors exist, the one closest to the end of the chain is removed
+		
+		mutex(configLock)
+			{
+			//remove the intercept rule
+			Interceptor nic = interceptors.findFirst(Interceptor.[intf], new Interceptor(intf, cmp))
+			
+			if (nic == null)
+				throw new Exception("interceptor $intf/$cmp is not registered")
+			
+			Interceptor nArray[] = new Interceptor[interceptors.arrayLength-1]
+			int j = 0
+			for (int i = 0; i < interceptors.arrayLength; i++)
+				{
+				if (interceptors[i] !== nic)
+					{
+					nArray[j] = interceptors[i]
+					j ++
+					}
+				}
+			
+			interceptors = nArray
+			
+			//remove each specific intercept
+			for (Component cw = components; cw != null; cw = cw.next)
+				{
+				for (int i = 0; i < cw.interfaces.arrayLength; i++)
+					{
+					if (cw.interfaces[i].name == intf && cw.interfaces[i].proxy != null)
+						{
+						Component wireTo = componentLoaded(components, cw.interfaces[i].currentWiring)
+						interceptAPI.removeIntercept(cw.class, cw.interfaces[i].name, wireTo.class, intf, nic.reqIntf)
+						cw.interfaces[i].proxy = null
+						}
+					}
+				}
+			}
+		
+		return false
+		}
+	
+	InterceptInfo[] Assembly:getIntercepts()
+		{
+		InterceptInfo result[] = new InterceptInfo[interceptors.arrayLength]
+		
+		for (int i = 0; i < result.arrayLength; i++)
+			{
+			result[i] = new InterceptInfo(interceptors[i].intf, interceptors[i].cmp)
+			}
+		
+		return result
+		}
+	
+	bool Assembly:runApp(char launchPath[])
+		{
+		mutex(configLock)
+			{
+			if (mainComponent == null)
+				{
+				throw new Exception("no main component loaded - use setConfig first")
+				}
+			
+			if (!appStarted)
+				{
+				appStarted = true
+				}
+				else
+				{
+				throw new Exception("app is already running")
+				}
+			}
+		
+		launchMain(mainComponent.class, launchPath)
+		
+		return true
 		}
 	
 	}

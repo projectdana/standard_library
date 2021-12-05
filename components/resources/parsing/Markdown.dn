@@ -1,0 +1,131 @@
+/*
+ {"description" : "Markdown instance, used by the Markdown parser to represent a parsed document. Each parsed document will start with a root node, which has one or more children instances. Each data instance has a type, and may have an extType. Each data instance may have a content value, and an extInfo value."}
+*/
+
+data MDElement nocycle {
+	
+	/*
+	 {"@description" : "Possible 'type' value, indicating a paragraph. The content & extInfo fields will be null."}
+	*/
+	const byte PARAGRAPH 	= 1
+	/*
+	 {"@description" : "Possible 'type' value, indicating a section of plain text, with potential styling modifiers. The extType field will contain a bitwise or of the style used for this text. The content field will be the text."}
+	*/
+	const byte PLAIN 		= 2
+	/*
+	 {"@description" : "Possible 'type' value, indicating a hyperlink. The content field will be set to the URL. The extInfo field will be set to the title of the link, if any. The child nodes of this instance will be the visible element(s) of the link (such as text, or an image)."}
+	*/
+	const byte LINK 		= 3
+	/*
+	 {"@description" : "Possible 'type' value, indicating an image. The content field will contain the path to the image file. The extType field may contain alt text for the image."}
+	*/
+	const byte IMAGE 		= 4
+	/*
+	 {"@description" : "Possible 'type' value, indicating a block of code. May have extType set to CODE_FENCE if this is a fenced code block, in which case extInfo may also be set to the language name. The content field will be set to the text of the code block, which should be rendered verbatim."}
+	*/
+	const byte CODE_BLOCK 	= 5
+	/*
+	 {"@description" : "Possible 'type' value, indicating a block quote. The child nodes will be set to the markdown elements that are inside the block quote."}
+	*/
+	const byte QUOTE_BLOCK 	= 6
+	/*
+	 {"@description" : "Possible 'type' value, indicating an ordered list. Each child node will be set to LIST_ITEM, one of the items in the list."}
+	*/
+	const byte LIST_ORDERED = 7
+	/*
+	 {"@description" : "Possible 'type' value, indicating an unordered list. Each child node will be set to LIST_ITEM, one of the items in the list."}
+	*/
+	const byte LIST_UNORDERED = 8
+	/*
+	 {"@description" : "Possible 'type' value, indicating an item in a list. Each child node will be one or more document elements forming the content of this list item."}
+	*/
+	const byte LIST_ITEM 	= 9
+	/*
+	 {"@description" : "Possible 'type' value, indicating that this is a header. The extType field will be set to one of the header types H1...H6."}
+	*/
+	const byte HEADING 		= 10
+	/*
+	 {"@description" : "Possible 'type' value, indicating that this is a horizontal line."}
+	*/
+	const byte HLINE 		= 11
+	
+	/*
+	 {"@description" : "The type of this instance."}
+	*/
+	byte type
+	
+	/*
+	 {"@description" : "Possible value for extType, when type is HEADING."}
+	*/
+	const byte H1 		= 1
+	/*
+	 {"@description" : "Possible value for extType, when type is HEADING."}
+	*/
+	const byte H2 		= 2
+	/*
+	 {"@description" : "Possible value for extType, when type is HEADING."}
+	*/
+	const byte H3 		= 3
+	/*
+	 {"@description" : "Possible value for extType, when type is HEADING."}
+	*/
+	const byte H4 		= 4
+	/*
+	 {"@description" : "Possible value for extType, when type is HEADING."}
+	*/
+	const byte H5 		= 5
+	/*
+	 {"@description" : "Possible value for extType, when type is HEADING."}
+	*/
+	const byte H6 		= 6
+	
+	/*
+	 {"@description" : "Possible value for extType, when type is CODE_BLOCK. If set, this indicates that extInfo may contain a programming language name."}
+	*/
+	const byte CODE_FENCE = 1
+	
+	/*
+	 {"@description" : "Possible bitwise or value for extType, when type is PLAIN."}
+	*/
+	const byte BOLD 		= 1
+	/*
+	 {"@description" : "Possible bitwise or value for extType, when type is PLAIN."}
+	*/
+	const byte ITALIC 		= 2
+	/*
+	 {"@description" : "Possible bitwise or value for extType, when type is PLAIN."}
+	*/
+	const byte CODE 		= 4
+	
+	/*
+	 {"@description" : "Extended type information for this instance; value may or may not be used depending on type."}
+	*/
+	byte extType
+	
+	/*
+	 {"@description" : "The content of this instance, often used to carry text, but sometimes used for other purposes depending on type."}
+	*/
+	char content[]
+	
+	/*
+	 {"@description" : "Extended textual information relating to this instance, which may or may not be used depending on type."}
+	*/
+	char extInfo[]
+	
+	/*
+	 {"@description" : "The child nodes of this instance, which may or may not be used depending on type."}
+	*/
+	MDElement children[]
+	}
+
+/*
+ {"description" : "Parser for Markdown-formatted text documents. A tree of MDElement instances is returned, reflecting the elements within the document."}
+*/
+
+interface Markdown {
+	
+	/*
+	 {"@description" : "Parse a Markdown-formatted text document."}
+	*/
+	MDElement parse(char doc[])
+	}

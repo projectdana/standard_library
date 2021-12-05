@@ -1,0 +1,119 @@
+component provides FileDrop requires ui.Font, io.Output out, data.IntUtil iu, data.StringUtil stringUtil {
+	
+	Color bgColor = new Color(200, 200, 215, 255)
+	Color textColor = new Color(120, 120, 135, 255)
+	Color borderColor = new Color(130, 130, 145, 255)
+
+	WH preferredSize = new WH()
+	
+	int width = 100
+	int height = 100
+	
+	int lineSkip = 1
+	
+	Font textFont
+	char text[] = "drop file"
+	String textLines[]
+	int textWidth
+	int textHeight
+	int fontHeight
+	
+	void makeTextLines()
+		{
+		textLines = stringUtil.explode(text, "\r\n")
+		textHeight = ((fontHeight + lineSkip) * textLines.arrayLength) - lineSkip
+		}
+	
+	FileDrop:FileDrop()
+		{
+		textFont = new Font("SourceSansPro.ttf", 14)
+		textWidth = textFont.getTextWidth(text)
+		fontHeight = textFont.getFontMetrics().height
+		makeTextLines()
+		}
+	
+	void FileDrop:setSize(int w, int h)
+		{
+		width = w
+		height = h
+		
+		postRepaint()
+		}
+	
+	void FileDrop:setText(char t[])
+		{
+		text = t
+		makeTextLines()
+		postRepaint()
+		}
+	
+	void FileDrop:setFont(store Font f)
+		{
+		textFont = f
+		
+		postRepaint()
+		}
+	
+	void FileDrop:paint(Canvas c)
+		{
+		c.drawRect(new Rect2D(xPosition, yPosition, width, height, bgColor))
+		c.drawRectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
+		
+		int xp = xPosition + (width / 2)
+		int yp = yPosition + (height / 2) - (textHeight / 2)
+		for (int i = 0; i < textLines.arrayLength; i++)
+			{
+			int txp = xp - (textFont.getTextWidth(textLines[i].string) / 2)
+			c.drawText(new Point2D(txp, yp, textColor), textFont, textLines[i].string)
+			yp += fontHeight + lineSkip
+			}
+		
+		}
+	
+	Rect FileDrop:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, height)
+		}
+
+	void FileDrop:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+
+	Point FileDrop:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+
+	WH FileDrop:getPreferredSize()
+		{
+		return new WH(width, height)
+		}
+
+	void FileDrop:click(int x, int y, int button)
+		{
+		}
+	
+	void FileDrop:dropFile(int x, int y, char path[])
+		{
+		emitevent fileDrop(new String(path))
+		}
+
+	void FileDrop:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	void FileDrop:setFocus()
+		{
+		emitevent requestFocus()
+		}
+	
+	void FileDrop:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
+
+	}

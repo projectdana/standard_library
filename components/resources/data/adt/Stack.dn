@@ -11,7 +11,17 @@ interface Stack{
 	/*
 	 {"@description" : "Add an element to the stack."}
 	*/
-	void add(Data item)
+	void push(store Data item)
+	
+	/*
+	 {"@description" : "Read and remove an element from the stack, according to the stack policy."}
+	*/
+	Data pop()
+	
+	/*
+	 {"@description" : "Read (but do not remove) the top element on the stack, according to the stack policy."}
+	*/
+	Data peek()
 	
 	/*
 	 {"@description" : "Remove an element from the stack."}
@@ -21,19 +31,11 @@ interface Stack{
 	/*
 	 {"@description" : "Update an element in the stack."}
 	*/
-	void update(Data item, Data newVersion)
+	void update(Data item, store Data newVersion)
 	
-	/*
-	 {"@description" : "Read and remove an element from the stack, according to the stack policy."}
-	*/
-	Data service()
-	
-	/*
-	 {"@description" : "Read (but do not remove) the top element on the stack, according to the stack policy."}
-	*/
-	Data peek()
-	
-	//information
+	/* {"@description" : "Get the number of items in the stack."} */
 	int getLength()
+	
+	/* {"@description" : "Get all items currently in the stack."} */
 	Data[] getContents()
 	}

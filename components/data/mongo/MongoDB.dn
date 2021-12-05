@@ -447,7 +447,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
 
   byte[] toLittleEndian(int4 value){
 	Int4 i4 = new Int4(value)
-    byte result[] = bu.reverse(dana.getByteArrayOf(i4))
+    byte result[] = bu.reverse(dana.serial(i4))
 	return result
   }
 
@@ -543,7 +543,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
 	{
 	Int4 q = new Int4()
 	
-	byte x[] = dana.getByteArrayOf(q)
+	byte x[] = dana.serial(q)
 	x =[] array
 	
 	return q.i
@@ -553,7 +553,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
 	{
 	Int8 q = new Int8()
 	
-	byte x[] = dana.getByteArrayOf(q)
+	byte x[] = dana.serial(q)
 	x =[] array
 	
 	return q.i

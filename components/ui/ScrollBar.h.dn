@@ -1,0 +1,310 @@
+const int SCR_BUTTON_HEIGHT = 20
+const int SCR_BUTTON_WIDTH = 20
+
+const int SLIDER_MIN_WIDTH = 20
+
+const int HEIGHT = 20
+
+component provides ScrollBar:h {
+	
+	int width
+	int height = HEIGHT
+	
+	Color scrollButtonColor = new Color(185, 185, 200, 255)
+	Color scrollButtonLineColor = new Color(140, 140, 165, 255)
+	Color scrollButtonArrowColor = new Color(100, 100, 135, 255)
+	Color scrollBarColor = new Color(220, 220, 235, 255)
+	Color scrollSliderColor = new Color(195, 195, 210, 255)
+
+	int scroll
+
+	int scrollAmount = 10
+	int maxScroll = 0
+
+	int sliderWidth = 0
+	int sliderX = 0
+
+	bool dragging = false
+	int dragStartX = 0
+	int dragSliderStartX = 0
+
+	void updateScrollBarV(int max)
+		{
+		//update scroll bounds, and potentially position, assuming our content could have gotten larger or smaller since we last checked...
+		
+		if (max > 0)
+			{
+			maxScroll = max
+			
+			if (maxScroll > (width - (SCR_BUTTON_WIDTH*2)))
+				{
+				sliderWidth = SLIDER_MIN_WIDTH
+				}
+				else
+				{
+				sliderWidth = (width - (SCR_BUTTON_WIDTH*2)) - maxScroll
+				
+				if (sliderWidth < SLIDER_MIN_WIDTH) sliderWidth = SLIDER_MIN_WIDTH
+				}
+			
+			if (scroll > maxScroll)
+				{
+				scroll = maxScroll
+				emitevent scrollMoved()
+				}
+			}
+			else
+			{
+			sliderWidth = 0
+			maxScroll = 0
+			sliderX = 0
+			scroll = 0
+			emitevent scrollMoved()
+			}
+		}
+	
+	void ScrollBar:setMaxValue(int v)
+		{
+		updateScrollBarV(v)
+		postRepaint()
+		}
+
+	void ScrollBar:setLength(int w)
+		{
+		width = w
+		}
+	
+	void ScrollBar:setIncrement(int v)
+		{
+		if (v < maxScroll)
+			{
+			scrollAmount = v
+			}
+		}
+	
+	void ScrollBar:setScrollPos(int v)
+		{
+		if (v < maxScroll)
+			{
+			scroll = v
+			postRepaint()
+			}
+		}
+	
+	int ScrollBar:getScrollPos()
+		{
+		return scroll
+		}
+
+	void ScrollBar:setFocus()
+		{
+		//pass-through to content
+		}
+
+	HotKey[] ScrollBar:recvFocus()
+		{
+		//pass-through to content
+		return null
+		}
+
+	void ScrollBar:loseFocus()
+		{
+		//pass-through to content
+		}
+
+	Rect ScrollBar:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, height)
+		}
+
+	void ScrollBar:mouseDown(int x, int y, int button)
+		{
+		//if on slider, enter dragging mode
+		if (y >= height-SCR_BUTTON_HEIGHT && y <= height)
+			{
+			if (x >= sliderX && x <= sliderX + sliderWidth)
+				{
+				dragging = true
+				dragStartX = x
+				dragSliderStartX = sliderX
+				}
+			}
+		}
+
+	void ScrollBar:mouseMove(int x, int y)
+		{
+		//if in dragging mode, move slider and update scroll view
+		if (dragging)
+			{
+			//check if the slider can actually move any further in this direction, and if so repaint()
+			if (x < dragStartX)
+				{
+				int sliderMinX = SCR_BUTTON_WIDTH
+
+				int diff = dragStartX - x
+
+				if (diff <= dragSliderStartX - sliderMinX)
+					{
+					int sliderNewX = dragSliderStartX - diff
+
+					//calculate new scrollY, then postRepaint
+
+					int percent = (sliderNewX - SCR_BUTTON_WIDTH) * 100 / ((width - (SCR_BUTTON_WIDTH*2)) - sliderWidth)
+
+					scroll = (percent * maxScroll) / 100
+
+					emitevent scrollMoved()
+					postRepaint()
+					}
+					else
+					{
+					dragSliderStartX = sliderMinX
+					
+					emitevent scrollMoved()
+					postRepaint()
+					}
+				}
+				else
+				{
+				int sliderMaxX = ((width) - (SCR_BUTTON_WIDTH)) - sliderWidth
+
+				int diff = x - dragStartX
+
+				if (dragSliderStartX + diff <= sliderMaxX)
+					{
+					int sliderNewX = dragSliderStartX + diff
+
+					//calculate new scrollY, then postRepaint
+
+					int percent = (sliderNewX - SCR_BUTTON_WIDTH) * 100 / ((width - (SCR_BUTTON_WIDTH*2)) - sliderWidth)
+
+					scroll = (percent * maxScroll) / 100
+					
+					emitevent scrollMoved()
+					postRepaint()
+					}
+					else
+					{
+					scroll = maxScroll
+					
+					emitevent scrollMoved()
+					postRepaint()
+					}
+				}
+			}
+		}
+	
+	void ScrollBar:mouseUp(int x, int y, int button)
+		{
+		dragging = false
+		}
+	
+	void ScrollBar:click(int x, int y, int button)
+		{
+		//somewhere on the vertical scroll bar
+		if (x >= 0 && x <= SCR_BUTTON_WIDTH)
+			{
+			//scroll up button
+			if (scroll > 0)
+				{
+				if (scroll < scrollAmount)
+					scroll = 0
+					else
+					scroll -= scrollAmount
+				
+				emitevent scrollMoved()
+				postRepaint()
+				}
+			}
+			else if (x >= width - SCR_BUTTON_WIDTH && x <= width)
+			{
+			//scroll right button
+			if (scroll < maxScroll)
+				{
+				if (scroll + scrollAmount > maxScroll)
+					scroll = maxScroll
+					else
+					scroll += scrollAmount
+				
+				emitevent scrollMoved()
+				postRepaint()
+				}
+			}
+			//only do this if the mouse position is not over the slider...
+			else if (x < sliderX || x > sliderX + sliderWidth)
+			{
+			//the scroll bar area - click-jump to this scroll position...
+			// - we do this by calculating the percentage within the scroll bar, and converting to a percentage within the content
+			int percent = (x - SCR_BUTTON_WIDTH) * 100 / (width - (SCR_BUTTON_WIDTH*2))
+
+			scroll = (percent * maxScroll) / 100
+			
+			emitevent scrollMoved()
+			postRepaint()
+			}
+		}
+	
+	void ScrollBar:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	void ScrollBar:paint(Canvas c)
+		{
+		//horizontal scroll bar
+		// - left button (rect)
+		c.drawRect(new Rect2D(xPosition, yPosition, SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonColor))
+		c.drawRectOutline(new Rect2D(xPosition, yPosition, SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonLineColor))
+		// - left button (arrow)
+		c.drawRect(new Rect2D(xPosition + SCR_BUTTON_WIDTH - 8, yPosition + (height-SCR_BUTTON_HEIGHT) + 4, 2, SCR_BUTTON_HEIGHT-8, scrollButtonArrowColor))
+		c.drawRect(new Rect2D(xPosition + SCR_BUTTON_WIDTH - 12, yPosition + (height-SCR_BUTTON_HEIGHT) + 6, 2, SCR_BUTTON_HEIGHT-12, scrollButtonArrowColor))
+		c.drawRect(new Rect2D(xPosition + SCR_BUTTON_WIDTH - 16, yPosition + (height-SCR_BUTTON_HEIGHT) + 8, 2, SCR_BUTTON_HEIGHT-16, scrollButtonArrowColor))
+		// - scroll slider pipe
+		c.drawRect(new Rect2D(xPosition + SCR_BUTTON_WIDTH, yPosition, width-(SCR_BUTTON_WIDTH*2), SCR_BUTTON_HEIGHT, scrollBarColor))
+		c.drawLine(new Line2D(xPosition + SCR_BUTTON_WIDTH, yPosition, xPosition + (width - (SCR_BUTTON_WIDTH)), yPosition, scrollButtonLineColor))
+		c.drawLine(new Line2D(xPosition + SCR_BUTTON_WIDTH, yPosition + SCR_BUTTON_HEIGHT-1, xPosition + (width - (SCR_BUTTON_WIDTH)), yPosition + SCR_BUTTON_HEIGHT-1, scrollButtonLineColor))
+		// - right button (rect)
+		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition + (height-SCR_BUTTON_HEIGHT), SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonColor))
+		c.drawRectOutline(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition + (height-SCR_BUTTON_HEIGHT), SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonLineColor))
+		// - right button (arrow)
+		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 6, yPosition + (height-SCR_BUTTON_HEIGHT) + 4, 2, SCR_BUTTON_HEIGHT-8, scrollButtonArrowColor))
+		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 10, yPosition + (height-SCR_BUTTON_HEIGHT) + 6, 2, SCR_BUTTON_HEIGHT-12, scrollButtonArrowColor))
+		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 14, yPosition + (height-SCR_BUTTON_HEIGHT) + 8, 2, SCR_BUTTON_HEIGHT-16, scrollButtonArrowColor))
+		
+		//slider - calculate position
+		// - we do this by calculating the position of its top edge, as a percentage of (scroll slider pipe height - slider height)
+		if (sliderWidth != 0)
+			{
+			int percent = scroll * 100 / maxScroll
+
+			//calculate top-edge position
+			int availableWidth = (width - ((SCR_BUTTON_WIDTH*2))) - sliderWidth
+			sliderX = ((percent * availableWidth) / 100) + SCR_BUTTON_WIDTH
+
+			c.drawRect(new Rect2D(xPosition + sliderX, yPosition+1, sliderWidth, height-2, scrollSliderColor))
+			}
+		}
+	
+	void ScrollBar:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+	
+	Point ScrollBar:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+
+	WH ScrollBar:getPreferredSize()
+		{
+		return new WH(width, height)
+		}
+	
+	void ScrollBar:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
+	
+	}

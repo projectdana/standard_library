@@ -36,6 +36,24 @@ component provides UnitTest {
 		return a * b
 		}
 	
+	int decint_testA()
+		{
+		dec a = 1100.0
+		dec b = 100.0
+		int c = a / b
+		
+		return c
+		}
+	
+	int decint_testB()
+		{
+		dec a = 80.0
+		int b = 9
+		int c = (a / 100.0) * b
+		
+		return c
+		}
+	
 	bool UnitTest:runTest()
 		{
 		int a = 2 + 2
@@ -69,6 +87,10 @@ component provides UnitTest {
 		if (dec_testC() != -1.21) throw new Exception("Failure in test 8")
 		
 		if (dec_testD() != 1.21) throw new Exception("Failure in test 9")
+		
+		if (decint_testA() != 11) throw new Exception("Failure in test 10")
+		
+		if (decint_testB() != 7) throw new Exception("Failure in test 11")
 		
 		return true
 		}

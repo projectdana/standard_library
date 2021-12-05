@@ -1,0 +1,612 @@
+data StyleFrame {
+	const byte BOLD = 0x1
+	const byte ITALIC = 0x2
+	const byte CODE = 0x4
+	
+	byte flag
+	
+	int startPos
+	}
+
+data LinkSection {
+	char linkContent[] //in []
+	char url[] //in ()
+	char title[] //in (), after space
+	int postIndex
+	}
+
+data StackEl {
+	MDElement mde
+	Stack subStack
+	}
+
+component provides Markdown requires data.StringUtil stringUtil, data.adt.List, data.adt.Stack, io.Output out, data.IntUtil iu {
+	
+	String[] toLines(char content[])
+		{
+		List lines = new List()
+		
+		int i
+		int lastStart = 0
+		for (i = 0; i < content.arrayLength; i++)
+			{
+			if (content[i] == "\r" && i+1 < content.arrayLength && content[i+1] == "\n")
+				{
+				int end
+				
+				if (i == 0)
+					end = 0
+					else
+					end = i-1
+				
+				if (lastStart == end)
+					{
+					if (content[lastStart] != "\n")
+						{
+						lines.add(new String(content[lastStart]))
+						}
+						else
+						{
+						lines.add(new String())
+						}
+					}
+					else
+					{
+					int len = (end - lastStart)+1
+					char kn[] = new char[len]
+					copyCharsFD(kn, 0, content, lastStart, len)
+					lines.add(new String(kn))
+					}
+				
+				lastStart = i + 2
+				
+				if (lastStart < content.arrayLength && (content[lastStart] == "\r" || content[lastStart] == "\n")) lastStart --
+				
+				i ++
+				}
+				else if (content[i] == "\n")
+				{
+				lastStart = i + 1
+				}
+			}
+		
+		//grab the final chunk, if any...
+		if (lastStart != i-1)
+			{
+			int end = i-1
+			int len = (end - lastStart)+1
+			char kn[] = new char[len]
+			copyCharsFD(kn, 0, content, lastStart, len)
+			lines.add(new String(kn))
+			}
+		
+		return lines.getContents(typeof(String))
+		}
+	
+	void copyCharsFD(char dest[], int start, char source[], int srcStart, int srcLen)
+		{
+		for (int i = 0; i < srcLen; i++)
+			{
+			dest[start+i] = source[srcStart + i]
+			}
+		}
+	
+	MDElement processHeaderLine(char str[])
+		{
+		if (stringUtil.startsWith(str, "######"))
+			{
+			int startLen = 6
+			char kn[] = stringUtil.subString(str, startLen, str.arrayLength - startLen).ltrim()
+			
+			return new MDElement(MDElement.HEADING, 6, kn)
+			}
+			else if (stringUtil.startsWith(str, "#####"))
+			{
+			int startLen = 5
+			char kn[] = stringUtil.subString(str, startLen, str.arrayLength - startLen).ltrim()
+			
+			return new MDElement(MDElement.HEADING, 5, kn)
+			}
+			else if (stringUtil.startsWith(str, "####"))
+			{
+			int startLen = 4
+			char kn[] = stringUtil.subString(str, startLen, str.arrayLength - startLen).ltrim()
+			
+			return new MDElement(MDElement.HEADING, 4, kn)
+			}
+			else if (stringUtil.startsWith(str, "###"))
+			{
+			int startLen = 3
+			char kn[] = stringUtil.subString(str, startLen, str.arrayLength - startLen).ltrim()
+			
+			return new MDElement(MDElement.HEADING, 3, kn)
+			}
+			else if (stringUtil.startsWith(str, "##"))
+			{
+			int startLen = 2
+			char kn[] = stringUtil.subString(str, startLen, str.arrayLength - startLen).ltrim()
+			
+			return new MDElement(MDElement.HEADING, 2, kn)
+			}
+			else if (stringUtil.startsWith(str, "#"))
+			{
+			int startLen = 1
+			char kn[] = stringUtil.subString(str, startLen, str.arrayLength - startLen).ltrim()
+			
+			return new MDElement(MDElement.HEADING, 1, kn)
+			}
+			
+		return null
+		}
+	
+	char[] extractArray(char src[], int start, int end)
+		{
+		char result[] = new char[end-start]
+		
+		int j = 0
+		for (int i = start; i < end; i ++)
+			{
+			result[j] = src[i]
+			j ++
+			}
+		
+		return result
+		}
+	
+	LinkSection getLink(char line[], int startIndex)
+		{
+		//this is bracket-balance checks, plus in-string
+		if (line[startIndex] == "[")
+			{
+			int sqBalance = 1
+			int rbBalance = 0
+			bool inString = false
+			
+			int mode = 0
+			
+			LinkSection ls = new LinkSection()
+			
+			int lastStart = startIndex + 1
+			
+			for (int i = startIndex + 1; i < line.arrayLength; i++)
+				{
+				if (!inString)
+					{
+					if (line[i] == "[")
+						sqBalance ++
+						else if (line[i] == "]")
+						sqBalance --
+						else if (line[i] == "(")
+						rbBalance ++
+						else if (line[i] == ")")
+						rbBalance --
+						else if (line[i] == "\"")
+						inString = true
+					
+					//end of sq section
+					if (mode == 0 && sqBalance == 0)
+						{
+						ls.linkContent = extractArray(line, lastStart, i)
+						mode = 1
+						}
+					
+					//start of round bracket section
+					if (mode == 1 && line[i] == "(" && rbBalance == 1)
+						{
+						lastStart = i + 1
+						}
+					
+					//end of first param of the round bracket section
+					if (mode == 1 && rbBalance == 1 && line[i] == " ")
+						{
+						ls.url = extractArray(line, lastStart, i)
+						
+						mode = 2
+						
+						lastStart = i + 1
+						}
+					
+					//end of round bracket section, without the optional 2nd param
+					if (mode == 1 && rbBalance == 0 && line[i] == ")")
+						{
+						ls.url = extractArray(line, lastStart, i)
+						ls.postIndex = i + 1
+						
+						return ls
+						}
+					
+					//end of round bracket section, with the optional 2nd param
+					if (mode == 2 && rbBalance == 0 && line[i] == ")")
+						{
+						ls.title = extractArray(line, lastStart+1, i-1)
+						ls.postIndex = i + 1
+						
+						return ls
+						}
+					}
+					else if (line[i] == "\"")
+					{
+					inString = false
+					}
+				}
+			}
+		
+		return null
+		}
+	
+	//the key here is that we need a flat list as output, no nesting -- and the text styles are just *flags*
+	// - we need a stack to track the current set of text style flags, and whenever we get to a new style *start* marker we complete the current MDElement, with the flags it has, and push the new flags on to the stack
+	// - at an end marker, we again end the current MDElement, pop the stack, and start the next MDElement with the style flags we used to have...
+	//TODO:
+	// - escape chars
+	// - double back-ticks
+	// - direct-url
+	MDElement[] parseLine(char line[])
+		{
+		MDElement result[]
+		
+		Stack statusStack = new Stack()
+		
+		statusStack.push(new StyleFrame())
+		
+		StyleFrame top = statusStack.peek()
+		
+		for (int i = 0; i < line.arrayLength; i++)
+			{
+			if (line[i] == "`")
+				{
+				//code
+				// - disables all other line style elements until code off
+				
+				//TODO: double-back-tick, which disables single-back-tick until code off...
+				
+				if ((top.flag & StyleFrame.CODE) == StyleFrame.CODE)
+					{
+					//end
+					MDElement newEl = new MDElement(MDElement.PLAIN, top.flag, extractArray(line, top.startPos, i))
+					result = new MDElement[](result, newEl)
+					
+					statusStack.pop()
+					
+					top = statusStack.peek()
+					
+					top.startPos = i + 1
+					}
+					else
+					{
+					//start
+					MDElement newEl = new MDElement(MDElement.PLAIN, top.flag, extractArray(line, top.startPos, i))
+					result = new MDElement[](result, newEl)
+					
+					statusStack.push(new StyleFrame(StyleFrame.CODE | top.flag, i + 1))
+					
+					top = statusStack.peek()
+					}
+				}
+				else if ((top.flag & StyleFrame.CODE) != StyleFrame.CODE)
+				{
+				if (line[i] == "\\")
+					{
+					//escape character (ignore what's next, but remove the "\" itself)
+					//TODO.
+					
+					}
+					else if (line[i] == "*")
+					{
+					//emphasis -- check ahead to see how many *'s we have
+					// (decide which flags this entails; peek at the stack-top and create a new flag set which combines the new and existing style flags)
+					// - if it's the same flag set as the stack top, then it's just the end of that section...?
+					
+					byte flag = 0
+					int postPos = 0
+					int ori = i
+					if (i+1 < line.arrayLength && line[i+1] == "*")
+						{
+						if (i+2 < line.arrayLength && line[i+2] == "*")
+							{
+							if (i+3 < line.arrayLength)
+								{
+								flag = StyleFrame.BOLD | StyleFrame.ITALIC
+								postPos = 3
+								i ++
+								i ++
+								}
+							}
+							else if (i+2 < line.arrayLength)
+							{
+							flag = StyleFrame.BOLD
+							postPos = 2
+							i ++
+							}
+						}
+						else if (i+1 < line.arrayLength)
+						{
+						flag = StyleFrame.ITALIC
+						postPos = 1
+						}
+					
+					top = statusStack.peek()
+					
+					if (top.flag == flag)
+						{
+						//end of current section
+						MDElement newEl = new MDElement(MDElement.PLAIN, top.flag, extractArray(line, top.startPos, ori))
+						result = new MDElement[](result, newEl)
+						
+						statusStack.pop()
+						
+						top = statusStack.peek()
+						
+						top.startPos = ori + postPos
+						}
+						else
+						{
+						//start of new section; we still end the current section before starting the new one
+						MDElement newEl = new MDElement(MDElement.PLAIN, top.flag, extractArray(line, top.startPos, ori))
+						result = new MDElement[](result, newEl)
+						
+						statusStack.push(new StyleFrame(flag | top.flag, ori + postPos))
+						
+						top = statusStack.peek()
+						}
+					}
+					else if (line[i] == "[")
+					{
+					//start of a link
+					// - this looks like [](), where the () can internally have two items: the link URL and the "title", separated by a space
+					// - the thing in [] can be processed recursively, and the parse here also needs to be aware of nested []'s inside it, so we count...
+					
+					// - here we need to scan forward to consume the entire statement, and check it's syntactically correct
+					// - if it isn't well-formed we can just ignore this syntax and continue
+					
+					LinkSection ls = null
+					
+					if ((ls = getLink(line, i)) != null)
+						{
+						//end of current section
+						MDElement newEl = new MDElement(MDElement.PLAIN, top.flag, extractArray(line, top.startPos, i))
+						result = new MDElement[](result, newEl)
+						
+						//adjust indices for where we resume, and add the link record
+						i = ls.postIndex
+						top.startPos = i
+						
+						newEl = new MDElement(MDElement.LINK, top.flag, ls.url, ls.title, parseLine(ls.linkContent))
+						result = new MDElement[](result, newEl)
+						}
+					}
+					else if (line[i] == "!")
+					{
+					//start of an image
+					// - ![]()
+					
+					if (i + 1 < line.arrayLength && line[i+1] == "[")
+						{
+						LinkSection ls = null
+						
+						if ((ls = getLink(line, i+1)) != null)
+							{
+							//end of current section
+							MDElement newEl = new MDElement(MDElement.PLAIN, top.flag, extractArray(line, top.startPos, i))
+							result = new MDElement[](result, newEl)
+							
+							//adjust indices for where we resume, and add the image record
+							i = ls.postIndex
+							top.startPos = i
+							
+							newEl = new MDElement(MDElement.IMAGE, top.flag, ls.url, ls.title)
+							result = new MDElement[](result, newEl)
+							}
+						}
+					}
+					//TODO: <direct-url>
+				}
+			}
+		
+		top = statusStack.pop()
+		
+		//this is either plain text, or an unclosed style, which we also consider to be plain text...
+		if (top != null && top.startPos < line.arrayLength)
+			{
+			MDElement newEl = new MDElement(MDElement.PLAIN, 0, extractArray(line, top.startPos, line.arrayLength))
+			result = new MDElement[](result, newEl)
+			}
+		
+		return result
+		}
+	
+	bool emptyLine(char line[])
+		{
+		if (line.arrayLength == 0)
+			return true
+		
+		return false
+		}
+	
+	bool isNumber(char s)
+		{
+		return s == "0" || s == "1" || s == "2" || s == "3" || s == "4" || s == "5" || s == "6" || s == "7" || s == "8" || s == "9"
+		}
+	
+	bool orderedListStart(char str[])
+		{
+		for (int i = 0; i < str.arrayLength; i ++)
+			{
+			if (i > 0 && str[i] == ".") return true
+			
+			if (!isNumber(str[i])) return false
+			}
+		
+		return false
+		}
+	
+	void processElements(Stack stack, char str[])
+		{
+		StackEl topEl = stack.peek()
+		MDElement top = topEl.mde
+		MDElement sub = null
+		
+		if (top.type == MDElement.CODE_BLOCK && top.extType == MDElement.CODE_FENCE)
+			{
+			if (stringUtil.startsWith(str, "```"))
+				{
+				stack.pop()
+				}
+				else
+				{
+				top.content = new char[](top.content, "$str\n")
+				}
+			}
+			else if (stringUtil.startsWith(str, "    "))
+			{
+			int startLen = 4
+			char kn[] = stringUtil.subString(str, startLen, str.arrayLength - startLen)
+			
+			//TODO: if we're in a list, we can now have the start of another element type (for processElements)...
+			
+			if (top.type == MDElement.LIST_ORDERED || top.type == MDElement.LIST_UNORDERED)
+				{
+				// - so we would get the last child element of top, and add children to that...?
+				}
+				else if (top.type == MDElement.CODE_BLOCK)
+				{
+				//this is just a continuation
+				top.content = new char[](top.content, "$kn\n")
+				}
+				else
+				{
+				//start of a new code block section
+				MDElement el = new MDElement(MDElement.CODE_BLOCK)
+				
+				top.children = new MDElement[](top.children, el)
+				stack.push(new StackEl(el))
+				
+				el.content = "$kn\n"
+				}
+			}
+			else if (stringUtil.startsWith(str, "\t"))
+			{
+			//TODO: as above...
+			}
+			else if ((sub = processHeaderLine(str)) != null)
+			{
+			top.children = new MDElement[](top.children, sub)
+			}
+			else if (emptyLine(str))
+			{
+			if (top.type != MDElement.PLAIN)
+				{
+				stack.pop()
+				topEl = stack.peek()
+				top = topEl.mde
+				}
+			
+			//TODO: decide on whether to start a new paragraph
+			}
+			else if (stringUtil.startsWith(str, ">"))
+			{
+			char kn[] = stringUtil.subString(str, 1, str.arrayLength - 1).ltrim()
+			
+			//here we need to create a nested status-tracking stack, so that the thing inside the block quote gets a fresh context
+			
+			Stack relative = null
+			
+			if (top.type != MDElement.QUOTE_BLOCK)
+				{
+				sub = new MDElement(MDElement.QUOTE_BLOCK)
+				sub.children = new MDElement(MDElement.PLAIN)
+				top.children = new MDElement[](top.children, sub)
+				relative = new Stack()
+				stack.push(new StackEl(sub, relative))
+				relative.push(new StackEl(sub.children[0]))
+				}
+				else
+				{
+				relative = topEl.subStack
+				//check if a nested block quote just ended...
+				//TODO: I don't think this works if muliple nested levels end at the same line...
+				StackEl relativeTop = relative.peek()
+				if (kn.arrayLength > 0 && kn[0] != ">" && relativeTop.mde.type == MDElement.QUOTE_BLOCK) relative.pop()
+				}
+			
+			processElements(relative, kn)
+			}
+			else if (stringUtil.startsWith(str, "- "))
+			{
+			char kn[] = stringUtil.subString(str, 1, str.arrayLength - 1).ltrim()
+			
+			if (top.type != MDElement.LIST_UNORDERED)
+				{
+				sub = new MDElement(MDElement.LIST_UNORDERED)
+				top.children = new MDElement[](top.children, sub)
+				stack.push(new StackEl(sub))
+				top = sub
+				}
+			
+			top.children = new MDElement[](top.children, new MDElement(MDElement.LIST_ITEM, 0, null, null, parseLine(kn)))
+			}
+			else if (orderedListStart(str))
+			{
+			char kn[] = stringUtil.subString(str, 2, str.arrayLength - 2).ltrim()
+			
+			if (top.type != MDElement.LIST_ORDERED)
+				{
+				sub = new MDElement(MDElement.LIST_ORDERED)
+				top.children = new MDElement[](top.children, sub)
+				stack.push(new StackEl(sub))
+				top = sub
+				}
+			
+			top.children = new MDElement[](top.children, new MDElement(MDElement.LIST_ITEM, 0, null, null, parseLine(kn)))
+			}
+			else if (stringUtil.startsWith(str, "```"))
+			{
+			if (top.type != MDElement.CODE_BLOCK)
+				{
+				char language[] = extractArray(str, 3, str.arrayLength)
+				
+				sub = new MDElement(MDElement.CODE_BLOCK, MDElement.CODE_FENCE, extInfo = language)
+				top.children = new MDElement[](top.children, sub)
+				stack.push(new StackEl(sub))
+				}
+			}
+			else if (stringUtil.startsWith(str, "***") || stringUtil.startsWith(str, "---") || stringUtil.startsWith(str, "___"))
+			{
+			top.children = new MDElement[](top.children, new MDElement(MDElement.HLINE))
+			}
+			else
+			{
+			if (top.type != MDElement.PARAGRAPH)
+				{
+				sub = new MDElement(MDElement.PARAGRAPH)
+				top.children = new MDElement[](top.children, sub)
+				stack.push(new StackEl(sub))
+				top = sub
+				}
+			
+			top.children = new MDElement[](top.children, parseLine(str))
+			}
+		}
+	
+	MDElement Markdown:parse(char doc[])
+		{
+		MDElement root = new MDElement(MDElement.PLAIN)
+		
+		String lines[] = toLines(doc)
+		
+		int lineNumber = 1
+		
+		Stack stack = new Stack()
+		stack.push(new StackEl(root))
+		
+		for (int i = 0; i < lines.arrayLength; i++)
+			{
+			processElements(stack, lines[i].string)
+			
+			lineNumber ++
+			}
+		
+		return root
+		}
+	
+	}

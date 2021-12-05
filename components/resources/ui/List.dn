@@ -1,0 +1,40 @@
+/*
+ {"description" : "A graphical list, allowing a user to click on items shown in the list. This widget would usually be used together with a ScrollPane to support scrolling."}
+*/
+
+uses data.String
+
+interface List extends XYMouseObject {
+	
+	/* {"@description" : "This event is fired when a user clicks on an item in the list."} */
+	event selectItem()
+	/* {"@description" : "This event is fired when a file is dropped on the list."} */
+	event fileDrop(String path)
+
+	/* {"@description" : "Instantiate a new list widget."} */
+	List()
+
+	/* {"@description" : "Add an item to the list. Items are displayed in the order they are added."} */
+	void addItem(char name[])
+	/* {"@description" : "Update the name of an item in the list."} */
+	void updateItem(int index, char name[])
+	/* {"@description" : "Delete an item in the list."} */
+	void deleteItem(int index)
+	/* {"@description" : "Remove all items from the list."} */
+	void clear()
+
+	/* {"@description" : "Set the desired width of the list (note tht its height is automatically calculated based on how many items are in the list)."} */
+	void setWidth(int w)
+	
+	/* {"@description" : "Filter the set of items shown, by only showing those at the given index positions."} */
+	void filter(int indices[])
+
+	/* {"@description" : "Get the name of the list item that has been selected."} */
+	char[] getSelectedItem()
+	/* {"@description" : "Get the index of the list item that has been selected."} */
+	int getSelectedIndex()
+	
+	/* {"@description" : "Set the index of the list item that shows as selected."} */
+	void setSelectedIndex(int index)
+
+	}

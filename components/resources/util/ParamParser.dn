@@ -1,0 +1,44 @@
+uses App
+uses data.String
+
+/*
+{ "description" : "Utility interface to help with parsing command-line parameters."}
+*/
+
+interface ParamParser {
+	
+	/*
+	{"@description" : "Parse a set of parameters into elements of key/value pairs (-key value), switches (-key), and free values not bound to a key.",
+		"params" : "The command-line arguments to parse.",
+		"switches" : "The set of switches which do not have an associated value, used to disambiguate kay/values and free values."
+		}
+	*/
+	ParamParser(AppParam params[], opt String switches[])
+	
+	/*
+	{"@description" : "Get the value associated with the given key (if any).",
+		"paramKey" : "They key for which to return an associated value."
+		}
+	*/
+	char[] getValue(char paramKey[])
+	
+	/*
+	{"@description" : "Check for the presence of a switch.",
+		"key" : "They switch to check for the presence of."
+		}
+	*/
+	bool hasSwitch(char key[])
+	
+	/*
+	{"@description" : "Get the list of free values."
+		}
+	*/
+	String[] getFreeValues()
+	
+	/*
+	{"@description" : "Check for the presence of a given free value."
+		}
+	*/
+	bool hasFreeValue(char val[])
+	
+	}

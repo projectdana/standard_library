@@ -1,3 +1,5 @@
+uses data.String
+
 interface TCPLib{
 	int connect(char address[], int port)
 	void disconnect(int hnd)
@@ -10,9 +12,43 @@ interface TCPLib{
 	void getRemoteAddress(int hnd, NetworkEndpoint ha)
 	}
 
-component provides net.TCPServerSocket, net.TCPSocket requires native TCPLib lib, io.Output out {
+interface SSLLib{
 	
-	implementation TCPSocket{
+	//certificate stores
+	int createCertStore()
+	bool addCertificate(int hnd, char cert[])
+	bool loadLocation(int hnd, char cert[])
+	void freeCertStore(int hnd)
+	
+	//contexts
+	int createContext(bool serverMode) //true for server, false for client
+	bool setCertificate(int hnd, byte cert[], byte key[])
+	bool setCertificateChain(int hnd, String chain[])
+	bool setCipherSet(int hnd, int set)
+	void freeContext(int hnd)
+	
+	//SSL
+	
+	int makeSSL(int cxt)
+	
+	bool accept(int hnd, int soc_fd)
+	bool connect(int hnd, int soc_fd)
+	
+	char[] getPeerCertificate(int hnd)
+	String[] getPeerCertChain(int hnd)
+	
+	int verifyCertificate(int hnd, int st_hnd, VerifyStatus vfs, char cert[], String chain[])
+	
+	int write(int hnd, byte dat[])
+	byte[] read(int hnd, int len)
+	
+	void closeSSL(int hnd)
+	void freeSSL(int hnd)
+	}
+
+component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TLSCertStore(Destructor), net.TLSContext(Destructor), net.TLS(Destructor) requires native TCPLib lib, native SSLLib slib, io.Output out {
+	
+	implementation TCPSocket {
 		bool connected
 		int platformSocket
 		Mutex accessLock = new Mutex()
@@ -141,9 +177,20 @@ component provides net.TCPServerSocket, net.TCPSocket requires native TCPLib lib
 			
 			return ha
 			}
+		
+		void Destructor:destroy()
+			{
+			if (connected)
+				{
+				lib.disconnect(platformSocket)
+				connected = false
+				platformSocket = 0
+				}
+			}
+		
 		}
 	
-	implementation TCPServerSocket{
+	implementation TCPServerSocket {
 		bool connected
 		int platformSocket
 		Mutex accessLock = new Mutex()
@@ -176,4 +223,141 @@ component provides net.TCPServerSocket, net.TCPSocket requires native TCPLib lib
 				}
 			}
 		}
+	
+	implementation TLSCertStore {
+		int handle
+		
+		TLSCertStore:TLSCertStore()
+			{
+			handle = slib.createCertStore()
+			}
+		
+		//add a trusted certificate (PEM-encoded x509)
+		bool TLSCertStore:addCertificate(char cert[])
+			{
+			return slib.addCertificate(handle, cert)
+			}
+		
+		//load all certificates from the given system path
+		bool TLSCertStore:loadLocation(char path[])
+			{
+			return slib.loadLocation(handle, path)
+			}
+		
+		void Destructor:destroy()
+			{
+			slib.freeCertStore(handle)
+			}
+		
+		}
+	
+	implementation TLSContext {
+		
+		int platformHandle
+		
+		TLSContext:TLSContext(byte mode)
+			{
+			if (mode == TLSContext.CLIENT)
+				platformHandle = slib.createContext(false)
+				else
+				platformHandle = slib.createContext(true)
+			}
+		
+		bool TLSContext:setCertificate(char cert[], byte key[])
+			{
+			return slib.setCertificate(platformHandle, cert, key)
+			}
+		
+		bool TLSContext:setCertificateChain(String chain[])
+			{
+			return slib.setCertificateChain(platformHandle, chain)
+			}
+		
+		void TLSContext:setCipherSet(int set)
+			{
+			slib.setCipherSet(platformHandle, set)
+			}
+		
+		void Destructor:destroy()
+			{
+			slib.freeContext(platformHandle)
+			}
+		
+		}
+	
+	implementation TLS {
+		
+		int platformHandle
+		bool closed
+		Mutex connectLock = new Mutex()
+		TLSContext context
+		//TCPSocket socket
+		
+		TLS:TLS(TLSContext cxt)
+			{
+			context = cxt
+			platformHandle = slib.makeSSL(cxt.platformHandle)
+			}
+		
+		bool TLS:accept(TCPSocket s)
+			{
+			//socket = s
+			return slib.accept(platformHandle, s.platformSocket)
+			}
+		
+		bool TLS:connect(TCPSocket s)
+			{
+			//socket = s
+			return slib.connect(platformHandle, s.platformSocket)
+			}
+		
+		VerifyStatus TLS:verifyCertificate(TLSCertStore st, char cert[], String chain[])
+			{
+			VerifyStatus vf = new VerifyStatus()
+			slib.verifyCertificate(platformHandle, st.handle, vf, cert, chain)
+			return vf
+			}
+		
+		char[] TLS:getPeerCertificate()
+			{
+			return slib.getPeerCertificate(platformHandle)
+			}
+		
+		String[] TLS:getPeerCertChain()
+			{
+			return slib.getPeerCertChain(platformHandle)
+			}
+		
+		int TLS:send(byte dat[])
+			{
+			return slib.write(platformHandle, dat)
+			}
+		
+		byte[] TLS:recv(int len)
+			{
+			return slib.read(platformHandle, len)
+			}
+		
+		void TLS:close()
+			{
+			if (platformHandle != 0 && !closed)
+				{
+				slib.closeSSL(platformHandle)
+				closed = true
+				}
+			}
+		
+		void Destructor:destroy()
+			{
+			if (platformHandle != 0 && !closed)
+				{
+				slib.closeSSL(platformHandle)
+				}
+			
+			if (platformHandle != 0)
+				slib.freeSSL(platformHandle)
+			}
+		
+		}
+	
 	}

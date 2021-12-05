@@ -111,9 +111,9 @@ component provides UnitTest requires io.Output out, data.json.JSONEncoder encode
 		
 		Person p = new Person()
 		
-		if (p.["age"] == Field.NOT_FOUND) throw new Exception("Failure in test 2")
+		//if (p.["age"] == Field.NOT_FOUND) throw new Exception("Failure in test 2")
 		
-		if (p.["space"] != Field.NOT_FOUND) throw new Exception("Failure in test 3")
+		//if (p.["space"] != Field.NOT_FOUND) throw new Exception("Failure in test 3")
 		
 		t = typeof(Person)
 		
@@ -137,6 +137,16 @@ component provides UnitTest requires io.Output out, data.json.JSONEncoder encode
 		String sv = x.cargo
 		
 		if (sv.string != "Starbase") throw new Exception("Failure in test 5")
+		
+		// -- sizing --
+		
+		Type tsA = typeof(char[10])
+		
+		if (tsA.size != 10) throw new Exception("Failure in test 6")
+		
+		Type tsB = typeof(char[])
+		
+		if (tsB.size != 0) throw new Exception("Failure in test 7")
 		
 		return true
 		}

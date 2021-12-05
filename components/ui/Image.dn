@@ -147,7 +147,14 @@ component provides Image {
 	
 	WH Image:getPreferredSize()
 		{
-		return null
+		if (!frameSet)
+			{
+			return new WH(renderWidth, renderHeight)
+			}
+			else
+			{
+			return new WH(frameWidth, frameHeight)
+			}
 		}
 	
 	}

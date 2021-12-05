@@ -1,0 +1,89 @@
+/*
+	{
+	"description" : "API to create a multi-category graph, where one axis is used to show evenly-spaced categories, such as a bar chart or histogram. Use one of the semantic variants of this interface to select a particular type of graph."
+	}
+*/
+
+uses ui.Color
+uses ui.Canvas
+
+interface CategoryMulti extends ChartCore {
+
+	CategoryMulti()
+	
+	/*
+	 {"@description" : "Adds a new series. Each category will display the values of every series.",
+	 	"name" : "The unique name used for this series."
+		}
+	*/
+	void addSeries(char name[])
+	
+	/*
+	 {"@description" : "Adds a new sample (or set of samples) to a series, for a specific category.",
+	 	"series" : "The unique name used for this series.",
+		"cat" : "The category in which this series data will appear.",
+		"values" : "The values for this series data for this category."
+		}
+	*/
+	void addSample(char series[], char cat[], dec values[])
+	
+	/*
+	 {"@description" : "Sets a color used to display this series.",
+	 	"series" : "The unique name used for this series.",
+		"c" : "The color for this series."
+		}
+	*/
+	void setSeriesColor(char series[], store Color c)
+	
+	/*
+	 {"@description" : "Sets a display name for this series, which will appear on a legend.",
+	 	"series" : "The unique name used for this series.",
+		"name" : "The display name for this series."
+		}
+	*/
+	void setSeriesName(char series[], char name[])
+	
+	/*
+	 {"@description" : "Display error bars on the graph (if the specific implementation supports it).",
+	 	"on" : "True to show error bars, false otherwise."
+		}
+	*/
+	void showErrorBars(bool on)
+	
+	/*
+	 {"@description" : "This function can be used to clamp error bars at specific values. This can be useful for display purposes if a value could not be outside a certain range.",
+	 	"low" : "Lowest value allowed.",
+		"high" : "Highest value allowed."
+		}
+	*/
+	void clampErrorBars(dec low, dec high)
+	
+	/*
+	 {"@description" : "Display a legend on the graph, using the display names for series.",
+	 	"on" : "True to show legend, false otherwise."
+		}
+	*/
+	void showLegend(bool on)
+	
+	/*
+	 {"@description" : "Set the width of category display rendering as a percentage of the category space available (for example, the relative width of bars on a bar chart).",
+	 	"percent" : "A number between 0.0 and 100.0."
+		}
+	*/
+	void setCatDisplayWidth(dec percent)
+	
+	/*
+	 {"@description" : "Set a level of padding between the edge of the category space available and the category rendering.",
+	 	"pixels" : "Number of pixels to pad each side of a category."
+		}
+	*/
+	void setCatDisplayPadding(int pixels)
+	
+	/*
+	 {"@description" : "Render the graph to a specific canvas, such as an SVGCanvas.",
+	 	"c" : "The canvas to draw to."
+		}
+	*/
+	void drawToCanvas(Canvas c)
+	
+	}

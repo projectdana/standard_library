@@ -1,0 +1,248 @@
+data Sample {
+	dec values[]
+	dec seriesValue
+	char label[]
+	}
+
+//size of markers, in pixels
+const int MARKER_SIZE = 7
+
+component provides Series:line requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font {
+	
+	Sample samples[]
+	
+	Color seriesColor = new Color(100, 200, 200, 255)
+	Color axisColor = new Color(0, 0, 0, 255)
+	Color gridColor = new Color(220, 220, 220, 255)
+	Color bgColor = new Color(255, 255, 255, 255)
+	
+	dec highestX
+	dec lowestX
+	dec highestY
+	dec lowestY
+	
+	dec numberIntervalX
+	dec markerIntervalX
+	dec gridIntervalX
+	dec numberIntervalY
+	dec markerIntervalY
+	dec gridIntervalY
+	
+	dec xAxMax
+	dec xAxMin
+	dec yAxMax
+	dec yAxMin
+	
+	byte markerStyle
+	
+	bool showStdDev
+	
+	Series:Series()
+		{
+		super()
+		}
+	
+	void Series:addSample(dec xv, dec yvalues[])
+		{
+		//update our highest and lowest X and Y points, to use in normalising coordinates
+		dec hy = stcore.max(yvalues)
+		dec ly = stcore.min(yvalues)
+		
+		if (samples == null)
+			{
+			highestX = xv
+			lowestX = xv
+			highestY = hy
+			lowestY = ly
+			}
+			else
+			{
+			if (xv > highestX) highestX = xv
+			if (xv < lowestX) lowestX = xv
+			if (hy > highestY) highestY = hy
+			if (ly < lowestY) lowestY = ly
+			}
+		
+		//add sample
+		samples = new Sample[](samples, new Sample(yvalues, xv))
+		
+		// -- automated calculation of the highest and lowest points on the axis --
+		
+		//update the axis endpoints, if the series values are now outside the bounds of whatever endpoints have been set
+		if (highestX > xAxMax) xAxMax = highestX
+		if (lowestX < xAxMin) xAxMin = lowestX
+		if (highestY > yAxMax) yAxMax = highestY
+		if (lowestY < yAxMin) yAxMin = lowestY
+		
+		setXMinMax(xAxMin, xAxMax)
+		setYMinMax(yAxMin, yAxMax)
+		
+		postRepaint()
+		}
+	
+	void Series:setXMinMax(dec min, dec max)
+		{
+		//TODO: disallow values that can't contain all of the graph points...
+		//TODO: we also won't allow a value which is not a multiple of our marker interval
+		xAxMin = min
+		xAxMax = max
+		
+		super(min, max)
+		}
+	
+	void Series:setYMinMax(dec min, dec max)
+		{
+		//TODO: disallow values that can't contain all of the graph points...
+		yAxMin = min
+		yAxMax = max
+		
+		super(min, max)
+		}
+	
+	void Series:setSeriesColor(Color c)
+		{
+		seriesColor = c
+		}
+	
+	void Series:setSeriesMarkers(byte b)
+		{
+		markerStyle = b
+		}
+	
+	void Series:showErrorBars(bool b)
+		{
+		showStdDev = b
+		}
+	
+	void Series:clampErrorBars(dec low, dec high)
+		{
+		
+		}
+	
+	// -- SVG rendering --
+	
+	void Series:drawToCanvas(Canvas c)
+		{
+		paint(c)
+		}
+	
+	void prepAxisLimits()
+		{
+		dec highX
+		dec lowX
+		dec highY
+		dec lowY
+		
+		//calculate what our min/max should be, and account for stdDev
+		for (int i = 0; i < samples.arrayLength; i++)
+			{
+			dec mean = stcore.mean(samples[i].values)
+			
+			if (showStdDev)
+				{
+				dec stdDev = stcore.stdDev(samples[i].values)
+				
+				if (mean - stdDev < lowY) lowY = mean - stdDev
+				if (mean + stdDev > highY) highY = mean + stdDev
+				}
+				else
+				{
+				if (mean < lowY) lowY = mean
+				if (mean > highY) highY = mean
+				}
+			
+			if (samples[i].seriesValue < lowX) lowX = samples[i].seriesValue
+			if (samples[i].seriesValue > highX) highX = samples[i].seriesValue
+			}
+		
+		//NOTE: we could now calculate end "endpoint" on each axis which is a multiple of their number interval
+		
+		setXMinMax(lowX, highX)
+		setYMinMax(lowY, highY)
+		}
+	
+	// -- screen rendering (temporary?) --
+	
+	void Series:paint(Canvas c)
+		{
+		prepAxisLimits()
+		
+		Point xyp = getPosition()
+		WH wh = getSize()
+		
+		c.pushSurface(new Rect(xyp.x, xyp.y, wh.width, wh.height), 0, 0, 255)
+		
+		preparePlotArea()
+		
+		//graph background
+		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		
+		//plot area background (TODO)
+		
+		//grid lines, if any
+		drawGrid(c)
+		
+		//data
+		
+		// - TODO: sort data by seriesValue first???
+		int lastX
+		int lastY
+		for (int i = 0; i < samples.arrayLength; i++)
+			{
+			//this kind of graph plots the mean of the set
+			dec thisX = samples[i].seriesValue
+			dec thisY = stcore.mean(samples[i].values)
+			
+			int xy[] = getPlotPoint(thisX, thisY)
+			
+			if (markerStyle == Series.M_SQUARE)
+				{
+				c.drawRect(new Rect2D(xy[0] - MARKER_SIZE/2, xy[1] - MARKER_SIZE/2, MARKER_SIZE, MARKER_SIZE, seriesColor))
+				}
+				else if (markerStyle == Series.M_SQUARE_OUTLINE)
+				{
+				c.drawRectOutline(new Rect2D(xy[0] - MARKER_SIZE/2, xy[1] - MARKER_SIZE/2, MARKER_SIZE, MARKER_SIZE, seriesColor))
+				}
+				else if (markerStyle == Series.M_PLUS)
+				{
+				c.drawLine(new Line2D(xy[0], xy[1] - MARKER_SIZE/2, xy[0], xy[1] + MARKER_SIZE/2, seriesColor))
+				c.drawLine(new Line2D(xy[0] - MARKER_SIZE/2, xy[1], xy[0] + MARKER_SIZE/2, xy[1], seriesColor))
+				}
+				else if (markerStyle == Series.M_CROSS)
+				{
+				c.drawLine(new Line2D(xy[0] - MARKER_SIZE/2, xy[1] - MARKER_SIZE/2, xy[0] + MARKER_SIZE/2, xy[1] + MARKER_SIZE/2, seriesColor))
+				c.drawLine(new Line2D(xy[0] - MARKER_SIZE/2, xy[1] + MARKER_SIZE/2, xy[0] + MARKER_SIZE/2, xy[1] - MARKER_SIZE/2, seriesColor))
+				}
+			
+			if (i > 0)
+				{
+				c.drawLine(new Line2D(lastX, lastY, xy[0], xy[1], seriesColor))
+				}
+			
+			if (showStdDev)
+				{
+				dec stdDev = stcore.stdDev(samples[i].values)
+				
+				if (stdDev != 0.0)
+					{
+					int xyHigh[] = getPlotPoint(thisX, thisY+stdDev)
+					int xyLow[] = getPlotPoint(thisX, thisY-stdDev)
+					
+					c.drawLine(new Line2D(xyHigh[0], xyHigh[1], xyLow[0], xyLow[1], seriesColor))
+					
+					c.drawLine(new Line2D(xyHigh[0]-MARKER_SIZE/2, xyHigh[1], xyHigh[0]+MARKER_SIZE/2, xyHigh[1], seriesColor))
+					c.drawLine(new Line2D(xyLow[0]-MARKER_SIZE/2, xyLow[1], xyLow[0]+MARKER_SIZE/2, xyLow[1], seriesColor))
+					}
+				}
+			
+			lastX = xy[0]
+			lastY = xy[1]
+			}
+		
+		//draw axes and labels
+		drawAxes(c)
+		
+		c.popSurface()
+		}
+	
+	}

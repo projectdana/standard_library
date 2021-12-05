@@ -1,0 +1,276 @@
+//all BMP files have this header:
+const int BASIC_HDR_SIZE = 12
+data BasicHeader {
+	char ID[2]
+	int4 size
+	byte resvA[2]
+	byte resvB[2]
+	int4 data_offset
+	}
+
+//all BMP files then have another "DIB" header, the type of which varies between BMP types
+// - the below is the most common Windows format
+const int BMP_INFO_HDR_SIZE = 40
+data BitmapInfoHeader {
+	int4 hdr_size
+	int4 width
+	int4 height
+	int2 color_panes
+	int2 bits_per_pixel
+	int4 compression_method
+	int4 image_size
+	int4 hres
+	int4 vres
+	int4 palette
+	int4 imp_colors
+	}
+
+data Int4 {
+	int4 n
+	}
+
+data Int2 {
+	int2 n
+	}
+
+component provides ImageEncoder:bmp requires io.Output out, data.IntUtil iu {
+	
+	PixelMap map
+	
+	ImageEncoder:ImageEncoder()
+		{
+		}
+	
+	PixelMap ImageEncoder:getPixels()
+		{
+		return map
+		}
+	
+	void ImageEncoder:setPixels(PixelMap pm)
+		{
+		map = pm
+		}
+	
+	void reverseEndian(byte num[])
+		{
+		int j = num.arrayLength - 1
+		for (int i = 0; i < num.arrayLength / 2; i++)
+			{
+			byte tmp = num[j]
+			num[j] = num[i]
+			num[i] = tmp
+			j --
+			}
+		}
+	
+	int4 reverseInt4(int4 i4)
+		{
+		Int4 ct = new Int4(i4)
+		reverseEndian(dana.serial(ct))
+		return ct.n
+		}
+	
+	int2 reverseInt2(int2 i2)
+		{
+		Int2 ct = new Int2(i2)
+		reverseEndian(dana.serial(ct))
+		return ct.n
+		}
+	
+	bool ImageEncoder:loadImage(File fd)
+		{
+		//check for headers
+		
+		BasicHeader basicHeader = new BasicHeader()
+		BitmapInfoHeader detailHeader = new BitmapInfoHeader()
+		
+		// read the basic header
+		
+		byte serial[] = dana.getByteArrayOf(basicHeader)
+		
+		byte in[] = fd.read(serial.arrayLength)
+		
+		if (in.arrayLength != serial.arrayLength) throw new Exception("unknown file format / IO read error")
+		
+		serial =[] in
+		
+		//check special bytes
+		if (basicHeader.ID != "BM") throw new Exception("unknown file format")
+		
+		// - convert endianness
+		basicHeader.size = reverseInt4(basicHeader.size)
+		basicHeader.data_offset = reverseInt4(basicHeader.data_offset)
+		
+		// read the typical DIB header
+		
+		serial = dana.getByteArrayOf(detailHeader)
+		
+		in = fd.read(serial.arrayLength)
+		
+		if (in.arrayLength != serial.arrayLength) throw new Exception("unknown file format / IO read error")
+		
+		serial =[] in
+		
+		// - convert endianness
+		detailHeader.hdr_size = reverseInt4(detailHeader.hdr_size)
+		detailHeader.width = reverseInt4(detailHeader.width)
+		detailHeader.height = reverseInt4(detailHeader.height)
+		detailHeader.color_panes = reverseInt2(detailHeader.color_panes)
+		detailHeader.bits_per_pixel = reverseInt2(detailHeader.bits_per_pixel)
+		detailHeader.compression_method = reverseInt4(detailHeader.compression_method)
+		detailHeader.image_size = reverseInt4(detailHeader.image_size)
+		detailHeader.hres = reverseInt4(detailHeader.hres)
+		detailHeader.vres = reverseInt4(detailHeader.vres)
+		detailHeader.palette = reverseInt4(detailHeader.palette)
+		detailHeader.imp_colors = reverseInt4(detailHeader.imp_colors)
+		
+		//check if we understand the header
+		if (detailHeader.hdr_size != 40)
+			throw new Exception("unrecognized format for bitmap")
+		
+		//check if we understand the compression format
+		if (detailHeader.compression_method != 0)
+			throw new Exception("unsupported format for bitmap (compressed)")
+		
+		//fill in commonly missing information
+		if (basicHeader.data_offset == 0)
+			basicHeader.data_offset = 24
+		
+		if (detailHeader.image_size == 0)
+			detailHeader.image_size = detailHeader.width * detailHeader.height * 3
+		
+		//read the image data
+		fd.setPos(basicHeader.data_offset)
+		byte rawData[] = fd.read(detailHeader.image_size)
+		
+		if (detailHeader.bits_per_pixel == 24)
+			{
+			decodeData24bpp(detailHeader.width, detailHeader.height, rawData)
+			}
+			else
+			{
+			throw new Exception("unsupported format for this decoder")
+			}
+		
+		return true
+		}
+	
+	void decodeData24bpp(int width, int height, byte rawData[])
+		{
+		//bitmap data in this format is arranged as bgr, instead of rgba, so we convert assuming alpha is 255
+		map = new PixelMap(new WH(width, height))
+		map.pixels = new byte[width * height * 4]
+		
+		//bitmap data is stored bottom-up, so the last row is first
+		
+		//bitmaps use padding to ensure each row is a multiple of 4, so we calculate the padding amount (if any)
+		int pad = 0
+		if (((width * 3) % 4) != 0) pad = 4 - ((width * 3) % 4)
+		
+		for (int i = 0; i < height; i++)
+			{
+			int srcStartPixel = rawData.arrayLength - ((i+1) * ((width*3)+pad))
+			int dstStartPixel = i * (width*4)
+			
+			for (int j = 0; j < width; j ++)
+				{
+				map.pixels[dstStartPixel] = rawData[srcStartPixel+2]
+				map.pixels[dstStartPixel+1] = rawData[srcStartPixel+1]
+				map.pixels[dstStartPixel+2] = rawData[srcStartPixel]
+				map.pixels[dstStartPixel+3] = 255
+				srcStartPixel += 3
+				dstStartPixel += 4
+				}
+			}
+		}
+	
+	bool ImageEncoder:saveImage(File fd)
+		{
+		//by default, we write file in BITMAPINFOHEADER/24bpp format
+		
+		//bitmaps use padding to ensure each row is a multiple of 4, so we calculate the padding amount (if any)
+		int rowWidth = map.size.width * 3
+		int pad = 0
+		if (rowWidth % 4 != 0) pad = 4 - (rowWidth % 4)
+		
+		int dataSize = ((map.size.width * 3)+pad)*map.size.height
+		
+		BasicHeader basicHeader = new BasicHeader()
+		BitmapInfoHeader detailHeader = new BitmapInfoHeader()
+		
+		// - write general header
+		basicHeader.ID[0] = "B"
+		basicHeader.ID[1] = "M"
+		basicHeader.size = BASIC_HDR_SIZE + BMP_INFO_HDR_SIZE + dataSize
+		basicHeader.data_offset = BASIC_HDR_SIZE + BMP_INFO_HDR_SIZE
+		
+		// (endianness)
+		basicHeader.size = reverseInt4(basicHeader.size)
+		basicHeader.data_offset = reverseInt4(basicHeader.data_offset)
+		
+		byte serial[] = dana.getByteArrayOf(basicHeader)
+		
+		fd.write(serial)
+		
+		// - write DIB format header
+		detailHeader.hdr_size = BMP_INFO_HDR_SIZE
+		detailHeader.width = map.size.width
+		detailHeader.height = map.size.height
+		detailHeader.color_panes = 1
+		detailHeader.bits_per_pixel = 24
+		detailHeader.compression_method = 0
+		detailHeader.image_size = dataSize
+		detailHeader.hres = 0
+		detailHeader.vres = 0
+		detailHeader.palette = 0
+		detailHeader.imp_colors = 0
+		
+		// (endianness)
+		detailHeader.hdr_size = reverseInt4(detailHeader.hdr_size)
+		detailHeader.width = reverseInt4(detailHeader.width)
+		detailHeader.height = reverseInt4(detailHeader.height)
+		detailHeader.color_panes = reverseInt2(detailHeader.color_panes)
+		detailHeader.bits_per_pixel = reverseInt2(detailHeader.bits_per_pixel)
+		detailHeader.compression_method = reverseInt4(detailHeader.compression_method)
+		detailHeader.image_size = reverseInt4(detailHeader.image_size)
+		detailHeader.hres = reverseInt4(detailHeader.hres)
+		detailHeader.vres = reverseInt4(detailHeader.vres)
+		detailHeader.palette = reverseInt4(detailHeader.palette)
+		detailHeader.imp_colors = reverseInt4(detailHeader.imp_colors)
+		
+		serial = dana.getByteArrayOf(detailHeader)
+		
+		fd.write(serial)
+		
+		// - write data
+		byte encoded[] = new byte[dataSize]
+		
+		encodeData24bpp(map, encoded, pad)
+		
+		fd.write(encoded)
+		
+		return true
+		}
+	
+	void encodeData24bpp(PixelMap m, byte rawData[], int pad)
+		{
+		//bitmap data is stored bottom-up, so the last row is first
+		
+		for (int i = 0; i < m.size.height; i++)
+			{
+			int srcStartPixel = rawData.arrayLength - ((i+1) * ((m.size.width*3)+pad))
+			int dstStartPixel = i * (m.size.width*4)
+			
+			for (int j = 0; j < m.size.width; j ++)
+				{
+				rawData[srcStartPixel+2] = m.pixels[dstStartPixel]
+				rawData[srcStartPixel+1] = m.pixels[dstStartPixel+1]
+				rawData[srcStartPixel] = m.pixels[dstStartPixel+2]
+				
+				srcStartPixel += 3
+				dstStartPixel += 4
+				}
+			}
+		}
+	
+	}

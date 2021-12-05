@@ -1,23 +1,32 @@
 uses media.PixelMap
 
+/*
+ {"description" : "An image widget for graphical applications."}
+*/
+
 interface Image extends GraphicsObject {
 	
-	Image(PixelMap pm)
+	/* {"@description" : "Instantiate a new image, using the given pixel map."} */
+	Image(store PixelMap pm)
 	
-	void setPixels(PixelMap b)
+	/* {"@description" : "Set the pixel map used by this image widget."} */
+	void setPixels(store PixelMap b)
 	
+	/* {"@description" : "Set the size of the image widget."} */
 	void setFrameSize(int w, int h)
 	
-	/* no frame, just draw the entire image */
+	/* {"@description" : "Possible value for setFrameFit(), indicating that the source pixels should be rendered as-is, which may clip them at the frame boundary."} */
 	const int FIT_NONE = 0
-	/* stretch to fit the frame */
+	/* {"@description" : "Possible value for setFrameFit(), indicating that the source pixels should be stretched to match the frame dimensions."} */
 	const int FIT_STRETCH = 1
-	/* scale to fit the frame and center */
+	/* {"@description" : "Possible value for setFrameFit(), indicating that the source pixels should be scaled to fit the frame, and centered inside the frame."} */
 	const int FIT_SCALE = 2
-	/* scale to fit the frame, center, and clip to avoid empty frame space if the source image was bigger than the frame */
+	/* {"@description" : "Possible value for setFrameFit(), indicating that the source pixels should be scaled to fit the frame, centered, and clipped to avoid empty frame space if the source image was bigger than the frame."} */
 	const int FIT_FILL = 3
+	/* {"@description" : "Configure how the pixel map used by this image widget is fitted into the widget's size, for example by stretching or scaling it."} */
 	void setFrameFit(int mode)
 	
+	/* {"@description" : "Set the rotation of the source pixels in this image."} */
 	void setRotation(int degrees)
 	
 	}

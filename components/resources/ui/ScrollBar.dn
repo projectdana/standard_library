@@ -1,0 +1,23 @@
+/*
+ {"description" : "A scroll bar widget allowing selection of an integer between zero and a given value, usually including a slider and buttons."}
+*/
+
+interface ScrollBar extends XYMouseObject {
+	
+	/* {"@description" : "Get the current text in the field."} */
+	event scrollMoved()
+	
+	/* {"@description" : "Set the maximum value of the scroll bar."} */
+	void setMaxValue(int v)
+	/* {"@description" : "Set the increment step of the scroll bar, for example when a scroll arrow is clicked."} */
+	void setIncrement(int v)
+	
+	/* {"@description" : "Set the current position of the scroll bar."} */
+	void setScrollPos(int v)
+	/* {"@description" : "Get the current position of the scroll bar."} */
+	int getScrollPos()
+	
+	/* {"@description" : "Set the length of the scroll bar, in pixels (the size of the widget, which is equivalent to height/width depending on whether the scroll bar is displayed vertically or horizontally)."} */
+	void setLength(int pixels)
+	
+	}

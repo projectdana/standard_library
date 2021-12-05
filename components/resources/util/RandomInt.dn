@@ -1,5 +1,6 @@
 /*
- {"description" : "Generate random or pseudo-random numbers. The setSeed() function should generally be used once (after instantiation) to ensure a unique starting point for the sequence of numbers returned by successive calls to get(). The current time is commonly used with setSeed(). If setSeed() is not used, each instance of the random number generator may return the same sequence of numbers."}
+ {"description" : "Generate random or pseudo-random numbers. The setSeed() function should generally be used once (after instantiation) to ensure a unique starting point for the sequence of numbers returned by successive calls to get(). The current time is commonly used with setSeed(). If setSeed() is not used, each instance of the random number generator may return the same sequence of numbers.",
+ "@deprecated" : "true"}
 */
 
 interface RandomInt{
@@ -9,7 +10,7 @@ interface RandomInt{
 	void setSeed(int s)
 	
 	/*
-	 {"@description" : "Get a pseudo-random number between zero and 'top', exluding top itself."}
+	 {"@description" : "Get a pseudo-random number between zero and 'top', excluding top itself."}
 	*/
 	int get(int top)
 	}

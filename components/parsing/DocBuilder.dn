@@ -1,0 +1,1303 @@
+//parse a source file into the below using string syntax rules (isInterface() etc.); then scan for block comments just before interface or function header definitions and extract JSON from them (maybe consult the JSON parser as a really good example of strict parsing)
+const int TOKEN_UNKNOWN = 0
+const int TOKEN_LINE_COMMENT = 1
+const int TOKEN_BLOCK_COMMENT = 2
+const int TOKEN_INTERFACE = 3
+const int TOKEN_FUNCTION_HEADER = 4
+
+data Token {
+	int type
+	char content[]
+	int sourceLength
+	}
+
+data IncludeList{
+	String list[]
+	}
+
+component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File, data.json.JSONParser parser, data.StringUtil stringUtil, data.Tokeniser, data.IntUtil iu, os.SystemInfo sysInfo {
+	
+	SourceFile primaryFiles[]
+	SourceFile supportFiles[]
+	
+	String builtinTypes[]
+	
+	String parseTokens[]
+	String parseKeywords[]
+	
+	Tokeniser tokeniser
+	
+	void initialiseParseTokens()
+		{
+		parseTokens = new String[](new String(":"),
+									new String(";"),
+									new String(","),
+									new String("."),
+									new String("!"),
+									new String(">"),
+									new String("<"),
+									new String("++"),
+									new String("--"),
+									new String("+="),
+									new String("-="),
+									new String("+"),
+									new String("-"),
+									new String("/"),
+									new String("*"),
+									new String("&&"),
+									new String("||"),
+									new String("&"),
+									new String("|"),
+									new String("==="),
+									new String("!=="),
+									new String("=="),
+									new String("!="),
+									new String("="),
+									new String("{"),
+									new String("}"),
+									new String("["),
+									new String("]"),
+									new String("("),
+									new String(")"))
+		}
+	
+	bool isToken(char str[])
+		{
+		for (int i = 0; i < parseTokens.arrayLength; i++)
+			{
+			if (str == parseTokens[i].string)
+				return true
+			}
+		
+		return false
+		}
+	
+	void initialiseParseKeywords()
+		{
+		parseKeywords = new String[](new String("component"),
+									new String("interface"),
+									new String("data"),
+									new String("record"),
+									new String("extends"),
+									new String("provides"),
+									new String("requires"),
+									new String("const"),
+									new String("transfer"),
+									new String("static"),
+									new String("event"),
+									new String("nocycle"),
+									new String("new"),
+									new String("true"),
+									new String("false"),
+									new String("null"),
+									new String("uses"),
+									new String("implementation"),
+									new String("if"),
+									new String("while"),
+									new String("for"),
+									new String("else"),
+									new String("break"),
+									new String("throw"),
+									new String("return"))
+		}
+	
+	bool isKeyword(char str[])
+		{
+		for (int i = 0; i < parseKeywords.arrayLength; i++)
+			{
+			if (str == parseKeywords[i].string)
+				return true
+			}
+		
+		return false
+		}
+	
+	void initialiseBuiltinTypes()
+		{
+		builtinTypes = new String[](new String("void"),
+									new String("char"),
+									new String("byte"),
+									new String("bool"),
+									new String("TypeField"),
+									new String("int"),
+									new String("int1"),
+									new String("int2"),
+									new String("int4"),
+									new String("int8"),
+									new String("int16"),
+									new String("int32"),
+									new String("int64"),
+									new String("int128"),
+									new String("int256"),
+									new String("int512"),
+									new String("dec"),
+									new String("dec1"),
+									new String("dec2"),
+									new String("dec4"),
+									new String("dec8"),
+									new String("dec16"),
+									new String("dec32"),
+									new String("dec64"),
+									new String("dec128"),
+									new String("dec256"),
+									new String("dec512"),
+									new String("Data")
+									)
+		}
+	
+	bool isBuiltinType(char str[])
+		{
+		for (int i = 0; i < builtinTypes.arrayLength; i++)
+			{
+			if (str == builtinTypes[i].string)
+				return true
+			}
+		
+		return false
+		}
+	
+	bool isUses(ParseToken tokens[], int start)
+		{
+		if (tokens[start].type == ParseToken.TYPE_PARTICLE && tokens[start].content == "uses")
+			{
+			if (start + 1 < tokens.arrayLength && tokens[start+1].type == ParseToken.TYPE_PARTICLE)
+				{
+				return true
+				}
+			}
+		
+		return false
+		}
+	
+	int consumeUses(ParseToken tokens[], int start, IncludeList incList)
+		{
+		if (tokens[start].type == ParseToken.TYPE_PARTICLE && tokens[start].content == "uses")
+			{
+			int count = 1
+			start ++
+			while (start < tokens.arrayLength)
+				{
+				if (count > 1 && tokens[start].content != ",")
+					{
+					break
+					}
+					else if (count > 1)
+					{
+					start ++
+					count ++
+					}
+				
+				//the uses path, maybe separated by dots
+				char pkg[]
+				pkg = new char[](pkg, tokens[start].content)
+				start ++
+				count ++
+				
+				while (tokens[start].content == ".")
+					{
+					start ++
+					count ++
+					pkg = new char[](pkg, ".", tokens[start].content)
+					start ++
+					count ++
+					}
+				
+				incList.list = new String[](incList.list, new String(pkg))
+				}
+			
+			return count
+			}
+		
+		return 0
+		}
+	
+	bool isTypeDefinition(ParseToken tokens[], int start)
+		{
+		if (tokens[start].type == ParseToken.TYPE_PARTICLE &&
+			(tokens[start].content == "data" || tokens[start].content == "interface"))
+			{
+			start ++
+			
+			if (start >= tokens.arrayLength)
+				return false
+			
+			if (isToken(tokens[start].content))
+				return false
+			
+			start ++
+			
+			if (start >= tokens.arrayLength)
+				return false
+			
+			return true
+			}
+		
+		return false
+		}
+	
+	int consumeTypeDefinition(SourceFile sf, char docComment[], ParseToken tokens[], int start, IncludeList incList)
+		{
+		//collect the type name and also extract any "extends" clause
+		
+		int count = 0
+		
+		addType(sf, tokens[start].content, tokens[start+1].content, docComment)
+		
+		//type keyword
+		start ++
+		count ++
+		
+		//type name
+		start ++
+		count ++
+		
+		//nocycle?
+		if (tokens[start].content == "nocycle")
+			{
+			start ++
+			count ++
+			}
+		
+		//extends?
+		
+		if (tokens[start].content == "extends")
+			{
+			start ++
+			count ++
+			
+			//(package) and type name of the thing we're extending
+			char pkg[]
+			pkg = new char[](pkg, tokens[start].content)
+			start ++
+			count ++
+			
+			while (tokens[start].content == ".")
+				{
+				start ++
+				count ++
+				pkg = new char[](pkg, ".", tokens[start].content)
+				start ++
+				count ++
+				}
+			
+			incList.list = new String[](incList.list, new String(pkg))
+			}
+		
+		//nocycle?
+		if (tokens[start].content == "nocycle")
+			{
+			start ++
+			count ++
+			}
+		
+		//skip the type definition
+		if (tokens[start].content == "{")
+			{
+			while (start < tokens.arrayLength && tokens[start].content != "}")
+				{
+				count ++
+				start ++
+				}
+			}
+		
+		return count
+		}
+	
+	void addType(SourceFile sf, char type[], char name[], char docComment[])
+		{
+		if (type == "interface")
+			{
+			InterfaceDef nid = new InterfaceDef(TypeDef.OBJECT, name)
+			nid.doc_description = docComment
+			
+			sf.types = new TypeDef[](sf.types, nid)
+			}
+			else if (type == "data")
+			{
+			DataDef tid = new DataDef(TypeDef.DATA, name)
+			tid.doc_description = docComment
+			
+			sf.types = new TypeDef[](sf.types, tid)
+			}
+		}
+	
+	InterfaceDef getInterfaceDef(SourceFile sf, char pkg[], char name[])
+		{
+		for (int i = 0; i < sf.types.arrayLength; i++)
+			{
+			if (sf.types[i].class == TypeDef.OBJECT && sf.types[i].name == name)
+				{
+				InterfaceDef id = sf.types[i]
+				return id
+				}
+			}
+		
+		for (int n = 0; n < sf.supportFiles.arrayLength; n++)
+			{
+			for (int i = 0; i < sf.supportFiles[n].types.arrayLength; i++)
+				{
+				if (sf.supportFiles[n].types[i].class == TypeDef.OBJECT && sf.supportFiles[n].types[i].name == name)
+					{
+					InterfaceDef id = sf.supportFiles[n].types[i]
+					return id
+					}
+				}
+			}
+		
+		return null
+		}
+	
+	DataDef getDataDef(SourceFile sf, char name[])
+		{
+		//out.println("looking for type $name")
+		
+		for (int i = 0; i < sf.types.arrayLength; i++)
+			{
+			if (sf.types[i].class == TypeDef.DATA && sf.types[i].name == name)
+				{
+				DataDef dd = sf.types[i]
+				return dd
+				}
+			}
+		
+		for (int n = 0; n < sf.supportFiles.arrayLength; n++)
+			{
+			for (int i = 0; i < sf.supportFiles[n].types.arrayLength; i++)
+				{
+				if (sf.supportFiles[n].types[i].class == TypeDef.DATA && sf.supportFiles[n].types[i].name == name)
+					{
+					DataDef dd = sf.supportFiles[n].types[i]
+					return dd
+					}
+				}
+			}
+		
+		return null
+		}
+	
+	bool isType(SourceFile sf, char name[])
+		{
+		return getInterfaceDef(sf, null, name) != null || getDataDef(sf, name) != null || isBuiltinType(name)
+		}
+	
+	bool isPlainName(SourceFile sf, char name[])
+		{
+		return !isType(sf, name) && !isToken(name) && !isKeyword(name)
+		}
+
+	
+	bool isTypeQualifier(char str[])
+		{
+		return str == "const" || str == "transfer"
+		}
+	
+	bool isReturnTypeQualifier(char str[])
+		{
+		return false
+		}
+	
+	bool isParamTypeQualifier(char str[])
+		{
+		return str == "store" || str == "opt"
+		}
+	
+	bool isFieldDeclaration(SourceFile sf, ParseToken tokens[], int start)
+		{
+		//[const|transfer|copy] <type> <name> [sqBrackets]
+		
+		while (isTypeQualifier(tokens[start].content))
+			start ++
+		
+		if (!isType(sf, tokens[start].content))
+			return false
+		
+		start ++
+		
+		if (!isPlainName(sf, tokens[start].content))
+			return false
+		
+		start ++
+		
+		if (tokens[start].content == "[")
+			{
+			start ++
+			
+			if (tokens[start].content != "]")
+				return false
+			
+			start ++
+			}
+		
+		return true
+		}
+	
+	bool isEventSourceDeclaration(SourceFile sf, ParseToken tokens[], int start)
+		{
+		//[const|transfer|copy] <type> <name> [sqBrackets]
+		
+		if (tokens[start].content != "event")
+			return false
+		
+		start ++
+		
+		if (!isPlainName(sf, tokens[start].content))
+			return false
+		
+		start ++
+		
+		return true
+		}
+	
+	bool isFunctionDeclaration(SourceFile sf, InterfaceDef forInterface, ParseToken tokens[], int start)
+		{
+		//regular:
+		//[copy] <type> <name> ([<paramater>] [,<paramater>])
+		//constructor:
+		//<interface_type_name> ([<paramater>] [,<paramater>])
+		
+		if (tokens[start].content == forInterface.name && tokens[start+1].content == "(")
+			{
+			//constructor
+			start ++
+			}
+			else
+			{
+			//regular function
+			while (isReturnTypeQualifier(tokens[start].content))
+				start ++
+			
+			//return type
+			if (!isType(sf, tokens[start].content))
+				{
+				return false
+				}
+			
+			start ++
+			
+			//array?
+			if (tokens[start].content == "[")
+				{
+				if (tokens[start+1].content != "]")
+					return false
+				
+				start += 2
+				}
+			
+			//function name
+			if (!isPlainName(sf, tokens[start].content))
+				return false
+			
+			start ++
+			}
+		
+		//parameter list
+		if (tokens[start].content != "(")
+			return false
+		
+		start ++
+		
+		while (start < tokens.arrayLength)
+			{
+			if (tokens[start].content == ")")
+				break
+			
+			start ++
+			}
+		
+		return true
+		}
+	
+	bool isDocComment(char comment[])
+		{
+		//for now, trim the comment and check if it starts and ends with a "{" and "}"
+		//TODO: a full json syntax check
+		char tc[] = stringUtil.trim(comment)
+		
+		return tc[0] == "{" && tc[tc.arrayLength-1] == "}"
+		}
+	
+	int consumeInterfaceFieldDeclaration(InterfaceDef id, ParseToken docComment, ParseToken tokens[], int start)
+		{
+		//[const|transfer|copy] <type> <name> [sqBrackets]
+		FieldDef field = new FieldDef()
+		
+		bool qTransfer
+		bool qConstant
+		
+		int os = start
+		while (isTypeQualifier(tokens[start].content))
+			{
+			if (tokens[start].content == "transfer")
+				qTransfer = true
+			
+			if (tokens[start].content == "const")
+				qConstant = true
+			
+			start ++
+			}
+		
+		//type name
+		field.type = tokens[start].content
+		
+		start ++
+		
+		//field name
+		field.name = tokens[start].content
+		field.displayName = field.name
+		
+		start ++
+		
+		//array?
+		if (tokens[start].content == "[")
+			{
+			start ++
+			
+			if (tokens[start].content == "]")
+				field.array = true
+			
+			field.displayName = new char[](field.displayName, "[]")
+			
+			start ++
+			}
+		
+		//constant initialiser
+		if (qConstant)
+			{
+			if (tokens[start].content == "=")
+				{
+				start ++
+				
+				//consume one expression
+				ParseToken tk[] = consumeExpression(tokens, start)
+				start += tk.arrayLength
+				}
+			}
+		
+		if (docComment != null) field.doc_description = docComment.content
+		
+		if (qTransfer)
+			id.transferFields = new FieldDef[](id.transferFields, field)
+			else if (qConstant)
+			id.constants = new FieldDef[](id.constants, field)
+		
+		return start - os
+		}
+	
+	int consumeInterfaceEventSourceDeclaration(InterfaceDef id, ParseToken docComment, ParseToken tokens[], int start)
+		{
+		//eventsource <name>
+		EventSourceDef field = new EventSourceDef()
+		
+		int os = start
+		
+		//eventsource
+		//...
+		
+		start ++
+		
+		//field name
+		field.name = tokens[start].content
+		field.displayName = field.name
+		
+		start ++
+		
+		//parameter list
+		if (tokens[start].content != "(")
+			return 0
+		
+		start ++
+		
+		while (start < tokens.arrayLength)
+			{
+			if (tokens[start].content == ")")
+				break
+			
+			//[modifiers] <type> <name> [sqBrackets]
+			
+			while (isReturnTypeQualifier(tokens[start].content))
+				start ++
+			
+			FieldDef nfd = new FieldDef()
+			nfd.type = tokens[start].content
+			
+			start ++
+			
+			nfd.name = tokens[start].content
+			nfd.displayName = nfd.name
+			
+			start ++
+			
+			if (tokens[start].content == "[")
+				{
+				if (tokens[start+1].content != "]")
+					return 0
+				
+				start += 2
+				nfd.displayName = new char[](nfd.displayName, "[]")
+				}
+			
+			field.params = new FieldDef[](field.params, nfd)
+			
+			if (tokens[start].content == ",")
+				start ++
+			}
+		
+		start ++
+		
+		if (docComment != null) field.doc_description = docComment.content
+		
+		id.eventSources = new EventSourceDef[](id.eventSources, field)
+		
+		return start - os
+		}
+	
+	int consumeInterfaceFunctionDeclaration(InterfaceDef id, ParseToken docComment, ParseToken tokens[], int start)
+		{
+		//regular:
+		//<type> <name> ([<paramater>] [,<paramater>])
+		//constructor:
+		//<interface_type_name> ([<paramater>] [,<paramater>])
+		
+		int os = start
+		
+		FunctionDef newFunction = new FunctionDef()
+		
+		if (tokens[start].content == id.name && tokens[start+1].content == "(")
+			{
+			//constructor
+			newFunction.name = tokens[start].content
+			
+			start ++
+			}
+			else
+			{
+			//regular function
+			while (isReturnTypeQualifier(tokens[start].content))
+				start ++
+			
+			//return type
+			newFunction.returnType = tokens[start].content
+			
+			start ++
+			
+			//array?
+			if (tokens[start].content == "[")
+				{
+				if (tokens[start+1].content != "]")
+					return 0
+				
+				start += 2
+				newFunction.returnType = new char[](newFunction.returnType, "[]")
+				}
+			
+			//function name
+			newFunction.name = tokens[start].content
+			
+			start ++
+			}
+		
+		//parameter list
+		if (tokens[start].content != "(")
+			return 0
+		
+		start ++
+		
+		bool optLatch = false
+		
+		while (start < tokens.arrayLength)
+			{
+			if (tokens[start].content == ")")
+				break
+			
+			//[modifiers] <type> <name> [sqBrackets]
+			
+			bool sStore = false
+			bool pOpt = optLatch
+			
+			while (isParamTypeQualifier(tokens[start].content))
+				{
+				if (tokens[start].content == "store")
+					sStore = true
+				
+				if (tokens[start].content == "opt")
+					{
+					pOpt = true
+					optLatch = true
+					}
+				
+				start ++
+				}
+			
+			FieldDef nfd = new FieldDef()
+			nfd.type = tokens[start].content
+			
+			start ++
+			
+			nfd.name = tokens[start].content
+			nfd.displayName = nfd.name
+			
+			start ++
+			
+			if (tokens[start].content == "[")
+				{
+				if (tokens[start+1].content != "]")
+					return 0
+				
+				start += 2
+				nfd.displayName = new char[](nfd.displayName, "[]")
+				}
+			
+			nfd.scope_store = sStore
+			nfd.opt_param = pOpt
+			
+			newFunction.params = new FieldDef[](newFunction.params, nfd)
+			
+			if (tokens[start].content == ",")
+				start ++
+			}
+		
+		start ++
+		
+		//function body?
+		if (tokens[start].content == "{")
+			{
+			start ++
+			
+			while (tokens[start].content != "}")
+				start ++
+			
+			start ++
+			}
+		
+		if (docComment != null) newFunction.doc_description = docComment.content
+		
+		id.functions = new FunctionDef[](id.functions, newFunction)
+		
+		return start - os
+		}
+	
+	ParseToken[] consumeExpression(ParseToken tokens[], int start)
+		{
+		//<literal> | <expression>
+		
+		return new ParseToken[](tokens[start])
+		}
+	
+	int consumeDataFieldDeclaration(DataDef td, ParseToken docComment, ParseToken tokens[], int start)
+		{
+		//[const|transfer|copy] <type> <name> [sqBrackets]
+		FieldDef field = new FieldDef()
+		
+		bool qCopy
+		bool qTransfer
+		bool qConstant
+		
+		int os = start
+		while (isTypeQualifier(tokens[start].content))
+			{
+			if (tokens[start].content == "copy")
+				qCopy = true
+			
+			if (tokens[start].content == "transfer")
+				qTransfer = true
+			
+			if (tokens[start].content == "const")
+				qConstant = true
+			
+			start ++
+			}
+		
+		//type name
+		field.type = tokens[start].content
+		
+		start ++
+		
+		//field name
+		field.name = tokens[start].content
+		field.displayName = field.name
+		
+		start ++
+		
+		//array?
+		if (tokens[start].content == "[")
+			{
+			start ++
+			
+			if (tokens[start].content == "]")
+				field.array = true
+			
+			field.displayName = new char[](field.displayName, "[]")
+			
+			start ++
+			}
+		
+		//constant initialiser
+		if (qConstant)
+			{
+			if (tokens[start].content == "=")
+				{
+				start ++
+				
+				//consume one expression
+				ParseToken tk[] = consumeExpression(tokens, start)
+				start += tk.arrayLength
+				}
+			}
+		
+		if (docComment != null) field.doc_description = docComment.content
+		
+		if (qConstant)
+			td.constants = new FieldDef[](td.constants, field)
+			else
+			td.fields = new FieldDef[](td.fields, field)
+		
+		return start - os
+		}
+	
+	void printTypesFor(SourceFile sf)
+		{
+		out.println("types in '$(sf.path)'")
+		
+		for (int i = 0; i < sf.types.arrayLength; i++)
+			{
+			out.println(" -- $(sf.types[i].name)")
+			}
+		}
+	
+	int parseTypeDefinition(SourceFile root_sf, SourceFile sf, ParseToken tokens[], int start)
+		{
+		//collect the type name and also extract any "extends" clause
+		
+		//out.println("[parse type $(tokens[start+1].content)]")
+		
+		int count = 0
+		
+		if (tokens[start].content == "interface")
+			{
+			InterfaceDef id = getInterfaceDef(root_sf, null, tokens[start+1].content)
+			
+			if (id == null) throw new Exception("Interface $(tokens[start+1].content) not found!!!")
+			
+			//type keyword
+			start ++
+			count ++
+			
+			//type name
+			start ++
+			count ++
+			
+			//extends?
+			if (tokens[start].content == "extends")
+				{
+				start ++
+				count ++
+				
+				//(package) and type name of the thing we're extending
+				char pkg[]
+				char nm[] = tokens[start].content
+				pkg = new char[](pkg, nm)
+				start ++
+				count ++
+				
+				while (tokens[start].content == ".")
+					{
+					start ++
+					count ++
+					nm = tokens[start].content
+					pkg = new char[](pkg, ".", nm)
+					start ++
+					count ++
+					}
+				
+				id.extendsType = getInterfaceDef(root_sf, pkg, nm)
+				}
+			
+			//the type definition
+			if (tokens[start].content == "{")
+				{
+				count ++
+				start ++
+				
+				ParseToken lastDocComment
+				
+				while (start < tokens.arrayLength)
+					{
+					int ac = 1
+					
+					if (isFunctionDeclaration(root_sf, id, tokens, start))
+						{
+						//out.println(" - function")
+						ac = consumeInterfaceFunctionDeclaration(id, lastDocComment, tokens, start)
+						lastDocComment = null
+						}
+						else if (isFieldDeclaration(root_sf, tokens, start))
+						{
+						//out.println(" - field")
+						ac = consumeInterfaceFieldDeclaration(id, lastDocComment, tokens, start)
+						lastDocComment = null
+						}
+						else if (isEventSourceDeclaration(root_sf, tokens, start))
+						{
+						//out.println(" - eventsource")
+						ac = consumeInterfaceEventSourceDeclaration(id, lastDocComment, tokens, start)
+						lastDocComment = null
+						}
+						else if (tokens[start].content == "}")
+						{
+						break
+						}
+						else if (tokens[start].type == ParseToken.TYPE_BLOCK_COMMENT || tokens[start].type == ParseToken.TYPE_LINE_COMMENT)
+						{
+						//out.println(" - comment")
+						if (isDocComment(tokens[start].content))
+							lastDocComment = tokens[start]
+						}
+						else
+						{
+						throw new Exception("Syntax error T '$(tokens[start].content)' in '$(sf.path)'")
+						}
+					
+					count += ac
+					start += ac
+					
+					//out.println(" - next token: $(tokens[start].content)")
+					}
+				}
+			}
+			else if (tokens[start].content == "data")
+			{
+			DataDef td = getDataDef(sf, tokens[start+1].content)
+			
+			//type keyword
+			start ++
+			count ++
+			
+			//type name
+			start ++
+			count ++
+			
+			//nocycle?
+			if (tokens[start].content == "nocycle")
+				{
+				start ++
+				count ++
+				}
+			
+			//extends?
+			if (tokens[start].content == "extends")
+				{
+				start ++
+				count ++
+				
+				//(package) and type name of the thing we're extending
+				char pkg[]
+				pkg = new char[](pkg, tokens[start].content)
+				start ++
+				count ++
+				
+				while (tokens[start].content == ".")
+					{
+					start ++
+					count ++
+					pkg = new char[](pkg, ".", tokens[start].content)
+					start ++
+					count ++
+					}
+				
+				td.extendsType = getDataDef(root_sf, pkg)
+				}
+			
+			//nocycle?
+			if (tokens[start].content == "nocycle")
+				{
+				start ++
+				count ++
+				}
+			
+			//the type definition
+			if (tokens[start].content == "{")
+				{
+				start ++
+				count ++
+				
+				ParseToken lastDocComment
+				
+				while (start < tokens.arrayLength)
+					{
+					int ac = 1
+					
+					if (isFieldDeclaration(root_sf, tokens, start))
+						{
+						//out.println(" - field")
+						ac = consumeDataFieldDeclaration(td, lastDocComment, tokens, start)
+						lastDocComment = null
+						}
+						else if (tokens[start].content == "}")
+						{
+						break
+						}
+						else if (tokens[start].type == ParseToken.TYPE_BLOCK_COMMENT || tokens[start].type == ParseToken.TYPE_LINE_COMMENT)
+						{
+						//out.println(" - comment")
+						if (isDocComment(tokens[start].content))
+							lastDocComment = tokens[start]
+						}
+						else
+						{
+						throw new Exception("Syntax error D '$(tokens[start].content)' in '$(sf.path)'")
+						}
+					
+					count += ac
+					start += ac
+					
+					//out.println(" - next token: $(tokens[start].content)")
+					}
+				}
+			}
+		
+		return count
+		}
+	
+	void parseTypeDetails(SourceFile root_sf, SourceFile sf, ParseToken tokens[])
+		{
+		//in this pass we have collected all valid type names, so we can do a full syntax check (group into expressions, type definitions etc.)
+		int start = 0
+		
+		while (start != tokens.arrayLength)
+			{
+			int clength = 1
+			
+			if (isTypeDefinition(tokens, start))
+				{
+				clength = parseTypeDefinition(root_sf, sf, tokens, start)
+				}
+			
+			if (clength == 0) return
+			
+			start += clength
+			}
+		}
+	
+	SourceFile findSourceFile(char path[])
+		{
+		for (int i = 0; i < primaryFiles.arrayLength; i++)
+			{
+			if (primaryFiles[i].path == path)
+				return primaryFiles[i]
+			}
+		
+		for (int i = 0; i < supportFiles.arrayLength; i++)
+			{
+			if (supportFiles[i].path == path)
+				return supportFiles[i]
+			}
+		
+		return null
+		}
+	
+	char[] resolvePackageToFile(SourceFile sf, char package[])
+		{
+		char epath[] = new char[](stringUtil.implode(stringUtil.explode(package, "."), "/"), ".dn")
+		
+		char test[]
+		
+		// - check relative to the source file that references it
+		String tokens[] = clone stringUtil.explode(sf.path, "/\\")
+		tokens[tokens.arrayLength - 1] = new String("")
+		
+		test = new char[](stringUtil.implode(tokens, "/"), epath)
+		
+		if (fs.exists(test))
+			return test
+		
+		// - check relative to local base
+		test = new char[]("resources/", epath)
+		
+		if (fs.exists(test))
+			return test
+		
+		// - check centrally
+		
+		test = new char[](sysInfo.getVariable("DANA_HOME"), "/resources/", epath)
+		
+		if (fs.exists(test))
+			return test
+		
+		return null
+		}
+	
+	bool hasSupportFile(SourceFile sf, SourceFile q)
+		{
+		for (int i = 0; i < sf.supportFiles.arrayLength; i++)
+			{
+			if (sf.supportFiles[i] === q)
+				return true
+			}
+		
+		return false
+		}
+	
+	void addSubSupportFiles(SourceFile to_sf, SourceFile from_sf)
+		{
+		for (int i = 0; i < from_sf.supportFiles.arrayLength; i++)
+			{
+			if (! hasSupportFile(to_sf, from_sf.supportFiles[i]))
+				{
+				to_sf.supportFiles = new SourceFile[](to_sf.supportFiles, from_sf.supportFiles[i])
+				addSubSupportFiles(to_sf, from_sf.supportFiles[i])
+				}
+			}
+		}
+	
+	void collectExternalTypes(SourceFile root_sf, SourceFile sf, IncludeList incList)
+		{
+		//scan over all "uses" entries and "extends" clauses, but don't visit any files already in parsedFiles
+		for (int i = 0; i < incList.list.arrayLength; i++)
+			{
+			char package[] = incList.list[i].string
+			
+			//resolve this package into a file to parse, relative to sf.path
+			char path[] = resolvePackageToFile(sf, package)
+			
+			if (path == null)
+				{
+				out.println("[warning] package $package could not be resolved, from source file $(sf.path)")
+				}
+				else
+				{
+				//check if this file is already in primaryFiles or supportFiles
+				// - if not, go ahead and call parseTokens on it
+				SourceFile q = findSourceFile(path)
+				
+				if (q == null)
+					{
+					File fd = new File(path, File.READ)
+					
+					if (fd != null)
+						{
+						char content[] = fd.read(fd.getSize())
+						
+						fd.close()
+						
+						q = new SourceFile(path)
+						
+						supportFiles = new SourceFile[](supportFiles, q)
+						if (root_sf !== sf) sf.supportFiles = new SourceFile[](sf.supportFiles, q)
+						root_sf.supportFiles = new SourceFile[](root_sf.supportFiles, q)
+						
+						ParseToken tokens[] = tokeniser.tokenise(content)
+						
+						parseTokens(root_sf, q, tokens)
+						}
+					}
+					else
+					{
+					if (!hasSupportFile(root_sf, q))
+						{
+						root_sf.supportFiles = new SourceFile[](root_sf.supportFiles, q)
+						//we still need to add all supportFiles that q itself uses to root_sf's supportFiles
+						addSubSupportFiles(root_sf, q)
+						}
+					
+					if (sf !== q && !hasSupportFile(sf, q))
+						{
+						sf.supportFiles = new SourceFile[](sf.supportFiles, q)
+						addSubSupportFiles(sf, q)
+						}
+					}
+				}
+			}
+		}
+	
+	void parseTokens(SourceFile root_sf, SourceFile sf, ParseToken tokens[])
+		{
+		//TODO: group tokens into expressions, type definitions etc.
+		// - we need to do the same multi-pass process as the compiler: first scan for type definitions, then populate the types with their fields, etc.
+		
+		int start = 0
+		
+		IncludeList incList = new IncludeList()
+		
+		incList.list = new String[](incList.list, new String("lang.Type"))
+		incList.list = new String[](incList.list, new String("lang.IDC"))
+		incList.list = new String[](incList.list, new String("lang.Object"))
+		incList.list = new String[](incList.list, new String("lang.Thread"))
+		
+		char lastDocComment[]
+		
+		while (start != tokens.arrayLength)
+			{
+			int clength = 1
+			
+			if (isUses(tokens, start))
+				{
+				clength = consumeUses(tokens, start, incList)
+				}
+				else if (isTypeDefinition(tokens, start))
+				{
+				clength = consumeTypeDefinition(sf, lastDocComment, tokens, start, incList)
+				lastDocComment = null
+				}
+				else if (tokens[start].type == ParseToken.TYPE_BLOCK_COMMENT || tokens[start].type == ParseToken.TYPE_LINE_COMMENT)
+				{
+				if (isDocComment(tokens[start].content))
+					lastDocComment = tokens[start].content
+				}
+			
+			start += clength
+			}
+		
+		//from the headers of "uses" and type definitions, collect all external types from other source files
+		// - the below function should check supportFiles first to see if already parsed, and if so just add a reference to sf's list
+		collectExternalTypes(root_sf, sf, incList)
+		
+		//now that we have all externally-defined types, parse the internals of the type definitions (i.e. fields) from this source file
+		parseTypeDetails(root_sf, sf, tokens)
+		}
+	
+	DocBuilder:DocBuilder()
+		{
+		initialiseParseTokens()
+		initialiseParseKeywords()
+		initialiseBuiltinTypes()
+		
+		tokeniser = new Tokeniser(parseTokens)
+		tokeniser.setLineComment("//")
+		tokeniser.setBlockComment("/*", "*/")
+		}
+	
+	bool DocBuilder:parseFile(char path[])
+		{
+		File fd = new File(path, File.READ)
+		
+		if (fd != null)
+			{
+			char content[] = fd.read(fd.getSize())
+			
+			ParseToken tokens[] = tokeniser.tokenise(content)
+			
+			/*
+			for (int i = 0; i < tokens.arrayLength; i++)
+				{
+				out.println("<$(iu.makeString(tokens[i].type))>token: $(tokens[i].content)")
+				}
+			*/
+			
+			fd.close()
+			
+			SourceFile sf = new SourceFile(path)
+			
+			parseTokens(sf, sf, tokens)
+			
+			primaryFiles = new SourceFile[](primaryFiles, sf)
+			}
+		
+		return true
+		}
+	
+	ParsedFiles DocBuilder:getParsedFiles()
+		{
+		return new ParsedFiles(primaryFiles, supportFiles)
+		}
+	
+	}

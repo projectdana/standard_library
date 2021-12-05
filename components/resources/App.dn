@@ -3,14 +3,20 @@
 */
 
 data AppParam{
+	/* {"@description" : "The text-based data delivered to a command-line parameter."} */
 	char string[]
 	}
 
 /*
-{ "description" : "This interface is used by the entry-point component for command-line programs; a component must implement this interface to be executable from a command-line environment. The params[] array is populated with any parameters that follow the program name (for example issuing the command 'dana MyApp xyz 123' creates a params array with 2 cells, the first cell containing 'xyz' and the second containing '123'."}
+{ "description" : "This interface is used by the entry-point component of a Dana program; a component must implement this interface to be executable by the Dana interpreter. The params[] array is populated with any parameters that follow the program name (for example issuing the command 'dana MyApp xyz 123' creates a params array with 2 cells, the first cell containing 'xyz' and the second containing '123'."}
 */
 
 interface App{
+	/*
+	{"@description" : "This function provides the fully-qualified path to the directory containing this component's compiled object file. It is called before main(), and can be useful to access the path from which additional assets of a program may be located (such as graphics objects for GUI applications). The dataPath parameter, if set, indicates a specific location at which the program should store any writable user data such as configuration parameters. If dataPath is not set the program should decide independently where to place such data (such as in its source path)."}
+	*/
+	void setSourcePath(char path[], opt char dataPath[]){}
+
 	/*
 	{"@description" : "This function is called to start a program.",
 		"params" : "Array of the command-line arguments with which the program was started."}

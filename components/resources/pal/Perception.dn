@@ -19,9 +19,14 @@ data Event {
 	DateTime timeLast
 	}
 
+data Trace {
+	char content[]
+	}
+
 data PerceptionData {
 	Event events[]
 	Metric metrics[]
+	Trace trace[]
 	}
 
 /*
@@ -31,7 +36,7 @@ data PerceptionData {
 interface Perception {
 	
 	/*
-	{ "@description" : "Records a metric with a given name. Metrics are used to understand the current wellbeing of a component." }
+	{ "@description" : "Records a metric with a given name. Metrics are used to understand the current performance of a component." }
 	*/
 	void addMetric(char name[], int value, bool preferHigh)
 	
@@ -39,6 +44,11 @@ interface Perception {
 	{ "@description" : "Records an event with a given name. Events are used to understand the deployment environment of a component." }
 	*/
 	void addEvent(char name[], int value)
+	
+	/*
+	{ "@description" : "Records trace data that is used for additional system diagnostics, for example from an injected proxy capturing data travelling across a specific interface." }
+	*/
+	void addTrace(char content[])
 	
 	/*
 	{ "@description" : "Returns all perception data recorded since the last time this function was called." }

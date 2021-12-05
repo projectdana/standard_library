@@ -1,0 +1,232 @@
+data CompressEntry {
+	char fullPath[]
+	char localPath[]
+	}
+
+component provides App requires io.Output out, io.File,	io.FileSystem fileSystem, data.StringUtil stringUtil, compress.Archive:targz, compress.ArchiveWriter:targz {
+	
+	char[] normalisePath(char path[])
+		{
+		return path.explode("\\").implode("/")
+		}
+	
+	char[] getFileName(char path[])
+		{
+		if (path.rfind("/") != StringUtil.NOT_FOUND)
+			path = path.subString(path.rfind("/")+1, path.arrayLength - (path.rfind("/")+1))
+		
+		return path
+		}
+	
+	CompressEntry[] getFilesToCompress(char param[])
+		{
+		param = normalisePath(param)
+		
+		return new CompressEntry(param, getFileName(param))
+		}
+	
+	void addToArchive(ArchiveWriter aw, CompressEntry ce, char relativePath[])
+		{
+		char apath[] = ce.localPath
+		if (relativePath != null) apath = "$(relativePath)/$(apath)"
+		
+		FileInfo fInfo = fileSystem.getInfo(ce.fullPath)
+		
+		if (fInfo.type == FileInfo.TYPE_DIR)
+			{
+			aw.addDirectory(apath, fInfo.modified)
+			
+			FileEntry files[] = fileSystem.getDirectoryContents(ce.fullPath)
+			
+			for (int i = 0; i < files.arrayLength; i++)
+				{
+				addToArchive(aw, new CompressEntry("$(ce.fullPath)/$(files[i].name)", files[i].name), apath)
+				}
+			}
+			else
+			{
+			File fd = new File(ce.fullPath, File.READ)
+			aw.addFile(apath, fd, fInfo.modified)
+			}
+		}
+	
+	void extractDirectory(Archive archive, char path[], char to[])
+		{
+		ArchiveFile lst[] = archive.getContents(path)
+		
+		for (int i = 0; i < lst.arrayLength; i++)
+			{
+			if (lst[i].dir)
+				{
+				if (!fileSystem.exists("$to/$(lst[i].path)"))
+					fileSystem.createDirectory("$to/$(lst[i].path)")
+				
+				if (path == null)
+					extractDirectory(archive, "$(lst[i].path)", "$to/$(lst[i].path)")
+					else
+					extractDirectory(archive, "$path/$(lst[i].path)", "$to/$(lst[i].path)")
+				}
+				else
+				{
+				File fd = new File("$to/$(lst[i].path)", File.CREATE)
+				
+				if (path == null)
+					archive.extractFileTo("$(lst[i].path)", fd)
+					else
+					archive.extractFileTo("$path/$(lst[i].path)", fd)
+				}
+			}
+		}
+	
+	void makeDirectory(char path[])
+		{
+		//check this directory exists
+		
+		String parts[] = path.explode("/")
+		
+		char cpath[]
+		
+		if (path[0] == "/")
+			cpath = "/$(parts[0].string)"
+			else
+			cpath = parts[0].string
+		
+		if (!fileSystem.exists(cpath))
+			fileSystem.createDirectory(cpath)
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			cpath = new char[](cpath, "/", parts[i].string)
+			
+			if (!fileSystem.exists(cpath))
+				fileSystem.createDirectory(cpath)
+			}
+		}
+	
+	void printContents(Archive archive, char dir[])
+		{
+		ArchiveFile fileList[] = archive.getContents(dir)
+		
+		for (int i = 0; i < fileList.arrayLength; i++)
+			{
+			if (dir.arrayLength != 0)
+				out.println("$dir/$(fileList[i].path)")
+				else
+				out.println("$(fileList[i].path)")
+			
+			if (fileList[i].dir)
+				{
+				if (dir.arrayLength != 0)
+					printContents(archive, "$dir/$(fileList[i].path)")
+					else
+					printContents(archive, "$(fileList[i].path)")
+				}
+			}
+		}
+	
+	void printGuide()
+		{
+		out.println("Usage:")
+		out.println(" dana targz -c  archiveName.tar.gz fileToCompress1 fileToCompress2 folderToCompress3")
+		out.println(" dana targz -x  archiveToExtract.tar.gz -d extractToDirectory")
+		out.println(" dana targz -l  archiveContentsToList.tar.gz")
+		out.println(" dana targz -lr archiveContentsToListRecursively.tar.gz")
+		}
+	
+	int App:main(AppParam params[])
+		{
+		if (params.arrayLength == 0)
+			{
+			printGuide()
+			return 1
+			}
+		
+		if (params[0].string == "-c")
+			{
+			char archiveName[] = params[1].string
+			
+			File fd = new File(archiveName, File.CREATE)
+			
+			ArchiveWriter aw = new ArchiveWriter:targz(fd)
+			
+			for (int i = 2; i < params.arrayLength; i++)
+				{
+				CompressEntry files[] = getFilesToCompress(params[i].string)
+				
+				for (int j = 0; j < files.arrayLength; j++)
+					{
+					addToArchive(aw, files[j], null)
+					}
+				}
+			
+			aw.close()
+			}
+			else if (params[0].string == "-x")
+			{
+			char archiveName[] = params[1].string
+			char extractPath[] = "."
+			
+			File archiveFD = new File(archiveName, File.READ)
+			
+			if (archiveFD == null)
+				{
+				out.println("archive file not found")
+				return 1
+				}
+			
+			Archive ar = new Archive:targz(archiveFD)
+			
+			if (params.arrayLength == 4 && params[2].string == "-d")
+				{
+				extractPath = params[3].string
+				makeDirectory(extractPath)
+				}
+			
+			extractDirectory(ar, null, extractPath)
+			}
+			else if (params[0].string == "-l")
+			{
+			File archiveFD = new File(params[1].string, File.READ)
+			
+			if (archiveFD == null)
+				{
+				out.println("archive file not found")
+				return 1
+				}
+			
+			Archive archive = new Archive:targz(archiveFD)
+			
+			ArchiveFile fileList[] = archive.getContents(null)
+			
+			for (int i = 0; i < fileList.arrayLength; i++)
+				{
+				out.println(fileList[i].path)
+				}
+			}
+			else if (params[0].string == "-lr")
+			{
+			File archiveFD = new File(params[1].string, File.READ)
+			
+			if (archiveFD == null)
+				{
+				out.println("archive file not found")
+				return 1
+				}
+			
+			Archive archive = new Archive:targz(archiveFD)
+			
+			printContents(archive, null)
+			}
+			else
+			{
+			out.println("Error: unknown command. See below for correct usage.")
+			
+			printGuide()
+			
+			return 1
+			}
+		
+		return 0
+		}
+	
+	}

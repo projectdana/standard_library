@@ -1,6 +1,8 @@
+const int BUF_EX_SIZE = 2048
+
 uses data.String
 
-component provides CSVParser requires io.Output out, data.StringUtil stringUtil, data.IntUtil intUtil, data.DecUtil decUtil, data.adt.List, io.TextFile {
+component provides CSVParser requires io.Output out, data.StringUtil stringUtil, data.IntUtil intUtil, data.DecUtil decUtil, data.adt.List {
 	
 	bool isAnyOf(char c, char tokens[])
 		{
@@ -66,25 +68,80 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 		return t.class == Type.ARRAY && t.fields[0].type.class == Type.INTEGER && t.fields[0].type.flags == Type.F_CHAR
 		}
 	
-	Data[] CSVParser:parseDocument(char path[], char separators[], Data template)
+	char[] readLine(File fd)
+		{
+		int bufferSize = BUF_EX_SIZE
+		char buf[] = new char[BUF_EX_SIZE]
+		int ndx = 0
+		
+		bool inString = false
+		char c[]
+		
+		while (!fd.eof())
+			{
+			c = fd.read(1)
+			
+			if (isStringCharacter(c[0])) inString = !inString
+			
+			if (!inString && c == "\r")
+				{
+				if ((c = fd.read(1)).arrayLength == 1 && c != "\n")
+					fd.setPos(fd.getPos()-1)
+				
+				char result[] = new char[ndx]
+				result =[] buf
+				return result
+				}
+				else if (!inString && c == "\n")
+				{
+				char result[] = new char[ndx]
+				result =[] buf
+				return result
+				}
+				else if (c.arrayLength == 1)
+				{
+				buf[ndx] = c[0]
+				ndx ++
+				
+				if (ndx == bufferSize)
+					{
+					buf = new char[](buf, new char[BUF_EX_SIZE])
+					bufferSize += BUF_EX_SIZE
+					}
+				}
+			}
+		
+		char result[]
+		if (ndx > 0)
+			{
+			result = new char[ndx]
+			result =[] buf
+			}
+		return result
+		}
+	
+	Data[] CSVParser:parseDocument(File fd, bool hasHeaderLine, char separators[], Data template)
 		{
 		Data result[]
 		
 		Type type = typeof(template)
 		
-		TextFile fd = new TextFile(path, File.READ)
+		List lst = new List()
 		
-		if (fd != null)
+		if (hasHeaderLine)
+			readLine(fd)
+		
+		while (!fd.eof())
 			{
-			while (!fd.eof())
+			char ln[] = readLine(fd)
+			
+			String s[] = explodeKE(ln, separators)
+			
+			Data nd = clone template
+			
+			for (int i = 0; i < type.fields.arrayLength; i++)
 				{
-				char ln[] = fd.readLine()
-				
-				String s[] = explodeKE(ln, separators)
-				
-				Data nd = clone template
-				
-				for (int i = 0; i < type.fields.arrayLength; i++)
+				if (i < s.arrayLength && s[i] != null)
 					{
 					if (type.fields[i].type.class == Type.INTEGER)
 						{
@@ -96,17 +153,83 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 						}
 						else if (isStringArrayType(type.fields[i].type))
 						{
-						nd:.i = s[i].string
+						char str[] = s[i].string
+						
+						if (str.arrayLength >= 2 && str[0] == "\"" && str[str.arrayLength-1] == "\"")
+							str = stringUtil.subString(str, 1, str.arrayLength - 2)
+						
+						nd:.i = str
 						}
 					}
-				
-				result = new Data[](result, nd) from type
 				}
 			
-			fd.close()
+			lst.add(nd)
+			}
+		
+		if (lst.getLength() != 0)
+			{
+			int i = 0
+			result = new Data[lst.getLength()] from type
+			for (Data s = lst.getFirst(); s != null; s = lst.getNext())
+				{
+				result[i] = s
+				i ++
+				}
 			}
 		
 		return result
+		}
+	
+	bool CSVParser:writeDocument(File fd, bool hasHeaderLine, char separators[], Data rows[])
+		{
+		Type arrayType = typeof(rows)
+		Type type = arrayType.fields[0].type
+		
+		if (hasHeaderLine)
+			{
+			for (int j = 0; j < type.fields.arrayLength; j++)
+				{
+				char val[] = type.fields[j].name
+				
+				fd.write(val)
+				
+				if (j+1 < type.fields.arrayLength) fd.write(",")
+				}
+			
+			fd.write("\n")
+			}
+		
+		for (int i = 0; i < rows.arrayLength; i++)
+			{
+			Data nd = rows[i]
+			
+			for (int j = 0; j < type.fields.arrayLength; j++)
+				{
+				char val[] = null
+				
+				if (type.fields[j].type.class == Type.INTEGER)
+					{
+					val = intUtil.intToString(nd:.j)
+					}
+					else if (type.fields[j].type.class == Type.DECIMAL)
+					{
+					dec k = nd:.j
+					val = decUtil.decToString(k)
+					}
+					else if (isStringArrayType(type.fields[j].type))
+					{
+					val = nd:.j
+					}
+				
+				fd.write(val)
+				
+				if (j+1 < type.fields.arrayLength) fd.write(",")
+				}
+			
+			fd.write("\n")
+			}
+		
+		return true
 		}
 	
 	}

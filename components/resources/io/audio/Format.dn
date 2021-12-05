@@ -1,0 +1,16 @@
+/* {"description" : "Data type to describe an audio format, in frame encoding, sample rate, and channels."} */
+
+data Format {
+	
+	/* {"@description" : "Possible value for 'format', indicating use of the float-32 audio format."} */
+	const byte FORMAT_F32 = 1
+	
+	/* {"@description" : "The audio format."} */
+	byte format
+	
+	/* {"@description" : "The audio sample rate, in hz."} */
+	int sampleRate
+	
+	/* {"@description" : "The number of channels for the audio format (for example 2 channels for stereo)."} */
+	int channels
+	}

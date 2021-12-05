@@ -1,20 +1,26 @@
-const byte JSON_ELEMENT_OBJECT	= 1
-const byte JSON_ELEMENT_STRING	= 2
-const byte JSON_ELEMENT_NUMBER	= 3
-const byte JSON_ELEMENT_BOOLEAN	= 4
-const byte JSON_ELEMENT_ARRAY	= 5
+/* {"description" : "Data type returned by a JSON parser, representing a parsed document as a tree."} */
 
-data JSONElement {
-const byte TYPE_OBJECT	= 1
-const byte TYPE_STRING	= 2
-const byte TYPE_NUMBER	= 3
-const byte TYPE_BOOLEAN	= 4
-const byte TYPE_ARRAY	= 5
-const byte TYPE_NULL	= 6
+data JSONElement nocycle {
+	/* {"@description" : "Possible value for the 'type' field, indicating that this element is an object."} */
+	const byte TYPE_OBJECT	= 1
+	/* {"@description" : "Possible value for the 'type' field, indicating that this element is a string."} */
+	const byte TYPE_STRING	= 2
+	/* {"@description" : "Possible value for the 'type' field, indicating that this element is a number."} */
+	const byte TYPE_NUMBER	= 3
+	/* {"@description" : "Possible value for the 'type' field, indicating that this element is a boolean value (true/false)."} */
+	const byte TYPE_BOOLEAN	= 4
+	/* {"@description" : "Possible value for the 'type' field, indicating that this element is an array."} */
+	const byte TYPE_ARRAY	= 5
+	/* {"@description" : "Possible value for the 'type' field, indicating that this element is the special value 'null'."} */
+	const byte TYPE_NULL	= 6
 
+	/* {"@description" : "This field holds the type of this JSON document element."} */
 	int type
+	/* {"@description" : "The field name of this JSON document element."} */
 	char name[]
+	/* {"@description" : "The value this JSON document element, if it's a primitive type."} */
 	char value[]
+	/* {"@description" : "The value this JSON document element, if it's an object or array type."} */
 	JSONElement children[]
 	}
 

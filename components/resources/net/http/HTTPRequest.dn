@@ -1,15 +1,19 @@
 /*
  {"description" : "Make a HTTP request."}
 */
-
 uses Header
 
 interface HTTPRequest {
 	/*
 	 {"@description" : "Make a HTTP GET request, returning a response structure."}
 	*/
-	HTTPResponse get(char url[], Header headers[])
-	}
+	HTTPResponse get(char url[], opt Header headers[])
+	
+	/*
+	 {"@description" : "Make a HTTP POST request, returning a response structure."}
+	*/
+	HTTPResponse post(char url[], Header headers[], char postData[])
+}
 
 data HTTPResponse {
 	char url[]
@@ -18,4 +22,4 @@ data HTTPResponse {
 	byte content[]
 	char contentType[]
 	Header headers[]
-	}
+}

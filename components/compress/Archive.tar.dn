@@ -1,0 +1,474 @@
+// https://www.gnu.org/software/tar/manual/html_node/Standard.html
+
+uses time.DateTime
+
+const int CHUNK_SIZE = 5120
+
+const byte REGTYPE = "0"          /* regular file */
+const byte AREGTYPE = 0           /* regular file */
+const byte LNKTYPE = "1"          /* link */
+const byte SYMTYPE = "2"          /* reserved */
+const byte CHRTYPE = "3"          /* character special */
+const byte BLKTYPE = "4"          /* block special */
+const byte DIRTYPE = "5"          /* directory */
+const byte FIFOTYPE = "6"         /* FIFO special */
+const byte CONTTYPE = "7"         /* reserved */
+const byte XHDTYPE = "x"          /* Extended header referring to the next file in the archive */
+const byte XGLTYPE = "g"          /* Global extended header */
+
+//500-byte block
+data TarHeader {
+	byte fileName[100]
+	byte fileMode[8]
+	byte ownerID[8]
+	byte groupID[8]
+	byte fileSize[12]
+	byte lastModified[12]
+	byte checksum[8]
+	int1 fileType
+	byte linkedFileName[100] //last field of original TAR format
+	byte ustar[6]
+	byte ustarVersion[2]
+	byte ownerUsername[32]
+	byte ownerGroupname[32]
+	int8 devNoMajor
+	int8 devNoMinor
+	byte fileNamePrefix[155]
+	}
+
+data FileIndex {
+	TarHeader header
+	ArchiveFile record
+	int offset
+	char path[]
+	}
+
+data FileTree {
+	char name[]
+	bool dir
+	ArchiveFile record
+	FileTree children[]
+	}
+
+component provides Archive:tar requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, time.TimeUnix timeUnix, data.checksum.CRC32 crc32, data.query.Search search {
+	
+	File ifd
+	FileIndex archiveIndex[]
+	ArchiveFile publicIndex[]
+	FileTree fileTree
+	
+	void reverseEndian(byte num[])
+		{
+		int j = num.arrayLength - 1
+		for (int i = 0; i < num.arrayLength / 2; i++)
+			{
+			byte tmp = num[j]
+			num[j] = num[i]
+			num[i] = tmp
+			j --
+			}
+		}
+	
+	//return a Dana char[] from a null-terminated char[]
+	char[] getNTString(char nt[])
+		{
+		char c = 0
+		int ndx = 0
+		if ((ndx = nt.find(c)) != StringUtil.NOT_FOUND)
+			{
+			return nt.subString(c, ndx)
+			}
+			else
+			{
+			return nt
+			}
+		}
+	
+	int8 i8FromOctal(byte ar[])
+		{
+		int8 res = 0
+		
+		int n = 0
+		for (int i = ar.arrayLength-2; i != INT_MAX; i--)
+			{
+			if (ar[i] != 0)
+				{
+				int8 rq = ar[i] - 48
+				res = res | (rq << (n*3))
+				}
+			n ++
+			}
+		
+		return res
+		}
+	
+	int4 i4FromOctal(byte ar[], int topIndex)
+		{
+		int4 res = 0
+		
+		int n = 0
+		for (int i = topIndex; i != INT_MAX; i--)
+			{
+			if (ar[i] != 0)
+				{
+				char cn = ar[i]
+				int4 rq = ar[i] - 48
+				
+				res = res | (rq << (n*3))
+				}
+			n ++
+			}
+		
+		return res
+		}
+	
+	//there appear to be two different ways of storing a tar checksum; we accept both
+	int4 i4FromChecksum(byte ar[])
+		{
+		if (ar[ar.arrayLength-1] == " ")
+			{
+			//standard checksum, terminated by a nul then a space
+			int4 res = 0
+			
+			int n = 0
+			for (int i = ar.arrayLength-3; i != INT_MAX; i--)
+				{
+				if (ar[i] != 0)
+					{
+					char cn = ar[i]
+					int4 rq = ar[i] - 48
+					
+					res = res | (rq << (n*3))
+					}
+				n ++
+				}
+			
+			return res
+			}
+			else
+			{
+			//alternative checksum, which is terminated only by a nul
+			int4 res = 0
+			
+			int n = 0
+			for (int i = ar.arrayLength-2; i != INT_MAX; i--)
+				{
+				if (ar[i] != 0)
+					{
+					char cn = ar[i]
+					int4 rq = ar[i] - 48
+					
+					res = res | (rq << (n*3))
+					}
+				n ++
+				}
+			
+			return res
+			}
+		}
+	
+	TarHeader readFileHeader(File fd, int offset)
+		{
+		TarHeader record = new TarHeader()
+		
+		byte srd[] = dana.serial(record)
+		
+		fd.setPos(offset)
+		
+		srd =[] fd.read(srd.arrayLength)
+		
+		return record
+		}
+	
+	bool checksumOK(TarHeader record)
+		{
+		int4 chk = i4FromChecksum(record.checksum)
+		
+		byte srd[] = dana.serial(record)
+		
+		int4 ver = 0
+		
+		for (int i = 0; i < srd.arrayLength; i++)
+			{
+			ver += srd[i]
+			}
+		
+		for (int i = 0; i < record.checksum.arrayLength; i++)
+			{
+			ver -= record.checksum[i]
+			ver += 32
+			}
+		
+		return chk == ver
+		}
+	
+	bool blankHeader(TarHeader record)
+		{
+		byte srd[] = dana.serial(record)
+		
+		for (int i = 0; i < srd.arrayLength; i++)
+			{
+			if (srd[i] != 0) return false
+			}
+		
+		return true
+		}
+	
+	void addToTree(char path[], ArchiveFile info, bool isDir)
+		{
+		String parts[] = stringUtil.explode(path, "/")
+		
+		FileTree node = fileTree
+		
+		for (int i = 0; i < parts.arrayLength; i++)
+			{
+			FileTree nextNode = null
+			if ((nextNode = node.children.findFirst(FileTree.[name], new FileTree(parts[i].string))) == null)
+				{
+				nextNode = new FileTree(parts[i].string)
+				nextNode.dir = (i < parts.arrayLength-1) || isDir
+				nextNode.record = new ArchiveFile(parts[i].string, nextNode.dir)
+				
+				//check if it's a leaf node, and fill in its details if so...
+				if (!isDir && i == parts.arrayLength-1)
+					{
+					nextNode.record.compressedSize = info.compressedSize
+					nextNode.record.uncompressedSize = info.uncompressedSize
+					nextNode.record.modified = info.modified
+					}
+				
+				node.children = new FileTree[](node.children, nextNode)
+				node = nextNode
+				}
+				else
+				{
+				node = nextNode
+				}
+			}
+		}
+	
+	void buildTree()
+		{
+		fileTree = new FileTree(dir = true)
+		
+		for (int i = 0; i < archiveIndex.arrayLength; i++)
+			{
+			addToTree(archiveIndex[i].path, archiveIndex[i].record, archiveIndex[i].header.fileType == DIRTYPE)
+			}
+		}
+	
+	Archive:Archive(File fd)
+		{
+		//the first thing in the file should be a TarHeader with a correctly calculated checksum
+		// - (calculate and check the checksum inside readFileHeader, returning null if it fails)
+		
+		bool end = false
+		int nextOffset = 0
+		
+		while (!end)
+			{
+			TarHeader hdr = null
+			
+			hdr = readFileHeader(fd, nextOffset)
+			
+			//NOTE: we're supposed to get two empty headers in a row, to indicate end-of-stream, but we stop at one
+			if (blankHeader(hdr)) break
+			
+			if (!checksumOK(hdr))
+				{
+				throw new Exception("invalid tar file (checksum failure)")
+				}
+			
+			if (hdr == null) break
+			
+			char fileName[] = getNTString(hdr.fileName)
+			char fileNamePre[] = getNTString(hdr.fileNamePrefix)
+			
+			//we should only use fileNamePrefix, and other extended fields, if hdr.ustar is set to the string "ustar\0"
+			bool ustar = hdr.ustar == "ustar"
+			
+			int8 sz = i8FromOctal(hdr.fileSize)
+			
+			int8 mod = i8FromOctal(hdr.lastModified)
+			
+			//add to directory
+			char fn[] = null
+			
+			if (ustar)
+				fn = new char[](fileNamePre, fileName)
+				else
+				fn = fileName
+			
+			int4 mode = i4FromOctal(hdr.fileMode, hdr.fileMode.arrayLength-2)
+			
+			ArchiveFile naf = new ArchiveFile(fn)
+			naf.dir = hdr.fileType == DIRTYPE
+			naf.modified = timeUnix.fromUnixTime(mod)
+			naf.compressedSize = sz
+			naf.uncompressedSize = sz
+			
+			publicIndex = new ArchiveFile[](publicIndex, naf)
+			
+			FileIndex nfi = new FileIndex(hdr, naf)
+			nfi.offset = nextOffset + 512
+			nfi.path = fn
+			
+			archiveIndex = new FileIndex[](archiveIndex, nfi)
+			
+			//locate the next record
+			nextOffset = nextOffset + 512 + sz
+			
+			int add = 0
+			if (nextOffset % 512 != 0) add = 512 - (nextOffset % 512)
+			
+			nextOffset = nextOffset + add
+			
+			if (nextOffset >= fd.getSize()) break
+			}
+		
+		buildTree()
+		
+		ifd = fd
+		}
+	
+	ArchiveFile[] Archive:getAllContents()
+		{
+		return publicIndex
+		}
+	
+	ArchiveFile[] Archive:getContents(char path[])
+		{
+		FileTree node = null
+		if (path == null)
+			{
+			node = fileTree
+			}
+			else
+			{
+			String parts[] = path.explode("/")
+			
+			node = fileTree
+			
+			for (int i = 0; i < parts.arrayLength; i++)
+				{
+				FileTree nextNode = null
+				if ((nextNode = node.children.findFirst(FileTree.[name], new FileTree(parts[i].string))) == null)
+					{
+					throw new Exception("directory '$path' not found in archive")
+					}
+					else
+					{
+					node = nextNode
+					}
+				}
+			}
+		
+		if (!node.dir) throw new Exception("path '$path' is not a directory")
+		
+		ArchiveFile result[] = new ArchiveFile[node.children.arrayLength]
+		
+		for (int i = 0; i < result.arrayLength; i++)
+			{
+			result[i] = node.children[i].record
+			}
+		
+		return result
+		}
+	
+	bool Archive:exists(char path[])
+		{
+		return archiveIndex.findFirst(FileIndex.[path], new FileIndex(path = path)) != null
+		}
+	
+	ArchiveFile Archive:getInfo(char path[])
+		{
+		return publicIndex.findFirst(ArchiveFile.[path], new ArchiveFile(path = path))
+		}
+	
+	void copyArray(byte dest[], byte src[], int start)
+		{
+		int j = start
+		for (int i = 0; i < src.arrayLength; i++)
+			{
+			dest[j] = src[i]
+			j++
+			}
+		}
+	
+	byte[] Archive:extractFile(char path[])
+		{
+		FileIndex fi = archiveIndex.findFirst(FileIndex.[path], new FileIndex(path = path))
+		
+		if (fi != null)
+			{
+			ifd.setPos(fi.offset)
+			
+			byte result[] = new byte[fi.record.uncompressedSize]
+			
+			int rdAmt = 0
+			int offset = 0
+			while (rdAmt < fi.record.uncompressedSize)
+				{
+				int thisRead = CHUNK_SIZE
+				
+				if ((rdAmt + CHUNK_SIZE) > fi.record.uncompressedSize) thisRead = fi.record.uncompressedSize - rdAmt
+				
+				byte cdata[] = ifd.read(thisRead)
+				
+				byte ddata[]
+				
+				ddata = cdata
+				
+				copyArray(result, ddata, offset)
+				
+				offset += ddata.arrayLength
+				rdAmt += CHUNK_SIZE
+				}
+			
+			return result
+			}
+			else
+			{
+			throw new Exception("file '$path' not found in archive")
+			}
+		
+		return null
+		}
+	
+	bool Archive:extractFileTo(char path[], File ofd)
+		{
+		FileIndex fi = archiveIndex.findFirst(FileIndex.[path], new FileIndex(path = path))
+		
+		if (fi != null)
+			{
+			ifd.setPos(fi.offset)
+			
+			int rdAmt = 0
+			while (rdAmt < fi.record.uncompressedSize)
+				{
+				int thisRead = CHUNK_SIZE
+				
+				if ((rdAmt + CHUNK_SIZE) > fi.record.uncompressedSize) thisRead = fi.record.uncompressedSize - rdAmt
+				
+				byte cdata[] = ifd.read(thisRead)
+				
+				byte ddata[]
+				
+				ddata = cdata
+				
+				ofd.write(ddata)
+				
+				rdAmt += CHUNK_SIZE
+				}
+			
+			return true
+			}
+			else
+			{
+			throw new Exception("file '$path' not found in archive")
+			}
+		
+		return false
+		}
+	
+	}

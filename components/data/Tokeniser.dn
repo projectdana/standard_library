@@ -146,6 +146,7 @@ component provides data.Tokeniser requires io.Output out, data.StringUtil string
 		
 		if (!stringClosed) throw new Exception("Unterminated string '$(t.content)'")
 		
+		t.sourceStart = start
 		t.sourceLength = t.content.arrayLength + 2
 		
 		return t
@@ -262,9 +263,14 @@ component provides data.Tokeniser requires io.Output out, data.StringUtil string
 			}
 		
 		if (isFinalStateValid(state))
+			{
+			t.sourceStart = start
 			t.sourceLength = t.content.arrayLength
+			}
 			else
+			{
 			throw new Exception("Unknown number format")
+			}
 
 		return t
 		}
@@ -309,6 +315,7 @@ component provides data.Tokeniser requires io.Output out, data.StringUtil string
 				}
 			}
 		
+		t.sourceStart = start
 		t.sourceLength = t.content.arrayLength
 		
 		return t
@@ -328,6 +335,7 @@ component provides data.Tokeniser requires io.Output out, data.StringUtil string
 			t.content = new char[](t.content, string[i])
 			}
 		
+		t.sourceStart = start
 		t.sourceLength = t.content.arrayLength + blockComment[0].string.arrayLength + blockComment[1].string.arrayLength
 		
 		return t
@@ -347,6 +355,7 @@ component provides data.Tokeniser requires io.Output out, data.StringUtil string
 			t.content = new char[](t.content, string[i])
 			}
 		
+		t.sourceStart = start
 		t.sourceLength = t.content.arrayLength + lineComment.string.arrayLength
 		
 		return t

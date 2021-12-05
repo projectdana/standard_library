@@ -1,0 +1,18 @@
+uses time.DateTime
+
+/*
+{ "description" : "Utility interface to convert between DateTime instances and MS-DOS date and time formats."}
+*/
+
+interface TimeDOS {
+	
+	/* { "@description" : "Convert a DateTime instance to an MS-DOS-format time."} */
+	int2 toDOSTime(DateTime dt)
+	
+	/* { "@description" : "Convert a DateTime instance to an MS-DOS-format date."} */
+	int2 toDOSDate(DateTime dt)
+	
+	/* { "@description" : "Convert from an MS-DOS-format date and/or time to a DateTime instance."} */
+	DateTime fromDOSTime(int2 date, int2 time)
+	
+	}

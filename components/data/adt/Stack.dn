@@ -11,7 +11,7 @@ component provides Stack(Destructor, AdaptEvents) {
 	int length
 	Mutex listLock = new Mutex()
 	
-	void Stack:add(Data item)
+	void Stack:push(Data item)
 		{
 		mutex(listLock)
 			{
@@ -30,6 +30,49 @@ component provides Stack(Destructor, AdaptEvents) {
 			listEnd = ni
 			
 			length ++
+			}
+		}
+	
+	Data Stack:pop()
+		{
+		mutex(listLock)
+			{
+			if (listEnd != null)
+				{
+				ListItem current = listEnd
+				
+				listEnd = listEnd.prev
+				
+				current.prev = null
+				
+				if (listEnd != null)
+					{
+					listEnd.next = null
+					}
+					else
+					{
+					list = null
+					}
+				
+				length --
+				
+				return current.item
+				}
+				else
+				{
+				return null
+				}
+			}
+		}
+	
+	Data Stack:peek()
+		{
+		mutex(listLock)
+			{
+			if (listEnd != null)
+				return listEnd.item
+				else
+				return null
 			}
 		}
 	
@@ -84,49 +127,6 @@ component provides Stack(Destructor, AdaptEvents) {
 			}
 		}
 	
-	Data Stack:service()
-		{
-		mutex(listLock)
-			{
-			if (listEnd != null)
-				{
-				ListItem current = listEnd
-				
-				listEnd = listEnd.prev
-				
-				current.prev = null
-				
-				if (listEnd != null)
-					{
-					listEnd.next = null
-					}
-					else
-					{
-					list = null
-					}
-				
-				length --
-				
-				return current.item
-				}
-				else
-				{
-				return null
-				}
-			}
-		}
-	
-	Data Stack:peek()
-		{
-		mutex(listLock)
-			{
-			if (listEnd != null)
-				return listEnd.item
-				else
-				return null
-			}
-		}
-	
 	int Stack:getLength()
 		{
 		mutex(listLock)
@@ -158,7 +158,7 @@ component provides Stack(Destructor, AdaptEvents) {
 		
 		for (int i = 0; i < items.arrayLength; i++)
 			{
-			add(items[i])
+			push(items[i])
 			}
 		}
 	

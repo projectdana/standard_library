@@ -1,0 +1,519 @@
+/*
+This is a partial implementation of the ZIP file format. It is designed for maximum compatibility with other ZIP archive readers, uses only the most simple features of the ZIP format, and supports only the deflate (zlib) compression algorithm. It currently uses only "MS-DOS" (FAT) file system assumptions, and does not encode file attributes. This is sufficient for many common uses of ZIP files, but certainly doesn't cover all requirements.
+
+The most obvious future upgrades would be:
+ - support for other file system formats
+ - support for file attributes (if/when Dana's file system APIs support this)
+ - support for additional compression algorithms
+ - support for ZIP64, for archive sizes > 4GB
+*/
+
+// https://support.pkware.com/display/PKZIP/APPNOTE
+
+uses time.DateTime
+
+const int ZIP_CM_NONE = 0
+const int ZIP_CM_DEFLATE = 8
+
+const int CHUNK_SIZE = 5120
+
+data LFH {
+	const byte MAGIC[] = new byte[](0x50, 0x4b, 0x03, 0x04)
+	byte sig[4]
+	int2 versionNeeded
+	int2 flags
+	int2 compressionType
+	int2 lastModifiedTime
+	int2 lastModifiedDate
+	int4 originCRC
+	int4 compressedSize
+	int4 originSize
+	int2 fileNameLen
+	int2 exFieldLen
+	}
+
+data CDR {
+	const byte MAGIC[] = new byte[](0x50, 0x4b, 0x01, 0x02)
+	byte sig[4]
+	int2 versionMaker
+	int2 versionNeeded
+	int2 flags
+	int2 compressionType
+	int2 lastModifiedTime
+	int2 lastModifiedDate
+	int4 originCRC
+	int4 compressedSize
+	int4 originSize
+	int2 fileNameLen
+	int2 exFieldLen
+	int2 commentLen
+	int2 diskIndex
+	int2 intAttributes
+	int4 extAttributes
+	int4 headerOffset
+	}
+
+data EOCD {
+	const byte MAGIC[] = new byte[](0x50, 0x4b, 0x05, 0x06)
+	byte sig[4]
+	int2 diskNo
+	int2 cdStartDisk
+	int2 cdCountDisk
+	int2 cdCountTotal
+	int4 cdSizeBytes
+	int4 cdOffsetBytes
+	int2 commentLen
+	}
+
+data FileIndex {
+	CDR cdr
+	char path[]
+	}
+
+data FileTree {
+	char name[]
+	bool dir
+	ArchiveFile record
+	FileTree children[]
+	}
+
+const int MAX_HDR_LOCATE_TRIES = 1000
+
+data Int4 {
+	int4 n
+	}
+
+data Int2 {
+	int2 n
+	}
+
+component provides Archive:zip requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, time.TimeDOS timeDOS, compress.algorithm.StreamCompression:deflate, data.checksum.CRC32 crc32, data.query.Search search {
+	
+	File ifd
+	FileIndex archiveIndex[]
+	ArchiveFile publicIndex[]
+	FileTree fileTree
+	
+	void reverseEndian(byte num[])
+		{
+		int j = num.arrayLength - 1
+		for (int i = 0; i < num.arrayLength / 2; i++)
+			{
+			byte tmp = num[j]
+			num[j] = num[i]
+			num[i] = tmp
+			j --
+			}
+		}
+	
+	int4 reverseInt4(int4 i4)
+		{
+		Int4 ct = new Int4(i4)
+		reverseEndian(dana.serial(ct))
+		return ct.n
+		}
+	
+	int2 reverseInt2(int2 i2)
+		{
+		Int2 ct = new Int2(i2)
+		reverseEndian(dana.serial(ct))
+		return ct.n
+		}
+	
+	bool validEOCD(EOCD record)
+		{
+		//TODO: add more checks...
+		
+		if (record.sig == EOCD.MAGIC)
+			return true
+		
+		return false
+		}
+	
+	EOCD getEOCD(File fd)
+		{
+		//locate the end-of-central-directory (EOCD) record (which is not so easy, for zip32)
+		// - we need to use multiple verification points to check this: do we have the right magic constant; does the comment length equal the remainder; does the thing pointed to by the start-of-central-directory field have the right magic constant
+		// - we also need a max value on how far back we're willing to walk (i.e., max length of EOCD comment) before we give up
+		
+		EOCD record = new EOCD()
+		
+		byte srd[] = dana.serial(record)
+		
+		bool headerFound = false
+		
+		int nextPos = fd.getSize() - srd.arrayLength
+		int tries = 0
+		
+		// while...
+		while (!headerFound && tries < MAX_HDR_LOCATE_TRIES)
+			{
+			fd.setPos(nextPos)
+			srd =[] fd.read(srd.arrayLength)
+			
+			if (validEOCD(record))
+				{
+				headerFound = true
+				}
+				else
+				{
+				nextPos --
+				tries ++
+				}
+			}
+		
+		if (!headerFound) return null
+		
+		//reverse byte ordering of fields...
+		record.diskNo = reverseInt2(record.diskNo)
+		record.cdStartDisk = reverseInt2(record.cdStartDisk)
+		record.cdCountDisk = reverseInt2(record.cdCountDisk)
+		record.cdCountTotal = reverseInt2(record.cdCountTotal)
+		record.cdSizeBytes = reverseInt4(record.cdSizeBytes)
+		record.cdOffsetBytes = reverseInt4(record.cdOffsetBytes)
+		record.commentLen = reverseInt2(record.commentLen)
+		
+		return record
+		}
+	
+	CDR readCDR(File fd)
+		{
+		CDR record = new CDR()
+		
+		byte srd[] = dana.serial(record)
+		
+		srd =[] fd.read(srd.arrayLength)
+		
+		//TODO: check magic etc.
+		record.versionMaker = reverseInt2(record.versionMaker)
+		record.versionNeeded = reverseInt2(record.versionNeeded)
+		record.flags = reverseInt2(record.flags)
+		record.compressionType = reverseInt2(record.compressionType)
+		record.lastModifiedTime = reverseInt2(record.lastModifiedTime)
+		record.lastModifiedDate = reverseInt2(record.lastModifiedDate)
+		record.originCRC = reverseInt4(record.originCRC)
+		record.compressedSize = reverseInt4(record.compressedSize)
+		record.originSize = reverseInt4(record.originSize)
+		record.fileNameLen = reverseInt2(record.fileNameLen)
+		record.exFieldLen = reverseInt2(record.exFieldLen)
+		record.commentLen = reverseInt2(record.commentLen)
+		record.diskIndex = reverseInt2(record.diskIndex)
+		record.intAttributes = reverseInt2(record.intAttributes)
+		record.extAttributes = reverseInt4(record.extAttributes)
+		record.headerOffset = reverseInt4(record.headerOffset)
+		
+		return record
+		}
+	
+	LFH readLFH(File fd, int offset)
+		{
+		LFH record = new LFH()
+		
+		byte srd[] = dana.serial(record)
+		
+		fd.setPos(offset)
+		
+		srd =[] fd.read(srd.arrayLength)
+		
+		//TODO: check magic etc.
+		record.versionNeeded = reverseInt2(record.versionNeeded)
+		record.flags = reverseInt2(record.flags)
+		record.compressionType = reverseInt2(record.compressionType)
+		record.lastModifiedTime = reverseInt2(record.lastModifiedTime)
+		record.lastModifiedDate = reverseInt2(record.lastModifiedDate)
+		record.originCRC = reverseInt4(record.originCRC)
+		record.compressedSize = reverseInt4(record.compressedSize)
+		record.originSize = reverseInt4(record.originSize)
+		record.fileNameLen = reverseInt2(record.fileNameLen)
+		record.exFieldLen = reverseInt2(record.exFieldLen)
+		
+		return record
+		}
+	
+	void addToTree(char path[], CDR cdr)
+		{
+		bool isDir = path[path.arrayLength-1] == "/"
+		String parts[] = stringUtil.explode(path, "/")
+		
+		FileTree node = fileTree
+		
+		for (int i = 0; i < parts.arrayLength; i++)
+			{
+			FileTree nextNode = null
+			if ((nextNode = node.children.findFirst(FileTree.[name], new FileTree(parts[i].string))) == null)
+				{
+				nextNode = new FileTree(parts[i].string)
+				nextNode.dir = (i < parts.arrayLength-1) || isDir
+				nextNode.record = new ArchiveFile(parts[i].string, nextNode.dir)
+				
+				//check if it's a leaf node, and fill in its details if so...
+				if (!isDir && i == parts.arrayLength-1)
+					{
+					nextNode.record.compressedSize = cdr.compressedSize
+					nextNode.record.uncompressedSize = cdr.originSize
+					nextNode.record.modified = timeDOS.fromDOSTime(cdr.lastModifiedDate, cdr.lastModifiedTime)
+					}
+				
+				node.children = new FileTree[](node.children, nextNode)
+				node = nextNode
+				}
+				else
+				{
+				node = nextNode
+				}
+			}
+		}
+	
+	void buildTree()
+		{
+		fileTree = new FileTree(dir = true)
+		
+		for (int i = 0; i < archiveIndex.arrayLength; i++)
+			{
+			addToTree(archiveIndex[i].path, archiveIndex[i].cdr)
+			}
+		}
+	
+	Archive:Archive(File fd)
+		{
+		EOCD eocd = getEOCD(fd)
+		
+		if (eocd == null) throw new Exception("unrecognised archive format")
+		
+		ifd = fd
+		
+		fd.setPos(eocd.cdOffsetBytes)
+		
+		archiveIndex = new FileIndex[eocd.cdCountTotal]
+		
+		publicIndex = new ArchiveFile[archiveIndex.arrayLength]
+		
+		for (int i = 0; i < eocd.cdCountTotal; i++)
+			{
+			CDR cdr = readCDR(fd)
+			
+			char fn[] = fd.read(cdr.fileNameLen)
+			byte xfdata[] = fd.read(cdr.exFieldLen)
+			char comment[] = fd.read(cdr.commentLen)
+			
+			archiveIndex[i] = new FileIndex()
+			archiveIndex[i].cdr = cdr
+			archiveIndex[i].path = fn
+			
+			ArchiveFile naf = new ArchiveFile(fn)
+			naf.dir = fn.arrayLength > 0 && fn[fn.arrayLength-1] == "/"
+			naf.modified = timeDOS.fromDOSTime(cdr.lastModifiedDate, cdr.lastModifiedTime)
+			naf.compressedSize = cdr.compressedSize
+			naf.uncompressedSize = cdr.originSize
+			publicIndex[i] = naf
+			}
+		
+		buildTree()
+		}
+	
+	ArchiveFile[] Archive:getAllContents()
+		{
+		return publicIndex
+		}
+	
+	ArchiveFile[] Archive:getContents(char path[])
+		{
+		FileTree node = null
+		if (path == null)
+			{
+			node = fileTree
+			}
+			else
+			{
+			String parts[] = path.explode("/")
+			
+			node = fileTree
+			
+			for (int i = 0; i < parts.arrayLength; i++)
+				{
+				FileTree nextNode = null
+				if ((nextNode = node.children.findFirst(FileTree.[name], new FileTree(parts[i].string))) == null)
+					{
+					throw new Exception("directory '$path' not found in archive")
+					}
+					else
+					{
+					node = nextNode
+					}
+				}
+			}
+		
+		if (!node.dir) throw new Exception("path '$path' is not a directory")
+		
+		ArchiveFile result[] = new ArchiveFile[node.children.arrayLength]
+		
+		for (int i = 0; i < result.arrayLength; i++)
+			{
+			result[i] = node.children[i].record
+			}
+		
+		return result
+		}
+	
+	bool Archive:exists(char path[])
+		{
+		return archiveIndex.findFirst(FileIndex.[path], new FileIndex(path = path)) != null
+		}
+	
+	ArchiveFile Archive:getInfo(char path[])
+		{
+		return publicIndex.findFirst(ArchiveFile.[path], new ArchiveFile(path = path))
+		}
+	
+	void copyArray(byte dest[], byte src[], int start)
+		{
+		int j = start
+		for (int i = 0; i < src.arrayLength; i++)
+			{
+			dest[j] = src[i]
+			j++
+			}
+		}
+	
+	byte[] Archive:extractFile(char path[])
+		{
+		FileIndex fi = archiveIndex.findFirst(FileIndex.[path], new FileIndex(path = path))
+		
+		if (fi != null)
+			{
+			LFH lfh = readLFH(ifd, fi.cdr.headerOffset)
+			
+			int4 crc = 0
+			
+			StreamCompression scom = null
+			int2 zipMethod = 0
+			
+			if (lfh.compressionType == ZIP_CM_DEFLATE)
+				{
+				scom = new StreamCompression:deflate()
+				}
+				else if (lfh.compressionType == ZIP_CM_NONE)
+				{
+				
+				}
+				else
+				{
+				throw new Exception("unknown compression method $(lfh.compressionType) for '$path'")
+				}
+			
+			char fn[] = ifd.read(lfh.fileNameLen)
+			byte xfdata[] = ifd.read(lfh.exFieldLen)
+			
+			byte result[] = new byte[lfh.originSize]
+			
+			if (lfh.compressionType != ZIP_CM_NONE)
+				scom.decompressInit()
+			
+			int offset = 0
+			int rdAmt = 0
+			while (rdAmt < fi.cdr.compressedSize)
+				{
+				int thisRead = CHUNK_SIZE
+				
+				if ((rdAmt + CHUNK_SIZE) > fi.cdr.compressedSize) thisRead = fi.cdr.compressedSize - rdAmt
+				
+				byte cdata[] = ifd.read(thisRead)
+				
+				byte ddata[]
+				
+				if (lfh.compressionType != ZIP_CM_NONE)
+					ddata = scom.decompress(cdata)
+					else
+					ddata = cdata
+				
+				crc = crc32.makeCRC(crc, ddata)
+				
+				copyArray(result, ddata, offset)
+				
+				offset += ddata.arrayLength
+				rdAmt += CHUNK_SIZE
+				}
+			
+			if (lfh.compressionType != ZIP_CM_NONE)
+				scom.decompressEnd()
+			
+			return result
+			}
+			else
+			{
+			throw new Exception("file '$path' not found in archive")
+			}
+		
+		return null
+		}
+	
+	bool Archive:extractFileTo(char path[], File ofd)
+		{
+		FileIndex fi = archiveIndex.findFirst(FileIndex.[path], new FileIndex(path = path))
+		
+		if (fi != null)
+			{
+			LFH lfh = readLFH(ifd, fi.cdr.headerOffset)
+			
+			int4 crc = 0
+			
+			StreamCompression scom = null
+			
+			if (lfh.compressionType == ZIP_CM_DEFLATE)
+				{
+				scom = new StreamCompression:deflate()
+				}
+				else if (lfh.compressionType == ZIP_CM_NONE)
+				{
+				
+				}
+				else
+				{
+				throw new Exception("unknown compression method $(lfh.compressionType) for '$path'")
+				}
+			
+			char fn[] = ifd.read(lfh.fileNameLen)
+			byte xfdata[] = ifd.read(lfh.exFieldLen)
+			
+			if (lfh.compressionType != ZIP_CM_NONE)
+				scom.decompressInit()
+			
+			//the LFH is an unreliable source for compressedSize and CRC info, since that data may be absent and included in a "data descriptor" instead (in which case we'd need to decompress the data until deflate told us it's finished)
+			// - instead of having two different styles, however, we always read this data from the CDR (since we don't support multi-disk archives anyway at the moment)
+			int rdAmt = 0
+			while (rdAmt < fi.cdr.compressedSize)
+				{
+				int thisRead = CHUNK_SIZE
+				
+				if ((rdAmt + CHUNK_SIZE) > fi.cdr.compressedSize) thisRead = fi.cdr.compressedSize - rdAmt
+				
+				byte cdata[] = ifd.read(thisRead)
+				
+				byte ddata[]
+				
+				if (lfh.compressionType != ZIP_CM_NONE)
+					ddata = scom.decompress(cdata)
+					else
+					ddata = cdata
+				
+				crc = crc32.makeCRC(crc, ddata)
+				
+				ofd.write(ddata)
+				
+				rdAmt += CHUNK_SIZE
+				}
+			
+			if (lfh.compressionType != ZIP_CM_NONE)
+				scom.decompressEnd()
+			
+			return true
+			}
+			else
+			{
+			throw new Exception("file '$path' not found in archive")
+			}
+		
+		return false
+		}
+	
+	}

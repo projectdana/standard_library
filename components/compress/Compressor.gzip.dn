@@ -21,14 +21,14 @@ data Int2 {
 	int2 val
 	}
 
-const int BUF_SIZE = 512
+const int BUF_SIZE = 5048
 
-component provides Compressor:gzip requires compress.algorithm.StreamCompression:deflate alg, data.checksum.CRC32 crc32 {
+component provides Compressor:gzip requires compress.algorithm.StreamCompression:deflate, data.checksum.CRC32 crc32 {
 	
 	int4 readInt4(byte buf[])
 		{
 		Int4 i4 = new Int4()
-		byte copyBuf[] = dana.getByteArrayOf(i4)
+		byte copyBuf[] = dana.serial(i4)
 		
 		copyBuf =[] buf
 		
@@ -49,7 +49,7 @@ component provides Compressor:gzip requires compress.algorithm.StreamCompression
 	int2 readInt2(File fd)
 		{
 		Int2 i2 = new Int2()
-		byte copyBuf[] = dana.getByteArrayOf(i2)
+		byte copyBuf[] = dana.serial(i2)
 		
 		byte buf[] = fd.read(copyBuf.arrayLength)
 		
@@ -70,7 +70,7 @@ component provides Compressor:gzip requires compress.algorithm.StreamCompression
 		Int4 i4 = new Int4()
 		i4.val = val
 		
-		byte copyBuf[] = dana.getByteArrayOf(i4)
+		byte copyBuf[] = dana.serial(i4)
 		
 		//deal with endianness
 		byte swap
@@ -107,8 +107,10 @@ component provides Compressor:gzip requires compress.algorithm.StreamCompression
 		return buf
 		}
 	
-	bool Compressor:compress(File ifd, File ofd)
+	bool Compressor:compress(File ifd, File ofd, opt char filename[])
 		{
+		StreamCompression alg = new StreamCompression:deflate()
+		
 		GZHeader mainHeader = new GZHeader()
 		
 		mainHeader.ID1 = 31
@@ -116,20 +118,23 @@ component provides Compressor:gzip requires compress.algorithm.StreamCompression
 		
 		mainHeader.CM = 8
 		
-		mainHeader.FLG |= GZHeader.FLG_FNAME
+		if (isset filename)
+			mainHeader.FLG |= GZHeader.FLG_FNAME
 		
 		mainHeader.OS = 255
 		
-		byte copyBuf[] = dana.getByteArrayOf(mainHeader)
+		byte copyBuf[] = dana.serial(mainHeader)
 		
 		//header
 		ofd.write(copyBuf)
 		
 		//filename
-		ofd.write("") //TODO!
-		
-		//trailing \0
-		ofd.write(0)
+		if (isset filename)
+			{
+			ofd.write(filename)
+			//trailing \0
+			ofd.write(0)
+			}
 		
 		//compression content
 		byte buf[]
@@ -160,78 +165,120 @@ component provides Compressor:gzip requires compress.algorithm.StreamCompression
 	bool Compressor:decompress(File ifd, File ofd)
 		{
 		//a gzip file can contain a list of compressed files (or "members"), one after the other
-		// - if so, we behave like *nix gzip and concatenate all files into the same output file
 		
-		while (!ifd.eof())
+		StreamCompression alg = new StreamCompression:deflate()
+		
+		GZHeader mainHeader = new GZHeader()
+		char fileName[]
+		char memberComment[]
+		byte copyBuf[] = dana.serial(mainHeader)
+		
+		//read the standard header
+		byte buf[] = ifd.read(copyBuf.arrayLength)
+		
+		if (buf.arrayLength != copyBuf.arrayLength)
 			{
-			GZHeader mainHeader = new GZHeader()
-			char fileName[]
-			char memberComment[]
-			byte copyBuf[] = dana.getByteArrayOf(mainHeader)
+			throw new Exception("insufficient header bytes (file corrupted?)")
+			}
+		
+		copyBuf =[] buf
+		
+		//check for magic gzip header bytes
+		if (mainHeader.ID1 == 31 && mainHeader.ID2 == 139)
+			{
+			//read optional section, if present
+			if ((mainHeader.FLG & GZHeader.FLG_FEXTRA) == GZHeader.FLG_FEXTRA)
+				fileName = readOptionalHeader(ifd)
 			
-			//read the standard header
-			byte buf[] = ifd.read(copyBuf.arrayLength)
+			//read filename, if present
+			if ((mainHeader.FLG & GZHeader.FLG_FNAME) == GZHeader.FLG_FNAME)
+				fileName = readToZero(ifd)
 			
-			if (buf.arrayLength != copyBuf.arrayLength)
+			//read comment, if present
+			if ((mainHeader.FLG & GZHeader.FLG_FCOMMENT) == GZHeader.FLG_FCOMMENT)
+				memberComment = readToZero(ifd)
+			
+			//now comes the compressed content
+			int4 crcCheck
+			byte chunk[]
+			
+			alg.decompressInit()
+			
+			while (!ifd.eof() && alg.decompressStatus() == StreamCompression.DS_CONTINUE)
 				{
-				throw new Exception("insufficient header bytes (file corrupted?)")
+				buf = ifd.read(BUF_SIZE)
+				chunk = alg.decompress(buf)
+				crcCheck = crc32.makeCRC(crcCheck, chunk)
+				ofd.write(chunk)
 				}
 			
-			copyBuf =[] buf
+			int lcSize = alg.decompressEnd()
 			
-			//check for magic gzip header bytes
-			if (mainHeader.ID1 == 31 && mainHeader.ID2 == 139)
+			//adjust the file read head to wherever the last compressed chunk actually ended
+			ifd.setPos(ifd.getPos() - (buf.arrayLength - lcSize))
+			
+			//read CRC and ISIZE (original size of uncompressed data, mod 2^32)
+			int4 crc = readInt4(ifd.read(4))
+			
+			int4 isize = readInt4(ifd.read(4))
+			
+			if (crc != crcCheck)
 				{
-				//read optional section, if present
-				if ((mainHeader.FLG & GZHeader.FLG_FEXTRA) == GZHeader.FLG_FEXTRA)
-					fileName = readOptionalHeader(ifd)
-				
-				//read filename, if present
-				if ((mainHeader.FLG & GZHeader.FLG_FNAME) == GZHeader.FLG_FNAME)
-					fileName = readToZero(ifd)
-				
-				//read comment, if present
-				if ((mainHeader.FLG & GZHeader.FLG_FCOMMENT) == GZHeader.FLG_FCOMMENT)
-					memberComment = readToZero(ifd)
-				
-				//now comes the compressed content
-				int4 crcCheck
-				byte chunk[]
-				
-				alg.decompressInit()
-				
-				while (!ifd.eof() && alg.decompressStatus() == StreamCompression.DS_CONTINUE)
-					{
-					buf = ifd.read(BUF_SIZE)
-					chunk = alg.decompress(buf)
-					crcCheck = crc32.makeCRC(crcCheck, chunk)
-					ofd.write(chunk)
-					}
-				
-				int lcSize = alg.decompressEnd()
-				
-				//adjust the file read head to wherever the last compressed chunk actually ended
-				ifd.setPos(ifd.getPos() - (buf.arrayLength - lcSize))
-				
-				//read CRC and ISIZE (original size of uncompressed data, mod 2^32)
-				int4 crc = readInt4(ifd.read(4))
-				
-				int4 isize = readInt4(ifd.read(4))
-				
-				if (crc != crcCheck)
-					{
-					throw new Exception("CRC test failed")
-					}
-				
-				//(loop and read additional streams, if any)
+				throw new Exception("CRC test failed")
 				}
-				else
-				{
-				throw new Exception("header does not match gzip format")
-				}
+			}
+			else
+			{
+			throw new Exception("header does not match gzip format")
 			}
 		
 		return true
+		}
+	
+	char[] Compressor:getFileName(File ifd)
+		{
+		int opos = ifd.getPos()
+		
+		GZHeader mainHeader = new GZHeader()
+		char fileName[]
+		char memberComment[]
+		byte copyBuf[] = dana.serial(mainHeader)
+		
+		//read the standard header
+		byte buf[] = ifd.read(copyBuf.arrayLength)
+		
+		if (buf.arrayLength != copyBuf.arrayLength)
+			{
+			throw new Exception("insufficient header bytes (file corrupted?)")
+			}
+		
+		copyBuf =[] buf
+		
+		//check for magic gzip header bytes
+		if (mainHeader.ID1 == 31 && mainHeader.ID2 == 139)
+			{
+			//read optional section, if present
+			if ((mainHeader.FLG & GZHeader.FLG_FEXTRA) == GZHeader.FLG_FEXTRA)
+				fileName = readOptionalHeader(ifd)
+			
+			//read filename, if present
+			if ((mainHeader.FLG & GZHeader.FLG_FNAME) == GZHeader.FLG_FNAME)
+				fileName = readToZero(ifd)
+			
+			ifd.setPos(opos)
+			
+			return fileName
+			}
+			else
+			{
+			ifd.setPos(opos)
+			
+			throw new Exception("header does not match gzip format")
+			}
+		
+		ifd.setPos(opos)
+		
+		return null
 		}
 	
 	}

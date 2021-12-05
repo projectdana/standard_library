@@ -1,0 +1,34 @@
+uses data.String
+uses io.File
+uses time.DateTime
+
+/*
+{ "description" : "Interface to write file archives, often using compression."}
+*/
+
+interface ArchiveWriter {
+	
+	/* { "@description" : "Possible value for compression method, indicating that the file should not be compressed."} */
+	const byte CM_NONE = 0
+	/* { "@description" : "Possible value for compression method, indicating that the file should be compressed using the deflate algorithm."} */
+	const byte CM_DEFLATE = 1
+	
+	/* { "@description" : "Create a new ArchiveWriter, which will write the archive to the given file."} */
+	ArchiveWriter(store File fd, opt byte compressMethod)
+	
+	/* { "@description" : "Add a directory to the archive."} */
+	bool addDirectory(char path[], opt DateTime lastModified)
+	
+	/* { "@description" : "Add a file to the archive."} */
+	bool addFile(char path[], File uncompressed, opt DateTime lastModified)
+	
+	/* { "@description" : "Add a file to the archive by streaming each chunk of data. This function is followed by one or more calls to addFileStreamChunk() to add the content of the file."} */
+	bool addFileStreamStart(char path[])
+	
+	/* { "@description" : "Add another chunk of data to a file."} */
+	bool addFileStreamChunk(byte chunk[], bool lastChunk)
+	
+	/* { "@description" : "Finish writing the archive."} */
+	bool close()
+	
+	}

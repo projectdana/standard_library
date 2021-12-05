@@ -1,0 +1,31 @@
+component provides SearchList {
+	
+	Data[] SearchList:find(List list, TypeField field, Data template)
+		{
+		Data result[]
+		
+		for (Data nxt = list.getFirst(); nxt != null; nxt = list.getNext())
+			{
+			if (nxt:.field == template:.field)
+				{
+				result = new Data[](result, nxt) from typeof(template)
+				}
+			}
+		
+		return result
+		}
+	
+	Data SearchList:findFirst(List list, TypeField field, Data template)
+		{
+		for (Data nxt = list.getFirst(); nxt != null; nxt = list.getNext())
+			{
+			if (nxt:.field == template:.field)
+				{
+				return nxt
+				}
+			}
+		
+		return null
+		}
+	
+	}

@@ -1,18 +1,18 @@
-/*
- {"description" : "This type represents a component's interface."}
-*/
-
+/* {"description" : "This type describes a component's interface."} */
 data InterfaceSpec {
+	/* {"@description" : "The name used to identify the interface."} */
 	char alias[]
+	/* {"@description" : "The package in which the interface type was originally defined."} */
 	char package[]
+	/* {"@description" : "The semantic variant of this interface (optional)."} */
 	char variant[]
+	/* {"@description" : "The type of this interface."} */
 	Type type
 	}
 
 /*
  {"description" : "This type represents a loaded component."}
 */
-
 interface IDC {
 	
 	/*
@@ -71,9 +71,14 @@ interface IDC {
 	Object initObject(char reqIntf[])
 	
 	/*
-	 {"@description" : "Get a secondary interface of an object."}
+	 {"@description" : "Call a function on a secondary interface of an object. This function checks if the given interface exists on the object, and calls specified function if so. Parameters are passed by creating a Data type in which each field is a parameter. The return value is provided in a data type with a single field of type matching the function's return type."}
 	*/
-	Object getInterface(Object o, char typeName[], Type type)
+	Data callInterface(Object o, char typeName[], Type type, TypeField functionIndex, Data parameters)
+	
+	/*
+	 {"@description" : "Checks if an object has a secondary interface of the given type."}
+	*/
+	bool hasInterface(Object o, char typeName[], Type type)
 	
 	/*
 	 {"@description" : "Check if the given object has transfer state."}

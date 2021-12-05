@@ -1,0 +1,340 @@
+uses data.String
+
+data Sample {
+	dec values[]
+	char cat[]
+	}
+
+data Series {
+	Sample samples[]
+	char name[]
+	char displayName[]
+	Color seriesColor
+	}
+
+//marker length in pixels (the "ticks" on the axes)
+const int MARKER_LENGTH = 3
+
+const int MARKER_SIZE = 7
+
+const int LEGEND_SQ_SIZE = 10
+const int LEGEND_PAD_SIZE = 5
+
+component provides CategoryMulti:bar requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font, data.query.Search search {
+	
+	Series series[]
+	String categories[]
+	
+	Color stdDevColor = new Color(0, 0, 0, 255)
+	Color axisColor = new Color(0, 0, 0, 255)
+	Color gridColor = new Color(220, 220, 220, 255)
+	Color bgColor = new Color(255, 255, 255, 255)
+	
+	Font axisFont
+	Font labelFont
+	
+	dec highestX
+	dec lowestX
+	dec highestY
+	dec lowestY
+	
+	dec numberIntervalX = 1.0
+	dec markerIntervalX = 1.0
+	
+	dec numberIntervalY
+	dec markerIntervalY
+	dec gridIntervalY
+	
+	dec xAxMax
+	dec xAxMin
+	dec yAxMax
+	dec yAxMin
+	
+	//bar width, in percentage of category area
+	dec barWidth = 50.0
+	int barPad = 0
+	
+	bool showStdDev
+	bool showLegend
+	
+	CategoryMulti:CategoryMulti()
+		{
+		super()
+		
+		axisFont = new Font("SourceSansPro.ttf", 12)
+		
+		setXMarkerInterval(1.0)
+		}
+	
+	void CategoryMulti:addSeries(char name[])
+		{
+		series = new Series[](series, new Series(null, name, name, new Color(100, 200, 200, 255)))
+		}
+	
+	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[])
+		{
+		//update our highest and lowest X and Y points, to use in normalising coordinates
+		dec hy = stcore.max(yvalues)
+		dec ly = stcore.min(yvalues)
+		
+		if (categories.search(String.[string], new String(cat)) == null)
+			categories = new String[](categories, new String(cat))
+		
+		Series n = series.search(Series.[name], new Series(null, seriesName))[0]
+		
+		xAxMax += 1.0
+		
+		if (series.arrayLength == 1 && n.samples == null)
+			{
+			highestY = hy
+			lowestY = ly
+			}
+			else
+			{
+			if (hy > highestY) highestY = hy
+			if (ly < lowestY) lowestY = ly
+			}
+		
+		//add sample
+		n.samples = new Sample[](n.samples, new Sample(yvalues, cat))
+		
+		// -- automated calculation of the highest and lowest points on the axis --
+		
+		//update the axis endpoints, if the series values are now outside the bounds of whatever endpoints have been set
+		if (highestY > yAxMax) yAxMax = highestY
+		if (lowestY < yAxMin) yAxMin = lowestY
+		
+		setXMinMax(xAxMin, xAxMax)
+		setYMinMax(yAxMin, yAxMax)
+		
+		postRepaint()
+		}
+	
+	void CategoryMulti:setYMinMax(dec min, dec max)
+		{
+		//TODO: disallow values that can't contain all of the graph points...
+		yAxMin = min
+		yAxMax = max
+		
+		super(min, max)
+		}
+	
+	void CategoryMulti:setSeriesColor(char seriesName[], Color c)
+		{
+		Series n = series.search(Series.[name], new Series(null, seriesName))[0]
+		
+		n.seriesColor = c
+		}
+	
+	void CategoryMulti:setSeriesName(char seriesName[], char displayName[])
+		{
+		Series n = series.search(Series.[name], new Series(null, seriesName))[0]
+		
+		n.displayName = displayName
+		}
+	
+	void CategoryMulti:showErrorBars(bool on)
+		{
+		showStdDev = on
+		}
+	
+	void CategoryMulti:clampErrorBars(dec low, dec high)
+		{
+		
+		}
+	
+	void CategoryMulti:showLegend(bool on)
+		{
+		showLegend = on
+		}
+	
+	void CategoryMulti:setAxisFont(Font f)
+		{
+		axisFont = f
+		super(f)
+		}
+	
+	void CategoryMulti:setCatDisplayWidth(dec percent)
+		{
+		if (percent <= 0.0 || percent > 100.0)
+			throw new Exception("display width must be a percentage, between 1 and 100")
+		
+		barWidth = percent
+		}
+	
+	void CategoryMulti:setCatDisplayPadding(int pixels)
+		{
+		barPad = pixels
+		}
+	
+	// -- custom rendering --
+	
+	void CategoryMulti:drawToCanvas(Canvas c)
+		{
+		paint(c)
+		}
+	
+	void prepAxisLimits()
+		{
+		dec highX
+		dec lowX
+		dec highY
+		dec lowY
+		
+		for (int i = 0; i < categories.arrayLength; i++)
+			{
+			dec barTop = 0.0
+			dec barLow = 0.0
+			
+			for (int j = 0; j < series.arrayLength; j++)
+				{
+				Sample s[] = series[j].samples.search(Sample.[cat], new Sample(null, categories[i].string))
+				
+				if (s != null)
+					{
+					//add it to the bar, by going on to the top or below the bottom, depending on whether it's positive or negative...
+					
+					dec mean = stcore.mean(s[0].values)
+					
+					if (mean > highY) highY = mean
+					if (mean < lowY) lowY = mean
+					}
+				}
+			
+			highX += 1.0
+			}
+		
+		//NOTE: we could now calculate end "endpoint" on each axis which is a multiple of their number interval
+		
+		setXMinMax(lowX, highX)
+		setYMinMax(lowY, highY)
+		}
+	
+	int getLongestSeriesName()
+		{
+		int result = 0
+		
+		for (int i = 0; i < series.arrayLength; i++)
+			{
+			int wd = axisFont.getTextWidth(series[i].displayName)
+			
+			if (wd > result) result = wd
+			}
+		
+		return result
+		}
+	
+	void drawLegend(Canvas c)
+		{
+		//calculate the longest series name, and offset the legend by this much from the right (plus the legend color square width)
+		int longestTxt = getLongestSeriesName()
+		
+		int yPos = 10
+		int xStart = getSize().width - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		
+		int textHeight = axisFont.getFontMetrics().height
+		
+		int totalLegendHeight = ((textHeight + 5) * (series.arrayLength-1)) + textHeight
+		int totalLegendWidth = (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		
+		c.drawRect(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), bgColor))
+		c.drawRectOutline(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), axisColor))
+		
+		yPos += (axisFont.getFontMetrics().descent)
+		
+		for (int i = series.arrayLength - 1; i != INT_MAX; i--)
+			{
+			c.drawRect(new Rect2D(xStart, yPos, LEGEND_SQ_SIZE, LEGEND_SQ_SIZE, series[i].seriesColor))
+			
+			int yOffset = (yPos + (LEGEND_SQ_SIZE / 2)) - (textHeight / 2)
+			c.drawText(new Point2D(xStart + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE, yOffset, axisColor), axisFont, series[i].displayName)
+			
+			yPos += textHeight + 5
+			}
+		}
+	
+	// -- screen rendering (temporary?) --
+	
+	void CategoryMulti:paint(Canvas c)
+		{
+		prepAxisLimits()
+		
+		Point pos = getPosition()
+		WH wh = getSize()
+		
+		c.pushSurface(new Rect(pos.x, pos.y, wh.width, wh.height), 0, 0, 255)
+		
+		preparePlotArea()
+		
+		//background
+		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		
+		//grid lines, if any
+		drawGrid(c)
+		
+		//data
+		
+		int xSpacing = ((getPlotPoint(1.0, 0.0)[0] - getPlotPoint(0.0, 0.0)[0]+1) - barPad)
+		int totalBarWidthPX = (barWidth / 100.0) * xSpacing
+		int barWidthPX = totalBarWidthPX / series.arrayLength
+		
+		dec thisX = 0.0
+		
+		for (int i = 0; i < categories.arrayLength; i++)
+			{
+			int xyZ[] = getPlotPoint(thisX, 0.0)
+			
+			int centreX = xyZ[0] + ((getPlotPoint(thisX+1.0, 0.0)[0] - xyZ[0]) / 2)
+			
+			centreX -= totalBarWidthPX / 2
+			centreX += barWidthPX / 2
+			
+			for (int j = 0; j < series.arrayLength; j++)
+				{
+				Sample s[] = series[j].samples.search(Sample.[cat], new Sample(null, categories[i].string))
+				
+				if (s != null)
+					{
+					//add it to the bar, by going on to the top or below the bottom, depending on whether it's positive or negative...
+					
+					dec mean = stcore.mean(s[0].values)
+					
+					if (mean > 0.0)
+						{
+						int xyTop[] = getPlotPoint(thisX, mean)
+						int xyBot[] = getPlotPoint(thisX+1.0, 0.0)
+						
+						c.drawRect(new Rect2D((centreX - (barWidthPX / 2)) + barPad, xyTop[1], barWidthPX, xyBot[1] - xyTop[1], series[j].seriesColor))
+						}
+						else
+						{
+						int xyTop[] = getPlotPoint(thisX, 0.0)
+						int xyBot[] = getPlotPoint(thisX+1.0, mean)
+						
+						c.drawRect(new Rect2D((centreX - (barWidthPX / 2)) + barPad, xyTop[1], barWidthPX, xyBot[1] - xyTop[1], series[j].seriesColor))
+						}
+					}
+				
+				centreX += barWidthPX
+				}
+			
+			//category label
+			
+			centreX = xyZ[0] + ((getPlotPoint(thisX+1.0, 0.0)[0] - xyZ[0]) / 2)
+			
+			int textWidth = axisFont.getTextWidth(categories[i].string)
+			c.drawText(new Point2D(centreX - (textWidth/2), xyZ[1] + MARKER_LENGTH, axisColor), axisFont, categories[i].string)
+			
+			thisX += 1.0
+			}
+		
+		//axes and labels
+		drawAxes(c)
+		
+		//legend
+		if (showLegend) drawLegend(c)
+		
+		c.popSurface()
+		}
+	
+	}

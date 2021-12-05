@@ -1,0 +1,16 @@
+/*
+{"description" : "This interface represents a graphical check-box, which the user can tick or un-tick. State change events can be detected from the click event on the ClickableObject supertype."}
+*/
+
+interface CheckBox extends ui.Button {
+	
+	/* {"@description" : "Instantiate a new check box, with the specifed text."} */
+	CheckBox(char name[])
+	
+	/* {"@description" : "Test whether or not the check box is currently ticked."} */
+	bool isChecked()
+	
+	/* {"@description" : "Set the ticked status of the check box."} */
+	void setChecked(bool t)
+	
+	}

@@ -6,11 +6,12 @@ uses pal.Perception
 
 const int HOST_POST = 8008
 
-component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du, pal.Assembly, time.Timer timer, composition.RecursiveLoader loader, data.StringUtil stringUtil, net.TCPServerSocket, net.TCPSocket, data.json.JSONParser parser, composition.Search search {
+component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du, pal.Assembly, time.Timer timer, composition.RecursiveLoader loader, data.StringUtil stringUtil, net.TCPServerSocket, net.TCPSocket, data.json.JSONParser parser, composition.Search search, data.StringBuilder, io.FileSystem fs {
 	
 	bool running = true
 	char currentConfig[]
 	String configs[]
+	char systemPath[]
 	
 	Assembly assembly
 	Perception perc
@@ -25,6 +26,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		while (last4 != "\r\n\r\n")
 			{
 			char b[] = socket.recv(1)
+			if (b.arrayLength == 0) break
 			buf = new char[](buf, b)
 			last4[0] = last4[1]
 			last4[1] = last4[2]
@@ -124,6 +126,14 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				content = new char[](content, "{\"name\" : \"$(pd.events[i].name)\", \"source\" : \"$(pd.events[i].sourceComponent)\", \"value\" : $(iu.intToString(pd.events[i].totalValue)), \"count\" : $(iu.makeString(pd.events[i].totalCount)), \"startTime\" : \"$(dateToString(pd.events[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.events[i].timeLast))\"}")
 				if (i + 1 < pd.events.arrayLength) content = new char[](content, ",")
 				}
+			content = new char[](content, "], ")
+			
+			content = new char[](content, "\"trace\" : [")
+			for (int i = 0; i < pd.trace.arrayLength; i++)
+				{
+				content = new char[](content, "{\"content\" : \"$(pd.trace[i].content)\"}")
+				if (i + 1 < pd.trace.arrayLength) content = new char[](content, ",")
+				}
 			content = new char[](content, "]")
 			}
 		
@@ -146,20 +156,24 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			if (rsc == "/meta/get_all_configs")
 				{
 				//construct JSON object of all available configurations
+				StringBuilder sb = new StringBuilder()
+				
 				char content[]
 				
-				content = new char[](content, "{")
-				content = new char[](content, "\"configs\" : [")
+				sb.add("{")
+				sb.add("\"configs\" : [")
+				
 				for (int i = 0; i < configs.arrayLength; i++)
 					{
-					content = new char[](content, "\"$(configs[i].string)\"")
-					if (i + 1 < configs.arrayLength) content = new char[](content, ", ")
+					sb.add("\"$(configs[i].string)\"")
+					
+					if (i + 1 < configs.arrayLength) sb.add(", ")
 					}
-				content = new char[](content, "]")
-				content = new char[](content, "}")
+				sb.add("]")
+				sb.add("}")
 				
 				//send response
-				sendOK(socket, "text/json", content)
+				sendOK(socket, "text/json", sb.get())
 				}
 				else if (rsc == "/meta/get_config")
 				{
@@ -175,6 +189,35 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				
 				//send response
 				sendOK(socket, "text/json", content)
+				}
+				else if (rsc == "/meta/get_system_path")
+				{
+				//send response
+				sendOK(socket, "text", systemPath)
+				}
+				else if (rsc == "/meta/get_intercepts")
+				{
+				//construct JSON object of all available configurations
+				InterceptInfo iclist[] = assembly.getIntercepts()
+				
+				StringBuilder sb = new StringBuilder()
+				
+				char content[]
+				
+				sb.add("{")
+				sb.add("\"intercepts\" : [")
+				
+				for (int i = 0; i < iclist.arrayLength; i++)
+					{
+					sb.add("{\"rule\" : \"$(iclist[i].rule)\", \"impl\" : \"$(iclist[i].impl)\"}")
+					
+					if (i + 1 < iclist.arrayLength) sb.add(", ")
+					}
+				sb.add("]")
+				sb.add("}")
+				
+				//send response
+				sendOK(socket, "text/json", sb.get())
 				}
 				else if (rsc == "/meta/")
 				{
@@ -197,6 +240,22 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 											"POST /meta/set_config HTTP/1.0<br/>",
 											"Content-Type: text<br/>",
 											"</div>",
+											"<div style=\"$divStyle\">",
+											"POST /meta/add_component HTTP/1.0<br/>",
+											"Content-Type: text<br/>",
+											"</div>",
+											"<div style=\"$divStyle\">",
+											"POST /meta/rem_component HTTP/1.0<br/>",
+											"Content-Type: text<br/>",
+											"</div>",
+											"<div style=\"$divStyle\">",
+											"POST /meta/upd_component HTTP/1.0<br/>",
+											"Content-Type: text<br/>",
+											"</div>",
+											"<div style=\"$divStyle\">",
+											"POST /meta/upd_arch HTTP/1.0<br/>",
+											"Content-Type: text/json<br/>",
+											"</div>",
 											"</body>",
 											"</html>")
 				
@@ -215,7 +274,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				char contentType[] = getHeaderValue(headers, "content-type")
 				char payloadSize[] = getHeaderValue(headers, "content-length")
 				
-				if (contentType == "text/json")
+				if (contentType == "text/json" || contentType == "application/json")
 					{
 					char config[] = socket.recv(iu.intFromString(payloadSize))
 					
@@ -243,6 +302,191 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 					sendError(socket, "text", "Content type must be text/json")
 					}
 				}
+				else if (rsc == "/meta/add_component")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text")
+					{
+					char comp[] = socket.recv(iu.intFromString(payloadSize))
+					
+					if (assembly.addComponent(comp))
+						{
+						//respond with HTTP OK
+						sendOK(socket, "text/html", null)
+						
+						configs = assembly.getConfigs()
+						currentConfig = configs[0].string
+						}
+						else
+						{
+						sendError(socket, "text", "Addition of component failed (check component exists in the system's default search paths)")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text")
+					}
+				}
+				else if (rsc == "/meta/rem_component")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text")
+					{
+					char comp[] = socket.recv(iu.intFromString(payloadSize))
+					
+					if (assembly.remComponent(comp))
+						{
+						//respond with HTTP OK
+						sendOK(socket, "text/html", null)
+						
+						configs = assembly.getConfigs()
+						currentConfig = configs[0].string
+						}
+						else
+						{
+						sendError(socket, "text", "Removal of component failed (check component exists in the system, and the system is not currently using the selected component)")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text")
+					}
+				}
+				else if (rsc == "/meta/upd_component")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text")
+					{
+					char comp[] = socket.recv(iu.intFromString(payloadSize))
+					
+					char res[] = null
+					if ((res = assembly.updComponent(comp)) != null)
+						{
+						//respond with HTTP OK
+						sendOK(socket, "text", res)
+						
+						configs = assembly.getConfigs()
+						currentConfig = configs[0].string
+						}
+						else
+						{
+						sendError(socket, "text", "Update of component failed (check component exists in the system's default search paths)")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text")
+					}
+				}
+				else if (rsc == "/meta/upd_arch")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text/json")
+					{
+					char intfs[] = socket.recv(iu.intFromString(payloadSize))
+					
+					//parse the JSON array
+					JSONElement doc = parser.parseDocument(intfs)
+					
+					if (doc.type == JSONElement.TYPE_ARRAY)
+						{
+						String ifGroup[] = new String[doc.children.arrayLength]
+						
+						for (int i = 0; i < doc.children.arrayLength; i++)
+							{
+							ifGroup[i] = new String(doc.children[i].value)
+							}
+						
+						char res[] = null
+						if ((res = assembly.updArch(ifGroup)) != null)
+							{
+							//respond with HTTP OK
+							sendOK(socket, "text", res)
+							
+							configs = assembly.getConfigs()
+							currentConfig = configs[0].string
+							}
+							else
+							{
+							sendError(socket, "text", "Update of architecture failed (check all components exist in the system's default search paths)")
+							}
+						}
+						else
+						{
+						sendError(socket, "text", "Content type must be an array of strings")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text/json")
+					}
+				}
+				else if (rsc == "/meta/add_intercept")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text/json" || contentType == "application/json")
+					{
+					char config[] = socket.recv(iu.intFromString(payloadSize))
+					
+					//parse the JSON data
+					JSONElement doc = parser.parseDocument(config)
+					char intf[] = parser.getValue(doc, "interface").value
+					char cmp[] = parser.getValue(doc, "interceptComponent").value
+					
+					if (assembly.addIntercept(intf, cmp))
+						{
+						//respond with HTTP OK
+						sendOK(socket, "text/html", null)
+						}
+						else
+						{
+						sendError(socket, "text", "Add intercept failed")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text/json")
+					}
+				}
+				else if (rsc == "/meta/rem_intercept")
+				{
+				char contentType[] = getHeaderValue(headers, "content-type")
+				char payloadSize[] = getHeaderValue(headers, "content-length")
+				
+				if (contentType == "text/json" || contentType == "application/json")
+					{
+					char config[] = socket.recv(iu.intFromString(payloadSize))
+					
+					//parse the JSON data
+					JSONElement doc = parser.parseDocument(config)
+					char intf[] = parser.getValue(doc, "interface").value
+					char cmp[] = parser.getValue(doc, "interceptComponent").value
+					
+					if (assembly.remIntercept(intf, cmp))
+						{
+						//respond with HTTP OK
+						sendOK(socket, "text/html", null)
+						}
+						else
+						{
+						sendError(socket, "text", "Add intercept failed")
+						}
+					}
+					else
+					{
+					sendError(socket, "text", "Content type must be text/json")
+					}
+				}
 				else
 				{
 				sendError(socket, "text", "Operation not known")
@@ -256,35 +500,13 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		socket.disconnect()
 		}
 	
-	int App:main(AppParam params[])
+	void serverThread(int port)
 		{
-		if (params.arrayLength == 0)
-			{
-			out.println("usage: pal.rest main_component.o")
-			return 0
-			}
-		
-		char perceptionPath[] = search.getDefaultComponent("pal.Perception")
-		LoadedComponents lc = loader.load(perceptionPath)
-		IDC perception = lc.mainComponent
-		
-		out.println("[scanning system for components, please be patient...]")
-		
-		perc = new Perception() from perception
-		assembly = new Assembly(params[0].string, perception)
-		
-		configs = assembly.getConfigs()
-		
-		out.println("[located $(iu.intToString(configs.arrayLength)) possible configurations for target software system]")
-		
-		assembly.setConfig(configs[0].string)
-		currentConfig = configs[0].string
-		
 		TCPServerSocket server = new TCPServerSocket()
 		
-		if (server.bind(TCPServerSocket.ANY_ADDRESS, HOST_POST))
+		if (server.bind(TCPServerSocket.ANY_ADDRESS, port))
 			{
-			out.println("[REST service started, visit http://localhost:$HOST_POST/meta/ for API details]")
+			out.println("[REST service started, visit http://localhost:$port/meta/ for API details]")
 			
 			while (running)
 				{
@@ -297,8 +519,95 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			else
 			{
 			out.println("Failed to bind to server port")
+			}
+		}
+	
+	int App:main(AppParam params[])
+		{
+		if (params.arrayLength == 0)
+			{
+			out.println("usage: pal.rest main_component.o")
+			out.println("")
+			out.println("Any parameters after main_component.o are passed to the sub-program")
+			out.println("")
+			out.println("options for pal.rest:")
+			out.println(" -p portNumber     Set the port number on which the REST service will listen")
+			return 0
+			}
+		
+		char objectFile[] = null
+		
+		int serverPort = HOST_POST
+		
+		store AppParam subParams[] = null
+		
+		for (int i = 0; i < params.arrayLength; i++)
+			{
+			if (params[i].string == "-p")
+				{
+				if (i + 1 < params.arrayLength)
+					{
+					if (stringUtil.isNumeric(params[i+1].string))
+						{
+						serverPort = iu.intFromString(params[i+1].string)
+						i ++
+						}
+						else
+						{
+						out.println("expected port number after -p")
+						}
+					}
+					else
+					{
+					out.println("expected port number after -p")
+					return 0
+					}
+				}
+				else if (objectFile == null)
+				{
+				objectFile = params[i].string
+				}
+				else if (objectFile != null)
+				{
+				subParams = new AppParam[](subParams, new AppParam(params[i].string))
+				}
+			}
+		
+		objectFile = objectFile.explode("\\").implode("/")
+		
+		if (!fs.exists(objectFile))
+			{
+			out.println("object file $objectFile not found")
 			return 1
 			}
+		
+		int pathMod = 0
+		if (objectFile.startsWith("./")) pathMod = 2
+		systemPath = fs.getFullPath(objectFile)
+		systemPath = systemPath.subString(0, systemPath.arrayLength - (objectFile.arrayLength-pathMod))
+		
+		out.println("[system home path: $systemPath]")
+		
+		char perceptionPath[] = search.getDefaultComponent("pal.Perception")
+		LoadedComponents lc = loader.load(perceptionPath)
+		IDC perception = lc.mainComponent
+		
+		out.println("[scanning system for components, please be patient...]")
+		
+		perc = new Perception() from perception
+		assembly = new Assembly(objectFile, subParams, perception)
+		
+		configs = assembly.getConfigs()
+		
+		out.println("[located $(iu.intToString(configs.arrayLength)) possible configurations for target software system]")
+		
+		assembly.setConfig(configs[0].string)
+		currentConfig = configs[0].string
+		
+		//call assembly.runApp(), and launch the server stuff in a different thread...
+		asynch::serverThread(serverPort)
+		
+		assembly.runApp(systemPath)
 		
 		return 0
 		}
