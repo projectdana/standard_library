@@ -1,0 +1,31 @@
+// Insertion sort
+// Author: Roberto Rodrigues Filho
+// Date: August @ 2021
+
+component provides data.query.Sort {
+	Data[] Sort:sort(Data list[], TypeField field, bool ascending) {
+		Data result[] = clone list
+		
+		Data temp = null
+		int j = 0
+		
+		for (int i = 1; i < result.arrayLength; i++) {
+			temp = result[i]
+			j = i
+			while (j > 0) {
+				if (ascending) {
+					if (result[j-1]:.field <= temp:.field)
+						break
+				} else {
+					if (result[j-1]:.field >= temp:.field)
+						break
+				}
+				result[j] = result[j-1] 
+				j--
+			}
+			result[j] = temp
+		}
+		
+		return result		
+	}
+}

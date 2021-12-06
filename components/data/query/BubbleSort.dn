@@ -1,0 +1,34 @@
+// Bubble sort
+// Author: Roberto Rodrigues Filho
+// Date: August @ 2021
+
+component provides data.query.Sort {
+	Data[] Sort:sort(Data list[], TypeField field, bool ascending) {
+		Data result[] = clone list
+		
+		bool swap = false
+		int end = result.arrayLength-1
+
+		while (end > 0) {
+			Data helper = null
+			for (int i = 0; i < end; i++) {
+				if (ascending) {
+					swap = result[i]:.field > result[i+1]:.field
+				} else {
+					swap = result[i]:.field < result[i+1]:.field
+				}
+				if (swap) {
+					helper = result[i]
+					result[i] = result[i+1]
+					result[i+1] = helper
+					swap = false
+				}
+			}
+			if (helper == null)
+				break
+			end--
+		}
+
+		return result		
+	}
+}
