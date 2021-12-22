@@ -28,4 +28,76 @@ component provides SearchList {
 		return null
 		}
 	
+	Data findFirstArray(Data list[], TypeField field, Data template)
+		{
+		for (int i = 0; i < list.arrayLength; i++)
+			{
+			if (list[i]:.field == template:.field)
+				{
+				return list[i]
+				}
+			}
+		
+		return null
+		}
+	
+	Data[] SearchList:findDuplicates(List list, TypeField field)
+		{
+		Data result[]
+		
+		int index = 0
+		
+		for (Data nxt = list.getFirst(); nxt != null; nxt = list.getNext())
+			{
+			if (findFirstArray(result, field, nxt) == null)
+				{
+				for (int j = index+1; j < list.getLength(); j++)
+					{
+					if (nxt:.field == list.getIndex(j):.field)
+						{
+						result = new Data[](result, nxt) from typeof(nxt)
+						
+						break
+						}
+					}
+				}
+			
+			index ++
+			}
+		
+		return result
+		}
+	
+	Group[] SearchList:groupBy(List list, TypeField field)
+		{
+		Group result[]
+		
+		for (Data nxt = list.getFirst(); nxt != null; nxt = list.getNext())
+			{
+			Group g = null
+			
+			for (int j = 0; j < result.arrayLength; j++)
+				{
+				if (result[j].cells[0]:.field == nxt:.field)
+					{
+					g = result[j]
+					break
+					}
+				}
+			
+			if (g == null)
+				{
+				g = new Group(new Data[](nxt) from typeof(nxt))
+				
+				result = new Group[](result, g)
+				}
+				else
+				{
+				g.cells = new Data[](g.cells, nxt) from typeof(nxt)
+				}
+			}
+		
+		return result
+		}
+	
 	}

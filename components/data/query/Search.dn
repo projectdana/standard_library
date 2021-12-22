@@ -1,4 +1,4 @@
-component provides Search {
+component provides Search requires io.Output out {
 	
 	Data[] Search:search(Data list[], TypeField field, Data template)
 		{
@@ -41,6 +41,61 @@ component provides Search {
 			}
 		
 		return null
+		}
+	
+	Data[] Search:findDuplicates(Data list[], TypeField field)
+		{
+		Data result[]
+		
+		for (int i = 0; i < list.arrayLength; i++)
+			{
+			if (findFirst(result, field, list[i]) == null)
+				{
+				for (int j = i+1; j < list.arrayLength; j++)
+					{
+					if (list[i]:.field == list[j]:.field)
+						{
+						result = new Data[](result, list[i]) from typeof(list)
+						
+						break
+						}
+					}
+				}
+			}
+		
+		return result
+		}
+	
+	Group[] Search:groupBy(Data list[], TypeField field)
+		{
+		Group result[]
+		
+		for (int i = 0; i < list.arrayLength; i++)
+			{
+			Group g = null
+			
+			for (int j = 0; j < result.arrayLength; j++)
+				{
+				if (result[j].cells[0]:.field == list[i]:.field)
+					{
+					g = result[j]
+					break
+					}
+				}
+			
+			if (g == null)
+				{
+				g = new Group(new Data[](list[i]) from typeof(list))
+				
+				result = new Group[](result, g)
+				}
+				else
+				{
+				g.cells = new Data[](g.cells, list[i]) from typeof(list)
+				}
+			}
+		
+		return result
 		}
 	
 	}

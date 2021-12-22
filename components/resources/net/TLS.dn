@@ -33,7 +33,7 @@ interface TLS extends net.Stream {
 	/* {"@description" : "Get the certificate chain of the remote host, which can be queried or used in verifyCertificate(). The certificate chain is returned as an array base64-encoded PEM format certificates."} */
 	String[] getPeerCertChain()
 	
-	/* {"@description" : "This function allows you to verify a certificate, as returned by getPeerCertificate() or getPeerCertChain(). An SSLCertStore instance must be passed in which holds root certificates that you intend to trust. It is still your responsibility to perform host name verification separately."} */
+	/* {"@description" : "This function allows you to verify a certificate, as returned by getPeerCertificate() or getPeerCertChain(). A TLSCertStore instance must be passed in which holds root certificates that you intend to trust. It is still your responsibility to perform host name verification separately."} */
 	VerifyStatus verifyCertificate(TLSCertStore storeData, char certificate[], String chain[])
 	
 	/* {"@description" : "Close the secure session."} */

@@ -1,3 +1,7 @@
+data Group {
+	Data cells[]
+	}
+
 /*
 { "description" : "Search for values in an array."}
 */
@@ -34,5 +38,23 @@ interface Search {
 	}
 	*/
 	Data findFirst(Data list[], TypeField field, Data template)
+	
+	/*
+	{ "@description" : "Search an array for cells that have the same value for the given field.",
+			"list" : "The array to search.",
+			"field" : "The field to find duplicates of.",
+			"@return" : "An array of cells that have duplicates in the source list."
+	}
+	*/
+	Data[] findDuplicates(Data list[], TypeField field)
+	
+	/*
+	{ "@description" : "Search an array for cells that have the same value for the given field, grouping those cells together.",
+			"list" : "The array to search.",
+			"field" : "The field to group by.",
+			"@return" : "An array of groups, each one containing the cells in that group."
+	}
+	*/
+	Group[] groupBy(Data list[], TypeField field)
 	
 	}

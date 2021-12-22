@@ -1,0 +1,41 @@
+data Row {
+	int id
+	char colour[]
+	dec score
+	}
+
+component provides UnitTest requires data.query.Search search, data.adt.List, data.query.SearchList slist {	
+
+	bool UnitTest:runTest() {
+		Row rows[] = new Row[](new Row(44, "Blue", 2.0), new Row(78, "Red", 7.0), new Row(109, "Blue", 19.08),new Row(12, "Green", 0.001))
+		
+		Row res[] = rows.find(Row.[colour], new Row(colour = "Blue"))
+		
+		if (res.arrayLength != 2) throw new Exception("Failure in test 1")
+		
+		res = rows.findDuplicates(Row.[colour])
+		
+		if (res.arrayLength != 1) throw new Exception("Failure in test 2")
+		
+		Group groups[] = rows.groupBy(Row.[colour])
+		
+		if (groups.arrayLength != 3) throw new Exception("Failure in test 3")
+		
+		List l = new List()
+		l.add(rows[0])
+		l.add(rows[1])
+		l.add(rows[2])
+		l.add(rows[3])
+		
+		res = slist.findDuplicates(l, Row.[colour])
+		
+		if (res.arrayLength != 1) throw new Exception("Failure in test 3")
+		
+		groups = slist.groupBy(l, Row.[colour])
+		
+		if (groups.arrayLength != 3) throw new Exception("Failure in test 4")
+	
+		return true
+	}
+
+}
