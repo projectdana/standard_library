@@ -36,6 +36,8 @@ data ParsedParam {
 
 component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocket, net.TLS, net.TLSContext, io.FileSystem fileSystem, io.File, data.StringUtil stringUtil, data.IntUtil iu, ws.RequestHandler {
 	
+	char wsHomePath[]
+	
 	int listenPort = 0
 	int sslPort = 0
 	char sslCertificateFile[] = null
@@ -69,9 +71,9 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 	void loadMIMETypes()
 		{
 		//TODO: update this to cache the file in a key/val format, and re-read only if the file's modified date has changed...
-		if (fileSystem.exists(MIME_TYPES_FILE))
+		if (fileSystem.exists("$wsHomePath$MIME_TYPES_FILE"))
 			{
-			File fd = new File(MIME_TYPES_FILE, File.READ)
+			File fd = new File("$wsHomePath$MIME_TYPES_FILE", File.READ)
 			
 			String mediaTypes[] = fd.read(fd.getSize()).explode("\r\n ")
 			
@@ -196,6 +198,11 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 				rh.processStream(client, ssl, config)
 				}
 			}
+		}
+	
+	void App:setSourcePath(char path[], opt char dpath[])
+		{
+		wsHomePath = path
 		}
 	
 	int App:main(AppParam params[])

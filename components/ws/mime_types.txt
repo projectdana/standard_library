@@ -1,0 +1,15 @@
+txt:text/plain
+css:text/css
+html:text/html
+htm:text/html
+bmp:image/bmp
+gif:image/gif
+jpeg:image/jpeg
+jpg:image/jpeg
+png:image/png
+svg:image/svg+xml
+tiff:image/tiff
+ico:image/x-icon
+cur:image/x-icon
+zip:application/zip
+pdf:application/pdf
