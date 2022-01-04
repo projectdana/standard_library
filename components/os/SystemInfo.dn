@@ -5,6 +5,8 @@ interface SystemLib{
 	char[] getHostName()
 	char[] getVar(char name[])
 	char[] getSystemFont(bool monospaced)
+	int getCoreCount()
+	int getMemorySize()
 	}
 
 component provides os.SystemInfo requires native SystemLib lib
@@ -29,13 +31,23 @@ component provides os.SystemInfo requires native SystemLib lib
 		return lib.getPlatformVersion()
 		}
 	
+	char[] SystemInfo:getSystemFont(bool monospaced)
+		{
+		return lib.getSystemFont(monospaced)
+		}
+	
 	char[] SystemInfo:getChipName()
 		{
 		return lib.getChipName()
 		}
 	
-	char[] SystemInfo:getSystemFont(bool monospaced)
+	int SystemInfo:getCoreCount()
 		{
-		return lib.getSystemFont(monospaced)
+		return lib.getCoreCount()
+		}
+	
+	int SystemInfo:getMemorySize()
+		{
+		return lib.getMemorySize()
 		}
 	}
