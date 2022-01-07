@@ -26,6 +26,10 @@ body{
 	margin: 5px;
 }
 
+.index_pkg_dis{
+   color: #444;
+}
+
 .doc_function_list{
 	padding: 2px;
 	margin-bottom: 50px;
