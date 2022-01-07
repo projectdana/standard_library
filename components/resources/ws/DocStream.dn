@@ -32,22 +32,22 @@ interface DocStream {
 	void remSessionKey(char key[])
 	
 	/*
-	 {"@description" : "Send data to the connected client. By default, content is assumed to be text (HTML) and uses chunked encoding; other content types should be indicated by first using writeStatus()."}
+	 {"@description" : "Set the status code that will be used for this response. This must be used before any data is sent (e.g. via write()). No data is sent as a result of this function call. If directStream is set to true, response data is sent immediately by calls to write()."}
 	*/
 	void setStatusCode(int code, char reason[], bool directStream)
 	
 	/*
-	 {"@description" : "Send data to the connected client. By default, content is assumed to be text (HTML) and uses chunked encoding; other content types should be indicated by first using writeStatus()."}
+	 {"@description" : "Set the response headers that will be used for this response. This must be used before any data is sent (e.g. via write()). No data is sent as a result of this function call."}
 	*/
 	void setHeaders(store Header headers[])
 	
 	/*
-	 {"@description" : "Send data to the connected client. By default, content is assumed to be text (HTML) and uses chunked encoding; other content types should be indicated by first using writeStatus()."}
+	 {"@description" : "Send data to the connected client. Unless directStream has been set to true via setStatusCode(), data passed to this function may be buffered into larger chunks before actually being sent to the client. By default, content is assumed to be text (HTML) and uses chunked encoding; other content types should be indicated by first using setStatusCode() / setHeaders()."}
 	*/
 	void write(char str[])
 	
 	/*
-	 {"@description" : "Indicate that sending of response data is complete. This function is automatically called by the web framework and so does not need to be used by the web app. After this function has been called, no further data can be sent in response to this request."}
+	 {"@description" : "Indicate that sending of response data is complete. After this function has been called, no further data can be sent in response to this request."}
 	*/
 	void sendResponse()
 	
