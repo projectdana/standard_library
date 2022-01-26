@@ -1,28 +1,28 @@
 interface MathLib {
-	char[] sqrt(char val[])
+	dec sqrt(dec val)
 	
-	char[] pow(char val[], char power[])
-	char[] root(char val[], char root[])
+	dec pow(dec val, dec power)
+	dec root(dec val, dec root)
 	
-	char[] log(char val[])
-	char[] natlog(char val[])
-	char[] natexp(char val[])
+	dec log(dec val)
+	dec natlog(dec val)
+	dec natexp(dec val)
 	
-	char[] cos(char val[])
-	char[] sin(char val[])
-	char[] tan(char val[])
+	dec cos(dec val)
+	dec sin(dec val)
+	dec tan(dec val)
 	
-	char[] acos(char val[])
-	char[] asin(char val[])
-	char[] atan(char val[])
+	dec acos(dec val)
+	dec asin(dec val)
+	dec atan(dec val)
 	
-	char[] cosh(char val[])
-	char[] sinh(char val[])
-	char[] tanh(char val[])
+	dec cosh(dec val)
+	dec sinh(dec val)
+	dec tanh(dec val)
 	
-	char[] acosh(char val[])
-	char[] asinh(char val[])
-	char[] atanh(char val[])
+	dec acosh(dec val)
+	dec asinh(dec val)
+	dec atanh(dec val)
 	}
 
 component provides util.Math requires native MathLib lib, io.Output out, data.DecUtil decUtil {
@@ -130,92 +130,92 @@ component provides util.Math requires native MathLib lib, io.Output out, data.De
 	
 	dec Math:sqrt(dec n)
 		{
-		return decUtil.decFromString(lib.sqrt(decUtil.decToString(n)))
+		return lib.sqrt(n)
 		}
 	
 	dec Math:power(dec n, dec p)
 		{
-		return decUtil.decFromString(lib.pow(decUtil.decToString(n), decUtil.decToString(p)))
+		return lib.pow(n, p)
 		}
 	
 	dec Math:rootn(dec n, dec r)
 		{
-		return decUtil.decFromString(lib.root(decUtil.decToString(n), decUtil.decToString(r)))
+		return lib.root(n, r)
 		}
 	
 	dec Math:log(dec n)
 		{
-		return decUtil.decFromString(lib.log(decUtil.decToString(n)))
+		return lib.log(n)
 		}
 	
 	dec Math:natlog(dec n)
 		{
-		return decUtil.decFromString(lib.natlog(decUtil.decToString(n)))
+		return lib.natlog(n)
 		}
 	
 	dec Math:natexp(dec n)
 		{
-		return decUtil.decFromString(lib.natexp(decUtil.decToString(n)))
+		return lib.natexp(n)
 		}
 	
 	dec Math:cos(dec n)
 		{
-		return decUtil.decFromString(lib.cos(decUtil.decToString(n)))
+		return lib.cos(n)
 		}
 	
 	dec Math:sin(dec n)
 		{
-		return decUtil.decFromString(lib.sin(decUtil.decToString(n)))
+		return lib.sin(n)
 		}
 	
 	dec Math:tan(dec n)
 		{
-		return decUtil.decFromString(lib.tan(decUtil.decToString(n)))
+		return lib.tan(n)
 		}
 	
 	dec Math:acos(dec n)
 		{
-		return decUtil.decFromString(lib.acos(decUtil.decToString(n)))
+		return lib.acos(n)
 		}
 	
 	dec Math:asin(dec n)
 		{
-		return decUtil.decFromString(lib.asin(decUtil.decToString(n)))
+		return lib.asin(n)
 		}
 	
 	dec Math:atan(dec n)
 		{
-		return decUtil.decFromString(lib.atan(decUtil.decToString(n)))
+		return lib.atan(n)
 		}
 	
 	dec Math:cosh(dec n)
 		{
-		return decUtil.decFromString(lib.cosh(decUtil.decToString(n)))
+		return lib.cosh(n)
 		}
 	
 	dec Math:sinh(dec n)
 		{
-		return decUtil.decFromString(lib.sinh(decUtil.decToString(n)))
+		return lib.sinh(n)
 		}
 	
 	dec Math:tanh(dec n)
 		{
-		return decUtil.decFromString(lib.tanh(decUtil.decToString(n)))
+		return lib.tanh(n)
 		}
 	
 	dec Math:acosh(dec n)
 		{
-		return decUtil.decFromString(lib.acosh(decUtil.decToString(n)))
+		return lib.acosh(n)
 		}
 	
 	dec Math:asinh(dec n)
 		{
-		return decUtil.decFromString(lib.asinh(decUtil.decToString(n)))
+		return lib.asinh(n)
 		}
 	
 	dec Math:atanh(dec n)
 		{
-		return decUtil.decFromString(lib.atanh(decUtil.decToString(n)))
+		return lib.atanh(n)
 		}
 	
 	}

@@ -17,7 +17,7 @@ interface DocStream {
 	/* {"@description" : "Pop headers to next context on the stack."} */
 	void popContext()
 	
-	/* {"@description" : "Set a piece of session state, identified by a given key, to equal a given value. This causes a cookie to be set, so that this session state is available on subsequent web requests. This function must be called before any use of write() or writeStatus()."} */
+	/* {"@description" : "Set a piece of session state, identified by a given key, to equal a given value. This causes a cookie to be set, so that this session state is available on subsequent web requests. This function must be called before any use of write(), setStatusCode(), or setHeaders()."} */
 	void setSessionKey(char key[], char value[])
 	
 	/*
@@ -27,7 +27,7 @@ interface DocStream {
 	char[] getSessionKey(char key[])
 	
 	/*
-	 {"@description" : "Delete a piece of session state, identified by a given key. The deleted session state will no longer be available to subsequent web requests. This function must be called before any use of write() or writeStatus()."}
+	 {"@description" : "Delete a piece of session state, identified by a given key. The deleted session state will no longer be available to subsequent web requests. This function must be called before any use of write(), setStatusCode(), or setHeaders()."}
 	*/
 	void remSessionKey(char key[])
 	
