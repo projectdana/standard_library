@@ -54,14 +54,13 @@ component provides Queue(Destructor, AdaptEvents) {
 					
 					lw.next = null
 					lw.prev = null
-					
+					length--
+
 					break
 					}
 				
 				lw = lw.next
 				}
-			
-			length --
 			}
 		}
 	
