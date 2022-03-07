@@ -26,6 +26,11 @@ data Persons {
 	Object objects[]
 	}
 
+data MDRTest {
+	int a[][]
+	int b[][][]
+	}
+
 component provides UnitTest requires io.Output out, data.json.JSONEncoder encoder, data.json.JSONParser parser {
 	
 	Type buildType(JSONElement doc)
@@ -147,6 +152,27 @@ component provides UnitTest requires io.Output out, data.json.JSONEncoder encode
 		Type tsB = typeof(char[])
 		
 		if (tsB.size != 0) throw new Exception("Failure in test 7")
+		
+		// -- multi-dimension arrays --
+		MDRTest tst = new MDRTest()
+		tst.a = new int[2][3]
+		
+		int kt[] = tst:.0
+		
+		int dim[] = dana.getDimensions(kt)
+		
+		if (dim.arrayLength != 2) throw new Exception("Failure in test 8")
+		
+		int nt[] = new int[6] from typeof(int[][])
+		
+		dana.setDimensions(nt, dim)
+		
+		nt[1] = 7
+		nt[4] = 9
+		
+		tst:.0 = nt
+		
+		if (tst.a[0][1] != 7) throw new Exception("Failure in test 9")
 		
 		return true
 		}

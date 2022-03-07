@@ -20,5 +20,5 @@ interface Run{
 	/*
 	 {"@description" : "Execute a command and wait until the command has finished executing, returning its status when it does so."}
 	*/
-	RunStatus execute(char path[])
+	RunStatus execute(char cmd[])
 	}

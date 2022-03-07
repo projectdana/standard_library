@@ -1,0 +1,44 @@
+interface RWLockLib {
+	int newLock()
+	void readLock(int hnd)
+	void readUnlock(int hnd)
+	void writeLock(int hnd)
+	void writeUnlock(int hnd)
+	void destroyLock(int hnd)
+	}
+
+component provides RWLock(Destructor) requires native RWLockLib lib {
+	
+	int handle
+	
+	RWLock:RWLock()
+		{
+		handle = lib.newLock()
+		}
+	
+	void RWLock:lockRead()
+		{
+		lib.readLock(handle)
+		}
+	
+	void RWLock:unlockRead()
+		{
+		lib.readUnlock(handle)
+		}
+	
+	void RWLock:lockWrite()
+		{
+		lib.writeLock(handle)
+		}
+	
+	void RWLock:unlockWrite()
+		{
+		lib.writeUnlock(handle)
+		}
+	
+	void Destructor:destroy()
+		{
+		lib.destroyLock(handle)
+		}
+	
+	}

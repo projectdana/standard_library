@@ -1,0 +1,29 @@
+component provides UnitTest {
+	
+	bool UnitTest:runTest()
+		{
+		int a[][] = new int[2][3]
+		
+		a[0][1] = 7
+		a[1][1] = 9
+		
+		if (a[0][1] != 7) throw new Exception("Failure in test 1")
+		
+		a = new int[2][3]
+		a[0][1] = 7
+		
+		int c[][] = new int[][](new int[](1, 2, 3), a)
+		
+		if (c[1][1] != 7) throw new Exception("Failure in test 2")
+		
+		int x[][][] = new int[][][](
+									new int[][](new int[](1, 2, 3), new int[](4, 5, 6)),
+									new int[][](new int[](7, 8, 9), new int[](10, 11, 12))
+									)
+		
+		if (x[1][0][1] != 8) throw new Exception("Failure in test 3")
+		
+		return true
+		}
+	
+	}

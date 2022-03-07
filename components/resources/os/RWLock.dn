@@ -1,0 +1,20 @@
+/*
+ {"description" : "A read/write lock, allowing multiple readers into a critical section, but only a single writer."
+	}
+*/
+
+interface RWLock {
+	/* {"@description" : "Instantiate a new read/write lock object."	} */
+	RWLock()
+	
+	/* {"@description" : "Request a read lock. This function will block if another thread currently holds a write lock." } */
+	void lockRead()
+	/* {"@description" : "Release a read lock." } */
+	void unlockRead()
+	
+	/* {"@description" : "Request a write lock. This function will block if any other threads currently hold a write or a read lock." } */
+	void lockWrite()
+	/* {"@description" : "Release a write lock." } */
+	void unlockWrite()
+	
+	}

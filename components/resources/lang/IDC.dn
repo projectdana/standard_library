@@ -86,7 +86,7 @@ interface IDC {
 	bool hasTransferState(Object o)
 	
 	/*
-	 {"@description" : "Get the transfer state of the given object."}
+	 {"@description" : "Get the transfer state of the given object. This function also resets the transfer state fields of the given object to default values."}
 	*/
 	Data getTransferState(Object o)
 	

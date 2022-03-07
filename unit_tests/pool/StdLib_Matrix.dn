@@ -1,0 +1,43 @@
+component provides UnitTest requires stats.Matrix matrix {
+	
+	bool UnitTest:runTest()
+		{
+		dec x[][] = new dec[2][3]
+		dec y[][] = new dec[3][2]
+		
+		x[0][0] = 1.0
+		x[0][1] = 2.0
+		x[0][2] = 3.0
+		x[1][0] = 4.0
+		x[1][1] = 5.0
+		x[1][2] = 6.0
+		
+		y[0][0] = 7.0
+		y[0][1] = 8.0
+		
+		y[1][0] = 9.0
+		y[1][1] = 10.0
+		
+		y[2][0] = 11.0
+		y[2][1] = 12.0
+		
+		dec z[][] = matrix.multiply(x, y)
+		
+		if (z[0][0] != 58.0) throw new Exception("Failure in test 1")
+		
+		dec f[][] = matrix.add(x, x)
+		
+		if (f[0][0] != 2.0) throw new Exception("Failure in test 2")
+		
+		f = matrix.subtract(x, x)
+		
+		if (f[0][0] != 0.0) throw new Exception("Failure in test 3")
+		
+		f = matrix.transpose(x)
+		
+		if (f[0][1] != 4.0) throw new Exception("Failure in test 4")
+		
+		return true
+		}
+	
+	}

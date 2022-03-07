@@ -1,0 +1,103 @@
+component provides Matrix {
+	
+	dec[][] Matrix:add(dec a[][], dec b[][])
+		{
+		if (a.arrayLength != b.arrayLength) throw new Exception("matrix dimensions are not compatible")
+		if (a[0].arrayLength != b[0].arrayLength) throw new Exception("matrix dimensions are not compatible")
+		
+		dec result[][] = new dec[a.arrayLength][a[0].arrayLength]
+		
+		for (int i = 0; i < a.arrayLength; i++)
+			{
+			for (int j = 0; j < a[i].arrayLength; j++)
+				{
+				result[i][j] = a[i][j] + b[i][j]
+				}
+			}
+		
+		return result
+		}
+	
+	dec[][] Matrix:subtract(dec a[][], dec b[][])
+		{
+		if (a.arrayLength != b.arrayLength) throw new Exception("matrix dimensions are not compatible")
+		if (a[0].arrayLength != b[0].arrayLength) throw new Exception("matrix dimensions are not compatible")
+		
+		dec result[][] = new dec[a.arrayLength][a[0].arrayLength]
+		
+		for (int i = 0; i < a.arrayLength; i++)
+			{
+			for (int j = 0; j < a[i].arrayLength; j++)
+				{
+				result[i][j] = a[i][j] - b[i][j]
+				}
+			}
+		
+		return result
+		}
+	
+	dec[][] Matrix:multiply(dec a[][], dec b[][])
+		{
+		if (a[0].arrayLength != b.arrayLength) throw new Exception("matrix dimensions are not compatible")
+		
+		dec result[][] = new dec[a.arrayLength][b[0].arrayLength]
+		
+		//...for each row of "a"
+		for (int i = 0; i < a.arrayLength; i++)
+			{
+			dec q[] = a[i]
+			
+			//...for each column of "b"
+			
+			for (int k = 0; k < b[0].arrayLength; k++)
+				{
+				dec res = 0.0
+				
+				for (int j = 0; j < q.arrayLength; j++)
+					{
+					res += (q[j] * b[j][k])
+					}
+				
+				result[i][k] = res
+				}
+			}
+		
+		return result
+		}
+	
+	dec[][] Matrix:multiplyBy(dec a[][], dec b)
+		{
+		dec result[][] = new dec[a.arrayLength][a[0].arrayLength]
+		
+		for (int i = 0; i < a.arrayLength; i++)
+			{
+			for (int j = 0; j < a[i].arrayLength; j++)
+				{
+				result[i][j] = a[i][j] * b
+				}
+			}
+		
+		return result
+		}
+	
+	dec[][] Matrix:negate(dec a[][])
+		{
+		return multiplyBy(a, -1.0)
+		}
+	
+	dec[][] Matrix:transpose(dec a[][])
+		{
+		dec result[][] = new dec[a[0].arrayLength][a.arrayLength]
+		
+		for (int i = 0; i < a.arrayLength; i++)
+			{
+			for (int j = 0; j < a[i].arrayLength; j++)
+				{
+				result[j][i] = a[i][j]
+				}
+			}
+		
+		return result
+		}
+	
+	}

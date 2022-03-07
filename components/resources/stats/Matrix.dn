@@ -1,0 +1,52 @@
+/*
+ {"description" : "Matrix manipulation functions."
+	}
+*/
+
+interface Matrix {
+	
+	/*
+	 {"@description" : "Adds matrix a to matrix b.",
+	 	"@return" : "The resulting matrix."
+		}
+	*/
+	dec[][] add(dec a[][], dec b[][])
+	
+	/*
+	 {"@description" : "Subtracts matrix a from matrix b.",
+	 	"@return" : "The resulting matrix."
+		}
+	*/
+	dec[][] subtract(dec a[][], dec b[][])
+	
+	/*
+	 {"@description" : "Multiplies matrix a by matrix b.",
+	 	"a" : "The [n][m] matrix to multiply.",
+	 	"b" : "The [m][q] matrix to multiply (m must be the same as in matrix a).",
+	 	"@return" : "The resulting matrix."
+		}
+	*/
+	dec[][] multiply(dec a[][], dec b[][])
+	
+	/*
+	 {"@description" : "Multiplies a matrix by a scalar value.",
+	 	"@return" : "The resulting matrix."
+		}
+	*/
+	dec[][] multiplyBy(dec a[][], dec b)
+	
+	/*
+	 {"@description" : "Negate a matrix.",
+	 	"@return" : "The resulting matrix."
+		}
+	*/
+	dec[][] negate(dec a[][])
+	
+	/*
+	 {"@description" : "Transpose a matrix (rows become columns).",
+	 	"@return" : "The resulting matrix."
+		}
+	*/
+	dec[][] transpose(dec a[][])
+	
+	}

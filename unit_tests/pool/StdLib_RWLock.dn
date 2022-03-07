@@ -1,0 +1,16 @@
+component provides UnitTest requires os.RWLock {
+	
+	bool UnitTest:runTest()
+		{
+		RWLock lock = new RWLock()
+		
+		lock.lockWrite()
+		lock.unlockWrite()
+		
+		lock.lockRead()
+		lock.unlockRead()
+		
+		return true
+		}
+	
+	}

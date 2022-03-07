@@ -1,0 +1,41 @@
+data Person {
+	char name[]
+	int age
+	}
+
+component provides UnitTest {
+	
+	bool UnitTest:runTest()
+		{
+		int q[] = new int[7]
+		q[1] = 1
+		q[5] = 5
+		q[6] = 6
+		
+		int s[] = dana.sub(q, 1, 5)
+		
+		if (s.arrayLength != 5) throw new Exception("Failure in test 1")
+		
+		if (s[0] != 1) throw new Exception("Failure in test 2")
+		
+		dec x[][] = new dec[3][3]
+		
+		x[0][0] = 1.0
+		x[0][1] = 2.0
+		x[0][2] = 3.0
+		x[1][0] = 4.0
+		x[1][1] = 5.0
+		x[1][2] = 6.0
+		
+		x[2][0] = 7.0
+		x[2][1] = 8.0
+		x[2][2] = 9.0
+		
+		dec v[][] = dana.sub(x, 1, 2)
+		
+		if (v[0][1] != 5.0) throw new Exception("Failure in test 3")
+		
+		return true
+		}
+	
+	}
