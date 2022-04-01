@@ -475,7 +475,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			start ++
 			
 			//array?
-			if (tokens[start].content == "[")
+			while (tokens[start].content == "[")
 				{
 				if (tokens[start+1].content != "]")
 					return false
@@ -681,7 +681,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			start ++
 			
 			//array?
-			if (tokens[start].content == "[")
+			while (tokens[start].content == "[")
 				{
 				if (tokens[start+1].content != "]")
 					return 0
@@ -738,7 +738,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			
 			start ++
 			
-			if (tokens[start].content == "[")
+			while (tokens[start].content == "[")
 				{
 				if (tokens[start+1].content != "]")
 					return 0

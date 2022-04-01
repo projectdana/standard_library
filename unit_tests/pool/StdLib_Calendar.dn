@@ -6,6 +6,9 @@ component provides UnitTest requires time.Calendar calendar {
 		
 		if (dt == null || dt.year == 0 || dt.month == 0 || dt.day == 0) throw new Exception("Failure in test 1")
 		
+		int st = calendar.getMS()
+		int et = calendar.getMS()
+		
 		return true
 		}
 	

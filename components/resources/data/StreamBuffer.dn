@@ -1,9 +1,28 @@
+/*
+ {"description" : "Utility interface to help place arbitrary amounts of bytes into a buffer, and read chunks of bytes back out of that buffer at a given chunk size."}
+*/
+
 interface StreamBuffer {
 	
+	/* {"@description" : "The current contents of the buffer."} */
+	transfer byte bufferContent[]
+	
+	/*
+	 {"@description" : "Write new bytes to the end of the buffer."
+			"ar" : "The bytes to be appended.",
+			"len" : "The number of bytes from 'ar' to be appended (default is all bytes)."}
+	*/
 	void write(byte ar[], opt int len)
 	
+	/*
+	 {"@description" : "Read a given number of bytes from the start of the buffer."
+			"len" : "The number of bytes to read."}
+	*/
 	byte[] read(int len)
 	
+	/*
+	 {"@description" : "Get the total number of bytes currently in the buffer."}
+	*/
 	int getSize()
 	
 	}

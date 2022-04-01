@@ -1,0 +1,24 @@
+uses data.StringBuilder
+uses data.String
+
+component provides UnitTest requires Loader loader, System sysInfo, composition.Adapt adapt {
+	
+	bool UnitTest:runTest()
+		{
+		IDC a = loader.load("$(sysInfo.getDanaHome())/components/data/StringBuilder.o")
+		
+		StringBuilder l = new StringBuilder() from a
+		
+		l.add("hi")
+		l.add(" there")
+		
+		IDC b = loader.load("$(sysInfo.getDanaHome())/components/data/StringBuilder.o")
+		
+		adapt.adaptObject(a, l, b, "data.StringBuilder")
+		
+		if (l.get() != "hi there") throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

@@ -1,0 +1,24 @@
+uses data.adt.List
+uses data.String
+
+component provides UnitTest requires Loader loader, System sysInfo, composition.Adapt adapt {
+	
+	bool UnitTest:runTest()
+		{
+		IDC a = loader.load("$(sysInfo.getDanaHome())/components/data/adt/List.o")
+		
+		List l = new List() from a
+		
+		l.add(new String("hi"))
+		l.add(new String("there"))
+		
+		IDC b = loader.load("$(sysInfo.getDanaHome())/components/data/adt/List.o")
+		
+		adapt.adaptObject(a, l, b, "data.adt.List")
+		
+		if (l.getLength() != 2) throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

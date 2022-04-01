@@ -1,0 +1,24 @@
+uses data.StreamBuffer
+uses data.String
+
+component provides UnitTest requires Loader loader, System sysInfo, composition.Adapt adapt {
+	
+	bool UnitTest:runTest()
+		{
+		IDC a = loader.load("$(sysInfo.getDanaHome())/components/data/StreamBuffer.o")
+		
+		StreamBuffer l = new StreamBuffer() from a
+		
+		l.write("hi")
+		l.write(" there")
+		
+		IDC b = loader.load("$(sysInfo.getDanaHome())/components/data/StreamBuffer.o")
+		
+		adapt.adaptObject(a, l, b, "data.StreamBuffer")
+		
+		if (l.read(8) != "hi there") throw new Exception("Failure in test 1")
+		
+		return true
+		}
+	
+	}

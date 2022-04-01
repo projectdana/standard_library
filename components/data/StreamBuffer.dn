@@ -3,7 +3,7 @@ data Chunk {
 	Chunk next
 	}
 
-component provides StreamBuffer {
+component provides StreamBuffer(AdaptEvents) {
 	
 	int totalLen
 	int chunkStart
@@ -88,6 +88,34 @@ component provides StreamBuffer {
 	int StreamBuffer:getSize()
 		{
 		return totalLen
+		}
+	
+	void AdaptEvents:active()
+		{
+		chunks = null
+		lastChunk = null
+		
+		write(bufferContent)
+		totalLen = bufferContent.arrayLength
+		
+		bufferContent = null
+		}
+	
+	void AdaptEvents:inactive()
+		{
+		byte ar[] = new byte[totalLen]
+		int offset = 0
+		
+		Chunk cw = chunks
+		while (cw != null)
+			{
+			copyBytes(ar, offset, cw.content, 0, cw.content.arrayLength)
+			offset += cw.content.arrayLength
+			
+			cw = cw.next
+			}
+		
+		bufferContent = ar
 		}
 	
 	}
