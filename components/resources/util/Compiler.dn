@@ -1,0 +1,38 @@
+uses data.String
+
+data CompileError {
+	const int ERROR = 1
+	const int WARNING = 2
+	int errorLevel
+	
+	char sourceFile[]
+	int lineNumber
+	char text[]
+	}
+
+/* {"description" : "Data type representing the result of a compile attempt."} */
+data CompileResult {
+	const int OK = 1
+	const int ERROR = 2
+	const int FAULT = 3
+	
+	/* {"@description" : "The result of the compile (success or failure)."} */
+	int resultCode
+	
+	/* {"@description" : "The compiled component object file, which can be written to disk as a '.o' file."} */
+	byte objectCode[]
+	
+	/* {"@description" : "The list of compile errors and/or warnings, if any."} */
+	CompileError errors[]
+	}
+
+/* {"description" : "This API provides access to the Dana compiler, allowing source code to be compiled into object code."} */
+
+interface Compiler {
+	
+	/* {"@description" : "Set the list of search paths available to the compiler, to locate interface and data types (directories that contain a 'resources' folder). The compiler has no search paths by default, so you are required to provide everything needed here; you would usually provide at least the 'DANA_HOME/components' directory here."} */
+	void setSearchPaths(String paths[])
+	
+	/* {"@description" : "Compile a given component. The source code is passed in as a character array, along with a 'name' for that source code which is usually the file name from which it was read. The name is used for compile error output, and is also associated with the compiled component for runtime exceptions. The result (success/fail) and additional data, including the compiled component as a byte array, is returned via a CompileResult instance."} */
+	CompileResult compile(char sourceName[], char sourceCode[])
+	}

@@ -9,7 +9,8 @@ interface Loader{
 	IDC load(char path[])
 	
 	/*
-	 {"@description" : "Unload a previously loaded component from main memory."}
+	 {"@description" : "Load a component from an object file stored in memory."}
 	*/
-	bool unload(IDC com)
+	IDC loadFrom(char objectFile[])
+	
 	}

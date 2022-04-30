@@ -1,0 +1,322 @@
+//magic header of a Dana object matching the below format
+const byte danaMagic[] = new int[](0x44, 0x41, 0x4E, 0x41, 0x0, 0x1)
+
+//a Dana object header
+data SourceHeader{
+	//basic identification; this part is always the same total size
+	byte magic[6]
+	byte checksum[4]
+	byte objectType[2]
+	byte hostType[2]
+	byte vpuType[2]
+	//the below fields are each the size of the target host machine's native address width
+	//machine code
+	int textOffset
+	int textSize
+	//local relocations; a list of addresses to add the start address of this object to
+	int lrTableOffset
+	int lrTableSize
+	int lrTableCount
+	//info sections (if one of these is hardlinks then this object file is not fit to be loaded)
+	int infoSectionsOffset
+	int infoSectionsSize
+	int infoSectionsCount
+	}
+
+//an info section header
+data DanaInfoSection{
+	byte sectionType[4] //type code identifying the section's purpose (0.x.x.x, D.N.x.x, F.R.x.x are reserved)
+	byte contentType[4] //type code identifying the kind of content (json, xml, jpeg, etc.)
+	int size //size of the section's content, excluding this header
+	}
+
+component provides ObjectFile requires io.File, io.FileSystem fileSystem, data.StringUtil stringUtil, data.IntUtil iu, io.Output out, System system {
+	
+	ObjectInfo info
+	int lastInfoIndex
+	int infoSectionsOffset
+	
+	ObjectFile:ObjectFile(char path[])
+		{
+		File fd = new File(path, File.READ)
+		
+		if (fd == null)
+			throw new Exception("File not found")
+		
+		SourceHeader hdr = new SourceHeader()
+		byte serialHDR[] = dana.serial(hdr)
+		
+		byte buf[]
+		
+		if ((buf = fd.read(serialHDR.arrayLength)).arrayLength != serialHDR.arrayLength)
+			{
+			throw new Exception("Error: File is not a Dana object")
+			}
+		
+		serialHDR =[] buf
+		
+		if (hdr.magic != danaMagic)
+			{
+			throw new Exception("Error: File is not a Dana object")
+			}
+		
+		if (hdr.hostType != system.getHostType())
+			{
+			throw new Exception("Error: File was compiled for a different architecture")
+			}
+		
+		if (hdr.vpuType != system.getVMType())
+			{
+			throw new Exception("Error: File was compiled for a different VPU version")
+			}
+		
+		info = new ObjectInfo(hdr.textSize, hdr.infoSectionsCount, hdr.lrTableCount)
+		infoSectionsOffset = hdr.infoSectionsOffset
+		
+		fd.close()
+		
+		objectPath = path
+		}
+	
+	ObjectInfo ObjectFile:getInfo()
+		{
+		return info
+		}
+	
+	InfoSection[] ObjectFile:getInfoSections()
+		{
+		InfoSection result[]
+		
+		File fd = new File(objectPath, File.READ)
+		
+		if (fd == null)
+			{
+			throw new Exception("Object file $objectPath is no longer readable")
+			}
+		
+		fd.setPos(infoSectionsOffset)
+		for (int i = 0; i < info.infoSectionCount; i++)
+			{
+			byte serialData[]
+			
+			DanaInfoSection is = new DanaInfoSection()
+			serialData = dana.serial(is)
+			serialData =[] fd.read(serialData.arrayLength)
+			
+			fd.read(is.size)
+			
+			result = new InfoSection[](result, new InfoSection(is.sectionType, is.contentType))
+			}
+		
+		fd.close()
+		
+		return result
+		}
+	
+	InfoSection ObjectFile:getInfoSection(char type[], char cType[])
+		{
+		File fd = new File(objectPath, File.READ)
+		
+		if (fd == null)
+			{
+			throw new Exception("Object file $objectPath is no longer readable")
+			}
+		
+		fd.setPos(infoSectionsOffset)
+		for (int i = 0; i < info.infoSectionCount; i++)
+			{
+			byte serialData[]
+			
+			DanaInfoSection is = new DanaInfoSection()
+			is.size = 0
+			serialData = dana.serial(is)
+			serialData =[] fd.read(serialData.arrayLength)
+			
+			byte contents[] = fd.read(is.size)
+			
+			if (is.sectionType == type && (cType == null || is.contentType == cType))
+				{
+				InfoSection section = new InfoSection(is.sectionType, is.contentType, contents)
+				fd.close()
+				return section
+				}
+			}
+		
+		fd.close()
+		
+		return null
+		}
+	
+	char[] getDirectoryOf(char path[])
+		{
+		//strip off what's after the last trailing "/", if anything
+		String parts[] = clone stringUtil.explode(path, "/\\")
+		
+		if (parts.arrayLength > 1)
+			{
+			parts[parts.arrayLength-1] = null
+			char result[] = new char[](stringUtil.implode(parts, "/"), "/")
+			return result
+			}
+		
+		return ""
+		}
+	
+	char[] getTmpFile(char relativePath[])
+		{
+		if (fileSystem.getInfo(relativePath).type == FileInfo.TYPE_FILE)
+			relativePath = getDirectoryOf(relativePath)
+		
+		int tn = 1
+		char path[] = new char[](relativePath, iu.makeString(tn), ".tmp")
+		
+		while (fileSystem.exists(path))
+			{
+			tn ++
+			path = new char[](relativePath, iu.makeString(tn), ".tmp")
+			}
+		
+		return path
+		}
+	
+	void ObjectFile:addInfoSection(InfoSection newSection)
+		{
+		DanaInfoSection dis = new DanaInfoSection()
+		
+		//find an unused temporary filename
+		char tmp[] = getTmpFile(objectPath)
+		
+		//write the existing file with an updated header, and the new infosection at the end
+		File output = new File(tmp, File.WRITE)
+		File input = new File(objectPath, File.WRITE)
+		
+		// - write an updated header (editing the count and size of infosections)
+		SourceHeader hdr = new SourceHeader()
+		byte serialHDR[] = dana.serial(hdr)
+		
+		byte buf[]
+		
+		if ((buf = input.read(serialHDR.arrayLength)).arrayLength != serialHDR.arrayLength)
+			{
+			throw new Exception("Error: File is not a Dana object")
+			}
+		
+		serialHDR =[] buf
+		
+		// - we'll be using the originals of these values shortly, so cache them
+		int iso = hdr.infoSectionsOffset
+		int iss = hdr.infoSectionsSize
+		
+		hdr.infoSectionsCount ++
+		hdr.infoSectionsSize += newSection.content.arrayLength + dana.serial(dis).arrayLength
+		
+		info.infoSectionCount ++
+		
+		output.write(serialHDR)
+		
+		// - write everything up to the last infosection
+		buf = input.read((iso + iss) - serialHDR.arrayLength)
+		output.write(buf)
+		
+		// - write the new infosection
+		dis.sectionType =[] newSection.sectionType
+		dis.contentType =[] newSection.contentType
+		dis.size = newSection.content.arrayLength
+		
+		buf = dana.serial(dis)
+		
+		output.write(buf)
+		
+		output.write(newSection.content)
+		
+		// - write anything else from the input file
+		buf = input.read(input.getSize() - input.getPos())
+		output.write(buf)
+		
+		output.close()
+		input.close()
+		
+		//delete the original file and rename the temporary one to it
+		fileSystem.delete(objectPath)
+		fileSystem.move(tmp, objectPath)
+		}
+	
+	void ObjectFile:deleteInfoSection(char sectionType[], char cType[])
+		{
+		InfoSection is = getInfoSection(sectionType, cType)
+		
+		if (is == null)
+			return
+		
+		//find an unused temporary filename
+		char tmp[] = getTmpFile(objectPath)
+		
+		//write the existing file with an updated header, and exclude the selected infosection from that
+		File output = new File(tmp, File.WRITE)
+		File input = new File(objectPath, File.WRITE)
+		
+		// - write an updated header (editing the count and size of infosections)
+		SourceHeader hdr = new SourceHeader()
+		byte serialHDR[] = dana.serial(hdr)
+		
+		byte buf[]
+		
+		if ((buf = input.read(serialHDR.arrayLength)).arrayLength != serialHDR.arrayLength)
+			{
+			throw new Exception("Error: File is not a Dana object")
+			}
+		
+		serialHDR =[] buf
+		
+		// - we'll be using the originals of these values shortly, so cache them
+		int iso = hdr.infoSectionsOffset
+		int isc = hdr.infoSectionsCount
+		int iss = hdr.infoSectionsSize
+		
+		hdr.infoSectionsCount --
+		hdr.infoSectionsSize -= is.content.arrayLength
+		
+		info.infoSectionCount --
+		
+		output.write(serialHDR)
+		
+		// - write everything up to the first infosection
+		buf = input.read(iso - serialHDR.arrayLength)
+		output.write(buf)
+		
+		// - write each infosection in turn, unless it's the one to exclude
+		bool deleted = false
+		for (int i = 0; i < isc; i++)
+			{
+			byte serialData[]
+			
+			DanaInfoSection dis = new DanaInfoSection()
+			serialData = dana.serial(dis)
+			serialData =[] input.read(serialData.arrayLength)
+			
+			byte contents[] = input.read(dis.size)
+			
+			if (dis.sectionType != sectionType || (cType != null && dis.contentType != cType) || deleted)
+				{
+				output.write(serialData)
+				output.write(contents)
+				}
+				else
+				{
+				deleted = true
+				}
+			}
+		
+		// - write anything else from the input file
+		buf = input.read(input.getSize() - input.getPos())
+		output.write(buf)
+		
+		output.close()
+		input.close()
+		
+		//delete the original file and rename the temporary one to it
+		fileSystem.delete(objectPath)
+		fileSystem.move(tmp, objectPath)
+		}
+	
+	}

@@ -1,0 +1,18 @@
+interface CompilerLib {
+	void setSearchPaths(String paths[])
+	CompileResult compile(char sourceName[], char sourceCode[])
+	}
+
+component provides Compiler requires native CompilerLib lib {
+	
+	void Compiler:setSearchPaths(String paths[])
+		{
+		lib.setSearchPaths(paths)
+		}
+	
+	CompileResult Compiler:compile(char sourceName[], char sourceCode[])
+		{
+		return lib.compile(sourceName, sourceCode)
+		}
+	
+	}

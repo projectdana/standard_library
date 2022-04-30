@@ -10,9 +10,4 @@ interface NativeLoader{
 	*/
 	IDC load(char path[])
 	
-	/*
-	{"description" : "Unloads a native library that was previously loaded with the load function.",
-		"l" : "The IDC reference of the native library to unload."}
-	*/
-	void unload(IDC l)
 	}

@@ -24,59 +24,61 @@ component provides Markdown requires data.StringUtil stringUtil, data.adt.List, 
 	
 	String[] toLines(char content[])
 		{
+		//this function is similar to StringUtil.explode(), except that it preserves "blank lines" that appear between two or more line breaks
 		List lines = new List()
 		
 		int i
-		int lastStart = 0
+		int lastN = 0
 		for (i = 0; i < content.arrayLength; i++)
 			{
-			if (content[i] == "\r" && i+1 < content.arrayLength && content[i+1] == "\n")
+			if (content[i] == "\n")
 				{
 				int end
+				int start = lastN
 				
 				if (i == 0)
 					end = 0
+					else if (content[i-1] == "\r")
+					end = i-2
 					else
 					end = i-1
 				
-				if (lastStart == end)
+				if (content[start] == "\n")
+					start ++
+				
+				if (lastN == end)
 					{
-					if (content[lastStart] != "\n")
+					if (content[lastN] != "\n")
 						{
-						lines.add(new String(content[lastStart]))
+						lines.add(new String(content[lastN]))
+						//out.println("ln: '$(content[lastN])'")
 						}
 						else
 						{
 						lines.add(new String())
+						//out.println("ln: ''")
 						}
 					}
 					else
 					{
-					int len = (end - lastStart)+1
+					int len = (end - start)+1
 					char kn[] = new char[len]
-					copyCharsFD(kn, 0, content, lastStart, len)
+					copyCharsFD(kn, 0, content, start, len)
 					lines.add(new String(kn))
+					//out.println("ln: '$kn'")
 					}
 				
-				lastStart = i + 2
-				
-				if (lastStart < content.arrayLength && (content[lastStart] == "\r" || content[lastStart] == "\n")) lastStart --
-				
-				i ++
-				}
-				else if (content[i] == "\n")
-				{
-				lastStart = i + 1
+				lastN = i
 				}
 			}
 		
 		//grab the final chunk, if any...
-		if (lastStart != i-1)
+		if (lastN != i-1)
 			{
 			int end = i-1
-			int len = (end - lastStart)+1
+			int len = (end - lastN)+1
 			char kn[] = new char[len]
-			copyCharsFD(kn, 0, content, lastStart, len)
+			copyCharsFD(kn, 0, content, lastN, len)
 			lines.add(new String(kn))
 			}
 		
