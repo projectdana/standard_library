@@ -31,7 +31,7 @@ interface ObjectFile{
 	transfer char objectPath[]
 	
 	/*
-		{"@description" : "Create an ObjectWriter for a given compiled component file."}
+		{"@description" : "Create an ObjectFile for a given compiled component file."}
 	*/
 	ObjectFile(char path[])
 	

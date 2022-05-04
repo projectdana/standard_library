@@ -21,7 +21,7 @@ data Role{
 	Role next
 	}
 
-component provides App requires io.Output out, io.Input stdin, io.TextFile, Loader loader, NativeLoader nLoader, composition.ObjectWriter, data.json.JSONParser parser, data.StringUtil stringUtil, data.IntUtil iu, os.SystemInfo systemInfo, io.FileSystem fileSystem, composition.Adapter adapter {
+component provides App requires io.Output out, io.Input stdin, io.TextFile, Loader loader, NativeLoader nLoader, util.ObjectFile, data.json.JSONParser parser, data.StringUtil stringUtil, data.IntUtil iu, os.SystemInfo systemInfo, io.FileSystem fileSystem, composition.Adapter adapter {
 	
 	char manifest[]
 	Role roles
@@ -341,7 +341,7 @@ component provides App requires io.Output out, io.Input stdin, io.TextFile, Load
 	
 	void connectNative(char path[], IDC com)
 		{
-		ObjectWriter reader = new ObjectWriter(path)
+		ObjectFile reader = new ObjectFile(path)
 		InfoSection section = reader.getInfoSection("DNIL", "json")
 		
 		JSONElement document = parser.parseDocument(section.content)

@@ -7,13 +7,13 @@ data ReqIntf {
 	bool isNative
 	}
 
-component provides composition.RecursiveLoader requires composition.Search search, Loader loader, NativeLoader nLoader, data.json.JSONParser parser, composition.ObjectWriter, System system, data.IntUtil iu {
+component provides composition.RecursiveLoader requires composition.Search search, Loader loader, NativeLoader nLoader, data.json.JSONParser parser, util.ObjectFile, System system, data.IntUtil iu {
 	
 	ReqIntf[] getRequiredInterfaces(char com[])
 		{
 		ReqIntf result[]
 		
-		ObjectWriter reader = new ObjectWriter(com)
+		ObjectFile reader = new ObjectFile(com)
 		InfoSection section = reader.getInfoSection("DNIL", "json")
 		
 		JSONElement document = parser.parseDocument(section.content)

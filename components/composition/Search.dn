@@ -1,6 +1,6 @@
 const byte danaMagic[] = new int[](0x44, 0x41, 0x4E, 0x41, 0x0, 0x1)
 
-component provides Search requires data.StringUtil stringUtil, io.FileSystem fileSystem, ObjectWriter, io.File, data.json.JSONParser parser, io.Output out, System system, os.SystemInfo systemInfo {
+component provides Search requires data.StringUtil stringUtil, io.FileSystem fileSystem, util.ObjectFile, io.File, data.json.JSONParser parser, io.Output out, System system, os.SystemInfo systemInfo {
 	
 	bool Search:isDanaComponent(char path[])
 		{
@@ -30,7 +30,7 @@ component provides Search requires data.StringUtil stringUtil, io.FileSystem fil
 		intfPackage = parts[0].string
 		if (parts.arrayLength == 2) flavour = parts[1].string
 		
-		ObjectWriter ow = new ObjectWriter(path)
+		ObjectFile ow = new ObjectFile(path)
 		
 		InfoSection section = ow.getInfoSection("DNIL", "json")
 		

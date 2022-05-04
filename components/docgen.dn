@@ -7,7 +7,7 @@ data PrimaryType{
 const char OUTPUT_DIR[] = "_docs"
 const bool SHOW_WARNINGS = true
 
-component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo, composition.Search csearch, composition.ObjectWriter, data.query.Search dsearch {
+component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo, composition.Search csearch, util.ObjectFile, data.query.Search dsearch {
 	
 	char[] getHTMLFileFor(char sourceFile[], char type[])
 		{
@@ -147,7 +147,7 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 		//read each component, and check for which variant of package it implements (if not default)
 		for (int i = 0; i < components.arrayLength; i++)
 			{
-			ObjectWriter ow = new ObjectWriter(components[i].string)
+			ObjectFile ow = new ObjectFile(components[i].string)
 			
 			char intfData[] = ow.getInfoSection("DNIL", "json").content
 			

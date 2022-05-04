@@ -1,4 +1,4 @@
-component provides App requires io.Output out, composition.ObjectWriter, data.json.JSONParser parser {
+component provides App requires io.Output out, util.ObjectFile, data.json.JSONParser parser {
 	
 	char[] formatFunction(JSONElement fnc)
 		{
@@ -45,7 +45,7 @@ component provides App requires io.Output out, composition.ObjectWriter, data.js
 	
 	int App:main(AppParam params[])
 		{
-		ObjectWriter ow = new ObjectWriter(params[0].string)
+		ObjectFile ow = new ObjectFile(params[0].string)
 		
 		char content[] = ow.getInfoSection("DNIL", "json").content
 		

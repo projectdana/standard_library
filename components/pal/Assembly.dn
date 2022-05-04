@@ -87,7 +87,7 @@ data StringList {
 	String list[]
 	}
 
-component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, composition.Search search, composition.ObjectWriter, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search asearch, composition.Adapt adaptAPI, composition.Intercept interceptAPI, composition.RecursiveLoader rLoader, os.SystemInfo systemInfo, time.DateUtil dateUtil, data.StringBuilder {
+component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, composition.Search search, util.ObjectFile, data.json.JSONParser parser, io.Output out, System system, data.IntUtil iu, data.StringUtil stringUtil, data.query.Search asearch, composition.Adapt adaptAPI, composition.Intercept interceptAPI, composition.RecursiveLoader rLoader, os.SystemInfo systemInfo, time.DateUtil dateUtil, data.StringBuilder {
 	
 	App myApp
 	bool appStarted
@@ -132,7 +132,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 			}
 		
 		//not found - go to disk
-		ObjectWriter reader = new ObjectWriter(com)
+		ObjectFile reader = new ObjectFile(com)
 		InfoSection section = reader.getInfoSection("DNIL", "json")
 		
 		JSONElement document = parser.parseDocument(section.content)
@@ -172,7 +172,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 		{
 		IntfDef result[]
 		
-		ObjectWriter reader = new ObjectWriter(com)
+		ObjectFile reader = new ObjectFile(com)
 		InfoSection section = reader.getInfoSection("DNIL", "json")
 		
 		JSONElement document = parser.parseDocument(section.content)
