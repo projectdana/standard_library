@@ -6,59 +6,52 @@ uses media.PixelMap
 */
 interface Window extends Panel {
 	
-		event close()
+	event resize(WH newSize)
+	
+	event close()
 	
 	/*
-	 {"@description" : "Instantiate a new window with the given title."
-		}
+	 {"@description" : "Instantiate a new window with the given title."}
 	*/
 	Window(char title[])
 	
 	/*
-	 {"@description" : "Make the window visible / invisible."
-		}
+	 {"@description" : "Make the window visible / invisible."}
 	*/
 	void setVisible(bool b)
 	
 	/*
-	 {"@description" : "Make the window user-resizable or not."
-		}
+	 {"@description" : "Make the window user-resizable or not."}
 	*/
 	void setResizable(bool b)
 	
 	/*
-	 {"@description" : "Place the window in full-screen mode, or in windowed mode."
-		}
+	 {"@description" : "Place the window in full-screen mode, or in windowed mode."}
 	*/
 	void setFullScreen(bool b)
 	
 	/*
-	 {"@description" : "Set the title of the window."
-		}
+	 {"@description" : "Set the title of the window."}
 	*/
 	void setTitle(char title[])
 	
 	/*
-	 {"@description" : "Set the icon used to represent the window, if the operating system supports this."
-		}
+	 {"@description" : "Set the icon used to represent the window, if the operating system supports this."}
 	*/
 	void setIcon(store PixelMap p)
 	
 	/*
-	 {"@description" : "Get the current location of this window, relative to the top-left corner of the screen."
-		}
+	 {"@description" : "Get the current location of this window, relative to the top-left corner of the screen."}
 	*/
 	Rect getRect()
 	
 	/*
-	 {"@description" : "Close the window (no further operations can be called on the window once this is done)."
-		}
+	 {"@description" : "Close the window (no further operations can be called on the window once this is done)."}
 	*/
 	void close()
 	
 	/*
-	 {"@description" : "This utility function can be used to block the caller until the window is closed."
-		}
+	 {"@description" : "This utility function can be used to block the caller until the window is closed."}
 	*/
 	void waitForClose()
 	}

@@ -103,7 +103,13 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			else if (ed.type == IOWindow.[resizeWindow])
 			{
 			WH wh = ed.details
-			setSize(wh.width, wh.height)
+			
+			currentWidth = wh.width
+			currentHeight = wh.height
+			
+			emitevent resize(wh)
+			
+			postRepaint()
 			}
 			else if (ed.type == IOWindow.[moveWindow])
 			{
