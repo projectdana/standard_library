@@ -17,14 +17,14 @@ component provides UnitTest {
 	
 	bool UnitTest:runTest()
 		{
-		Person a = new Person("Wendalina Wobblegoth", 17)
+		Person a = new Person("Emeric Pressburger", 17)
 		Person b = clone a
 		
-		b.name[0] = "B"
+		b.name[0] = "A"
 		
 		if (a.name != b.name) throw new Exception("Failure in test 1")
 		
-		Hero h = new Hero("Harmon Heavesqueezer", 22, 14)
+		Hero h = new Hero("Frisian Tapestry", 22, 14)
 		
 		if (h.level != 14) throw new Exception("Failure in test 2")
 		

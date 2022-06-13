@@ -539,36 +539,42 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		
 		int serverPort = HOST_POST
 		
-		store AppParam subParams[] = null
+		AppParam subParams[] = null
 		
 		for (int i = 0; i < params.arrayLength; i++)
 			{
-			if (params[i].string == "-p")
+			if (objectFile == null)
 				{
-				if (i + 1 < params.arrayLength)
+				//parameters here are for pal.rest
+				if (params[i].string == "-p")
 					{
-					if (stringUtil.isNumeric(params[i+1].string))
+					if (i + 1 < params.arrayLength)
 						{
-						serverPort = iu.intFromString(params[i+1].string)
-						i ++
+						if (stringUtil.isNumeric(params[i+1].string))
+							{
+							serverPort = iu.intFromString(params[i+1].string)
+							i ++
+							}
+							else
+							{
+							out.println("expected port number after -p")
+							return 0
+							}
 						}
 						else
 						{
 						out.println("expected port number after -p")
+						return 0
 						}
 					}
 					else
 					{
-					out.println("expected port number after -p")
-					return 0
+					objectFile = params[i].string
 					}
 				}
-				else if (objectFile == null)
+				else
 				{
-				objectFile = params[i].string
-				}
-				else if (objectFile != null)
-				{
+				//collect as a sub-parameter to pass to the sub-program we're launching
 				subParams = new AppParam[](subParams, new AppParam(params[i].string))
 				}
 			}
@@ -581,10 +587,14 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			return 1
 			}
 		
-		int pathMod = 0
-		if (objectFile.startsWith("./")) pathMod = 2
+		//we need to find the fully-qualified path to the object file we're launching, so we can pass it in to App.setSourcePath()
+		// - TODO: this fails in lots of cases; we need to take off the leaf path...
+		int splitPoint = 0
 		systemPath = fs.getFullPath(objectFile)
-		systemPath = systemPath.subString(0, systemPath.arrayLength - (objectFile.arrayLength-pathMod))
+		if ((splitPoint = systemPath.rfind("/")) != StringUtil.NOT_FOUND)
+			systemPath = systemPath.subString(0, splitPoint+1)
+			else
+			systemPath = "."
 		
 		out.println("[system home path: $systemPath]")
 		

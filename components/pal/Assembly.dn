@@ -146,7 +146,7 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 				JSONElement ri = requiredInterfaces.children[i]
 				char package[] = parser.getValue(ri, "package").value
 				char alias[] = parser.getValue(ri, "alias").value
-				char semantic[]
+				char semantic[] = null
 				if (parser.getValue(ri, "semantic") != null)
 					semantic = parser.getValue(ri, "semantic").value
 				bool isNative = parser.getValue(ri, "native") != null && parser.getValue(ri, "native").value == "true"
@@ -413,7 +413,12 @@ component provides pal.Assembly requires io.FileSystem fileSystem, io.File, Load
 						String options[] = getComponentsIn(ris[i].package, ris[i].semantic)
 						
 						if (options.arrayLength == 0)
-							throw new Exception("No components found to satisfy '$(ris[i].package)' of '$com'")
+							{
+							if (ris[i].semantic != null)
+								throw new Exception("No components found to satisfy '$(ris[i].package):$(ris[i].semantic)' of '$com'")
+								else
+								throw new Exception("No components found to satisfy '$(ris[i].package)' of '$com'")
+							}
 						
 						ConfigBuilder prevResult[] = result
 						result = null
