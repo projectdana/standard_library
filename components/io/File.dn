@@ -252,7 +252,7 @@ component provides io.File(Destructor), io.FileSystem requires native FileLib li
 				if (getInfo(subPath).type == FileInfo.TYPE_DIR)
 					{
 					if (!deleteContents(subPath)) return false
-					if (!lib.deleteDirectory(path)) return false
+					if (!lib.deleteDirectory(subPath)) return false
 					}
 					else
 					{

@@ -588,7 +588,6 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			}
 		
 		//we need to find the fully-qualified path to the object file we're launching, so we can pass it in to App.setSourcePath()
-		// - TODO: this fails in lots of cases; we need to take off the leaf path...
 		int splitPoint = 0
 		systemPath = fs.getFullPath(objectFile)
 		if ((splitPoint = systemPath.rfind("/")) != StringUtil.NOT_FOUND)
@@ -605,7 +604,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		out.println("[scanning system for components, please be patient...]")
 		
 		perc = new Perception() from perception
-		assembly = new Assembly(objectFile, subParams, perception)
+		assembly = new Assembly(fs.getFullPath(objectFile), subParams, perception)
 		
 		configs = assembly.getConfigs()
 		

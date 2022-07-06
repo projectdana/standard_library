@@ -287,11 +287,20 @@ component provides Markdown requires data.StringUtil stringUtil, data.adt.List, 
 				}
 				else if ((top.flag & StyleFrame.CODE) != StyleFrame.CODE)
 				{
-				if (line[i] == "\\")
+				if (line[i] == "\\" && i+1 < line.arrayLength)
 					{
 					//escape character (ignore what's next, but remove the "\" itself)
-					//TODO.
+					// - we end the current block here, then start a new one after the "\"
+					MDElement newEl = new MDElement(MDElement.PLAIN, top.flag, extractArray(line, top.startPos, i))
+					result = new MDElement[](result, newEl)
+
+					// - create a new block which starts with the escaped character
+					statusStack.push(new StyleFrame(top.flag, i + 1))
 					
+					top = statusStack.peek()
+
+					//now we get the parser to ignore the escaped character by skipping over that character
+					i ++
 					}
 					else if (line[i] == "*")
 					{
@@ -306,22 +315,19 @@ component provides Markdown requires data.StringUtil stringUtil, data.adt.List, 
 						{
 						if (i+2 < line.arrayLength && line[i+2] == "*")
 							{
-							if (i+3 < line.arrayLength)
-								{
-								flag = StyleFrame.BOLD | StyleFrame.ITALIC
-								postPos = 3
-								i ++
-								i ++
-								}
+							flag = StyleFrame.BOLD | StyleFrame.ITALIC
+							postPos = 3
+							i ++
+							i ++
 							}
-							else if (i+2 < line.arrayLength)
+							else
 							{
 							flag = StyleFrame.BOLD
 							postPos = 2
 							i ++
 							}
 						}
-						else if (i+1 < line.arrayLength)
+						else
 						{
 						flag = StyleFrame.ITALIC
 						postPos = 1
