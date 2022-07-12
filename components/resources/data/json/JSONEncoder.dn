@@ -13,7 +13,7 @@ interface JSONEncoder {
 	 	"t" : "Data type to which the JSON document will be converted to.",
 	 	"map" : "In some cases the key name in a JSON document does not match the name of a variable of a Dana data type. In those cases, it is necessary to provide a dictionary mapping the key name to the name of the variable in the Dana data type. The most common case is when JSON documents use as key names Dana reserved words. An example of a map looks like the following: Map map = new Map[](new Map(''data'', ''data_'')). When a key is named 'data', but 'data' is a reserved word in Dana."}
 	*/
-	Data[] jsonToArray(char json[], Type t, Map map[])
+	Data[] jsonToArray(char json[], Type t, opt Map map[])
 
 	/*
 	 {"description" : "Receives a JSON document and parse it into a specific Dana data type.",
@@ -21,19 +21,19 @@ interface JSONEncoder {
 	 	"t" : "Data type to which the JSON document will be converted to.",
 	 	"map" : "In some cases the key name in a JSON document does not match the name of a variable of a Dana data type. In those cases, it is necessary to provide a dictionary mapping the key name to the name of the variable in the Dana data type. The most common case is when JSON documents use as key names Dana reserved words. An example of a map looks like the following: Map map = new Map[](new Map(''data'', ''data_'')). When a key is named 'data', but 'data' is a reserved word in Dana."}
 	*/
-	Data jsonToData(char json[], Type t, Map map[])
+	Data jsonToData(char json[], Type t, opt Map map[])
 
 	/*
 	 {"description" : "Receives an array of Dana data type and convert it into a JSON document.",
 	 	"d" : "Dana data array that will be converted into a JSON.",
 	 	"map" : "In some cases the key name in a JSON document does not match the name of a variable of a Dana data type. In those cases, it is necessary to provide a dictionary mapping the key name to the name of the variable in the Dana data type. The most common case is when JSON documents use as key names Dana reserved words. An example of a map looks like the following: Map map = new Map[](new Map(''data'', ''data_'')). When a key is named 'data', but 'data' is a reserved word in Dana."}
 	*/
-	char[] jsonFromArray(Data d[], Map map[])
+	char[] jsonFromArray(Data d[], opt Map map[])
 
 	/*
 	 {"description" : "Receives a Dana data type and convert it into a JSON document.",
 	 	"d" : "Dana data that will be converted into a JSON.",
 	 	"map" : "In some cases the key name in a JSON document does not match the name of a variable of a Dana data type. In those cases, it is necessary to provide a dictionary mapping the key name to the name of the variable in the Dana data type. The most common case is when JSON documents use as key names Dana reserved words. An example of a map looks like the following: Map map = new Map[](new Map(''data'', ''data_'')). When a key is named 'data', but 'data' is a reserved word in Dana."}
 	*/
-	char[] jsonFromData(Data d, Map map[])
+	char[] jsonFromData(Data d, opt Map map[])
 }
