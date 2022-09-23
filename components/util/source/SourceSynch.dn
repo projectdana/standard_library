@@ -1,0 +1,198 @@
+//we use a file header record to avoid the need for an array-expanding "getRecords" implementation
+data SourceFileHeader {
+	const byte MAGIC[] = new byte[](4, 1, 14, 1, 19, 18, 3, 0) //7 magic bytes, 1 byte of version number
+	byte magic[8]
+	int8 recordCount
+}
+
+//records are disk are more generic; their "type" can represent extended record types that might be useful in future
+data SourceRecordDisk {
+	int2 type
+	int8 version
+	char hash[32]
+	int4 dataLenA
+	int4 dataLenB
+}
+
+const char FILE_LOC[] = ".source/synch.dat"
+
+component provides SourceSynch requires io.File, sec.hash.SHA2 sha2 {
+	
+	SourceRecord[] SourceSynch:getRecords(opt File fromFile)
+		{
+		SourceRecord result[]
+
+		File fd = fromFile
+
+		if (fd == null)
+			{
+			fd = new File(FILE_LOC, File.READ)
+
+			if (fd == null)
+				{
+				throw new Exception("source synch file not found at $(FILE_LOC)")
+				}
+			}
+		
+		if (fromFile.getSize() == 0) return null
+		
+		SourceFileHeader hdr = new SourceFileHeader()
+		byte stream[] = dana.serial(hdr)
+
+		byte buf[] = fd.read(stream.arrayLength)
+
+		if (buf.arrayLength != stream.arrayLength) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+		stream =[] buf
+		if (hdr.magic != SourceFileHeader.MAGIC) throw new Exception("synch file header magic bytes invalid")
+
+		result = new SourceRecord[hdr.recordCount]
+		
+		SourceRecordDisk srd = new SourceRecordDisk()
+		stream = dana.serial(srd)
+		int i = 0
+		while (!fd.eof())
+			{
+			buf = fd.read(stream.arrayLength)
+
+			if (buf.arrayLength != stream.arrayLength) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+
+			stream =[] buf
+
+			char name[] = fd.read(srd.dataLenA)
+
+			if (name.arrayLength != srd.dataLenA) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+
+			result[i] = new SourceRecord(srd.type, srd.version, srd.hash, name)
+			i ++
+			}
+
+		return result
+		}
+	
+	SourceRecord SourceSynch:getRecord(char entityName[], int type)
+		{
+		File fd = new File(FILE_LOC, File.READ)
+
+		if (fd == null)
+			{
+			throw new Exception("source synch file not found at $(FILE_LOC)")
+			}
+		
+		SourceRecordDisk srd = new SourceRecordDisk()
+		byte stream[] = dana.serial(srd)
+		while (!fd.eof())
+			{
+			byte buf[] = fd.read(stream.arrayLength)
+
+			if (buf.arrayLength != stream.arrayLength) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+
+			stream =[] buf
+
+			char name[] = fd.read(srd.dataLenA)
+
+			if (name.arrayLength != srd.dataLenA) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+
+			if (srd.type == type && name == entityName) return new SourceRecord(srd.type, srd.version, srd.hash, name)
+			}
+		
+		return null
+		}
+
+	void SourceSynch:addRecord(SourceRecord record)
+		{
+		File fd = new File(FILE_LOC, File.WRITE)
+
+		if (fd == null)
+			{
+			throw new Exception("source synch file not found at $(FILE_LOC)")
+			}
+		
+		SourceFileHeader hdr = new SourceFileHeader()
+		byte stream[] = dana.serial(hdr)
+		
+		//check if the file has any contents at all; if it does we can read a header, if not we assume the header is going to be new with 1 record
+		if (fd.getSize() > 0)
+			{
+			byte buf[] = fd.read(stream.arrayLength)
+			fd.setPos(0)
+
+			if (buf.arrayLength != stream.arrayLength) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+			stream =[] buf
+			if (hdr.magic != SourceFileHeader.MAGIC) throw new Exception("synch file header magic bytes invalid")
+
+			hdr.recordCount ++
+			}
+			else
+			{
+			hdr.magic =[] SourceFileHeader.MAGIC
+			hdr.recordCount = 1
+			}
+		
+		fd.write(stream)
+		
+		fd.setPos(fd.getSize())
+
+		SourceRecordDisk srd = new SourceRecordDisk(record.type, record.version, record.hash, record.name.arrayLength)
+		srd.hash =[] record.hash
+		stream = dana.serial(srd)
+
+		fd.write(stream)
+		fd.write(record.name)
+
+		fd.close()
+		}
+	
+	bool SourceSynch:updateRecord(SourceRecord record)
+		{
+		File fd = new File(FILE_LOC, File.WRITE)
+
+		if (fd == null)
+			{
+			throw new Exception("source synch file not found at $(FILE_LOC)")
+			}
+		
+		SourceFileHeader hdr = new SourceFileHeader()
+		byte stream[] = dana.serial(hdr)
+		byte buf[] = fd.read(stream.arrayLength)
+		
+		int fpos = fd.getPos()
+		SourceRecordDisk srd = new SourceRecordDisk()
+		stream = dana.serial(srd)
+		while (!fd.eof())
+			{
+			buf = fd.read(stream.arrayLength)
+
+			if (buf.arrayLength != stream.arrayLength) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+
+			stream =[] buf
+
+			char name[] = fd.read(srd.dataLenA)
+
+			if (name.arrayLength != srd.dataLenA) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+
+			if (srd.type == record.type && name == record.name)
+				{
+				fd.setPos(fpos)
+				srd.version = record.version
+				srd.hash = record.hash
+
+				fd.write(stream)
+
+				fd.close()
+
+				return true
+				}
+			
+			fpos += buf.arrayLength
+			fpos += name.arrayLength
+			}
+
+		return false
+		}
+	
+	char[] SourceSynch:hash(byte content[])
+		{
+		return sha2.hashData(content, SHA2.HASH_SHA_256)
+		}
+	
+	}

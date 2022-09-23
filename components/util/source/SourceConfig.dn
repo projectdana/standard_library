@@ -1,0 +1,82 @@
+//config entries on disk are stored as a list of generic header/content records
+data ConfigRecordDisk {
+	const int T_SERVER_URL = 1
+	const int T_SERVER_PORT = 2
+	const int T_USERNAME = 3
+	const int T_OPTION = 4
+	int2 type
+	int8 dataLenA
+	int8 dataLenB
+}
+
+const char FILE_LOC[] = ".source/config.dat"
+
+const int PORT_DEFAULT = 80
+
+component provides SourceConfig requires io.File, data.IntUtil iu {
+	
+	ConfigData SourceConfig:getConfig()
+		{
+		File fd = new File(FILE_LOC, File.READ)
+
+		if (fd == null)
+			{
+			throw new Exception("source config file not found at $(FILE_LOC)")
+			}
+		
+		ConfigData result = new ConfigData()
+		
+		ConfigRecordDisk srd = new ConfigRecordDisk()
+		byte stream[] = dana.serial(srd)
+		while (!fd.eof())
+			{
+			byte buf[] = fd.read(stream.arrayLength)
+
+			if (buf.arrayLength != stream.arrayLength) throw new Exception("I/O error when reading from config file (corrupt file / disk error)")
+
+			stream =[] buf
+
+			char content[] = fd.read(srd.dataLenA)
+			if (content.arrayLength != srd.dataLenA) throw new Exception("I/O error when reading from config file (corrupt file / disk error)")
+			char contentB[] = fd.read(srd.dataLenB)
+			if (contentB.arrayLength != srd.dataLenB) throw new Exception("I/O error when reading from config file (corrupt file / disk error)")
+
+			if (srd.type == ConfigRecordDisk.T_SERVER_URL) result.repoServer = content
+			if (srd.type == ConfigRecordDisk.T_SERVER_PORT) result.repoPort = content.intFromString()
+			if (srd.type == ConfigRecordDisk.T_USERNAME) result.username = content
+			}
+
+		return result
+		}
+
+	void SourceConfig:setConfig(ConfigData cfg)
+		{
+		File fd = new File(FILE_LOC, File.CREATE)
+
+		if (fd == null)
+			{
+			throw new Exception("source config file not found at $(FILE_LOC)")
+			}
+		
+		ConfigRecordDisk srd = new ConfigRecordDisk()
+		byte stream[] = dana.serial(srd)
+
+		srd.type = ConfigRecordDisk.T_SERVER_URL
+		srd.dataLenA = cfg.repoServer.arrayLength
+		fd.write(stream)
+		fd.write(cfg.repoServer)
+
+		srd.type = ConfigRecordDisk.T_SERVER_PORT
+		srd.dataLenA = cfg.repoPort.makeString().arrayLength
+		fd.write(stream)
+		fd.write(cfg.repoPort.makeString())
+
+		srd.type = ConfigRecordDisk.T_USERNAME
+		srd.dataLenA = cfg.username.arrayLength
+		fd.write(stream)
+		fd.write(cfg.username)
+
+		fd.close()
+		}
+	
+	}

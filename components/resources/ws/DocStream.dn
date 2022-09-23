@@ -6,10 +6,13 @@ uses net.http.Header
 interface DocStream {
 	
 	/* {"@description" : "Construct a new doc stream. This is done automatically by a web framework."} */
-	DocStream(store Stream s, store Header headers[])
+	DocStream(store Stream s, store Header headers[], opt bool encrypted)
 	
 	/* {"@description" : "Get the list of request headers sent by the client."} */
 	Header[] getRequestHeaders()
+
+	/* {"@description" : "Check if the underlying network connection is encrypted (via HTTPS) or is a regular HTTP connection."} */
+	bool isEncrypted()
 	
 	/* {"@description" : "Push a context onto the stack, collect content without sending anything."} */
 	void pushContext()
@@ -47,7 +50,7 @@ interface DocStream {
 	void write(char str[])
 	
 	/*
-	 {"@description" : "Indicate that sending of response data is complete. After this function has been called, no further data can be sent in response to this request."}
+	 {"@description" : "In non-streaming mode, this function is called to indicate that sending of response data is complete, after which no further data can be sent in response to this request. In direct-stream mode, this function must be called before any use of write(), as its sends header information."}
 	*/
 	void sendResponse()
 	

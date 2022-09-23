@@ -1,0 +1,47 @@
+/*
+ {"description" : "API to set and get information from a source repository synch file."}
+*/
+
+uses io.File
+
+data SourceRecord {
+	const int T_PACKAGE = 1
+	const int T_TYPEFILE = 2
+	const int T_COMPONENT = 3
+	const int T_LIBRARY = 4
+	const int T_TAG = 5
+	int type
+	int version
+	char hash[]
+	char name[]
+}
+
+interface SourceSynch {
+	
+	/*
+	 {"@description" : "Read all records from a synch file.",
+		"fromFile" : "Optional parameter from which to read synch data; if this is not supplied, data is read from the standard source config directory."}
+	*/
+	SourceRecord[] getRecords(opt File fromFile)
+
+	/*
+	 {"@description" : "Read a specific record from the standard source synch file on disk."}
+	*/
+	SourceRecord getRecord(char entityName[], int type)
+
+	/*
+	 {"@description" : "Add a new record to the standard source synch file on disk."}
+	*/
+	void addRecord(SourceRecord record)
+	
+	/*
+	 {"@description" : "Update an existing record in the standard source synch file on disk."}
+	*/
+	bool updateRecord(SourceRecord record)
+
+	/*
+	 {"@description" : "Hash data using the current source hashing methodology."}
+	*/
+	char[] hash(byte content[])
+	
+	}

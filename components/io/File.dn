@@ -31,6 +31,7 @@ component provides io.File(Destructor), io.FileSystem requires native FileLib li
 	implementation File {
 		int platformHandle
 		int pos
+		byte accessMode
 		Mutex rwLock = new Mutex()
 		
 		File:File(char path[], byte mode)
@@ -42,10 +43,16 @@ component provides io.File(Destructor), io.FileSystem requires native FileLib li
 			
 			platformHandle = ph
 			pos = 0
+			accessMode = mode
 			}
 		
 		int File:write(byte content[])
 			{
+			if (accessMode == File.READ)
+				{
+				throw new Exception("attempt to write to a file opened in read mode")
+				}
+
 			mutex(rwLock)
 				{
 				if (platformHandle != 0)

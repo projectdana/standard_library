@@ -103,4 +103,16 @@ interface StringUtil{
 			"@return" : "True if the string is comprised only of numerical characters, false otherwise."}
 	*/
 	bool endsWith(char str[], char with[])
+
+	/*
+	 {"@description" : "Split a string into two halves at the first occurance of a given search string."
+			"@return" : "The left and right parts of the string, both of which exclude the search string, or null if the search term wasn't found."}
+	*/
+	String[] lsplit(char str[], char searchStr[])
+
+	/*
+	 {"@description" : "Split a string into two halves at the last occurance of a given search string."
+			"@return" : "The left and right parts of the string, both of which exclude the search string, or null if the search term wasn't found."}
+	*/
+	String[] rsplit(char str[], char searchStr[])
 	}

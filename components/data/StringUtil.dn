@@ -250,4 +250,30 @@ component provides StringUtil requires io.Output out, data.adt.List {
 		return true
 		}
 	
+	String[] StringUtil:lsplit(char str[], char atStr[])
+		{
+		String result[] = new String[2]
+		int splitPoint = find(str, atStr)
+
+		if (splitPoint == StringUtil.NOT_FOUND) return null
+
+		result[0] = new String(subString(str, 0, splitPoint))
+		result[1] = new String(subString(str, splitPoint + atStr.arrayLength, str.arrayLength - (splitPoint + atStr.arrayLength)))
+		
+		return result
+		}
+	
+	String[] StringUtil:rsplit(char str[], char atStr[])
+		{
+		String result[] = new String[2]
+		int splitPoint = rfind(str, atStr)
+
+		if (splitPoint == StringUtil.NOT_FOUND) return null
+
+		result[0] = new String(subString(str, 0, splitPoint))
+		result[1] = new String(subString(str, splitPoint + atStr.arrayLength, str.arrayLength - (splitPoint + atStr.arrayLength)))
+
+		return result
+		}
+	
 	}

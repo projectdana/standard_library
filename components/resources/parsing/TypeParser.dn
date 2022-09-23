@@ -1,15 +1,17 @@
 uses data.String
+uses data.KeyValue
 
 data TypeDef {
 	const int INTEGER	= 1
 	const int DECIMAL	= 2
 	const int DATA		= 3
-	const int OBJECT	= 4
+	const int INTERFACE	= 4
+	const int COMPONENT	= 5
 	
 	int class
 	
 	char name[]
-	char type[]
+	char fullName[]
 	
 	char doc_description[]
 	}
@@ -61,9 +63,27 @@ data InterfaceDef extends TypeDef {
 	InterfaceDef extendsType
 	}
 
+data ProIntfDef {
+	char typeName[]
+	char variantName[]
+	String subInterfaces[]
+}
+
+data ReqIntfDef {
+	char typeName[]
+	char variantName[]
+	bool isNative
+}
+
+data ComponentDef extends TypeDef {
+	ProIntfDef provIntfs[]
+	ReqIntfDef reqIntfs[]
+	}
+
 //a single parsed source file with all of the types that it contains, and references to all of the support files that it used
 data SourceFile {
 	char path[]
+	char package[]
 	
 	TypeDef types[]
 	
@@ -76,23 +96,39 @@ data ParsedFiles {
 	SourceFile supportFiles[]
 	}
 
+data ParseIssue {
+	const int I_UNRESOLVED_TYPE = 1
+	const int I_PARSE_FAILURE = 2
+	const int I_SYNTAX_ERROR = 3
+	int type
+	char element[]
+	char inFile[]
+	char description[]
+	int atLine
+}
+
+data ParseStatus {
+	bool success
+	ParseIssue issues[]
+}
+
 /*
  {"description" : "Generate a documentation structure which can then be written to HTML or another format."}
 */
 
-interface DocBuilder {
+interface TypeParser {
 	/*
-	 {"@description" : "Initialise a new documentation builder."}
+	 {"@description" : "Initialise a new Dana source code type parser."}
 	*/
-	DocBuilder()
+	TypeParser()
 
 	/*
 	 {"@description" : "Parse a file, building a documentation structure for it.",
 	 	"fileContent" : "the contents (in memory) of the file to parse",
 		"filePath" : "the name of the file being parsed",
-		"filePath" : "an optional list of additional search paths to use when resolving used types"}
+		"searchPaths" : "an optional list of additional search paths to use when resolving used types"}
 	*/
-	bool parseFile(char fileContent[], opt char filePath[], opt String searchPaths[])
+	ParseStatus parseFile(char fileContent[], opt char filePath[], opt String searchPaths[], opt KeyValue resFiles[])
 	
 	/*
 	 {"@description" : "Get a documentation structure for all files parsed so far."}

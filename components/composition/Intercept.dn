@@ -91,26 +91,16 @@ component provides Intercept {
 		return true
 		}
 	
-	void deinterceptStatefulObject(IDC ofComponent, Object object, IDC source, char type[], char icReqInterface[])
+	void deinterceptStatefulObject(IDC ofComponent, Object object, Object objectTo, IDC source, char type[], char icReqInterface[])
 		{
 		InterceptEvents ie
-		Object a
+		Object a = objectTo
 		if (dana.pauseObject(ofComponent, object))
 			{
 			// - wait for all in-progress calls to finish in the old object
 			dana.waitForObject(object)
 			
-			Data transferState
-			
-			if (ofComponent.hasInterface(object, "InterceptEvents", null))
-				{
-				Object lst[] = ofComponent.getObjects(icReqInterface)
-				if (lst != null)
-					{
-					a = lst[0]
-					transferState = source.getTransferState(a)
-					}
-				}
+			Data transferState = source.getTransferState(objectTo)
 			
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
@@ -122,21 +112,12 @@ component provides Intercept {
 			}
 		}
 	
-	void deinterceptStatelessObject(IDC ofComponent, Object object, IDC source, char type[], char icReqInterface[])
+	void deinterceptStatelessObject(IDC ofComponent, Object object, Object objectTo, IDC source, char type[], char icReqInterface[])
 		{
 		InterceptEvents ie
-		Object a
+		Object a = objectTo
 		if (dana.pauseObject(ofComponent, object))
 			{
-			if (ofComponent.hasInterface(object, "InterceptEvents", null))
-				{
-				Object lst[] = ofComponent.getObjects(icReqInterface)
-				if (lst != null)
-					{
-					a = lst[0]
-					}
-				}
-			
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			
@@ -147,12 +128,12 @@ component provides Intercept {
 			}
 		}
 	
-	bool remObjectIntercept(IDC ofComponent, Object object, IDC newImplementation, char typeName[], char icReqInterface[])
+	bool remObjectIntercept(IDC ofComponent, Object object, Object objectTo, IDC newImplementation, char typeName[], char icReqInterface[])
 		{
 		if (ofComponent.hasTransferState(object))
-			deinterceptStatefulObject(ofComponent, object, newImplementation, typeName, icReqInterface)
+			deinterceptStatefulObject(ofComponent, object, objectTo, newImplementation, typeName, icReqInterface)
 			else
-			deinterceptStatelessObject(ofComponent, object, newImplementation, typeName, icReqInterface)
+			deinterceptStatelessObject(ofComponent, object, objectTo, newImplementation, typeName, icReqInterface)
 		
 		return true
 		}
@@ -168,12 +149,13 @@ component provides Intercept {
 			//switch the binding from this role to the new component (all new objects will be sourced from the new component)
 			ofComponent.wire(reqInterface, toComponent, toInterface)
 			Object objects[] = ofComponent.getObjects(reqInterface)
+			Object objectsTo[] = oldTarget.getObjects(icReqInterface)
 			ofComponent.resume(reqInterface)
 			
 			//switch all existing objects to the new class
 			for (int i = 0; i < objects.arrayLength; i++)
 				{
-				remObjectIntercept(oldTarget, objects[i], toComponent, toInterface, icReqInterface)
+				remObjectIntercept(oldTarget, objects[i], objectsTo[(objects.arrayLength-1)-i], toComponent, toInterface, icReqInterface)
 				}
 			}
 			else

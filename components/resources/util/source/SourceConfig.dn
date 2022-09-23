@@ -1,0 +1,26 @@
+/*
+ {"description" : "API to set and get information from a source repository configuration file."}
+*/
+
+uses data.KeyValue
+
+data ConfigData {
+	char repoServer[]
+	int repoPort
+	char username[]
+	KeyValue options[]
+}
+
+interface SourceConfig {
+	
+	/*
+	 {"@description" : "Get the config data from the file on disk."}
+	*/
+	ConfigData getConfig()
+
+	/*
+	 {"@description" : "Set the config data by writing it to the file on disk."}
+	*/
+	void setConfig(ConfigData cfg)
+	
+	}

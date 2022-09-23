@@ -6,6 +6,7 @@ data CompileError {
 	int errorLevel
 	
 	char sourceFile[]
+	int hasLineNumber
 	int lineNumber
 	char text[]
 	}

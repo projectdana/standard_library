@@ -7,7 +7,7 @@ data PrimaryType{
 const char OUTPUT_DIR[] = "_docs"
 const bool SHOW_WARNINGS = true
 
-component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo, composition.Search csearch, util.ObjectFile, data.query.Search dsearch {
+component provides App requires parsing.TypeParser, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo, composition.Search csearch, util.ObjectFile, data.query.Search dsearch {
 	
 	char[] getHTMLFileFor(char sourceFile[], char type[])
 		{
@@ -211,7 +211,7 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 		
 		for (int i = 0; i < sf.types.arrayLength; i++)
 			{
-			if (sf.types[i].class == TypeDef.OBJECT)
+			if (sf.types[i].class == TypeDef.INTERFACE)
 				{
 				InterfaceDef id = sf.types[i]
 				
@@ -844,7 +844,7 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 				
 				char dana_home[] = systemInfo.getVariable("DANA_HOME")
 				
-				File ref = new File("$dana_home/resources-ext/doc/index_a.html", File.READ)
+				File ref = new File("$dana_home/components/resources-ext/doc/index_a.html", File.READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()
 				
@@ -860,7 +860,7 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 					fd.write("</div>")
 					}
 				
-				ref = new File("$dana_home/resources-ext/doc/index_b.html", File.READ)
+				ref = new File("$dana_home/components/resources-ext/doc/index_b.html", File.READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()
 				
@@ -868,13 +868,13 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 				
 				//copy in the CSS file
 				fd = new File("$OUTPUT_DIR/doc.css", File.WRITE)
-				ref = new File("$dana_home/resources-ext/doc/doc.css", File.READ)
+				ref = new File("$dana_home/components/resources-ext/doc/doc.css", File.READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()
 				fd.close()
 				
 				fd = new File("$OUTPUT_DIR/files/doc.css", File.WRITE)
-				ref = new File("$dana_home/resources-ext/doc/doc.css", File.READ)
+				ref = new File("$dana_home/components/resources-ext/doc/doc.css", File.READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()
 				fd.close()
@@ -882,7 +882,7 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 			}
 		}
 	
-	void scanDirectory(DocBuilder docBuilder, char path[])
+	void scanDirectory(TypeParser docBuilder, char path[])
 		{
 		FileEntry files[] = fileSystem.getDirectoryContents(path)
 		
@@ -893,7 +893,10 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 			if (fileSystem.getInfo(filePath).type == FileInfo.TYPE_FILE)
 				{
 				out.println("Parsing $filePath")
-				docBuilder.parseFile(filePath)
+				File fd = new File(filePath, File.READ)
+				char content[] = fd.read(fd.getSize())
+				fd.close()
+				docBuilder.parseFile(content, filePath)
 				}
 				else
 				{
@@ -904,14 +907,17 @@ component provides App requires parsing.DocBuilder, io.File, io.FileSystem fileS
 	
 	int App:main(AppParam params[])
 		{
-		DocBuilder docBuilder = new DocBuilder()
+		TypeParser docBuilder = new TypeParser()
 		
 		bool writeIndex = false
 		
 		if (params.arrayLength > 0)
 			{
 			out.println("Parsing $(params[0].string)")
-			docBuilder.parseFile(params[0].string)
+			File fd = new File(params[0].string, File.READ)
+			char content[] = fd.read(fd.getSize())
+			fd.close()
+			docBuilder.parseFile(content, params[0].string)
 			}
 			else
 			{

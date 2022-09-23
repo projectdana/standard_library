@@ -1,0 +1,245 @@
+data ArchiveHeader {
+	int4 mode
+	int4 usernameLength
+	int4 passwordLength
+	int8 entryCount
+	int8 totalParams
+	int8 totalFiles
+}
+
+data EntryHeader {
+	int8 opType
+	int8 paramCount //how many param records there are
+	int8 fileCount //how many file records there are (param records might refer to them); most entries will have one file, but some might have aux files
+	int8 recordSize //the total size of this header, plus all of the param records and file records and their data
+	int8 dataOffset //where does the data for params start (offset from the start of the whole file)
+	int8 dataLength //total length, including the file length
+	int8 fileOffset //where does the data for the first file start (offset from the start of the whole file)
+	int8 fileLength //just the file length
+	int8 flags
+}
+
+//all param records are stored sequentially; the data from params starts at dataOffset; each successive param starts at that offset + the length of the prev param's key+value
+data Param {
+	int8 keyLength
+	int8 valueLength
+}
+
+data FileEntry {
+	int8 fileNameLength
+	int8 fileDataLength
+}
+
+component provides SourcePackage requires data.StringUtil stringUtil, io.Output out {
+
+	void copyBytes(byte dest[], int offset, byte src[], int length)
+		{
+		dana.sub(dest, offset, dest.arrayLength-1) =[] src
+		}
+	
+	byte[] SourcePackage:encode(CommandSet command)
+		{
+		//calculate the total needed array size to hold the encoded data
+		//generate the encoded data into that allocated byte array
+
+		SourceCommand commands[] = command.commands
+
+		int totalParams
+		int totalFiles
+		int totalParamDataSize
+		int totalFileDataSize
+
+		for (int i = 0; i < commands.arrayLength; i++)
+			{
+			totalParams += commands[i].params.arrayLength
+			for (int j = 0; j < commands[i].params.arrayLength; j++)
+				{
+				totalParamDataSize += commands[i].params[j].key.arrayLength
+				totalParamDataSize += commands[i].params[j].value.arrayLength
+				}
+			
+			totalFiles += commands[i].files.arrayLength
+			for (int j = 0; j < commands[i].files.arrayLength; j++)
+				{
+				totalFileDataSize += commands[i].files[j].name.arrayLength
+				totalFileDataSize += commands[i].files[j].content.arrayLength
+				}
+			}
+		
+		ArchiveHeader ah = new ArchiveHeader()
+		byte ahStream[] = dana.serial(ah)
+
+		EntryHeader eh = new EntryHeader()
+		byte ehStream[] = dana.serial(eh)
+
+		Param param = new Param()
+		byte paramStream[] = dana.serial(param)
+
+		FileEntry fileEntry = new FileEntry()
+		byte feStream[] = dana.serial(fileEntry)
+
+		byte result[] = new byte[ahStream.arrayLength + (ehStream.arrayLength * commands.arrayLength) + (paramStream.arrayLength * totalParams) + (feStream.arrayLength * totalFiles) + command.username.arrayLength + command.password.arrayLength + totalParamDataSize + totalFileDataSize]
+
+		//write the overall header
+		ah.mode = command.mode
+		ah.usernameLength = command.username.arrayLength
+		ah.passwordLength = command.password.arrayLength
+		ah.entryCount = commands.arrayLength
+		ah.totalParams = totalParams
+		ah.totalFiles = totalFiles
+
+		result =[] ahStream
+
+		//calculate starting offsets of param entries and file entries
+		int entryListOffset = 0
+		int paramListOffset = 0
+		int fileListOffset = 0
+
+		int paramDataOffset = 0
+		int fileDataOffset = 0
+
+		entryListOffset = ahStream.arrayLength
+		paramListOffset = ahStream.arrayLength + (ehStream.arrayLength * commands.arrayLength)
+		fileListOffset = ahStream.arrayLength + (ehStream.arrayLength * commands.arrayLength) + (paramStream.arrayLength * totalParams)
+
+		paramDataOffset = ahStream.arrayLength + (ehStream.arrayLength * commands.arrayLength) + (paramStream.arrayLength * totalParams)+ (feStream.arrayLength * totalFiles)
+		fileDataOffset = command.username.arrayLength + command.password.arrayLength + paramDataOffset + totalParamDataSize
+
+		if (command.username.arrayLength != 0)
+			copyBytes(result, paramDataOffset, command.username, command.username.arrayLength)
+		paramDataOffset += command.username.arrayLength
+		if (command.password.arrayLength != 0)
+			copyBytes(result, paramDataOffset, command.password, command.password.arrayLength)
+		paramDataOffset += command.password.arrayLength
+
+		//write each entry
+
+		for (int i = 0; i < commands.arrayLength; i++)
+			{
+			eh.opType = commands[i].command
+			eh.paramCount = commands[i].params.arrayLength
+			eh.fileCount = commands[i].files.arrayLength
+			eh.dataOffset = paramDataOffset
+			eh.fileOffset = fileDataOffset
+			copyBytes(result, entryListOffset, ehStream, ehStream.arrayLength)
+			entryListOffset += ehStream.arrayLength
+
+			for (int j = 0; j < commands[i].params.arrayLength; j++)
+				{
+				param.keyLength = commands[i].params[j].key.arrayLength
+				param.valueLength = commands[i].params[j].value.arrayLength
+
+				copyBytes(result, paramListOffset, paramStream, paramStream.arrayLength)
+				paramListOffset += paramStream.arrayLength
+
+				copyBytes(result, paramDataOffset, commands[i].params[j].key, commands[i].params[j].key.arrayLength)
+				paramDataOffset += commands[i].params[j].key.arrayLength
+
+				copyBytes(result, paramDataOffset, commands[i].params[j].value, commands[i].params[j].value.arrayLength)
+				paramDataOffset += commands[i].params[j].value.arrayLength
+				}
+			
+			for (int j = 0; j < commands[i].files.arrayLength; j++)
+				{
+				fileEntry.fileNameLength = commands[i].files[j].name.arrayLength
+				fileEntry.fileDataLength = commands[i].files[j].content.arrayLength
+
+				copyBytes(result, fileListOffset, feStream, feStream.arrayLength)
+				fileListOffset += feStream.arrayLength
+
+				copyBytes(result, fileDataOffset, commands[i].files[j].name, commands[i].files[j].name.arrayLength)
+				fileDataOffset += commands[i].files[j].name.arrayLength
+
+				copyBytes(result, fileDataOffset, commands[i].files[j].content, commands[i].files[j].content.arrayLength)
+				fileDataOffset += commands[i].files[j].content.arrayLength
+				}
+			}
+		
+		return result
+		}
+	
+	CommandSet SourcePackage:decode(byte x[])
+		{
+		ArchiveHeader ah = new ArchiveHeader()
+		byte ahStream[] = dana.serial(ah)
+
+		EntryHeader eh = new EntryHeader()
+		byte ehStream[] = dana.serial(eh)
+
+		Param param = new Param()
+		byte paramStream[] = dana.serial(param)
+
+		FileEntry fileEntry = new FileEntry()
+		byte feStream[] = dana.serial(fileEntry)
+
+		ahStream =[] x
+
+		int entryListOffset = 0
+		int paramListOffset = 0
+		int fileListOffset = 0
+		int paramDataOffset = 0
+
+		entryListOffset = ahStream.arrayLength
+		paramListOffset = ahStream.arrayLength + (ehStream.arrayLength * ah.entryCount)
+		fileListOffset = ahStream.arrayLength + (ehStream.arrayLength * ah.entryCount) + (paramStream.arrayLength * ah.totalParams)
+		paramDataOffset = ahStream.arrayLength + (ehStream.arrayLength * ah.entryCount) + (paramStream.arrayLength * ah.totalParams)+ (feStream.arrayLength * ah.totalFiles)
+
+		CommandSet sRes = new CommandSet(ah.mode)
+		SourceCommand result[] = new SourceCommand[ah.entryCount]
+		sRes.commands = result
+
+		if (ah.usernameLength != 0)
+			sRes.username = dana.sub(x, paramDataOffset, (paramDataOffset + ah.usernameLength)-1)
+		paramDataOffset += ah.usernameLength
+		if (ah.passwordLength != 0)
+			sRes.password = dana.sub(x, paramDataOffset, (paramDataOffset + ah.passwordLength)-1)
+
+		for (int i = 0; i < ah.entryCount; i++)
+			{
+			result[i] = new SourceCommand()
+
+			ehStream =[] dana.sub(x, entryListOffset, entryListOffset + ehStream.arrayLength)
+			entryListOffset += ehStream.arrayLength
+
+			result[i].command = eh.opType
+			result[i].params = new KeyValue[eh.paramCount]
+			result[i].files = new FileData[eh.fileCount]
+
+			paramDataOffset = eh.dataOffset
+			int fileDataOffset = eh.fileOffset
+
+			for (int j = 0; j < eh.paramCount; j++)
+				{
+				paramStream =[] dana.sub(x, paramListOffset, (paramListOffset + paramStream.arrayLength)-1)
+				paramListOffset += paramStream.arrayLength
+
+				result[i].params[j] = new KeyValue(new char[param.keyLength], new char[param.valueLength])
+
+				result[i].params[j].key = dana.sub(x, paramDataOffset, (paramDataOffset + param.keyLength)-1)
+				paramDataOffset += param.keyLength
+
+				result[i].params[j].value = dana.sub(x, paramDataOffset, (paramDataOffset + param.valueLength)-1)
+				paramDataOffset += param.valueLength
+
+				if (result[i].params[j].key == "-n") result[i].entityName = result[i].params[j].value
+				}
+			
+			for (int j = 0; j < eh.fileCount; j++)
+				{
+				feStream =[] dana.sub(x, fileListOffset, fileListOffset + feStream.arrayLength)
+				fileListOffset += feStream.arrayLength
+
+				result[i].files[j] = new FileData(new char[fileEntry.fileNameLength], new byte[fileEntry.fileDataLength])
+
+				result[i].files[j].name = dana.sub(x, fileDataOffset, fileDataOffset + (fileEntry.fileNameLength-1))
+				fileDataOffset += fileEntry.fileNameLength
+
+				result[i].files[j].content = dana.sub(x, fileDataOffset, fileDataOffset + (fileEntry.fileDataLength-1))
+				fileDataOffset += fileEntry.fileDataLength
+				}
+			}
+
+		return sRes
+		}
+	
+	}

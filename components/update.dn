@@ -153,14 +153,13 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		UpdateStatus ustatus = new UpdateStatus("$(today.year)/$(today.month)/$(today.day)", "$(today.year)/$(today.month)/$(today.day)")
 		
 		char home[] = osi.getVariable("DANA_HOME")
-		if (!fileSystem.exists("$home/resources-ext/update/"))
-			fileSystem.createDirectory("$home/resources-ext/update/")
+		if (!fileSystem.exists("$home/components/resources-ext/update/"))
+			fileSystem.createDirectory("$home/components/resources-ext/update/")
 		
-		/*
-		File fd = new File("$home/resources-ext/update/status.json", File.CREATE)
+		File fd = new File("$home/components/resources-ext/update/status.json", File.CREATE)
 		fd.write(encoder.jsonFromData(ustatus, null))
 		fd.close()
-		*/
+
 		return 0
 		}
 

@@ -17,7 +17,7 @@ component provides MarkdownToHTML requires data.IntUtil iu, data.StringBuilder, 
 				tokeniser.setBlockComment(style.blockComment[0].string, style.blockComment[1].string)
 			
 			//use parsing.Tokeniser to help...
-			ParseToken tokens[] = tokeniser.tokenise(src)
+			ParseToken tokens[] = tokeniser.tokenise(src).tokens
 			
 			int offset = 0
 			for (int i = 0; i < tokens.arrayLength; i++)

@@ -1,0 +1,19 @@
+uses ws.FormParser
+
+data EncodedForm {
+	char contentType[]
+	byte payload[]
+	}
+
+/*
+ {"description" : "Interface for pluggable HTTP web form encodings."}
+*/
+
+interface Encoder {
+	
+	/*
+	 {"@description" : "Encode the given form."}
+	*/
+	EncodedForm encode(FormData form)
+	
+	}

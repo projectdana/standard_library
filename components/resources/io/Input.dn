@@ -7,4 +7,9 @@ interface Input{
 	 {"@description" : "Wait for a line of user input and return it (e.g. when the user has pressed enter)."}
 	*/
 	char[] readln()
+
+	/*
+	 {"@description" : "Wait for a line of user input and return it, masking the user's input characters (e.g. for password entry)."}
+	*/
+	char[] readlnSecret()
 	}

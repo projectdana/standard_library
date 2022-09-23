@@ -15,7 +15,7 @@ data IncludeList{
 	String list[]
 	}
 
-component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File, data.json.JSONParser parser, data.StringUtil stringUtil, data.Tokeniser, data.IntUtil iu, os.SystemInfo sysInfo {
+component provides TypeParser requires io.Output out, io.FileSystem fs, io.File, data.json.JSONParser parser, data.StringUtil stringUtil, parsing.Tokeniser, data.IntUtil iu, System sysInfo, data.query.Search search {
 	
 	SourceFile primaryFiles[]
 	SourceFile supportFiles[]
@@ -234,13 +234,74 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		return false
 		}
 	
-	int consumeTypeDefinition(SourceFile sf, char docComment[], ParseToken tokens[], int start, IncludeList incList)
+	bool isComponentDefinition(ParseToken tokens[], int start)
+		{
+		if (tokens[start].type == ParseToken.TYPE_PARTICLE &&
+			(tokens[start].content == "component"))
+			{
+			start ++
+			
+			if (start >= tokens.arrayLength)
+				return false
+			
+			if (isToken(tokens[start].content))
+				return false
+			
+			start ++
+			
+			if (start >= tokens.arrayLength)
+				return false
+			
+			return true
+			}
+		
+		return false
+		}
+	
+	int skipScope(ParseToken tokens[], int start)
+		{
+		int count = 0
+
+		if (tokens[start].content == "{")
+			{
+			start ++
+			count ++
+			int brDepth = 1
+			while (start < tokens.arrayLength)
+				{
+				if (tokens[start].content == "}")
+					{
+					brDepth --
+					if (brDepth == 0)
+						{
+						count ++
+						start ++
+						break
+						}
+					}
+					else if (tokens[start].content == "{")
+					{
+					brDepth ++
+					}
+
+				count ++
+				start ++
+				}
+			}
+		
+		return count
+		}
+
+	int consumeTypeDefinition(SourceFile sf, char docComment[], ParseToken tokens[], int start, IncludeList incList, String searchPaths[])
 		{
 		//collect the type name and also extract any "extends" clause
 		
 		int count = 0
 		
-		addType(sf, tokens[start].content, tokens[start+1].content, docComment)
+		addType(sf, tokens[start].content, tokens[start+1].content, docComment, searchPaths)
+
+		bool isDataDef = tokens[start].content == "data"
+		bool isIntfDef = tokens[start].content == "interface"
 		
 		//type keyword
 		start ++
@@ -279,7 +340,11 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 				count ++
 				}
 			
-			incList.list = new String[](incList.list, new String(pkg))
+			//check if this type was defined in the current source file; otherwise put it on the include list for search
+			if ((isDataDef && getDataDef(sf, pkg) == null) || (isIntfDef && getInterfaceDef(sf, null, pkg) == null))
+				{
+				incList.list = new String[](incList.list, new String(pkg))
+				}
 			}
 		
 		//nocycle?
@@ -289,25 +354,221 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			count ++
 			}
 		
-		//skip the type definition
-		if (tokens[start].content == "{")
+		return count + skipScope(tokens, start)
+		}
+	
+	int consumeComponentDefinition(SourceFile sf, char docComment[], ParseToken tokens[], int start, IncludeList incList)
+		{
+		int count = 0
+
+		//get the provides and requires lists, including semantic variants
+		ComponentDef cdef = new ComponentDef(class = TypeDef.COMPONENT)
+
+		sf.types = new TypeDef[](sf.types, cdef)
+
+		//the word "component"
+		count ++
+		start ++
+
+		//"requires" or "provides"
+		if (tokens[start].content == "provides")
 			{
-			while (start < tokens.arrayLength && tokens[start].content != "}")
+			count ++
+			start ++
+
+			//a comma-separated list of types, potentially with package identifiers and semantic variants, until we hit either "requires" or "{"
+			while (true)
 				{
+				char intfType[] = null
+				char intfVar[] = null
+
+				//part of a type name
+				intfType = new char[](intfType, tokens[start].content)
+
 				count ++
 				start ++
+
+				while (tokens[start].content == ".")
+					{
+					intfType = new char[](intfType, ".", tokens[start+1].content)
+					count += 2
+					start += 2
+					}
+				
+				if (tokens[start].content == ":")
+					{
+					intfVar = tokens[start+1].content
+					start += 2
+					count += 2
+					}
+				
+				ProIntfDef newPro = new ProIntfDef(intfType, intfVar)
+
+				cdef.provIntfs = new ProIntfDef[](cdef.provIntfs, newPro)
+
+				incList.list = new String[](incList.list, new String(intfType))
+				
+				//brackets? (secondary object-level interfaces)
+				if (tokens[start].content == "(")
+					{
+					start ++
+
+					intfType = null
+
+					while (tokens[start].content != ")")
+						{
+						if (tokens[start].content == ",")
+							{
+							if (getInterfaceDef(sf, null, intfType) == null)
+								incList.list = new String[](incList.list, new String(intfType))
+							newPro.subInterfaces = new String[](newPro.subInterfaces, new String(intfType))
+							intfType = null
+							}
+							else
+							{
+							intfType = new char[](intfType, tokens[start].content)
+							}
+						
+						start ++
+						}
+					
+					if (intfType != null)
+						{
+						if (getInterfaceDef(sf, null, intfType) == null)
+							incList.list = new String[](incList.list, new String(intfType))
+						newPro.subInterfaces = new String[](newPro.subInterfaces, new String(intfType))
+						}
+					
+					start ++
+					}
+				
+				if (tokens[start].content == "requires" || tokens[start].content == "{")
+					{
+					break
+					}
+				
+				//comma
+				start ++
+				count ++
 				}
 			}
 		
-		return count
+		if (tokens[start].content == "requires")
+			{
+			count ++
+			start ++
+
+			//a comma-separated list of types, potentially with package identifiers and semantic variants, until we hit "{"
+
+			//a comma-separated list of types, potentially with package identifiers and semantic variants, until we hit either "requires" or "{"
+			while (true)
+				{
+				char intfType[] = null
+				char intfVar[] = null
+
+				ReqIntfDef newReq = new ReqIntfDef()
+
+				//native?
+				if (tokens[start].content == "native")
+					{
+					newReq.isNative = true
+					count ++
+					start ++
+					}
+
+				//part of a type name
+				intfType = new char[](intfType, tokens[start].content)
+
+				count ++
+				start ++
+
+				while (tokens[start].content == ".")
+					{
+					intfType = new char[](intfType, ".", tokens[start+1].content)
+					count += 2
+					start += 2
+					}
+				
+				if (tokens[start].content == ":")
+					{
+					intfVar = tokens[start+1].content
+					start += 2
+					count += 2
+					}
+				
+				newReq.typeName = intfType
+				newReq.variantName = intfVar
+				
+				cdef.reqIntfs = new ReqIntfDef[](cdef.reqIntfs, newReq)
+
+				//check if this interface was declared in this file (usually the case for "native" interfaces); if not, search for it
+				if (getInterfaceDef(sf, null, intfType) == null)
+					incList.list = new String[](incList.list, new String(intfType))
+				
+				//auto-instance name ?
+				if (tokens[start].type == ParseToken.TYPE_PARTICLE)
+					{
+					start ++
+					count ++
+					}
+				
+				//stop?
+				if (tokens[start].content == "{")
+					{
+					break
+					}
+				
+				//comma
+				start ++
+				count ++
+				}
+			}
+		
+		return count + skipScope(tokens, start)
 		}
 	
-	void addType(SourceFile sf, char type[], char name[], char docComment[])
+	//get the fully-qualified "package path" for which the given source file would be accessed via e.g. "uses" or "extends"
+	char[] getSourceFilePackage(SourceFile sf, String searchPaths[])
+		{
+		char path[] = sf.path
+
+		//check if the file was on a search path, and strip that search path if so...
+		for (int i = 0; i < searchPaths.arrayLength; i++)
+			{
+			if (path.startsWith(searchPaths[i].string))
+				{
+				path = path.subString(searchPaths[i].string.arrayLength+1, (path.arrayLength - searchPaths[i].string.arrayLength)-1)
+				break
+				}
+			}
+
+		if (path.startsWith("resources/"))
+			path = path.lsplit("/")[1].string
+		
+		if (path.endsWith(".dn")) path = path.rsplit(".")[0].string
+
+		return path.explode("/").implode(".")
+		}
+	
+	//here we assign a type's fully-qualified package name, relative to the file it appeared in
+	char[] getFullTypeName(SourceFile sf, char name[], String searchPaths[])
+		{
+		char pkg[] = getSourceFilePackage(sf, searchPaths)
+
+		String parts[] = pkg.explode(".")
+		if (parts[parts.arrayLength-1].string == name) name = pkg
+		//TODO: what should the "else" case actually be here? what does the language spec say?
+
+		return name
+		}
+
+	void addType(SourceFile sf, char type[], char name[], char docComment[], String searchPaths[])
 		{
 		if (type == "interface")
 			{
-			InterfaceDef nid = new InterfaceDef(TypeDef.OBJECT, name)
+			InterfaceDef nid = new InterfaceDef(TypeDef.INTERFACE, name)
 			nid.doc_description = docComment
+			nid.fullName = getFullTypeName(sf, name, searchPaths)
 			
 			sf.types = new TypeDef[](sf.types, nid)
 			}
@@ -315,6 +576,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			{
 			DataDef tid = new DataDef(TypeDef.DATA, name)
 			tid.doc_description = docComment
+			tid.fullName = getFullTypeName(sf, name, searchPaths)
 			
 			sf.types = new TypeDef[](sf.types, tid)
 			}
@@ -324,7 +586,8 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		{
 		for (int i = 0; i < sf.types.arrayLength; i++)
 			{
-			if (sf.types[i].class == TypeDef.OBJECT && sf.types[i].name == name)
+			//out.println(" - check $name vs $(sf.types[i].name) / $(sf.types[i].fullName)")
+			if (sf.types[i].class == TypeDef.INTERFACE && (sf.types[i].name == name || sf.types[i].fullName == name))
 				{
 				InterfaceDef id = sf.types[i]
 				return id
@@ -335,7 +598,9 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			{
 			for (int i = 0; i < sf.supportFiles[n].types.arrayLength; i++)
 				{
-				if (sf.supportFiles[n].types[i].class == TypeDef.OBJECT && sf.supportFiles[n].types[i].name == name)
+				//out.println(" - check $name vs $(sf.supportFiles[n].types[i].name) / $(sf.supportFiles[n].types[i].fullName)")
+
+				if (sf.supportFiles[n].types[i].class == TypeDef.INTERFACE && (sf.supportFiles[n].types[i].name == name || sf.supportFiles[n].types[i].fullName == name))
 					{
 					InterfaceDef id = sf.supportFiles[n].types[i]
 					return id
@@ -420,6 +685,9 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		if (tokens[start].content == "[")
 			{
 			start ++
+
+			if (tokens[start].content.isNumeric())
+				start ++
 			
 			if (tokens[start].content != "]")
 				return false
@@ -550,6 +818,9 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		if (tokens[start].content == "[")
 			{
 			start ++
+
+			if (tokens[start].content.isNumeric())
+				start ++
 			
 			if (tokens[start].content == "]")
 				field.array = true
@@ -778,8 +1049,65 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	ParseToken[] consumeExpression(ParseToken tokens[], int start)
 		{
 		//<literal> | <expression>
-		
-		return new ParseToken[](tokens[start])
+
+		//we're cheating a bit: at the type level, expression can only be valid if they're constant-initialisers, which can only be a single value or "new"
+		if (tokens[start].content == "new")
+			{
+			ParseToken result[]
+			result = new ParseToken[](result, tokens[start])
+
+			start ++
+
+			//type
+			result = new ParseToken[](result, tokens[start])
+			start ++
+
+			//possible square brackets
+			if (tokens[start].content == "[")
+				{
+				result = new ParseToken[](result, tokens[start])
+				start ++
+
+				if (tokens[start].content.isNumeric())
+					{
+					result = new ParseToken[](result, tokens[start])
+					start ++
+					}
+				
+				if (tokens[start].content == "]")
+					{
+					result = new ParseToken[](result, tokens[start])
+					start ++
+					}
+				}
+
+			//round brackets
+			int bb = 0
+			if (tokens[start].content == "(")
+				{
+				bb = 1
+				result = new ParseToken[](result, tokens[start])
+				start ++
+
+				while (bb != 0)
+					{
+					if (tokens[start].content == "(")
+						bb ++
+					
+					if (tokens[start].content == ")")
+						bb --
+					
+					result = new ParseToken[](result, tokens[start])
+					start ++
+					}
+				}
+			
+			return result
+			}
+			else
+			{
+			return new ParseToken[](tokens[start])
+			}
 		}
 	
 	int consumeDataFieldDeclaration(DataDef td, ParseToken docComment, ParseToken tokens[], int start)
@@ -822,6 +1150,9 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			{
 			start ++
 			
+			if (tokens[start].content.isNumeric())
+				start ++
+
 			if (tokens[start].content == "]")
 				field.array = true
 			
@@ -863,7 +1194,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			}
 		}
 	
-	int parseTypeDefinition(SourceFile root_sf, SourceFile sf, ParseToken tokens[], int start)
+	int parseTypeDefinition(ParseStatus status, SourceFile root_sf, SourceFile sf, ParseToken tokens[], int start)
 		{
 		//collect the type name and also extract any "extends" clause
 		
@@ -875,7 +1206,10 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			{
 			InterfaceDef id = getInterfaceDef(root_sf, null, tokens[start+1].content)
 			
-			if (id == null) throw new Exception("Interface $(tokens[start+1].content) not found!!!")
+			if (id == null)
+				{
+				throw new Exception("Interface $(tokens[start+1].content) not found!!!")
+				}
 			
 			//type keyword
 			start ++
@@ -953,7 +1287,8 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 						}
 						else
 						{
-						throw new Exception("Syntax error T '$(tokens[start].content)' in '$(sf.path)'")
+						status.issues = new ParseIssue[](status.issues, new ParseIssue(ParseIssue.I_SYNTAX_ERROR, id.name, sf.path, "unknown syntax at $(tokens[start].content)"))
+						return 0
 						}
 					
 					count += ac
@@ -1043,7 +1378,8 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 						}
 						else
 						{
-						throw new Exception("Syntax error D '$(tokens[start].content)' in '$(sf.path)'")
+						status.issues = new ParseIssue[](status.issues, new ParseIssue(ParseIssue.I_SYNTAX_ERROR, td.name, sf.path, "unknown syntax at $(tokens[start].content)"))
+						return 0
 						}
 					
 					count += ac
@@ -1057,7 +1393,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		return count
 		}
 	
-	void parseTypeDetails(SourceFile root_sf, SourceFile sf, ParseToken tokens[])
+	void parseTypeDetails(SourceFile root_sf, SourceFile sf, ParseToken tokens[], ParseStatus status)
 		{
 		//in this pass we have collected all valid type names, so we can do a full syntax check (group into expressions, type definitions etc.)
 		int start = 0
@@ -1068,7 +1404,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			
 			if (isTypeDefinition(tokens, start))
 				{
-				clength = parseTypeDefinition(root_sf, sf, tokens, start)
+				clength = parseTypeDefinition(status, root_sf, sf, tokens, start)
 				}
 			
 			if (clength == 0) return
@@ -1094,43 +1430,85 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		return null
 		}
 	
-	char[] resolvePackageToFile(SourceFile sf, char package[], String searchPaths[])
+	char[] getRelativePath(char path[], String searchPaths[])
+		{
+		//check if the file was on a search path, and strip that search path if so...
+		for (int i = 0; i < searchPaths.arrayLength; i++)
+			{
+			if (path.startsWith(searchPaths[i].string))
+				{
+				path = path.subString(searchPaths[i].string.arrayLength, (path.arrayLength - searchPaths[i].string.arrayLength))
+				break
+				}
+			}
+
+		return path
+		}
+	
+	char[] resolvePackageToFile(SourceFile sf, char package[], String searchPaths[], KeyValue resFiles[])
 		{
 		char epath[] = new char[](stringUtil.implode(stringUtil.explode(package, "."), "/"), ".dn")
 		
 		char test[]
-		
+
 		// - check relative to the source file that references it
-		String tokens[] = clone stringUtil.explode(sf.path, "/\\")
-		tokens[tokens.arrayLength - 1] = new String("")
-		
-		test = new char[](stringUtil.implode(tokens, "/"), epath)
-		
-		if (fs.exists(test))
+		char rqpath[] = getRelativePath(sf.path, searchPaths)
+		String tokens[] = clone stringUtil.explode(rqpath, "/\\")
+
+		//out.println("epath: $epath")
+		//out.println("rqpath: $rqpath")
+
+		if (tokens[0].string == "resources") tokens = dana.sub(tokens, 1, tokens.arrayLength-1)
+		if (tokens.arrayLength > 1)
+			tokens = dana.sub(tokens, 0, tokens.arrayLength-2)
+			else
+			tokens = null
+
+		if (tokens.arrayLength > 0)
+			test = new char[](stringUtil.implode(tokens, "/"), "/", epath)
+			else
+			test = epath
+
+		char simplePath[] = epath
+		char relativePath[] = test
+
+		test = "resources/$simplePath"
+		//out.println(" - scan $test")
+		if (fs.exists("resources/$simplePath"))
 			return test
 		
-		// - check relative to local base
-		test = new char[]("resources/", epath)
-		
-		if (fs.exists(test))
+		test = "resources/$relativePath"
+		//out.println(" - scan $test")
+		if (fs.exists("resources/$relativePath"))
 			return test
 		
+		// - check in-memory files via resFiles
+		for (int i = 0; i < resFiles.arrayLength; i++)
+			{
+			test = "resources/$simplePath"
+			//out.println(" - scan $test")
+			if (resFiles[i].key == test)
+				return test
+			test = "resources/$relativePath"
+			//out.println(" - scan $test")
+			if (resFiles[i].key == test)
+				return test
+			}
+
 		// - check search paths
 		for (int i = 0; i < searchPaths.arrayLength; i++)
 			{
-			test = new char[](searchPaths[i].string, "/resources/", epath)
-
+			test = "$(searchPaths[i].string)/resources/$(simplePath)"
+			//out.println(" - scan $test")
+			if (fs.exists(test))
+				return test
+			
+			test = "$(searchPaths[i].string)/resources/$(relativePath)"
+			//out.println(" - scan $test")
 			if (fs.exists(test))
 				return test
 			}
 
-		// - check centrally
-		
-		test = new char[](sysInfo.getVariable("DANA_HOME"), "/components/resources/", epath)
-		
-		if (fs.exists(test))
-			return test
-		
 		return null
 		}
 	
@@ -1157,7 +1535,43 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			}
 		}
 	
-	void collectExternalTypes(SourceFile root_sf, SourceFile sf, IncludeList incList, String searchPaths[])
+	void removeIssue(ParseStatus status, int index)
+		{
+		ParseIssue ni[] = new ParseIssue[status.issues.arrayLength - 1]
+
+		int j = 0
+		for (int i = 0; i < status.issues.arrayLength; i++)
+			{
+			if (i == index)
+				{
+				
+				}
+				else
+				{
+				ni[j] = status.issues[i]
+				j ++
+				}
+			}
+		
+		status.issues = ni
+		}
+
+	void resolveTypeLookups(SourceFile sf, ParseStatus status)
+		{
+		for (int i = 0; i < sf.types.arrayLength; i++)
+			{
+			for (int j = 0; j < status.issues.arrayLength; j++)
+				{
+				if (status.issues[j].type == ParseIssue.I_UNRESOLVED_TYPE && status.issues[j].element == sf.types[i].name)
+					{
+					removeIssue(status, j)
+					break
+					}
+				}
+			}
+		}
+	
+	void collectExternalTypes(SourceFile root_sf, SourceFile sf, IncludeList incList, ParseStatus status, String searchPaths[], KeyValue resFiles[])
 		{
 		//scan over all "uses" entries and "extends" clauses, but don't visit any files already in parsedFiles
 		for (int i = 0; i < incList.list.arrayLength; i++)
@@ -1165,11 +1579,16 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			char package[] = incList.list[i].string
 			
 			//resolve this package into a file to parse, relative to sf.path
-			char path[] = resolvePackageToFile(sf, package, searchPaths)
+			char path[] = resolvePackageToFile(sf, package, searchPaths, resFiles)
 			
 			if (path == null)
 				{
-				out.println("[warning] package $package could not be resolved, from source file $(sf.path)")
+				//check if this type name has since been located in another file
+				//TODO: the incList needs more info on where this inc came from (at least whether it's expecting a data type or interface!!)
+				if (getDataDef(sf, package) == null && getInterfaceDef(sf, null, package) == null)
+					{
+					status.issues = new ParseIssue[](status.issues, new ParseIssue(ParseIssue.I_UNRESOLVED_TYPE, package, sf.path))
+					}
 				}
 				else
 				{
@@ -1179,23 +1598,35 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 				
 				if (q == null)
 					{
-					File fd = new File(path, File.READ)
+					char content[] = null
+					KeyValue memStaged = null
 					
-					if (fd != null)
+					if ((memStaged = resFiles.findFirst(KeyValue.[key], new KeyValue(path))) != null)
 						{
-						char content[] = fd.read(fd.getSize())
-						
+						content = memStaged.value
+						}
+						else
+						{
+						File fd = new File(path, File.READ)
+						content = fd.read(fd.getSize())
 						fd.close()
-						
+						}
+					
+					if (content != null)
+						{
 						q = new SourceFile(path)
+						q.package = getSourceFilePackage(q, searchPaths)
 						
 						supportFiles = new SourceFile[](supportFiles, q)
 						if (root_sf !== sf) sf.supportFiles = new SourceFile[](sf.supportFiles, q)
 						root_sf.supportFiles = new SourceFile[](root_sf.supportFiles, q)
+
+						ParseToken tokens[] = tokeniser.tokenise(content).tokens
 						
-						ParseToken tokens[] = tokeniser.tokenise(content)
-						
-						parseTokens(root_sf, q, tokens, searchPaths)
+						parseTokens(root_sf, q, tokens, status, searchPaths, resFiles)
+
+						//scan the types added in 'q', and check if we can now remove any parse issues for unfindable types
+						resolveTypeLookups(q, status)
 						}
 					}
 					else
@@ -1217,19 +1648,14 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			}
 		}
 	
-	void parseTokens(SourceFile root_sf, SourceFile sf, ParseToken tokens[], String searchPaths[])
+	void parseTokens(SourceFile root_sf, SourceFile sf, ParseToken tokens[], ParseStatus status, String searchPaths[], KeyValue resFiles[])
 		{
-		//TODO: group tokens into expressions, type definitions etc.
+		//group tokens into expressions, type definitions etc.
 		// - we need to do the same multi-pass process as the compiler: first scan for type definitions, then populate the types with their fields, etc.
 		
 		int start = 0
 		
 		IncludeList incList = new IncludeList()
-		
-		incList.list = new String[](incList.list, new String("lang.Type"))
-		incList.list = new String[](incList.list, new String("lang.IDC"))
-		incList.list = new String[](incList.list, new String("lang.Object"))
-		incList.list = new String[](incList.list, new String("lang.Thread"))
 		
 		char lastDocComment[]
 		
@@ -1243,7 +1669,12 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 				}
 				else if (isTypeDefinition(tokens, start))
 				{
-				clength = consumeTypeDefinition(sf, lastDocComment, tokens, start, incList)
+				clength = consumeTypeDefinition(sf, lastDocComment, tokens, start, incList, searchPaths)
+				lastDocComment = null
+				}
+				else if (isComponentDefinition(tokens, start))
+				{
+				clength = consumeComponentDefinition(sf, lastDocComment, tokens, start, incList)
 				lastDocComment = null
 				}
 				else if (tokens[start].type == ParseToken.TYPE_BLOCK_COMMENT || tokens[start].type == ParseToken.TYPE_LINE_COMMENT)
@@ -1257,13 +1688,13 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		
 		//from the headers of "uses" and type definitions, collect all external types from other source files
 		// - the below function should check supportFiles first to see if already parsed, and if so just add a reference to sf's list
-		collectExternalTypes(root_sf, sf, incList, searchPaths)
+		collectExternalTypes(root_sf, sf, incList, status, searchPaths, resFiles)
 		
 		//now that we have all externally-defined types, parse the internals of the type definitions (i.e. fields) from this source file
-		parseTypeDetails(root_sf, sf, tokens)
+		parseTypeDetails(root_sf, sf, tokens, status)
 		}
 	
-	DocBuilder:DocBuilder()
+	TypeParser:TypeParser()
 		{
 		initialiseParseTokens()
 		initialiseParseKeywords()
@@ -1274,9 +1705,41 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 		tokeniser.setBlockComment("/*", "*/")
 		}
 	
-	bool DocBuilder:parseFile(char content[], opt char filePath[], opt String searchPaths[])
+	void addAutoInterfaces(SourceFile sf, ParseStatus status, String searchPaths[], KeyValue resFiles[])
 		{
-		ParseToken tokens[] = tokeniser.tokenise(content)
+		// for any components found, if they provide an interface which is a sub-type, we need a secondary interface of type AdaptEvents (this matches what the compiler does) -- so if no such secondary interface is found, add one
+
+		for (int i = 0; i < sf.types.arrayLength; i++)
+			{
+			if (sf.types[i].class == TypeDef.COMPONENT)
+				{
+				ComponentDef cdef = sf.types[i]
+
+				for (int j = 0; j < cdef.provIntfs.arrayLength; j++)
+					{
+					InterfaceDef id = getInterfaceDef(sf, null, cdef.provIntfs[j].typeName)
+					
+					if (id != null && id.extendsType != null && id.extendsType.fullName != "lang.Object")
+						{
+						if (cdef.provIntfs[j].subInterfaces.findFirst(String.[string], new String("AdaptEvents")) == null)
+							{
+							//out.println(" -- adding auto interface AdaptEvents")
+							cdef.provIntfs[j].subInterfaces = new String[](cdef.provIntfs[j].subInterfaces, new String("AdaptEvents"))
+							collectExternalTypes(sf, sf, new IncludeList(new String[](new String("AdaptEvents"))), status, searchPaths, resFiles)
+							}
+						}
+					}
+				}
+			}
+		}
+	
+	ParseStatus TypeParser:parseFile(char content[], opt char filePath[], opt String searchPaths[], opt KeyValue resFiles[])
+		{
+		ParseStatus status = new ParseStatus(true)
+
+		ParseToken tokens[] = tokeniser.tokenise(content).tokens
+
+		//out.println("[[beginning parse for '$filePath']]")
 		
 		/*
 		for (int i = 0; i < tokens.arrayLength; i++)
@@ -1284,17 +1747,32 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 			out.println("<$(iu.makeString(tokens[i].type))>token: $(tokens[i].content)")
 			}
 		*/
+
+		if (!(isset filePath) || filePath == null) filePath = "<input>"
+		if (!(isset searchPaths)) searchPaths = new String[](new String("$(sysInfo.getDanaHome())/components/"))
 		
 		SourceFile sf = new SourceFile(filePath)
+		sf.package = getSourceFilePackage(sf, searchPaths)
+
+		IncludeList incList = new IncludeList()
+		incList.list = new String[](incList.list, new String("lang.Type"))
+		incList.list = new String[](incList.list, new String("lang.Object"))
+		incList.list = new String[](incList.list, new String("lang.IDC"))
+		incList.list = new String[](incList.list, new String("lang.Thread"))
+		incList.list = new String[](incList.list, new String("lang.Destructor"))
+		collectExternalTypes(sf, sf, incList, status, searchPaths, resFiles)
 		
-		parseTokens(sf, sf, tokens, searchPaths)
+		parseTokens(sf, sf, tokens, status, searchPaths, resFiles)
+
+		//add any interfaces that are injected by the Dana compiler
+		addAutoInterfaces(sf, status, searchPaths, resFiles)
 		
 		primaryFiles = new SourceFile[](primaryFiles, sf)
 		
-		return true
+		return status
 		}
 	
-	ParsedFiles DocBuilder:getParsedFiles()
+	ParsedFiles TypeParser:getParsedFiles()
 		{
 		return new ParsedFiles(primaryFiles, supportFiles)
 		}

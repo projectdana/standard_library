@@ -28,6 +28,20 @@ data ParseToken {
 	int sourceLength
 	}
 
+data TokeniseIssue {
+	const int I_UNKNOWN_NUMBER_FORMAT = 1
+	const int I_INVALID_UNICODE = 2
+	const int I_INVALID_ESCAPE_CHAR = 3
+	const int I_UNTERMINATED_STRING = 4
+	int type
+	char description[]
+}
+
+data TokeniseResult {
+	ParseToken tokens[]
+	TokeniseIssue issues[]
+}
+
 /*
 {"description" : "This interface is used to tokenise a text document, using a given set of tokens, and supporting both line and block comments."}
 */
@@ -57,5 +71,5 @@ interface Tokeniser {
 		"content" : "The text to split into tokens.",
 		"@return" : "An array of tokens."}
 	*/
-	ParseToken[] tokenise(char content[])
+	TokeniseResult tokenise(char content[])
 	}

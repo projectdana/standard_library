@@ -1,0 +1,8 @@
+/* {"description" : "This is a container data type for key/value pairs."} */
+
+data KeyValue{
+	/* {"@description" : "The key."} */
+	char key[]
+	/* {"@description" : "The value."} */
+	char value[]
+	}

@@ -1,0 +1,17 @@
+component provides Encoder:urlencoded requires io.Output out, data.StringUtil stringUtil, data.IntUtil iu, encoding.Encoder:uri encoder {
+	
+	EncodedForm Encoder:encode(FormData form)
+		{
+		char encoded[]
+
+		for (int i = 0; i < form.fields.arrayLength; i++)
+			{
+			char encodedKey[] = encoder.encode(form.fields[i].key)
+			char encodedVal[] = encoder.encode(form.fields[i].value)
+			encoded = new char[](encoded, "&$(encodedKey)=$(encodedVal)")
+			}
+
+		return new EncodedForm("application/x-www-form-urlencoded", encoded)
+		}
+	
+	} 

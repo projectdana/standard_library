@@ -1,0 +1,69 @@
+/*
+ {"description" : "API to encode or decode a set of operations on a source repository."}
+*/
+
+uses data.String
+uses data.KeyValue
+
+data FileData {
+	char name[]
+	byte content[]
+}
+
+data SourceCommand {
+	const int4 C_ADD_PACKAGE = 1
+	const int4 C_ADD_TYPEFILE = 2
+	const int4 C_UPD_TYPEFILE = 3
+	const int4 C_ADD_COMPONENT = 4
+	const int4 C_UPD_COMPONENT = 5
+	const int4 C_ADD_LIB_SOURCE = 6
+	const int4 C_UPD_LIB_SOURCE = 7
+	const int4 C_ADD_LIB_BINARY = 8
+	const int4 C_UPD_LIB_BINARY = 9
+	const int4 C_SYNCH_FILE = 10
+	const int4 C_GET_ENTITY = 11
+	const int4 C_GET_TYPE = 12
+	const int4 C_GET_COMPONENT = 13
+	const int4 C_GET_PACKAGE = 14
+	const int4 C_GET_TAG = 15
+	const int4 C_ADD_TAG = 16
+	const int4 C_NEW_TAG = 17
+	const int4 C_TAG_TYPEFILE = 18
+	const int4 C_TAG_COMPONENT = 19
+	const int4 C_UNTAG_TYPEFILE = 20
+	const int4 C_UNTAG_COMPONENT = 21
+	int4 command
+	char entityName[]
+	KeyValue params[]
+
+	FileData files[]
+}
+
+data CommandSet {
+	const int4 M_GET = 1
+	const int4 M_PUT = 2
+	int4 mode
+	SourceCommand commands[]
+	char username[]
+	char password[]
+}
+
+interface SourcePackage {
+	
+	/*
+	 {"@description" : "Encode set of source commands into the binary transport format.",
+	 	"commands" : "The set of commands to encode.",
+		"@return" : "The encoded data."
+		}
+	*/
+	byte[] encode(CommandSet command)
+	
+	/*
+	 {"@description" : "Decode a binary-encoded set of source commands into its Dana data type.",
+	 	"x" : "The encoded data.",
+		"@return" : "The decoded data type."
+		}
+	*/
+	CommandSet decode(byte x[])
+	
+	}
