@@ -58,7 +58,7 @@ interface FileSystem{
 	 {"@description" : "Copy a file or directory to a new location.",
 			"@return" : "True if successful, false otherwise."}
 	*/
-	bool copy(char path[], char newPath[], bool recursive)
+	bool copy(char path[], char newPath[], opt bool recursive)
 	
 	/*
 	 {"@description" : "Create a new directory.",

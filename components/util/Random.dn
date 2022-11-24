@@ -21,6 +21,8 @@ component provides Random {
 	
 	int Random:getInt(int top)
 		{
+		if (top == 0) return 0
+		
 		int hi
 		int lo
 		

@@ -20,18 +20,25 @@ data SourceCommand {
 	const int4 C_UPD_LIB_SOURCE = 7
 	const int4 C_ADD_LIB_BINARY = 8
 	const int4 C_UPD_LIB_BINARY = 9
-	const int4 C_SYNCH_FILE = 10
-	const int4 C_GET_ENTITY = 11
-	const int4 C_GET_TYPE = 12
-	const int4 C_GET_COMPONENT = 13
-	const int4 C_GET_PACKAGE = 14
-	const int4 C_GET_TAG = 15
-	const int4 C_ADD_TAG = 16
-	const int4 C_NEW_TAG = 17
-	const int4 C_TAG_TYPEFILE = 18
-	const int4 C_TAG_COMPONENT = 19
-	const int4 C_UNTAG_TYPEFILE = 20
-	const int4 C_UNTAG_COMPONENT = 21
+	const int4 C_ADD_AUXDIR = 10
+	const int4 C_ADD_AUXFILE = 11
+	const int4 C_UPD_AUXFILE = 12
+	const int4 C_SYNCH_FILE = 13
+	const int4 C_GET_ENTITY = 14
+	const int4 C_GET_TYPE = 15
+	const int4 C_GET_COMPONENT = 16
+	const int4 C_GET_PACKAGE = 17
+	const int4 C_GET_AUXDIR = 18
+	const int4 C_GET_AUXFILE = 19
+	const int4 C_GET_TAG = 20
+	const int4 C_ADD_TAG = 21
+	const int4 C_NEW_TAG = 22
+	const int4 C_TAG_TYPEFILE = 23
+	const int4 C_TAG_COMPONENT = 24
+	const int4 C_TAG_AUXFILE = 25
+	const int4 C_UNTAG_TYPEFILE = 26
+	const int4 C_UNTAG_COMPONENT = 27
+	const int4 C_UNTAG_AUXFILE = 28
 	int4 command
 	char entityName[]
 	KeyValue params[]

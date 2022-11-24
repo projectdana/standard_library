@@ -34,7 +34,7 @@ component provides SourceSynch requires io.File, sec.hash.SHA2 sha2 {
 				}
 			}
 		
-		if (fromFile.getSize() == 0) return null
+		if (fd.getSize() == 0) return null
 		
 		SourceFileHeader hdr = new SourceFileHeader()
 		byte stream[] = dana.serial(hdr)
@@ -78,8 +78,12 @@ component provides SourceSynch requires io.File, sec.hash.SHA2 sha2 {
 			throw new Exception("source synch file not found at $(FILE_LOC)")
 			}
 		
+		SourceFileHeader hdr = new SourceFileHeader()
+		byte stream[] = dana.serial(hdr)
+		fd.read(stream.arrayLength)
+		
 		SourceRecordDisk srd = new SourceRecordDisk()
-		byte stream[] = dana.serial(srd)
+		stream = dana.serial(srd)
 		while (!fd.eof())
 			{
 			byte buf[] = fd.read(stream.arrayLength)

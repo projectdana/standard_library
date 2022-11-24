@@ -51,6 +51,7 @@ data WorkerThread {
 	
 	WorkItem work
 	WorkItem lastWork
+	WorkItem curWork
 	int workCount
 }
 
@@ -62,9 +63,6 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 	WorkerThread threadPool[] = new WorkerThread[THREAD_POOL_SIZE]
 	
 	Mutex workerLock = new Mutex()
-	
-	Mutex curWorkLock = new Mutex()
-	WorkItem curWork
 	
 	char END_SEQ[] = "\r\n\r\n"
 	char END_R[] = "\r"
@@ -544,6 +542,9 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 	
 	RequestHandler:RequestHandler()
 		{
+		//init tasks for web app
+		rh.setup()
+
 		//start thread pool
 		
 		for (int i = 0; i < THREAD_POOL_SIZE; i++)
@@ -571,25 +572,15 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 					w = state.work
 					state.work = w.next
 					if (state.work == null) state.lastWork = null
-					}
-				
-				mutex(curWorkLock)
-					{
-					w.next = curWork
-					if (curWork != null) curWork.prev = w
-					curWork = w
-					
-					curWork.threadID = state.threadID
+					state.curWork = w
 					}
 				
 				processRequest(w)
 				
-				mutex(curWorkLock)
+				mutex(state)
 					{
-					if (w.prev != null) w.prev.next = w.next
-					if (w.next != null) w.next.prev = w.prev
-					if (w === curWork) curWork = w.next
 					state.workCount --
+					state.curWork = null
 					w = null
 					}
 				}
@@ -605,32 +596,29 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 		while (true)
 			{
 			timer.sleep(TIMEOUT_INTERVAL)
-			
-			mutex(curWorkLock)
+
+			for (int i = 0; i < threadPool.arrayLength; i++)
 				{
-				WorkItem cwi = curWork
-				
-				if (cwi == null && shutdown)
+				mutex(threadPool[i])
 					{
-					return
-					}
-				
-				while (cwi != null)
-					{
-					if (cwi.waiting) cwi.idleTime += TIMEOUT_INTERVAL
-					
-					mutex(cwi)
+					WorkItem curWork = threadPool[i].curWork
+					if (curWork != null)
 						{
-						if (cwi.idleTime >= MAX_INACTIVE)
+						if (curWork.waiting)
 							{
-							if (cwi.tlsClient != null) cwi.tlsClient.close()
-							cwi.client.disconnect()
-							cwi.idleTime = 0
-							cwi.killed = true
+							curWork.idleTime += TIMEOUT_INTERVAL
+							//out.println("idle time on $(curWork.threadID) now $(curWork.idleTime)")
+							}
+
+						if (curWork.idleTime >= MAX_INACTIVE)
+							{
+							if (curWork.tlsClient != null) curWork.tlsClient.close()
+							curWork.client.disconnect()
+							curWork.idleTime = 0
+							curWork.killed = true
+							//out.println("killing connection on thread $(curWork.threadID)")
 							}
 						}
-					
-					cwi = cwi.next
 					}
 				}
 			}
@@ -654,7 +642,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 	
 	void RequestHandler:processStream(TCPSocket s, TLS tls, ConfigData cfg)
 		{
-		WorkerThread wt = getWorker()
+		WorkerThread worker = getWorker()
 		
 		Stream stream = s
 		
@@ -662,19 +650,21 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 		
 		WorkItem nwi = new WorkItem(s, tls, stream, cfg.landingPages, cfg)
 		
-		mutex(wt)
+		mutex(worker)
 			{
-			if (wt.lastWork == null)
-				wt.work = nwi
+			nwi.threadID = worker.threadID
+
+			if (worker.lastWork == null)
+				worker.work = nwi
 				else
-				wt.lastWork.next = nwi
+				worker.lastWork.next = nwi
 			
-			wt.lastWork = nwi
+			worker.lastWork = nwi
 			
-			wt.workCount ++
+			worker.workCount ++
 			}
 		
-		wt.thread.signal()
+		worker.thread.signal()
 		}
 	
 	void Destructor:destroy()

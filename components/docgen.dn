@@ -227,7 +227,10 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 					if (fd != null)
 						{
 						fd.write("<html>")
+						fd.write("<head>")
 						fd.write("<link href=\"doc.css\" rel=\"stylesheet\" type=\"text/css\">")
+						fd.write("<title>$(id.name)</title>")
+						fd.write("</head>")
 						fd.write("<body>")
 						
 						fd.write("<div class = \"doc_heading_line\">")
@@ -600,7 +603,10 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 				if (fd != null)
 					{
 					fd.write("<html>")
+					fd.write("<head>")
 					fd.write("<link href=\"doc.css\" rel=\"stylesheet\" type=\"text/css\">")
+					fd.write("<title>$(td.name)</title>")
+					fd.write("</head>")
 					fd.write("<body>")
 					
 					fd.write("<div class = \"doc_heading_line\">")

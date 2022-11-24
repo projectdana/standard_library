@@ -1,0 +1,11 @@
+/*
+ {"description" : "This interface supports iterating through permutations, where a collection of permutations is expressed as an array of integers (alongside a correlated array of maximum values for each cell in the array). An optionsLock array can be optionally supplied, which indicates if each array cell's value should not be adjusted from its initial value during permutation generation."}
+*/
+
+interface Permute {
+
+	int[] getFirst(int options[], int optionsMax[], opt bool optionsLock[])
+	
+	int[] getNext(int options[], int optionsMax[], opt bool optionsLock[])
+	
+	}

@@ -8,6 +8,9 @@ data InterfaceSpec {
 	char variant[]
 	/* {"@description" : "The type of this interface."} */
 	Type type
+	/* {"@description" : "Flags associated with this interface."} */
+	const byte F_NATIVE = 1
+	byte flags
 	}
 
 /*

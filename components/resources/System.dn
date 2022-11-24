@@ -4,6 +4,11 @@
 
 uses data.String
 
+data PlatformInfo {
+	char osCode[]
+	char chipCode[]
+}
+
 interface System {
 	/* {"@description" : "Get the VM's 'type' code, which must match the object type information of loaded components."} */
 	byte[] getVMType()
@@ -12,10 +17,16 @@ interface System {
 	byte[] getHostType()
 	
 	/* {"@description" : "Get the VM's version number."} */
-	char[] getVersion()
+	int getVersion()
+
+	/* {"@description" : "Host platform identifier codes."} */
+	PlatformInfo getPlatform()
 
 	/* {"@description" : "Get the VM's native library API version number."} */
 	int getLibAPIVersion()
+
+	/* {"@description" : "Get the language platform's version number. These are major releases."} */
+	int getFrameworkVersion()
 	
 	/* {"@description" : "Get the install directory of Dana (affected e.g. by the -dh parameter, or the DANA_HOME environment variable). It is always better to use this function instead of directly reading environment variables."} */
 	char[] getDanaHome()
@@ -23,9 +34,6 @@ interface System {
 	/* {"@description" : "Get the list of search paths used by the Dana virtual machine when looking for components (affected e.g. by the -sp parameter)."} */
 	String[] getSearchPaths()
 	
-	/* {"@description" : "Get the list of required interfaces (including package paths) that the virtual machine will automatically bind (to itself)."} */
+	/* {"@description" : "Get the list of required interfaces (including package paths) that the virtual machine will automatically wire (to itself)."} */
 	String[] getAutoBindings()
-	
-	/* {"@description" : "Set whether or not the VM will automatically bind the required interfaces returned by getAutoBindings() (default is true/on)."} */
-	void setAutoBind(bool on)
 	}

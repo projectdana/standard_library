@@ -20,9 +20,9 @@ component provides Intercepter {
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			if (source.hasInterface(object, "InterceptEvents", null))
+			if (source.hasInterface(object, "composition.InterceptEvents", null))
 				{
-				source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b))
+				source.callInterface(object, "composition.InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b))
 				source.adoptObject(icReqInterface, b)
 				}
 			ofComponent.setTransferState(b, transferState)
@@ -42,9 +42,9 @@ component provides Intercepter {
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			if (source.hasInterface(object, "InterceptEvents", null))
+			if (source.hasInterface(object, "composition.InterceptEvents", null))
 				{
-				source.callInterface(object, "InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b))
+				source.callInterface(object, "composition.InterceptEvents", null, InterceptEvents.[setTarget(Object)], new ObjectWrap(b))
 				source.adoptObject(icReqInterface, b)
 				}
 			// - allow new calls to proceed in the new object

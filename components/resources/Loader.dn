@@ -6,11 +6,11 @@ interface Loader{
 	/*
 	 {"@description" : "Load a component from a file into main memory."}
 	*/
-	IDC load(char path[])
+	IDC load(char path[], opt bool noAutoWire)
 	
 	/*
 	 {"@description" : "Load a component from an object file stored in memory."}
 	*/
-	IDC loadFrom(char objectFile[])
+	IDC loadFrom(char objectFile[], opt bool noAutoWire)
 	
 	}

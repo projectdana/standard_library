@@ -225,7 +225,7 @@ component provides io.File(Destructor), io.FileSystem requires native FileLib li
 			return true
 			}
 		
-		bool FileSystem:copy(char file[], char newFile[], bool recursive)
+		bool FileSystem:copy(char file[], char newFile[], opt bool recursive)
 			{
 			if (file == newFile)
 				throw new Exception("source and destination are the same")

@@ -1,0 +1,42 @@
+component provides Permute {
+
+	int[] Permute:getFirst(int options[], int optionsMax[], opt bool optionsLock[])
+		{
+		options = clone options
+		for (int i = 0; i < options.arrayLength; i++)
+			{
+			if (optionsLock == null || !optionsLock[i])
+				{
+				options[i] = 0
+				}
+			}
+		
+		return options
+		}
+	
+	int[] Permute:getNext(int options[], int optionsMax[], opt bool optionsLock[])
+		{
+		options = clone options
+
+		int q = options.arrayLength - 1
+
+		while (options[q] == optionsMax[q] || (optionsLock != null && optionsLock[q] == true))
+			{
+			q --
+
+			if (q == INT_MAX) return null
+			}
+		
+		options[q] ++
+		q ++
+
+		for (; q < options.arrayLength; q++)
+			{
+			if (optionsLock == null || optionsLock[q] == false)
+				options[q] = 0
+			}
+
+		return options
+		}
+	
+	}

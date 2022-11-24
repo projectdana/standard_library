@@ -1,9 +1,15 @@
 uses DocStream
 
 /*
- {"description" : "Interface for web app components."}
+ {"description" : "Interface for web app components. Web frameworks will instantiate one instance of a Web object to serve all requests (i.e., the same single object is persistent across all requests)."}
 */
 interface Web {
+
+	/*
+	 {"@description" : "This function is called once, when the web framework first starts up, and can optionally be used for initialisation tasks."}
+	*/
+	void setup() {  }
+
 	/*
 	 {"@description" : "This function is called when a HTTP GET request is made."}
 	*/

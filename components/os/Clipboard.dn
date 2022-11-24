@@ -1,4 +1,12 @@
-component provides Clipboard requires native Clipboard lib {
+interface ClipboardLib {
+	
+	void setContent(char content[])
+
+	char[] getContent()
+	
+	}
+
+component provides Clipboard requires native ClipboardLib lib {
 	
 	void Clipboard:setContent(char content[])
 		{

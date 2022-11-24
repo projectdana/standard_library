@@ -1,5 +1,3 @@
-uses AdaptEvents
-
 component provides Adapter requires io.Output out {
 	
 	void adaptStatefulObject(IDC ofComponent, Object object, IDC source, char type[])
@@ -11,7 +9,7 @@ component provides Adapter requires io.Output out {
 			// - initialise a new object, without calling its constructor
 			Object a = source.initObject(type)
 			// - notify the object that it's now the "inactive" copy
-			ofComponent.callInterface(object, "AdaptEvents", null, AdaptEvents.[inactive()], null)
+			ofComponent.callInterface(object, "lang.AdaptEvents", null, AdaptEvents.[inactive()], null)
 			// - get the object's state
 			Data transferState = ofComponent.getTransferState(object)
 			// - rewire live object so calls now go to the new one (a becomes null)
@@ -19,7 +17,7 @@ component provides Adapter requires io.Output out {
 			// - set the object's state
 			source.setTransferState(object, transferState)
 			// - notify the object that it's now the "active" copy
-			source.callInterface(object, "AdaptEvents", null, AdaptEvents.[active()], null)
+			source.callInterface(object, "lang.AdaptEvents", null, AdaptEvents.[active()], null)
 			// - allow new calls to proceed in the new object
 			dana.resumeObject(object)
 			// - wait for any in-progress asynchronous threads to finish
@@ -34,11 +32,11 @@ component provides Adapter requires io.Output out {
 			// - initialise a new object, without calling its constructor
 			Object a = source.initObject(type)
 			// - notify the object that it's now the "inactive" copy
-			ofComponent.callInterface(object, "AdaptEvents", null, AdaptEvents.[inactive()], null)
+			ofComponent.callInterface(object, "lang.AdaptEvents", null, AdaptEvents.[inactive()], null)
 			// - rewire live object so calls now go to the new one (a becomes null)
 			Object b = dana.rewireObject(object, a)
 			// - notify the object that it's now the "active" copy
-			source.callInterface(object, "AdaptEvents", null, AdaptEvents.[active()], null)
+			source.callInterface(object, "lang.AdaptEvents", null, AdaptEvents.[active()], null)
 			// - allow new calls to proceed in the new object
 			dana.resumeObject(object)
 			// - wait for all in-progress calls to finish in the old object
