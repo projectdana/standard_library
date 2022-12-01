@@ -210,7 +210,6 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 						}
 					
 					char pname[] = alias
-					if (semantic != null) pname = "$alias:$semantic"
 					
 					com.wire(pname, newCom, pname)
 					}

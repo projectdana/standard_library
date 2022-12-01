@@ -1,0 +1,39 @@
+uses data.String
+
+data ReqIntf {
+	char intf[]
+	bool isNative
+}
+
+data InterfaceActual {
+	char intf[]
+	char comp[]
+	char proxyTag[] //if comp is a proxy, what tag was it given (which we'll pass to a delegated loader)
+	char proxyParams[] //if comp is a proxy, what params was it given (which we'll pass to a delegated loader)
+	ReqIntf req[]
+}
+
+data Composition {
+	InterfaceActual options[]
+}
+
+data CompositionUpdate {
+	bool ok
+	Composition remOptions[]
+	Composition addOptions[]
+}
+
+interface OptionBuilder {
+	
+	OptionBuilder(char path[], opt store String searchPaths[], store String excludeList[])
+	
+	//NOTE: we currently assume that autobindings are NOT included in compositions; we could include them with a special InterfaceAction comp of "_runtime"
+	Composition[] getCompositions()
+
+	Composition[] addComponent(char path[])
+	CompositionUpdate updComponent(Composition compositions[], char path[])
+	Composition[] remComponent(Composition compositions[], char path[])
+
+	Composition[] addProxy(char forInterface[], char proxyComponent[], char tag[], char parameters[])
+	Composition[] remProxy(Composition compositions[], char forInterface[], char proxyComponent[], char tag[], char parameters[])
+	}

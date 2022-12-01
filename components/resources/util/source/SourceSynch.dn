@@ -7,15 +7,17 @@ uses io.File
 data SourceRecord {
 	const int T_PACKAGE = 1
 	const int T_TYPEFILE = 2
-	const int T_COMPONENT = 3
-	const int T_LIBRARY = 4
-	const int T_AUXDIR = 5
-	const int T_AUXFILE = 6
-	const int T_TAG = 7
+	const int T_DEFAULT_COM = 3
+	const int T_COMPONENT = 4
+	const int T_LIBRARY = 5
+	const int T_AUXDIR = 6
+	const int T_AUXFILE = 7
+	const int T_TAG = 8
 	int type
 	int version
 	char hash[]
 	char name[]
+	char info[]
 }
 
 interface SourceSynch {

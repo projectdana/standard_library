@@ -107,7 +107,6 @@ component provides composition.RecursiveLoader requires composition.Search searc
 				if (ri[i].semantic.arrayLength != 0)
 					{
 					pkg = "$pkg:$(ri[i].semantic)"
-					alias = "$alias:$(ri[i].semantic)"
 					}
 				resolveDependency(lc, comIndex, pkg, alias)
 				}

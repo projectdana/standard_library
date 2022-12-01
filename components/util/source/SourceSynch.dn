@@ -59,10 +59,12 @@ component provides SourceSynch requires io.File, sec.hash.SHA2 sha2 {
 			stream =[] buf
 
 			char name[] = fd.read(srd.dataLenA)
+			char info[] = fd.read(srd.dataLenB)
 
 			if (name.arrayLength != srd.dataLenA) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+			if (info.arrayLength != srd.dataLenB) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
 
-			result[i] = new SourceRecord(srd.type, srd.version, srd.hash, name)
+			result[i] = new SourceRecord(srd.type, srd.version, srd.hash, name, info)
 			i ++
 			}
 
@@ -93,8 +95,10 @@ component provides SourceSynch requires io.File, sec.hash.SHA2 sha2 {
 			stream =[] buf
 
 			char name[] = fd.read(srd.dataLenA)
+			char info[] = fd.read(srd.dataLenB)
 
 			if (name.arrayLength != srd.dataLenA) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+			if (info.arrayLength != srd.dataLenB) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
 
 			if (srd.type == type && name == entityName) return new SourceRecord(srd.type, srd.version, srd.hash, name)
 			}
@@ -136,12 +140,13 @@ component provides SourceSynch requires io.File, sec.hash.SHA2 sha2 {
 		
 		fd.setPos(fd.getSize())
 
-		SourceRecordDisk srd = new SourceRecordDisk(record.type, record.version, record.hash, record.name.arrayLength)
+		SourceRecordDisk srd = new SourceRecordDisk(record.type, record.version, record.hash, record.name.arrayLength, record.info.arrayLength)
 		srd.hash =[] record.hash
 		stream = dana.serial(srd)
 
 		fd.write(stream)
 		fd.write(record.name)
+		fd.write(record.info)
 
 		fd.close()
 		}

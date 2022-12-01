@@ -11,6 +11,7 @@ data FileData {
 }
 
 data SourceCommand {
+	const int4 C_ERROR = 0
 	const int4 C_ADD_PACKAGE = 1
 	const int4 C_ADD_TYPEFILE = 2
 	const int4 C_UPD_TYPEFILE = 3

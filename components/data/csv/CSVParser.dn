@@ -145,7 +145,10 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 					{
 					if (type.fields[i].type.class == Type.INTEGER)
 						{
-						nd:.i = intUtil.intFromString(s[i].string)
+						if (s[i].string.arrayLength == 0)
+							nd:.i = 0
+							else
+							nd:.i = intUtil.intFromString(s[i].string)
 						}
 						else if (type.fields[i].type.class == Type.DECIMAL)
 						{

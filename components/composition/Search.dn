@@ -1,6 +1,6 @@
 const byte danaMagic[] = new int[](0x44, 0x41, 0x4E, 0x41, 0x0, 0x1)
 
-component provides Search requires data.StringUtil stringUtil, io.FileSystem fileSystem, util.ObjectFile, io.File, data.json.JSONParser parser, io.Output out, System system, os.SystemInfo systemInfo, data.query.Search asr {
+component provides Search requires data.StringUtil stringUtil, io.FileSystem fileSystem, util.ObjectFile, io.File, data.json.JSONParser parser, io.Output out, System system, os.SystemInfo systemInfo, data.query.Search asr, Loader loader {
 	
 	bool Search:isDanaComponent(char path[])
 		{
@@ -29,30 +29,20 @@ component provides Search requires data.StringUtil stringUtil, io.FileSystem fil
 		String parts[] = stringUtil.explode(intfPackage, ":")
 		intfPackage = parts[0].string
 		if (parts.arrayLength == 2) flavour = parts[1].string
-		
-		ObjectFile ow = new ObjectFile(path)
-		
-		InfoSection section = ow.getInfoSection("DNIL", "json")
-		
-		JSONElement document = parser.parseDocument(section.content)
-		
-		JSONElement providedInterfaces = parser.getValue(document, "providedInterfaces")
-		
-		for (int j = 0; j < providedInterfaces.children.arrayLength; j++)
+
+		IDC com = loader.load(path)
+
+		InterfaceSpec interfaces[] = com.getProvides()
+
+		for (int i = 0; i < interfaces.arrayLength; i++)
 			{
-			JSONElement pi = providedInterfaces.children[j]
-			char package[] = parser.getValue(pi, "package").value
-			char semantic[]
-			JSONElement jp = parser.getValue(pi, "semantic")
-			if (jp != null) semantic = jp.value
-			
-			if (flavour == null && semantic.arrayLength == 0 && package == intfPackage)
+			if (flavour == null && interfaces[i].variant.arrayLength == 0 && interfaces[i].package == intfPackage)
 				return true
 			
-			if (flavour == "*" && semantic.arrayLength > 0 && package == intfPackage)
+			if (flavour == "*" && interfaces[i].variant.arrayLength > 0 && interfaces[i].package == intfPackage)
 				return true
 			
-			if (flavour == semantic && package == intfPackage)
+			if (flavour == interfaces[i].variant && interfaces[i].package == intfPackage)
 				return true
 			}
 		

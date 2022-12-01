@@ -1,0 +1,655 @@
+//NOTE: this implementation doesn't currently deal fully with the case of a component implementing two different interfaces; in this case the same component should always be selected for each of its interfaces that appear in a composition
+
+//the below five types are our cache, used when deriving compositions
+data CompOption {
+	char path[]
+	char proxyTag[] //set if this is a proxy (added manually via addProxy()); it won't have a corresponding ComponentInfo
+	char proxyParams[] //set if this is a proxy (added manually via addProxy()); it won't have a corresponding ComponentInfo
+}
+
+data InterfaceOptions {
+	//the interface name
+	char intf[]
+	//the implementation options (components)
+	CompOption options[]
+}
+
+data Intf {
+	char id[]
+	bool isNative
+}
+
+data ComponentInfo {
+	char path[]
+	Intf providedIntfs[]
+	Intf requiredIntfs[]
+}
+
+data InfoCache {
+	String searchPaths[]
+	String excludeList[]
+	InterfaceOptions interfaces[]
+	ComponentInfo components[]
+}
+
+component provides OptionBuilder requires io.Output out, data.StringUtil stringUtil, data.IntUtil iu, util.ObjectFile, System system, os.SystemInfo systemInfo, data.query.Search search, composition.Search csearch, data.json.JSONParser parser, data.Permute permute, Loader loader {
+
+	InfoCache icache
+
+	OptionBuilder:OptionBuilder(char path[], opt String searchPaths[], String excludeList[])
+		{
+		icache = new InfoCache()
+		icache.searchPaths = searchPaths
+		icache.excludeList = excludeList
+
+		scanComponentsR(path, icache, searchPaths, excludeList)
+
+		/*
+		for (int i = 0; i < icache.interfaces.arrayLength; i++)
+			{
+			out.println("interface: $(icache.interfaces[i].intf) -- $(icache.interfaces[i].options.arrayLength) options")
+			}
+		*/
+		}
+
+	ComponentInfo readInterfaces(char path[])
+		{
+		ComponentInfo nci = new ComponentInfo(path)
+
+		IDC com = loader.load(path)
+
+		InterfaceSpec interfaces[] = com.getRequires()
+
+		for (int i = 0; i < interfaces.arrayLength; i++)
+			{
+			char id[] = interfaces[i].alias
+			bool isNative = interfaces[i].flags == InterfaceSpec.F_NATIVE
+			nci.requiredIntfs = new Intf[](nci.requiredIntfs, new Intf(id, isNative))
+			}
+		
+		interfaces = com.getProvides()
+
+		for (int i = 0; i < interfaces.arrayLength; i++)
+			{
+			char id[] = interfaces[i].alias
+			nci.providedIntfs = new Intf[](nci.providedIntfs, new Intf(id))
+			}
+		
+		return nci
+		}
+	
+	void scanComponentsR(char start[], InfoCache ic, String searchPaths[], opt String excludeList[])
+		{
+		//out.println("scanning '$start'")
+
+		//prep the new component (but don't add it until we've checked the exclude list re: provided interfaces)
+		ComponentInfo nci = readInterfaces(start)
+
+		for (int i = 0; i < nci.providedIntfs.arrayLength; i++)
+			{
+			if (excludeList.findFirst(String.[string], new String(nci.providedIntfs[i].id)) != null) return
+			}
+		
+		//add as a cached component
+		ic.components = new ComponentInfo[](ic.components, nci)
+
+		//add as an implementation option of each of its provided interfaces
+		for (int i = 0; i < nci.providedIntfs.arrayLength; i++)
+			{
+			InterfaceOptions iopt = ic.interfaces.findFirst(InterfaceOptions.[intf], new InterfaceOptions(nci.providedIntfs[i].id))
+
+			if (iopt == null)
+				{
+				iopt = new InterfaceOptions(nci.providedIntfs[i].id)
+				ic.interfaces = new InterfaceOptions[](ic.interfaces, iopt)
+				}
+			
+			iopt.options = new CompOption[](iopt.options, new CompOption(start))
+			}
+
+		//scan for implementation options of each required interface (IF that interface is not already in the cache), and recurse on those
+		for (int i = 0; i < nci.requiredIntfs.arrayLength; i++)
+			{
+			if (!nci.requiredIntfs[i].isNative && ic.interfaces.findFirst(InterfaceOptions.[intf], new InterfaceOptions(nci.requiredIntfs[i].id)) == null)
+				{
+				String options[] = csearch.getComponentsIn(nci.requiredIntfs[i].id, searchPaths)
+
+				for (int j = 0; j < options.arrayLength; j++)
+					{
+					scanComponentsR(options[j].string, ic, searchPaths, excludeList)
+					}
+				}
+			}
+		}
+	
+	bool compositionEqual(Composition a, Composition b)
+		{
+		if (a.options.arrayLength != b.options.arrayLength) return false
+
+		for (int i = 0; i < a.options.arrayLength; i++)
+			{
+			if (a.options[i].intf != b.options[i].intf || a.options[i].comp != b.options[i].comp) return false
+			}
+		
+		return true
+		}
+
+	bool isCompositionNew(Composition n, Composition set[])
+		{
+		//check if n is the same as anything in set
+		// - we should be able to only check against the last value in set
+
+		for (int i = set.arrayLength - 1; i != INT_MAX; i--)
+			{
+			if (compositionEqual(n, set[i])) return false
+			}
+		
+		return true
+		}
+	
+	Composition makeComposition(InfoCache ic, int options[])
+		{
+		//here we make a composition from "options", BUT we need to ignore any components that aren't actually needed (by using the cache of componentinfo required interface records)
+
+		//we start by assuming we need nothing, then tick each interface when we discover that we need it
+		int needCount = 0
+		bool needed[] = new bool[ic.interfaces.arrayLength]
+		bool needChange = true
+
+		while (needChange)
+			{
+			needChange = false
+
+			for (int i = 0; i < ic.interfaces.arrayLength; i++)
+				{
+				//check if any selected options use this interface
+
+				if (!needed[i])
+					{
+					if (ic.interfaces[i].intf == "App")
+						{
+						needed[i] = true
+						needCount ++
+						needChange = true
+						}
+						else
+						{
+						for (int j = 0; j < ic.interfaces.arrayLength; j++)
+							{
+							//is this interface actually needed itself? (if not, it may later become needed, in which case we re-scan again)
+							if (j != i && needed[j])
+								{
+								//look up this component
+								ComponentInfo ci = ic.components.findFirst(ComponentInfo.[path], new ComponentInfo(ic.interfaces[j].options[options[j]].path))
+
+								//check if it has this interface (note that ci can be null here if the component is a proxy)
+								if (ci != null && ci.requiredIntfs.findFirst(Intf.[id], new Intf(ic.interfaces[i].intf)) != null)
+									{
+									//out.println("comp $(ci.path) requires $(ic.interfaces[i].intf)")
+									needed[i] = true
+									needCount ++
+									needChange = true
+									break
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		
+		//now create the composition out of the actual interfaces that we needed, and their selected options
+		Composition result = new Composition()
+		result.options = new InterfaceActual[needCount]
+
+		int indexA
+		for (int i = 0; i < ic.interfaces.arrayLength; i++)
+			{
+			if (needed[i])
+				{
+				InterfaceActual iactual = new InterfaceActual(ic.interfaces[i].intf, ic.interfaces[i].options[options[i]].path, ic.interfaces[i].options[options[i]].proxyTag, ic.interfaces[i].options[options[i]].proxyParams)
+				result.options[indexA] = iactual
+
+				//add required interfaces (if it's not a proxy)
+				if (iactual.proxyTag == null)
+					{
+					ComponentInfo ci = ic.components.findFirst(ComponentInfo.[path], new ComponentInfo(iactual.comp))
+					iactual.req = new ReqIntf[ci.requiredIntfs.arrayLength]
+					for (int j = 0; j < ci.requiredIntfs.arrayLength; j++)
+						{
+						iactual.req[j] = new ReqIntf(ci.requiredIntfs[j].id, ci.requiredIntfs[j].isNative)
+						}
+					}
+
+				indexA ++
+				}
+			}
+
+		return result
+		}
+	
+	char[] intArrayToString(int a[])
+		{
+		char result[]
+
+		for (int i = 0; i < a.arrayLength; i++)
+			{
+			if (result == null)
+				result = "$(a[i])"
+				else
+				result = "$result, $(a[i])"
+			}
+
+		return result
+		}
+	
+	char[] getFlatComposition(Composition c)
+		{
+		char result[]
+
+		for (int i = 0; i < c.options.arrayLength; i++)
+			{
+			char comp[] = c.options[i].comp
+
+			if (c.options[i].proxyTag != null) comp = "$comp{$(c.options[i].proxyTag)/$(c.options[i].proxyParams)}"
+
+			if (result == null)
+				result = "$(c.options[i].intf):$comp"
+				else
+				result = "$result, $(c.options[i].intf):$comp"
+			}
+
+		return result
+		}
+	
+	Composition[] generateCompositions(InfoCache ic, int options[], int optionsMax[], opt bool optionsLock[])
+		{
+		Composition result[]
+
+		bool continue = true
+		while (continue)
+			{
+			//derive the current permutation
+			Composition newc = makeComposition(ic, options)
+
+			if (isCompositionNew(newc, result))
+				{
+				//out.println("adding composition option $(intArrayToString(options))")
+				//out.println(" - $(getFlatComposition(newc))")
+				result = new Composition[](result, newc)
+				}
+				else
+				{
+				//out.println("skipping repeated option $(intArrayToString(options))")
+				}
+
+			//get the next one (if any)
+			options = permute.getNext(options, optionsMax, optionsLock)
+
+			continue = (options != null)
+			}
+
+		return result
+		}
+	
+	Composition[] OptionBuilder:getCompositions()
+		{
+		//record of which permutation we're currently trying
+		int options[] = new int[icache.interfaces.arrayLength]
+		int optionsMax[] = new int[icache.interfaces.arrayLength]
+
+		for (int i = 0; i < optionsMax.arrayLength; i++)
+			{
+			optionsMax[i] = icache.interfaces[i].options.arrayLength - 1
+			}
+		
+		return generateCompositions(icache, options, optionsMax)
+		}
+
+	Composition[] OptionBuilder:addComponent(char path[])
+		{
+		// - here we add the single component to the list of options for the given interface, and we scan that component's required interfaces to check if there are any different required interfaces (but NOT new implementations of known required interfaces) to add them to the list
+		// - we then generate new permutations by forcing the choice at that required interface to always be the new component's index, but allowing every other interface's choices to operate like clock hands as usual, starting from all 0's
+
+		InfoCache ic = icache
+
+		scanComponentsR(path, ic, ic.searchPaths, ic.excludeList)
+
+		int options[] = new int[ic.interfaces.arrayLength]
+		int optionsMax[] = new int[ic.interfaces.arrayLength]
+		bool optionsLock[] = new bool[ic.interfaces.arrayLength]
+
+		for (int i = 0; i < optionsMax.arrayLength; i++)
+			{
+			optionsMax[i] = ic.interfaces[i].options.arrayLength - 1
+
+			if (ic.interfaces[i].options.findFirst(CompOption.[path], new CompOption(path)) != null)
+				{
+				optionsLock[i] = true
+				options[i] = optionsMax[i] //NOTE: potentially a bad assumption that this is the index of our newly-added thing?
+				}
+			}
+		
+		return generateCompositions(ic, options, optionsMax, optionsLock)
+		}
+	
+	Data[] removeArrayCell(Data array[], Data cell)
+		{
+		Data result[] = new Data[array.arrayLength-1] from typeof(array)
+
+		int j = 0
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			if (array[i] !== cell)
+				{
+				result[j] = array[i]
+				j ++
+				}
+			}
+
+		return result
+		}
+	
+	//this will return two lists: one of compositions that have now disappeared, and one of new compositions
+	// - there may also be nothing returned at all, if the compositions haven't changed as a result of the update...
+	CompositionUpdate OptionBuilder:updComponent(Composition compositions[], char path[])
+		{
+		// - we can start by re-scanning that component's required interfaces to check if there are any different ones (but NOT new implementations of known required interfaces) to add them to the list
+		// - then re-generate new permutations by forcing the choice at that required interface to always be the updated component's index, but allowing every other interface's choices to operate like clock hands as usual, starting from all 0's (but note we only need to do this re-generation if we actually added any new required interfaces in step 1)
+		// - then we need to replace existing composition options with new ones, ideally in-place, but also be able to expand with any new ones, and also be able to contract our list if there are now fewer; we need to potentially adapt from and to the old/new version of this component if we're currently in a composition that's using it
+
+		//more simply:
+		// - we start by re-scanning the component's required interfaces; if it has the same ones as its prior version, we just report there are no changes
+		// - if it has different ones, we first remove the existing component and report which compositions are gone
+		// - we then re-add the component and get the set of new compositions, returning those as well
+
+		ComponentInfo nci = readInterfaces(path)
+
+		ComponentInfo oci = icache.components.findFirst(ComponentInfo.[path], new ComponentInfo(path = path))
+
+		if (oci == null)
+			{
+			throw new Exception("component not found in component cache")
+			}
+		
+		bool structureChange = false
+
+		if (oci.requiredIntfs.arrayLength != nci.requiredIntfs.arrayLength)
+			{
+			structureChange = true
+			}
+			else
+			{
+			for (int i = 0; i < oci.requiredIntfs.arrayLength; i++)
+				{
+				if (oci.requiredIntfs[i].id != nci.requiredIntfs[i].id)
+					{
+					structureChange = true
+					break
+					}
+				}
+			}
+		
+		if (!structureChange)
+			{
+			return new CompositionUpdate(true)
+			}
+			else
+			{
+			CompositionUpdate ncu = new CompositionUpdate(true)
+			
+			//remove the component, but in this case we're allowed to remove it if it's the last-option on the list
+			InfoCache ic = icache
+
+			for (int i = 0; i < oci.providedIntfs.arrayLength; i++)
+				{
+				InterfaceOptions iopt = ic.interfaces.findFirst(InterfaceOptions.[intf], new InterfaceOptions(oci.providedIntfs[i].id))
+
+				CompOption copt = null
+				for (int j = 0; j < iopt.options.arrayLength; j++)
+					{
+					if (iopt.options[j].path == path)
+						{
+						copt = iopt.options[j]
+						break
+						}
+					}
+				
+				iopt.options = removeArrayCell(iopt.options, copt)
+				}
+			
+			//now remove the component info
+			ic.components = removeArrayCell(ic.components, oci)
+
+			//and get the list of compositions we need to remove
+			Composition result[] = null
+
+			for (int i = 0; i < compositions.arrayLength; i++)
+				{
+				for (int j = 0; j < compositions[i].options.arrayLength; j++)
+					{
+					InterfaceActual iact = compositions[i].options[j]
+
+					if (iact.comp == path)
+						{
+						result = new Composition[](result, compositions[i])
+						break
+						}
+					}
+				}
+			
+			ncu.remOptions = result
+
+			//add the "new" component, with the usual procedure
+			ncu.addOptions = addComponent(path)
+
+			//...and do cleanup of our cache, in case some interfaces are no longer needed
+			cacheCleanup(icache)
+
+			return ncu
+			}
+		}
+	
+	void cacheCleanup(InfoCache ic)
+		{
+		bool changes = true
+		while (changes)
+			{
+			changes = false
+
+			for (int i = 0; i < ic.interfaces.arrayLength; i++)
+				{
+				if (ic.interfaces[i].intf != "App")
+					{
+					bool referenced = false
+
+					for (int j = 0; j < ic.components.arrayLength; j++)
+						{
+						if (ic.components[j].requiredIntfs.findFirst(Intf.[id], new Intf(ic.interfaces[i].intf)) != null)
+							{
+							referenced = true
+							break
+							}
+						}
+					
+					if (!referenced)
+						{
+						//out.println("cache-clean: intf $(ic.interfaces[i].intf) is no longer referenced")
+
+						//remove it, and all of its components (its components that aren't ref'd by any other provided interface options)
+						for (int j = 0; j < ic.interfaces[i].options.arrayLength; j++)
+							{
+							bool comRefEx = false
+
+							//check if any other interfaces consider this component to be an option (we won't remove it from the global components list if so)
+							for (int k = 0; k < ic.interfaces.arrayLength; k++)
+								{
+								if (k != j)
+									{
+									if (ic.interfaces[k].options.findFirst(CompOption.[path], new CompOption(ic.interfaces[i].options[j].path)) != null)
+										{
+										comRefEx = true
+										break
+										}
+									}
+								}
+
+							if (!comRefEx)
+								{
+								ComponentInfo cinfo = ic.components.findFirst(ComponentInfo.[path], new ComponentInfo(ic.interfaces[i].options[j].path))
+								ic.components = removeArrayCell(ic.components, cinfo)
+								}
+							}
+						
+						ic.interfaces = removeArrayCell(ic.interfaces, ic.interfaces[i])
+
+						changes = true
+						break
+						}
+					}
+				}
+			}
+		}
+	
+	Composition[] OptionBuilder:remComponent(Composition compositions[], char path[])
+		{
+		// - this is just remove all compositions featuring the given component, and potentially adapt away from the current choice
+		//  - it also removes the given component from the componentinfo cache
+		// - we'd also need to check the InfoCache to remove any required interfaces that are no longer needed
+		//  - so basically we scan through what's left in the componentinfo cache, and make sure every interface is referred to by something; if not remove that interface and all associated componentinfos, then if we did such a removal we repeat again to re-check
+
+		InfoCache ic = icache
+
+		ComponentInfo cinfo = ic.components.findFirst(ComponentInfo.[path], new ComponentInfo(path))
+
+		if (cinfo == null) throw new Exception("component $path is not known")
+
+		for (int i = 0; i < cinfo.providedIntfs.arrayLength; i++)
+			{
+			InterfaceOptions iopt = ic.interfaces.findFirst(InterfaceOptions.[intf], new InterfaceOptions(cinfo.providedIntfs[i].id))
+			if (iopt.options.arrayLength == 1) throw new Exception("cannot remove only remaining option for an interface")
+			}
+
+		for (int i = 0; i < cinfo.providedIntfs.arrayLength; i++)
+			{
+			InterfaceOptions iopt = ic.interfaces.findFirst(InterfaceOptions.[intf], new InterfaceOptions(cinfo.providedIntfs[i].id))
+
+			CompOption copt = null
+			for (int j = 0; j < iopt.options.arrayLength; j++)
+				{
+				if (iopt.options[j].path == path)
+					{
+					copt = iopt.options[j]
+					break
+					}
+				}
+			
+			iopt.options = removeArrayCell(iopt.options, copt)
+			}
+		
+		//now remove the component info
+		ic.components = removeArrayCell(ic.components, cinfo)
+
+		//now we need to clean up side effects: check the infocache for any interfaces that are no longer referenced by anything's required interface list
+		cacheCleanup(ic)
+		
+		//and return the list of compositions we need to remove
+		Composition result[] = null
+
+		for (int i = 0; i < compositions.arrayLength; i++)
+			{
+			for (int j = 0; j < compositions[i].options.arrayLength; j++)
+				{
+				InterfaceActual iact = compositions[i].options[j]
+
+				if (iact.comp == path)
+					{
+					result = new Composition[](result, compositions[i])
+					break
+					}
+				}
+			}
+
+		return result
+		}
+
+	//function to inject a custom proxy; this means that we'll generate a set of additional permutations on the assumption that proxyComponent is a valid implementation of forInterface
+	// - and we will NOT perform wiring of the proxy or any of its sub-components
+	// - the "tag" and "parameters" fields here are entirely for the API user, and will be passed back to their custom load function
+	// - when you call setConfig(), you can provide a set of custom loaders associated with tags and we'll call your loader to load and unload this proxy
+	Composition[] OptionBuilder:addProxy(char forInterface[], char proxyComponent[], char tag[], char parameters[])
+		{
+		//this works broadly the same as addComponent(), but we don't add the proxy as an actual component to our cache, and don't follow its interfaces
+		//...so instead we're going to add the component as an option to forInterface, but note that the component is a proxy and has delegated loading, storing the "tag" and "parameters" things with it to pass to the delegated loader
+		// - if someone calls setConfig() and there isn't a given delegated loader for this tag, then setConfig() will refuse to adapt to that config
+		InfoCache ic = icache
+
+		InterfaceOptions iopt = ic.interfaces.findFirst(InterfaceOptions.[intf], new InterfaceOptions(forInterface))
+
+		if (iopt == null) throw new Exception("interface $forInterface is not known")
+
+		iopt.options = new CompOption[](iopt.options, new CompOption(proxyComponent, tag, parameters))
+
+		int options[] = new int[ic.interfaces.arrayLength]
+		int optionsMax[] = new int[ic.interfaces.arrayLength]
+		bool optionsLock[] = new bool[ic.interfaces.arrayLength]
+
+		for (int i = 0; i < optionsMax.arrayLength; i++)
+			{
+			optionsMax[i] = ic.interfaces[i].options.arrayLength - 1
+
+			if (ic.interfaces[i].options.findFirst(CompOption.[path], new CompOption(proxyComponent)) != null)
+				{
+				optionsLock[i] = true
+				options[i] = optionsMax[i] //NOTE: potentially a bad assumption that this is the index of our newly-added thing?
+				}
+			}
+		
+		return generateCompositions(ic, options, optionsMax, optionsLock)
+		}
+	
+	Composition[] OptionBuilder:remProxy(Composition compositions[], char forInterface[], char proxyComponent[], char tag[], char parameters[])
+		{
+		InfoCache ic = icache
+
+		//update our infocache to remove this option
+		InterfaceOptions iopt = ic.interfaces.findFirst(InterfaceOptions.[intf], new InterfaceOptions(forInterface))
+
+		if (iopt == null) throw new Exception("interface $forInterface is not known")
+
+		CompOption copt = null
+		for (int i = 0; i < iopt.options.arrayLength; i++)
+			{
+			if (iopt.options[i].path == proxyComponent && iopt.options[i].proxyTag == tag && iopt.options[i].proxyParams == parameters)
+				{
+				copt = iopt.options[i]
+				break
+				}
+			}
+		
+		if (copt == null) throw new Exception("proxy $forInterface:$proxyComponent is not known")
+
+		if (iopt.options.arrayLength == 1) throw new Exception("cannot remove only remaining option for an interface")
+
+		iopt.options = removeArrayCell(iopt.options, copt)
+
+		//return the list of compositions we need to remove
+		Composition result[] = null
+
+		for (int i = 0; i < compositions.arrayLength; i++)
+			{
+			for (int j = 0; j < compositions[i].options.arrayLength; j++)
+				{
+				InterfaceActual iact = compositions[i].options[j]
+
+				if (iact.intf == forInterface && iact.comp == proxyComponent && iact.proxyTag == tag && iact.proxyParams == parameters)
+					{
+					result = new Composition[](result, compositions[i])
+					break
+					}
+				}
+			}
+
+		return result
+		}
+	}

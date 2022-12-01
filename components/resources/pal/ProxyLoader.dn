@@ -1,0 +1,7 @@
+interface ProxyLoader {
+	
+	IDC loadProxy(char proxyComponent[], char tag[], char parameters[])
+
+	void unloadProxy(IDC com, char proxyComponent[], char tag[], char parameters[])
+
+	}

@@ -310,8 +310,10 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				if (contentType == "text")
 					{
 					char comp[] = socket.recv(iu.intFromString(payloadSize))
+
+					String newConfigs[] = assembly.addComponent(comp)
 					
-					if (assembly.addComponent(comp))
+					if (newConfigs != null)
 						{
 						//respond with HTTP OK
 						sendOK(socket, "text/html", null)
@@ -337,8 +339,10 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				if (contentType == "text")
 					{
 					char comp[] = socket.recv(iu.intFromString(payloadSize))
+
+					String remConfigs[] = assembly.remComponent(comp)
 					
-					if (assembly.remComponent(comp))
+					if (remConfigs != null)
 						{
 						//respond with HTTP OK
 						sendOK(socket, "text/html", null)
@@ -364,15 +368,16 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				if (contentType == "text")
 					{
 					char comp[] = socket.recv(iu.intFromString(payloadSize))
+
+					UpdateInfo uinfo = assembly.updComponent(comp)
 					
-					char res[] = null
-					if ((res = assembly.updComponent(comp)) != null)
+					if (uinfo != null)
 						{
 						//respond with HTTP OK
-						sendOK(socket, "text", res)
+						sendOK(socket, "text", uinfo.currentConfig)
 						
 						configs = assembly.getConfigs()
-						currentConfig = configs[0].string
+						currentConfig = uinfo.currentConfig
 						}
 						else
 						{
@@ -382,51 +387,6 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 					else
 					{
 					sendError(socket, "text", "Content type must be text")
-					}
-				}
-				else if (rsc == "/meta/upd_arch")
-				{
-				char contentType[] = getHeaderValue(headers, "content-type")
-				char payloadSize[] = getHeaderValue(headers, "content-length")
-				
-				if (contentType == "text/json")
-					{
-					char intfs[] = socket.recv(iu.intFromString(payloadSize))
-					
-					//parse the JSON array
-					JSONElement doc = parser.parseDocument(intfs)
-					
-					if (doc.type == JSONElement.TYPE_ARRAY)
-						{
-						String ifGroup[] = new String[doc.children.arrayLength]
-						
-						for (int i = 0; i < doc.children.arrayLength; i++)
-							{
-							ifGroup[i] = new String(doc.children[i].value)
-							}
-						
-						char res[] = null
-						if ((res = assembly.updArch(ifGroup)) != null)
-							{
-							//respond with HTTP OK
-							sendOK(socket, "text", res)
-							
-							configs = assembly.getConfigs()
-							currentConfig = configs[0].string
-							}
-							else
-							{
-							sendError(socket, "text", "Update of architecture failed (check all components exist in the system's default search paths)")
-							}
-						}
-						else
-						{
-						sendError(socket, "text", "Content type must be an array of strings")
-						}
-					}
-					else
-					{
-					sendError(socket, "text", "Content type must be text/json")
 					}
 				}
 				else if (rsc == "/meta/add_intercept")
