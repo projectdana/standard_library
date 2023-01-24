@@ -38,12 +38,12 @@ interface Perception {
 	/*
 	{ "@description" : "Records a metric with a given name. Metrics are used to understand the current performance of a component." }
 	*/
-	void addMetric(char name[], int value, bool preferHigh)
+	void addMetric(char name[], int value, bool preferHigh, opt bool overwrite)
 	
 	/*
 	{ "@description" : "Records an event with a given name. Events are used to understand the deployment environment of a component." }
 	*/
-	void addEvent(char name[], int value)
+	void addEvent(char name[], int value, opt bool overwrite)
 	
 	/*
 	{ "@description" : "Records trace data that is used for additional system diagnostics, for example from an injected proxy capturing data travelling across a specific interface." }

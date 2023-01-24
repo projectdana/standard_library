@@ -7,7 +7,7 @@ data PrimaryType{
 const char OUTPUT_DIR[] = "_docs"
 const bool SHOW_WARNINGS = true
 
-component provides App requires parsing.TypeParser, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, os.SystemInfo systemInfo, composition.Search csearch, util.ObjectFile, data.query.Search dsearch {
+component provides App requires parsing.TypeParser, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, System system, composition.Search csearch, util.ObjectFile, data.query.Search dsearch {
 	
 	char[] getHTMLFileFor(char sourceFile[], char type[])
 		{
@@ -848,7 +848,7 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 				
 				PrimaryType duplicateNames[] = dsearch.findDuplicates(types, PrimaryType.[type])
 				
-				char dana_home[] = systemInfo.getVariable("DANA_HOME")
+				char dana_home[] = system.getDanaHome()
 				
 				File ref = new File("$dana_home/components/resources-ext/doc/index_a.html", File.READ)
 				fd.write(ref.read(ref.getSize()))

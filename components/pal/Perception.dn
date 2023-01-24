@@ -3,7 +3,7 @@ component provides pal.Perception requires time.Calendar calendar {
 	static PerceptionData perception
 	static Mutex plock = new Mutex()
 	
-	void Perception:addMetric(char name[], int value, bool preferHigh)
+	void Perception:addMetric(char name[], int value, bool preferHigh, opt bool overwrite)
 		{
 		mutex(plock)
 			{
@@ -14,9 +14,19 @@ component provides pal.Perception requires time.Calendar calendar {
 				{
 				if (perception.metrics[i].name == name)
 					{
-					perception.metrics[i].totalValue += value
-					perception.metrics[i].totalCount ++
+					if (overwrite)
+						{
+						perception.metrics[i].totalValue = value
+						perception.metrics[i].totalCount = 1
+						}
+						else
+						{
+						perception.metrics[i].totalValue += value
+						perception.metrics[i].totalCount ++
+						}
+					
 					perception.metrics[i].timeLast = calendar.getTime()
+					
 					return
 					}
 				}
@@ -27,7 +37,7 @@ component provides pal.Perception requires time.Calendar calendar {
 			}
 		}
 	
-	void Perception:addEvent(char name[], int value)
+	void Perception:addEvent(char name[], int value, opt bool overwrite)
 		{
 		mutex(plock)
 			{
@@ -38,8 +48,16 @@ component provides pal.Perception requires time.Calendar calendar {
 				{
 				if (perception.events[i].name == name)
 					{
-					perception.events[i].totalValue += value
-					perception.events[i].totalCount ++
+					if (overwrite)
+						{
+						perception.events[i].totalValue = value
+						perception.events[i].totalCount = 1
+						}
+						else
+						{
+						perception.events[i].totalValue += value
+						perception.events[i].totalCount ++
+						}
 					perception.events[i].timeLast = calendar.getTime()
 					return
 					}

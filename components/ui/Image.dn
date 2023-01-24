@@ -1,4 +1,4 @@
-component provides Image {
+component provides Image requires io.Output out, data.IntUtil iu {
 	
 	PixelMap pixels
 	dec imageAspectRatio
@@ -51,6 +51,9 @@ component provides Image {
 	
 	void Image:setFrameFit(int mode)
 		{
+		renderOffsetX = 0
+		renderOffsetY = 0
+
 		if (mode == Image.FIT_SCALE)
 			{
 			// - find out which edge (if any) is the bigger of the two (horizontal or vertical) on the picture and the frame

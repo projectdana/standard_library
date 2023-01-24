@@ -15,7 +15,7 @@ data IncludeList{
 	String list[]
 	}
 
-component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File, data.json.JSONParser parser, data.StringUtil stringUtil, data.Tokeniser, data.IntUtil iu, os.SystemInfo sysInfo {
+component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File, data.json.JSONParser parser, data.StringUtil stringUtil, data.Tokeniser, data.IntUtil iu, System system {
 	
 	SourceFile primaryFiles[]
 	SourceFile supportFiles[]
@@ -1126,7 +1126,7 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 
 		// - check centrally
 		
-		test = new char[](sysInfo.getVariable("DANA_HOME"), "/components/resources/", epath)
+		test = new char[](system.getDanaHome(), "/components/resources/", epath)
 		
 		if (fs.exists(test))
 			return test

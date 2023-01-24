@@ -26,7 +26,7 @@ data ChangeLog {
 	String natlib[]
 	}
 
-component provides App requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, System sys, net.http.HTTPRequest req, data.json.JSONEncoder encoder, os.SystemInfo osi, io.FileSystem fileSystem, io.File, time.Calendar cal {
+component provides App requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, System sys, net.http.HTTPRequest req, data.json.JSONEncoder encoder, io.FileSystem fileSystem, io.File, time.Calendar cal {
 	
 	bool sourceBreak
 	bool objectBreak
@@ -152,7 +152,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 		DateTime today = cal.getTime()
 		UpdateStatus ustatus = new UpdateStatus("$(today.year)/$(today.month)/$(today.day)", "$(today.year)/$(today.month)/$(today.day)")
 		
-		char home[] = osi.getVariable("DANA_HOME")
+		char home[] = sys.getDanaHome()
 		if (!fileSystem.exists("$home/components/resources-ext/update/"))
 			fileSystem.createDirectory("$home/components/resources-ext/update/")
 		

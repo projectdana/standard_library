@@ -129,7 +129,7 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 		result = new String[](result, system.getSearchPaths())
 		
 		//stdlib
-		result = new String[](result, new String(new char[](systemInfo.getVariable("DANA_HOME"), "/components/")))
+		result = new String[](result, new String(new char[](system.getDanaHome(), "/components/")))
 		
 		//pre-process strings into a common format
 		for (int i = 0; i < result.arrayLength; i++)
@@ -263,7 +263,9 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 		while (cw != null)
 			{
 			if (cw.path == comp && cw.proxy == proxy && cw.proxyTag == proxyTag && cw.proxyParams == proxyParams)
+				{
 				return cw
+				}
 			
 			cw = cw.next
 			}
@@ -294,8 +296,6 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 	
 	Component loadComponent(Composition forc, char comp[], ProxyLoaderInfo ploaders[])
 		{
-		//out.println(" -- loading '$comp'")
-
 		//check if it's a proxy
 		bool proxy = false
 		char proxyTag[] = null
@@ -495,8 +495,11 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 						}
 					}
 				}
+				else
+				{
+				prev = cw
+				}
 			
-			prev = cw
 			cw = cw.next
 			}
 		}
@@ -525,11 +528,11 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			//if (verbose) out.println(" [setting config to '$config']")
 			
 			// - walk through all wirings of the new configuration and apply them (using forwardWire to satisfy forward dependencies first)
-			String els[] = stringUtil.explode(config, "|")
+			String els[] = stringUtil.rsplit(config, "|")
 			String comps[] = stringUtil.explode(els[0].string, ",")
 			String wirings[] = null
 			if (els.arrayLength == 2)
-				wirings = clone stringUtil.explode(stringUtil.explode(config, "|")[1].string, ",")
+				wirings = clone stringUtil.explode(els[1].string, ",")
 			
 			//mark all loaded components as not-used
 			Component cw = components
@@ -602,11 +605,11 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			//if (verbose) out.println(" [setting config to '$config']")
 			
 			// - walk through all wirings of the new configuration and apply them (using forwardWire to satisfy forward dependencies first)
-			String els[] = stringUtil.explode(newConfig, "|")
+			String els[] = stringUtil.rsplit(newConfig, "|")
 			String comps[] = stringUtil.explode(els[0].string, ",")
 			String wirings[] = null
 			if (els.arrayLength == 2)
-				wirings = clone stringUtil.explode(stringUtil.explode(newConfig, "|")[1].string, ",")
+				wirings = clone stringUtil.explode(els[1].string, ",")
 			
 			//mark all loaded components as not-used
 			Component cw = components
@@ -809,7 +812,7 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 		//int wiringDelta = 0
 		int bestMatchIndex = 0
 
-		String compsA[] = matchWith.explode("|")[0].string.explode(",")
+		String compsA[] = matchWith.rsplit("|")[0].string.explode(",")
 
 		ConfigOption fromList[] = configs
 
@@ -817,7 +820,7 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			{
 			//count how many components don't match (how many wirings don't match??)
 			
-			String compsB[] = fromList[i].cflat.explode("|")[0].string.explode(",")
+			String compsB[] = fromList[i].cflat.rsplit("|")[0].string.explode(",")
 
 			int thisComDelta = 0
 

@@ -188,7 +188,8 @@ component provides HTTPRequest requires io.Output out, net.TCPSocket, net.TLS, n
 			result.hostName = url
 			}
 		
-		if ((ndx = stringUtil.find(result.hostName, ":")) != StringUtil.NOT_FOUND)
+		//check for a port number, but make sure we're not matching against "::" in IPv6 addresses
+		if ((ndx = stringUtil.rfind(result.hostName, ":")) != StringUtil.NOT_FOUND && (ndx != 0 && result.hostName[ndx-1] != ":"))
 			{
 			char tmp[] = result.hostName
 			result.hostName = stringUtil.subString(tmp, 0, ndx)
