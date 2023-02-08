@@ -232,8 +232,8 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 		int totalLegendHeight = ((textHeight + 5) * (series.arrayLength-1)) + textHeight
 		int totalLegendWidth = (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
 		
-		c.drawRect(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), bgColor))
-		c.drawRectOutline(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), axisColor))
+		c.rect(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), bgColor))
+		c.rectOutline(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), axisColor))
 		
 		yPos += (axisFont.getFontMetrics().descent)
 		
@@ -241,10 +241,10 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 			{
 			drawMarker(c, series[i].markerStyle, series[i].color, new int[](xStart + (LEGEND_SQ_SIZE/2), yPos + (LEGEND_SQ_SIZE/2)))
 			
-			c.drawLine(new Line2D(xStart, yPos + (LEGEND_SQ_SIZE/2), xStart + LEGEND_SQ_SIZE, yPos + (LEGEND_SQ_SIZE/2), series[i].color))
+			c.line(new Line2D(xStart, yPos + (LEGEND_SQ_SIZE/2), xStart + LEGEND_SQ_SIZE, yPos + (LEGEND_SQ_SIZE/2), series[i].color))
 			
 			int yOffset = (yPos + (LEGEND_SQ_SIZE / 2)) - (textHeight / 2)
-			c.drawText(new Point2D(xStart + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE, yOffset, axisColor), axisFont, series[i].displayName)
+			c.text(new Point2D(xStart + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE, yOffset, axisColor), axisFont, series[i].displayName)
 			
 			yPos += textHeight + 5
 			}
@@ -256,21 +256,21 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 		{
 		if (type == SeriesMulti.M_SQUARE)
 			{
-			c.drawRect(new Rect2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, MARKER_SIZE, MARKER_SIZE, color))
+			c.rect(new Rect2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, MARKER_SIZE, MARKER_SIZE, color))
 			}
 			else if (type == SeriesMulti.M_SQUARE_OUTLINE)
 			{
-			c.drawRectOutline(new Rect2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, MARKER_SIZE, MARKER_SIZE, color))
+			c.rectOutline(new Rect2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, MARKER_SIZE, MARKER_SIZE, color))
 			}
 			else if (type == SeriesMulti.M_PLUS)
 			{
-			c.drawLine(new Line2D(centreXY[0], centreXY[1] - MARKER_SIZE/2, centreXY[0], centreXY[1] + MARKER_SIZE/2, color))
-			c.drawLine(new Line2D(centreXY[0] - MARKER_SIZE/2, centreXY[1], centreXY[0] + MARKER_SIZE/2, centreXY[1], color))
+			c.line(new Line2D(centreXY[0], centreXY[1] - MARKER_SIZE/2, centreXY[0], centreXY[1] + MARKER_SIZE/2, color))
+			c.line(new Line2D(centreXY[0] - MARKER_SIZE/2, centreXY[1], centreXY[0] + MARKER_SIZE/2, centreXY[1], color))
 			}
 			else if (type == SeriesMulti.M_CROSS)
 			{
-			c.drawLine(new Line2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, centreXY[0] + MARKER_SIZE/2, centreXY[1] + MARKER_SIZE/2, color))
-			c.drawLine(new Line2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] + MARKER_SIZE/2, centreXY[0] + MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, color))
+			c.line(new Line2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, centreXY[0] + MARKER_SIZE/2, centreXY[1] + MARKER_SIZE/2, color))
+			c.line(new Line2D(centreXY[0] - MARKER_SIZE/2, centreXY[1] + MARKER_SIZE/2, centreXY[0] + MARKER_SIZE/2, centreXY[1] - MARKER_SIZE/2, color))
 			}
 		}
 	
@@ -286,7 +286,7 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 		preparePlotArea()
 		
 		//graph background
-		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		c.rect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
 		
 		//grid lines, if any
 		drawGrid(c)
@@ -314,7 +314,7 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 				
 				if (i > 0)
 					{
-					c.drawLine(new Line2D(lastX, lastY, xy[0], xy[1], seriesColor))
+					c.line(new Line2D(lastX, lastY, xy[0], xy[1], seriesColor))
 					}
 				
 				if (showStdDev)
@@ -326,10 +326,10 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 						int xyHigh[] = getPlotPoint(thisX, thisY+stdDev)
 						int xyLow[] = getPlotPoint(thisX, thisY-stdDev)
 						
-						c.drawLine(new Line2D(xyHigh[0], xyHigh[1], xyLow[0], xyLow[1], seriesColor))
+						c.line(new Line2D(xyHigh[0], xyHigh[1], xyLow[0], xyLow[1], seriesColor))
 						
-						c.drawLine(new Line2D(xyHigh[0]-MARKER_SIZE/2, xyHigh[1], xyHigh[0]+MARKER_SIZE/2, xyHigh[1], seriesColor))
-						c.drawLine(new Line2D(xyLow[0]-MARKER_SIZE/2, xyLow[1], xyLow[0]+MARKER_SIZE/2, xyLow[1], seriesColor))
+						c.line(new Line2D(xyHigh[0]-MARKER_SIZE/2, xyHigh[1], xyHigh[0]+MARKER_SIZE/2, xyHigh[1], seriesColor))
+						c.line(new Line2D(xyLow[0]-MARKER_SIZE/2, xyLow[1], xyLow[0]+MARKER_SIZE/2, xyLow[1], seriesColor))
 						}
 					}
 				

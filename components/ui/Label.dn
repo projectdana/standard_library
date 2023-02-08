@@ -53,7 +53,7 @@ component provides Label requires os.SystemInfo sysInfo, ui.Font {
 	
 	void Label:paint(Canvas c)
 		{
-		c.drawText(new Point2D(xPosition, yPosition, color), font, text)
+		c.text(new Point2D(xPosition, yPosition, color), font, text)
 		}
 	
 	WH Label:getPreferredSize()

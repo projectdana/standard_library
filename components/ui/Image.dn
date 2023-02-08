@@ -129,7 +129,7 @@ component provides Image requires io.Output out, data.IntUtil iu {
 	
 	void Image:paint(Canvas c)
 		{
-		c.drawPixelsEx(pixels, subRect, xPosition+renderOffsetX, yPosition+renderOffsetY, renderWidth, renderHeight, rotation)
+		c.pixels(pixels, xPosition+renderOffsetX, yPosition+renderOffsetY, renderWidth, renderHeight, rotation, subRect)
 		}
 	
 	void Image:postRepaint()

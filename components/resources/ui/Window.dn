@@ -1,5 +1,6 @@
 uses Rect
 uses media.PixelMap
+uses Cursor
 
 /*
  {"description" : "This API allows the programmer to create new graphical windows on the screen."}
@@ -39,6 +40,11 @@ interface Window extends Panel {
 	 {"@description" : "Set the icon used to represent the window, if the operating system supports this."}
 	*/
 	void setIcon(store PixelMap p)
+
+	/*
+	 {"@description" : "Set the mouse cursor globally for the window; this overrides any locally-requested cursor by GUI widgets until set back to default."}
+	*/
+	void setCursor(byte cursorType, opt Cursor c)
 	
 	/*
 	 {"@description" : "Get the current location of this window, relative to the top-left corner of the screen."}

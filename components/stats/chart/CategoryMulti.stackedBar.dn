@@ -255,17 +255,17 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 		int totalLegendHeight = ((textHeight + 5) * (series.arrayLength-1)) + textHeight
 		int totalLegendWidth = (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
 		
-		c.drawRect(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), bgColor))
-		c.drawRectOutline(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), axisColor))
+		c.rect(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), bgColor))
+		c.rectOutline(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), axisColor))
 		
 		yPos += (axisFont.getFontMetrics().descent)
 		
 		for (int i = series.arrayLength - 1; i != INT_MAX; i--)
 			{
-			c.drawRect(new Rect2D(xStart, yPos, LEGEND_SQ_SIZE, LEGEND_SQ_SIZE, series[i].seriesColor))
+			c.rect(new Rect2D(xStart, yPos, LEGEND_SQ_SIZE, LEGEND_SQ_SIZE, series[i].seriesColor))
 			
 			int yOffset = (yPos + (LEGEND_SQ_SIZE / 2)) - (textHeight / 2)
-			c.drawText(new Point2D(xStart + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE, yOffset, axisColor), axisFont, series[i].displayName)
+			c.text(new Point2D(xStart + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE, yOffset, axisColor), axisFont, series[i].displayName)
 			
 			yPos += textHeight + 5
 			}
@@ -285,7 +285,7 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 		preparePlotArea()
 		
 		//background
-		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		c.rect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
 		
 		//grid lines, if any
 		drawGrid(c)
@@ -332,7 +332,7 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 						int xyTop[] = getPlotPoint(thisX, topY)
 						int xyBot[] = getPlotPoint(thisX+1.0, barTop)
 						
-						c.drawRect(new Rect2D(xyTop[0] + barOffset + barPad, xyTop[1], barWidthPX, xyBot[1] - xyTop[1], series[j].seriesColor))
+						c.rect(new Rect2D(xyTop[0] + barOffset + barPad, xyTop[1], barWidthPX, xyBot[1] - xyTop[1], series[j].seriesColor))
 						
 						barTop = topY
 						}
@@ -343,7 +343,7 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 						int xyTop[] = getPlotPoint(thisX, barLow)
 						int xyBot[] = getPlotPoint(thisX+1.0, botY)
 						
-						c.drawRect(new Rect2D(xyTop[0] + barOffset + barPad, xyTop[1], barWidthPX, xyBot[1] - xyTop[1], series[j].seriesColor))
+						c.rect(new Rect2D(xyTop[0] + barOffset + barPad, xyTop[1], barWidthPX, xyBot[1] - xyTop[1], series[j].seriesColor))
 						
 						barLow = botY
 						}
@@ -353,7 +353,7 @@ component provides CategoryMulti:stackedBar requires ChartCore, stats.StatCore s
 			//category label
 			
 			int textWidth = axisFont.getTextWidth(categories[i].string)
-			c.drawText(new Point2D(centreX - (textWidth/2), xyZ[1] + MARKER_LENGTH, axisColor), axisFont, categories[i].string)
+			c.text(new Point2D(centreX - (textWidth/2), xyZ[1] + MARKER_LENGTH, axisColor), axisFont, categories[i].string)
 			
 			thisX += 1.0
 			}

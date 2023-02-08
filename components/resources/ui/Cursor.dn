@@ -1,0 +1,12 @@
+/*
+* Cursor type
+* This data type describes a custom cursor.
+*/
+
+uses media.PixelMap
+
+data Cursor{
+	PixelMap bitmap
+	int xHotSpot
+	int yHotSpot
+	}

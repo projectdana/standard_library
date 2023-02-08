@@ -254,23 +254,23 @@ component provides ScrollBar requires io.Output out, data.IntUtil iu {
 		{
 		//vertical scroll bar
 		// - up button (rect)
-		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition, SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonColor))
-		c.drawRectOutline(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition, SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonLineColor))
+		c.rect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition, SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonColor))
+		c.rectOutline(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition, SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonLineColor))
 		// - up button (arrow)
-		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 4, yPosition + SCR_BUTTON_HEIGHT - 8, SCR_BUTTON_WIDTH-8, 2, scrollButtonArrowColor))
-		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 6, yPosition + SCR_BUTTON_HEIGHT - 12, SCR_BUTTON_WIDTH-12, 2, scrollButtonArrowColor))
-		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 8, yPosition + SCR_BUTTON_HEIGHT - 16, SCR_BUTTON_WIDTH-16, 2, scrollButtonArrowColor))
+		c.rect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 4, yPosition + SCR_BUTTON_HEIGHT - 8, SCR_BUTTON_WIDTH-8, 2, scrollButtonArrowColor))
+		c.rect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 6, yPosition + SCR_BUTTON_HEIGHT - 12, SCR_BUTTON_WIDTH-12, 2, scrollButtonArrowColor))
+		c.rect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 8, yPosition + SCR_BUTTON_HEIGHT - 16, SCR_BUTTON_WIDTH-16, 2, scrollButtonArrowColor))
 		// - scroll slider pipe
-		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition + SCR_BUTTON_HEIGHT, SCR_BUTTON_WIDTH, height-(SCR_BUTTON_HEIGHT*2), scrollBarColor))
-		c.drawLine(new Line2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition + SCR_BUTTON_HEIGHT, xPosition + (width-SCR_BUTTON_WIDTH), yPosition + (height-SCR_BUTTON_HEIGHT), scrollButtonLineColor))
-		c.drawLine(new Line2D(xPosition + (width-1), yPosition + SCR_BUTTON_HEIGHT, xPosition + (width-1), yPosition + (height-SCR_BUTTON_HEIGHT), scrollButtonLineColor))
+		c.rect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition + SCR_BUTTON_HEIGHT, SCR_BUTTON_WIDTH, height-(SCR_BUTTON_HEIGHT*2), scrollBarColor))
+		c.line(new Line2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition + SCR_BUTTON_HEIGHT, xPosition + (width-SCR_BUTTON_WIDTH), yPosition + (height-SCR_BUTTON_HEIGHT), scrollButtonLineColor))
+		c.line(new Line2D(xPosition + (width-1), yPosition + SCR_BUTTON_HEIGHT, xPosition + (width-1), yPosition + (height-SCR_BUTTON_HEIGHT), scrollButtonLineColor))
 		// - down button (rect)
-		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition + (height-SCR_BUTTON_HEIGHT), SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonColor))
-		c.drawRectOutline(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition + (height-SCR_BUTTON_HEIGHT), SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonLineColor))
+		c.rect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition + (height-SCR_BUTTON_HEIGHT), SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonColor))
+		c.rectOutline(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition + (height-SCR_BUTTON_HEIGHT), SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, scrollButtonLineColor))
 		// - down button (arrow)
-		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 4, yPosition + (height-SCR_BUTTON_HEIGHT) + 6, SCR_BUTTON_WIDTH-8, 2, scrollButtonArrowColor))
-		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 6, yPosition + (height-SCR_BUTTON_HEIGHT) + 10, SCR_BUTTON_WIDTH-12, 2, scrollButtonArrowColor))
-		c.drawRect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 8, yPosition + (height-SCR_BUTTON_HEIGHT) + 14, SCR_BUTTON_WIDTH-16, 2, scrollButtonArrowColor))
+		c.rect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 4, yPosition + (height-SCR_BUTTON_HEIGHT) + 6, SCR_BUTTON_WIDTH-8, 2, scrollButtonArrowColor))
+		c.rect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 6, yPosition + (height-SCR_BUTTON_HEIGHT) + 10, SCR_BUTTON_WIDTH-12, 2, scrollButtonArrowColor))
+		c.rect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH) + 8, yPosition + (height-SCR_BUTTON_HEIGHT) + 14, SCR_BUTTON_WIDTH-16, 2, scrollButtonArrowColor))
 		
 		//slider - calculate position
 		// - we do this by calculating the position of its top edge, as a percentage of (scroll slider pipe height - slider height)
@@ -282,7 +282,7 @@ component provides ScrollBar requires io.Output out, data.IntUtil iu {
 			int availableHeight = (height - ((SCR_BUTTON_HEIGHT*2))) - sliderHeight
 			sliderY = ((percent * availableHeight) / 100) + SCR_BUTTON_HEIGHT
 
-			c.drawRect(new Rect2D(xPosition + 1, yPosition + sliderY, WIDTH-2, sliderHeight, scrollSliderColor))
+			c.rect(new Rect2D(xPosition + 1, yPosition + sliderY, WIDTH-2, sliderHeight, scrollSliderColor))
 			}
 		}
 	

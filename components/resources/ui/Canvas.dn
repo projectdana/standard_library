@@ -1,7 +1,11 @@
-uses Rect2D
-uses Line2D
-uses Color
 uses Point2D
+uses Line2D
+uses Curve2D
+uses Rect2D
+uses Ellipse2D
+uses Arc2D
+uses Polygon2D
+uses Color
 uses media.PixelMap
 uses media.WH
 uses Font
@@ -13,79 +17,77 @@ uses Point
 */
 
 interface Canvas {
+
+	/* { "@description" : "Draw a single-pixel point at the given location and with the given color." } */
+	void point(Point2D point)
+
+	/* { "@description" : "Draw a line between two points, the given description of size, position, and color." } */
+	void line(Line2D line, opt int lineWidth)
+
+	/* { "@description" : "Draw a line between two points, the given description of size, position, and color." } */
+	void curve(Curve2D line, int isteps, opt int lineWidth)
+	
+	/* { "@description" : "Draw a filled rectangle using the given description of size, position, and color." } */
+	void rect(Rect2D rect)
+	
+	/* { "@description" : "Draw an outline rectangle using the given description of size, position, and color." } */
+	void rectOutline(Rect2D rect, opt int lineWidth)
+
+	/* { "@description" : "Draw a filled rectangle with rounded corners using the given description of size, position, and color." } */
+	void roundedRect(Rect2D rect, int xRadius, int yRadius)
+	
+	/* { "@description" : "Draw an outline rectangle with rounded corners using the given description of size, position, and color." } */
+	void roundedRectOutline(Rect2D rect, int xRadius, int yRadius, opt int lineWidth)
+
+	/* { "@description" : "Draw a filled ellipse using the given description of position, radius, and color." } */
+	void ellipse(Ellipse2D ellipse)
+	
+	/* { "@description" : "Draw an outline ellipse using the given description of position, radius, and color." } */
+	void ellipseOutline(Ellipse2D ellipse, opt int lineWidth)
+
+	/* { "@description" : "Draw a filled arc using the given description of position, radius, and color." } */
+	void arc(Arc2D ellipse)
+
+	/* { "@description" : "Draw an outline arc using the given description of position, radius, and color." } */
+	void arcOutline(Arc2D ellipse, opt int lineWidth)
+
+	/* { "@description" : "Draw a filled pie using the given description of position, radius, and color." } */
+	void pie(Arc2D ellipse)
+
+	/* { "@description" : "Draw a filled polygon." } */
+	void polygon(Polygon2D p)
+	
+	/* { "@description" : "Draw an outline polygon." } */
+	void polygonOutline(Polygon2D p)
+
+	/* { "@description" : "Draw a filled polygon bounded by curves." } */
+	void polygonBezier(Polygon2D p, int isteps)
 	
 	/*
-	{ "@description" : "Draw a filled rectangle using the given description of size, position, and color. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
-			"rect" : "Description of the rectangle to draw."
-	}
-	*/
-	void drawRect(Rect2D rect)
-	
-	/*
-	{ "@description" : "Draw an outline rectangle using the given description of size, position, and color. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
-			"rect" : "Description of the rectangle to draw."
-	}
-	*/
-	void drawRectOutline(Rect2D rect)
-	
-	/*
-	{ "@description" : "Draw a line between two points, the given description of size, position, and color. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
-			"line" : "Description of the line to draw."
-	}
-	*/
-	void drawLine(Line2D line)
-	
-	/*
-	{ "@description" : "Draw a single-pixel point at the given location and with the given color. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
-			"point" : "Description of the point to draw."
-	}
-	*/
-	void drawPoint(Point2D point)
-	
-	/*
-	{ "@description" : "Draw a rectangle of pixels, at the given position, with the given rotation in degrees. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
+	{ "@description" : "Draw a rectangle of pixels, at the given position, with the given rotation in degrees.",
 			"map" : "The pixels to draw.",
-			"x" : "The X position at which to draw the top-left of the pixel map.",
-			"y" : "The Y position at which to draw the top-left of the pixel map.",
-			"rotation" : "The rotation to apply to the pixel map, in degrees."
-	}
-	*/
-	void drawPixels(PixelMap map, int x, int y, opt int rotation)
-	
-	/*
-	{ "@description" : "Draw a rectangle of pixels, at the given position, with the given rotation in degrees, and with the given scaling factor and clipping boundary. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
-			"map" : "The pixels to draw.",
-			"subRect" : "The clipping boundary.",
 			"x" : "The X position at which to draw the top-left of the pixel map.",
 			"y" : "The Y position at which to draw the top-left of the pixel map.",
 			"scaledWidth" : "The width in pixels at which to scale the image.",
 			"scaledHeight" : "The height in pixels at which to scale the image.",
-			"rotation" : "The rotation to apply to the pixel map, in degrees."
+			"rotation" : "The rotation to apply to the pixel map, in degrees.",
+			"clipFrame" : "The clipping boundary."
 	}
 	*/
-	void drawPixelsEx(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
+	void pixels(PixelMap map, int x, int y, opt int scaledWidth, int scaledHeight, int rotation, Rect clipFrame)
 	
 	/*
-	{ "@description" : "Draw a piece of text, at the given position, with the given font. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
-			"position" : "The x/y coordinate at which to draw the top left of the text.",
-			"f" : "The font with which to draw the text.",
-			"text" : "The text to draw."
-	}
-	*/
-	void drawText(Point2D position, Font f, char text[])
-	
-	/*
-	{ "@description" : "Draw a piece of text, at the given position, with the given font, and the given rotation. The 0,0 coordinate of the draw location will be relative to the surface at the top of the surface stack.",
+	{ "@description" : "Draw a piece of text, at the given position, with the given font.",
 			"position" : "The x/y coordinate at which to draw the top left of the text.",
 			"f" : "The font with which to draw the text.",
 			"text" : "The text to draw.",
 			"rotation" : "The rotation to apply to the text, in degrees."
 	}
 	*/
-	void drawTextEx(Point2D position, Font f, char text[], int rotation)
+	void text(Point2D position, Font f, char text[], opt int rotation)
 	
 	/*
-	{ "@description" : "Push a new surface to the surface stack, using the given rect instance to indicate the x/y position and width/height. Any new draw operations will take place inside this surface, and will be clipped at the surface's width/height.",
+	{ "@description" : "Push a new surface to the surface stack, using the given rect instance to indicate the x/y position and width/height. Any new draw operations will take place inside this surface, with the zero x/y coordinates of draw commands being relative to the top left corner of the surface, and will be clipped at the surface's width/height.",
 			"rect" : "The x/y coordinate and width/height of the surface.",
 			"xscr" : "The amount, in pixels, by which the surface is 'scrolled' on the X-axis.",
 			"yscr" : "The amount, in pixels, by which the surface is 'scrolled' on the Y-axis.",
@@ -94,10 +96,7 @@ interface Canvas {
 	*/
 	void pushSurface(Rect rect, int xscr, int yscr, byte alpha)
 	
-	/*
-	{ "@description" : "Pop the top-most surface from the surface stack."
-	}
-	*/
+	/* { "@description" : "Pop the top-most surface from the surface stack." } */
 	void popSurface()
 	
 	}

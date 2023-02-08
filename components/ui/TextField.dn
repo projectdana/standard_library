@@ -9,6 +9,8 @@ const int CURSOR_WIDTH = 1
 const byte CONTEXT_MENU = 0
 const byte CONTEXT_HINT = 1
 
+uses IOWindow
+
 component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, os.SystemInfo sysInfo, os.Clipboard clipboard, locale.KeyMapping keyMapping, encoding.StringUTF {
 	
 	bool passwordMask
@@ -451,6 +453,29 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			}
 		}
 	
+	void TextField:clickMulti(int x, int y, int button, int clicks)
+		{
+		focus = true
+		if (button == MouseButtons.BUTTON_LEFT && clicks == 2)
+			{
+			//TODO: check if this position is inside a word, with no special characters; if so, highlight that word  and place the cursor at its end
+			cursorPosition = findCursorPos(x + hScroll)
+			selectStartPos = cursorPosition
+
+			updateCursorPosition()
+
+			postRepaint()
+			}
+			else if (button == MouseButtons.BUTTON_LEFT && clicks == 3)
+			{
+			//select all
+			selectStartPos = 0
+			cursorPosition = currentText.length()
+
+			postRepaint()
+			}
+		}
+	
 	void processMenuClick(MenuItem item)
 		{
 		if (item === copyMenu)
@@ -571,7 +596,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		{
 		int xp = getX(pos)
 		
-		c.drawLine(new Line2D(xp, 0, xp, height, new Color(0, 0, 0, 255)))
+		c.line(new Line2D(xp, 0, xp, height, new Color(0, 0, 0, 255)))
 		}
 	
 	void drawSelectionBox(Canvas c)
@@ -595,7 +620,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			int selectStartX = getX(startPos)
 			int selectEndX = getX(endPos)
 			
-			c.drawRect(new Rect2D(selectStartX, 0, selectEndX - selectStartX, height, highlightColor))
+			c.rect(new Rect2D(selectStartX, 0, selectEndX - selectStartX, height, highlightColor))
 			}
 		}
 	
@@ -627,18 +652,18 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	
 	void TextField:paint(Canvas c)
 		{
-		c.drawRect(new Rect2D(xPosition, yPosition, width, height, bgColor))
+		c.rect(new Rect2D(xPosition, yPosition, width, height, bgColor))
 		
 		c.pushSurface(new Rect(xPosition + TEXT_BORDER_H, yPosition, width - (TEXT_BORDER_H*2), height), hScroll, 0, 255)
 		
-		c.drawRect(new Rect2D(hScroll, 0, width, height, bgColor))
+		c.rect(new Rect2D(hScroll, 0, width, height, bgColor))
 		
 		drawSelectionBox(c)
 		
 		if (passwordMask)
-			c.drawText(new Point2D(0, TEXT_BORDER_V, textColor), textFont, maskedText)
+			c.text(new Point2D(0, TEXT_BORDER_V, textColor), textFont, maskedText)
 			else
-			c.drawText(new Point2D(0, TEXT_BORDER_V, textColor), textFont, currentText.getRaw())
+			c.text(new Point2D(0, TEXT_BORDER_V, textColor), textFont, currentText.getRaw())
 		
 		if (focus)
 			{
@@ -647,7 +672,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		
 		c.popSurface()
 		
-		c.drawRectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
+		c.rectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
 		}
 	
 	void TextField:postRepaint()
@@ -669,6 +694,11 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	WH TextField:getPreferredSize()
 		{
 		return new WH(width, height)
+		}
+	
+	void TextField:mouseOver()
+		{
+		emitevent setCursor(new CursorSetEvent(IOWindow.CURSOR_IBEAM))
 		}
 	
 	void TextField:setFocus()

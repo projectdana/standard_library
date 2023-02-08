@@ -1,3 +1,5 @@
+uses IOWindow
+
 data GraphicsItem{
 	GraphicsObject object
 	GraphicsItem next
@@ -16,7 +18,7 @@ data XYListener{
 	XYListener prev
 	}
 
-component provides Panel requires io.Output out {
+component provides Panel requires io.Output out, data.IntUtil iu {
 
 	GraphicsItem objects
 	GraphicsItem lastObject
@@ -66,9 +68,20 @@ component provides Panel requires io.Output out {
 			emitevent contextMenuOff()
 			}
 		}
+	
+	eventsink CursorEvents(EventData ed)
+		{
+		if (ed.type == XYMouseObject.[setCursor])
+			{
+			CursorSetEvent cse = ed.details
+
+			emitevent setCursor(cse)
+			}
+		}
 
 	Panel:Panel()
 		{
+		repaintOn = true
 		}
 	
 	void Panel:setFocus()
@@ -105,18 +118,21 @@ component provides Panel requires io.Output out {
 
 	void Panel:paint(Canvas c)
 		{
-		//occlude contents at panel boundary
-		c.pushSurface(new Rect(xPosition, yPosition, width, height), 0, 0, 255)
-
-		//background
-		c.drawRect(new Rect2D(0, 0, width, height, backgroundColor))
-
-		for (GraphicsItem gi = objects; gi != null; gi = gi.next)
+		if (repaintOn)
 			{
-			gi.object.paint(c)
-			}
+			//occlude contents at panel boundary
+			c.pushSurface(new Rect(xPosition, yPosition, width, height), 0, 0, 255)
 
-		c.popSurface()
+			//background
+			c.rect(new Rect2D(0, 0, width, height, backgroundColor))
+
+			for (GraphicsItem gi = objects; gi != null; gi = gi.next)
+				{
+				gi.object.paint(c)
+				}
+
+			c.popSurface()
+			}
 		}
 
 	void Panel:addObject(GraphicsObject go)
@@ -135,7 +151,11 @@ component provides Panel requires io.Output out {
 			addClickTarget(go)
 
 		if (go hastype XYMouseObject)
+			{
 			addMouseEventTarget(go)
+			XYMouseObject mo = go
+			sinkevent CursorEvents(mo)
+			}
 
 		if (go hastype KeyEventObject)
 			{
@@ -174,7 +194,11 @@ component provides Panel requires io.Output out {
 			remClickTarget(go)
 
 		if (go hastype XYMouseObject)
+			{
 			remMouseEventTarget(go)
+			XYMouseObject mo = go
+			stopevent CursorEvents(mo)
+			}
 
 		postRepaint()
 		}
@@ -279,6 +303,21 @@ component provides Panel requires io.Output out {
 
 	void Panel:click(int x, int y, int button)
 		{
+		}
+	
+	void Panel:clickMulti(int x, int y, int button, int clicks)
+		{
+		for (ClickableItem ci = clickObjects; ci != null; ci = ci.next)
+			{
+			Rect r = ci.object.getBounds()
+
+			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+				{
+				ci.object.clickMulti(x - r.x, y - r.y, button, clicks)
+				
+				break
+				}
+			}
 		}
 	
 	void Panel:hotKeyClick(HotKey h)
@@ -469,6 +508,7 @@ component provides Panel requires io.Output out {
 					if (mouseOver != null)
 						{
 						mouseOver.mouseOut()
+						emitevent setCursor(new CursorSetEvent(IOWindow.CURSOR_DEFAULT))
 						}
 
 					mouseOver = ci.object
@@ -486,6 +526,7 @@ component provides Panel requires io.Output out {
 		if (!overSomething && mouseOver != null)
 			{
 			mouseOver.mouseOut()
+			emitevent setCursor(new CursorSetEvent(IOWindow.CURSOR_DEFAULT))
 			mouseOver = null
 			}
 		}
@@ -519,6 +560,14 @@ component provides Panel requires io.Output out {
 		{
 		disabled = d
 		postRepaint()
+		}
+	
+	void Panel:setRepaint(bool b)
+		{
+		repaintOn = b
+
+		if (repaintOn)
+			postRepaint()
 		}
 
 	}

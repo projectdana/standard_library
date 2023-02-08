@@ -7,6 +7,7 @@ uses media.WH
 uses Font
 uses Rect
 uses Point
+uses Cursor
 
 data MouseEvent	{
 	int type
@@ -14,6 +15,8 @@ data MouseEvent	{
 	int button
 	int x
 	int y
+
+	int exd1
 	}
 
 data KeyEvent {
@@ -31,6 +34,17 @@ data DropEvent {
 */
 
 interface IOWindow extends Canvas {
+
+	const byte CURSOR_DEFAULT = 0
+	const byte CURSOR_CUSTOM = 1
+	const byte CURSOR_IBEAM = 2
+	const byte CURSOR_HAND = 3
+	const byte CURSOR_WAIT = 4
+	const byte CURSOR_SIZENS = 5
+	const byte CURSOR_SIZEWE = 6
+	const byte CURSOR_SIZENWSE = 7
+	const byte CURSOR_SIZENESW = 8
+	const byte CURSOR_SIZEALL = 9
 	
 	event mouseUp(MouseEvent m)
 	event mouseDown(MouseEvent m)
@@ -68,6 +82,9 @@ interface IOWindow extends Canvas {
 	
 	/* {"@description" : "Set the background color of the window."} */
 	void setBackground(store Color c)
+
+	/* {"@description" : "Set the current mouse cursor of the window."} */
+	void setCursor(byte cursorType, opt Cursor c)
 	
 	/* {"@description" : "Get the screen resolution of the display on which the window resides."} */
 	WH getResolution()

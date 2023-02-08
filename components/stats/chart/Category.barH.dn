@@ -207,7 +207,7 @@ component provides Category:barH requires ChartCore, stats.StatCore stcore, io.O
 		preparePlotArea()
 		
 		//background
-		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		c.rect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
 		
 		//grid lines, if any
 		drawGrid(c)
@@ -242,7 +242,7 @@ component provides Category:barH requires ChartCore, stats.StatCore stcore, io.O
 			
 			int centreY = xy[1] + ((xyBL[1] - xy[1]) / 2)
 			
-			c.drawRect(new Rect2D(xLow, (centreY - (barHeightPX / 2)) - barPad, xHigh - xLow, barHeightPX, seriesColor))
+			c.rect(new Rect2D(xLow, (centreY - (barHeightPX / 2)) - barPad, xHigh - xLow, barHeightPX, seriesColor))
 			
 			if (showStdDev)
 				{
@@ -253,10 +253,10 @@ component provides Category:barH requires ChartCore, stats.StatCore stcore, io.O
 					int xyHigh[] = getPlotPoint(thisX+stdDev, thisY)
 					int xyLow[] = getPlotPoint(thisX-stdDev, thisY)
 					
-					c.drawLine(new Line2D(xyHigh[0], centreY, xyLow[0], centreY, stdDevColor))
+					c.line(new Line2D(xyHigh[0], centreY, xyLow[0], centreY, stdDevColor))
 					
-					c.drawLine(new Line2D(xyHigh[0], centreY-MARKER_SIZE/2, xyHigh[0], centreY+MARKER_SIZE/2, stdDevColor))
-					c.drawLine(new Line2D(xyLow[0], centreY-MARKER_SIZE/2, xyLow[0], centreY+MARKER_SIZE/2, stdDevColor))
+					c.line(new Line2D(xyHigh[0], centreY-MARKER_SIZE/2, xyHigh[0], centreY+MARKER_SIZE/2, stdDevColor))
+					c.line(new Line2D(xyLow[0], centreY-MARKER_SIZE/2, xyLow[0], centreY+MARKER_SIZE/2, stdDevColor))
 					}
 				}
 			
@@ -264,7 +264,7 @@ component provides Category:barH requires ChartCore, stats.StatCore stcore, io.O
 			int textWidth = axisFont.getTextWidth(samples[i].category)
 			int textHeight = axisFont.getFontMetrics().height
 			
-			c.drawText(new Point2D(getPlotArea().x - MARKER_LENGTH - textWidth, centreY - (textHeight / 2), axisColor), axisFont, samples[i].category)
+			c.text(new Point2D(getPlotArea().x - MARKER_LENGTH - textWidth, centreY - (textHeight / 2), axisColor), axisFont, samples[i].category)
 			
 			thisY += 1.0
 			}

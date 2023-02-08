@@ -2,6 +2,7 @@ data WindowEventData {
 	int button_id
 	int x
 	int y
+	int exd1
 }
 
 data DropEventData {
@@ -26,36 +27,33 @@ interface UIPlaneLib {
 	event post_shutdown()
 	
 	int makeWindow()
-	
-	void startPoly()
-	void addPolyPoint(int x, int y, byte r, byte g, byte b, byte a)
-	void endPoly()
-	
-	void addRect(int phandle, int x, int y, int w, int h, byte r, byte g, byte b, byte a)
-	
-	void addLine(int phandle, int sx, int sy, int ex, int ey, byte r, byte g, byte b, byte a)
-	
+
 	void addPoint(int phandle, int x, int y, byte r, byte g, byte b, byte a)
+	void addLine(int phandle, int sx, int sy, int ex, int ey, int thickness, byte r, byte g, byte b, byte a, bool antiAlias)
+	void addCurve(int phandle, Point points[], int isteps, int thickness, byte r, byte g, byte b, byte a, bool antiAlias)
+	void addRect(int phandle, int x, int y, int w, int h, byte r, byte g, byte b, byte a)
+	void addEllipse(int phandle, int x, int y, int w, int h, byte r, byte g, byte b, byte a)
+	void addEllipseOutline(int phandle, int x, int y, int w, int h, int thickness, byte r, byte g, byte b, byte a)
+	void addArc(int phandle, int x, int y, int w, int h, int start, int end, int lineWidth, byte r, byte g, byte b, byte a, bool antiAlias)
+	void addPie(int phandle, int x, int y, int w, int h, int start, int end, bool chord, byte r, byte g, byte b, byte a)
+	void addPolygon(int phandle, Point points[], byte r, byte g, byte b, byte a)
+	void addPolygonOutline(int phandle, Point points[], int thickness, byte r, byte g, byte b, byte a)
+	void addPolygonBezier(int phandle, Point points[], int isteps, byte r, byte g, byte b, byte a)
+	void addPolygonBezierOutline(int phandle, Point points[], int isteps, int thickness, byte r, byte g, byte b, byte a)
 	void addBitmap(int phandle, PixelMap pixels, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
-	
 	void addTextWith(int phandle, int fontHandle, int x, int y, int rotation, char text[], byte r, byte g, byte b, byte a)
 	
 	void pushSurface(int phandle, int x, int y, int w, int h, int sx, int sy, byte a)
 	void popSurface(int phandle)
 	
 	void setSize(int phandle, int x, int y)
-
 	void setPosition(int phandle, int x, int y)
-	
 	void setVisible(int phandle, bool b)
-	
 	void setResizable(int phandle, bool b)
-	
 	void setFullScreen(int phandle, bool b)
-	
 	void setTitle(int phandle, char t[])
-	
 	void setIcon(int phandle, PixelMap p)
+	void setCursor(int phandle, byte type, Cursor c)
 	
 	void commitBuffer(int phandle)
 	
@@ -99,7 +97,7 @@ component provides IOLayer, IOWindow(Destructor), Font(Destructor) requires nati
 			if (ed.type == UIPlaneLib.[mouseUp])
 				{
 				WindowEventData wed = ed.details
-				emitevent mouseUp(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+				emitevent mouseUp(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y, wed.exd1))
 				}
 				else if (ed.type == UIPlaneLib.[mouseDown])
 				{
@@ -204,6 +202,14 @@ component provides IOLayer, IOWindow(Destructor), Font(Destructor) requires nati
 				}
 			}
 		
+		void IOWindow:setCursor(byte cursorType, opt Cursor c)
+			{
+			mutex(windowStateLock)
+				{
+				lib.setCursor(platformHandle, cursorType, c)
+				}
+			}
+		
 		void IOWindow:close()
 			{
 			mutex(windowStateLock)
@@ -224,7 +230,7 @@ component provides IOLayer, IOWindow(Destructor), Font(Destructor) requires nati
 				}
 			}
 		
-		void IOWindow:drawRect(Rect2D r)
+		void IOWindow:rect(Rect2D r)
 			{
 			mutex(windowStateLock)
 				{
@@ -232,26 +238,194 @@ component provides IOLayer, IOWindow(Destructor), Font(Destructor) requires nati
 				}
 			}
 		
-		void IOWindow:drawRectOutline(Rect2D r)
+		void IOWindow:rectOutline(Rect2D r, opt int thickness)
 			{
-			drawLine(new Line2D(r.x, r.y, (r.x + r.width) - 1, r.y, r.color))
-			
-			drawLine(new Line2D(r.x, r.y, r.x, (r.y + r.height) - 1, r.color))
-			
-			drawLine(new Line2D((r.x + r.width) - 1, r.y, (r.x + r.width) - 1, (r.y + r.height) - 1, r.color))
-			
-			drawLine(new Line2D(r.x, (r.y + r.height) - 1, (r.x + r.width) - 1, (r.y + r.height) - 1, r.color))
+			if (!(isset thickness)) thickness = 1
+
+			int offset = thickness / 2
+
+			line(new Line2D(r.x - offset, r.y, (r.x + r.width) + offset - 1, r.y, r.color), thickness)
+			line(new Line2D(r.x, r.y, r.x, (r.y + r.height) + offset - 1, r.color), thickness)
+			line(new Line2D((r.x + r.width) - 1, r.y, (r.x + r.width) - 1, (r.y + r.height) + offset - 1, r.color), thickness)
+			line(new Line2D(r.x, (r.y + r.height) - 1, (r.x + r.width) - 1, (r.y + r.height) - 1, r.color), thickness)
 			}
 		
-		void IOWindow:drawLine(Line2D l)
+		void IOWindow:roundedRect(Rect2D r, int xRadius, int yRadius)
 			{
 			mutex(windowStateLock)
 				{
-				lib.addLine(platformHandle, l.sx, l.sy, l.ex, l.ey, l.color.r, l.color.g, l.color.b, l.color.a)
+				//top-left corner
+				pie(new Arc2D((r.x + xRadius), r.y + yRadius, xRadius, yRadius, 270, 360, r.color))
+				//top-right corner
+				pie(new Arc2D((r.x + r.width - xRadius), r.y + yRadius, xRadius, yRadius, 0, 90, r.color))
+				//bottom-right corner
+				pie(new Arc2D((r.x + r.width - xRadius), (r.y + r.height - yRadius), xRadius, yRadius, 90, 180, r.color))
+				//bottom-left corner
+				pie(new Arc2D((r.x + xRadius), (r.y + r.height - yRadius), xRadius, yRadius, 180, 270, r.color))
+
+				//middle
+				rect(new Rect2D(r.x + xRadius, r.y, r.width - xRadius - xRadius, r.height, r.color))
+
+				//left rect
+				rect(new Rect2D(r.x, r.y + yRadius, xRadius, r.height - yRadius - yRadius, r.color))
+
+				//right rect
+				rect(new Rect2D(r.x + r.width - xRadius, r.y + yRadius, xRadius, r.height - yRadius - yRadius, r.color))
 				}
 			}
 		
-		void IOWindow:drawPoint(Point2D p)
+		void IOWindow:roundedRectOutline(Rect2D r, int xRadius, int yRadius, opt int thickness)
+			{
+			if (!(isset thickness)) thickness = 1
+
+			int offset = thickness / 2
+			int md = thickness % 2
+
+			if (thickness <= 1)
+				{
+				line(new Line2D((r.x + xRadius), r.y, (r.x + r.width - xRadius), r.y, r.color), thickness)
+				line(new Line2D(r.x, r.y + yRadius, r.x, (r.y + r.height - yRadius), r.color), thickness)
+				line(new Line2D((r.x + r.width) - 1, r.y + yRadius, (r.x + r.width) - 1, (r.y + r.height - yRadius), r.color), thickness)
+				line(new Line2D((r.x + xRadius), (r.y + r.height) - 2, (r.x + r.width - xRadius), (r.y + r.height) - 2, r.color), thickness)
+				}
+				else
+				{
+				//using "curves" for lines here seems to give us the best anti-alias matched position effect, relative to our corner arcs
+
+				//top
+				curve(new Curve2D(new Point[](new Point(r.x+xRadius, r.y), new Point(r.x+(r.width/2), r.y), new Point(r.x+r.width-xRadius, r.y)), r.color), 2, thickness)
+
+				//left
+				curve(new Curve2D(new Point[](new Point(r.x, r.y+yRadius), new Point(r.x, r.y+(r.height/2)), new Point(r.x, r.y + r.height - yRadius)), r.color), 2, thickness)
+
+				//right
+				curve(new Curve2D(new Point[](new Point(r.x+r.width-1, r.y+yRadius), new Point(r.x+r.width-1, r.y+(r.height/2)), new Point(r.x+r.width-1, r.y + r.height - yRadius)), r.color), 2, thickness)
+
+				//bottom
+				curve(new Curve2D(new Point[](new Point(r.x+xRadius, r.y+r.height-offset), new Point(r.x+(r.width/2), r.y+r.height-offset), new Point(r.x+r.width-xRadius, r.y+r.height-offset)), r.color), 2, thickness)
+				}
+
+			if (thickness <= 1)
+				{
+				Arc2D arc = null
+
+				//top-left corner
+				arc = new Arc2D((r.x + xRadius), r.y + yRadius, xRadius, yRadius, 270, 360, r.color)
+				lib.addArc(platformHandle, arc.x, arc.y, arc.xRadius, arc.yRadius, arc.start, arc.end, thickness, r.color.r, r.color.g, r.color.b, r.color.a, false)
+				//top-right corner
+				arc = new Arc2D((r.x + r.width - xRadius)-1, r.y + yRadius, xRadius, yRadius, 0, 90, r.color)
+				lib.addArc(platformHandle, arc.x, arc.y, arc.xRadius, arc.yRadius, arc.start, arc.end, thickness, r.color.r, r.color.g, r.color.b, r.color.a, false)
+				//bottom-right corner
+				arc = new Arc2D((r.x + r.width - xRadius)-1, (r.y + r.height - yRadius) - 2, xRadius, yRadius, 90, 180, r.color)
+				lib.addArc(platformHandle, arc.x, arc.y, arc.xRadius, arc.yRadius, arc.start, arc.end, thickness, r.color.r, r.color.g, r.color.b, r.color.a, false)
+				//bottom-left corner
+				arc = new Arc2D((r.x + xRadius), (r.y + r.height - yRadius) - 2, xRadius, yRadius, 180, 270, r.color)
+				lib.addArc(platformHandle, arc.x, arc.y, arc.xRadius, arc.yRadius, arc.start, arc.end, thickness, r.color.r, r.color.g, r.color.b, r.color.a, false)
+				}
+				else
+				{
+				//top-left corner
+				arcOutline(new Arc2D((r.x + xRadius), r.y + yRadius, xRadius, yRadius, 270, 360, r.color), thickness)
+				//top-right corner
+				arcOutline(new Arc2D((r.x + r.width - xRadius)-1, r.y + yRadius, xRadius, yRadius, 0, 90, r.color), thickness)
+				//bottom-right corner
+				arcOutline(new Arc2D((r.x + r.width - xRadius)-1, (r.y + r.height - yRadius) - 2, xRadius, yRadius, 90, 180, r.color), thickness)
+				//bottom-left corner
+				arcOutline(new Arc2D((r.x + xRadius), (r.y + r.height - yRadius) - 2, xRadius, yRadius, 180, 270, r.color), thickness)
+				}
+			}
+		
+		void IOWindow:ellipse(Ellipse2D r)
+			{
+			mutex(windowStateLock)
+				{
+				lib.addEllipse(platformHandle, r.x, r.y, r.xRadius, r.yRadius, r.color.r, r.color.g, r.color.b, r.color.a)
+				}
+			}
+		
+		void IOWindow:ellipseOutline(Ellipse2D r, opt int thickness)
+			{
+			if (!(isset thickness)) thickness = 1
+
+			mutex(windowStateLock)
+				{
+				lib.addEllipseOutline(platformHandle, r.x, r.y, r.xRadius, r.yRadius, thickness, r.color.r, r.color.g, r.color.b, r.color.a)
+				}
+			}
+		
+		void IOWindow:arc(Arc2D r)
+			{
+			mutex(windowStateLock)
+				{
+				lib.addPie(platformHandle, r.x, r.y, r.xRadius, r.yRadius, r.start, r.end, true, r.color.r, r.color.g, r.color.b, r.color.a)
+				}
+			}
+		
+		void IOWindow:arcOutline(Arc2D r, opt int lineWidth)
+			{
+			if (!(isset lineWidth)) lineWidth = 1
+
+			mutex(windowStateLock)
+				{
+				lib.addArc(platformHandle, r.x, r.y, r.xRadius, r.yRadius, r.start, r.end, lineWidth, r.color.r, r.color.g, r.color.b, r.color.a, true)
+				}
+			}
+		
+		void IOWindow:pie(Arc2D r)
+			{
+			mutex(windowStateLock)
+				{
+				lib.addPie(platformHandle, r.x, r.y, r.xRadius, r.yRadius, r.start, r.end, false, r.color.r, r.color.g, r.color.b, r.color.a)
+				}
+			}
+		
+		void IOWindow:polygon(Polygon2D r)
+			{
+			mutex(windowStateLock)
+				{
+				lib.addPolygon(platformHandle, r.points, r.color.r, r.color.g, r.color.b, r.color.a)
+				}
+			}
+		
+		void IOWindow:polygonOutline(Polygon2D r)
+			{
+			int thickness = 1
+
+			mutex(windowStateLock)
+				{
+				lib.addPolygonOutline(platformHandle, r.points, thickness, r.color.r, r.color.g, r.color.b, r.color.a)
+				}
+			}
+		
+		void IOWindow:polygonBezier(Polygon2D r, int isteps)
+			{
+			mutex(windowStateLock)
+				{
+				lib.addPolygonBezier(platformHandle, r.points, isteps, r.color.r, r.color.g, r.color.b, r.color.a)
+				}
+			}
+		
+		void IOWindow:line(Line2D l, opt int thickness)
+			{
+			if (!(isset thickness)) thickness = 1
+
+			mutex(windowStateLock)
+				{
+				lib.addLine(platformHandle, l.sx, l.sy, l.ex, l.ey, thickness, l.color.r, l.color.g, l.color.b, l.color.a, false)
+				}
+			}
+		
+		void IOWindow:curve(Curve2D l, int isteps, opt int thickness)
+			{
+			if (!(isset thickness)) thickness = 1
+
+			mutex(windowStateLock)
+				{
+				lib.addCurve(platformHandle, l.points, isteps, thickness, l.color.r, l.color.g, l.color.b, l.color.a, false)
+				}
+			}
+		
+		void IOWindow:point(Point2D p)
 			{
 			mutex(windowStateLock)
 				{
@@ -259,40 +433,18 @@ component provides IOLayer, IOWindow(Destructor), Font(Destructor) requires nati
 				}
 			}
 		
-		void IOWindow:drawPixels(PixelMap map, int x, int y, int rotation)
+		void IOWindow:pixels(PixelMap map, int x, int y, opt int scaledWidth, int scaledHeight, int rotation, Rect subRect)
 			{
-			mutex(windowStateLock)
-				{
-				lib.addBitmap(platformHandle, map, null, x, y, map.size.width, map.size.height, rotation)
-				}
-			}
-		
-		void IOWindow:drawPixelsEx(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
-			{
+			if (!(isset scaledWidth)) scaledWidth = map.size.width
+			if (!(isset scaledHeight)) scaledHeight = map.size.height
+
 			mutex(windowStateLock)
 				{
 				lib.addBitmap(platformHandle, map, subRect, x, y, scaledWidth, scaledHeight, rotation)
 				}
 			}
 		
-		void IOWindow:drawText(Point2D origin, Font f, char text[])
-			{
-			//check if f is implemented by this component and if so we use its internal font handle; otherwise we fall back on Font.getBitmap() (which is slow)
-			mutex(windowStateLock)
-				{
-				if (implements f)
-					{
-					lib.addTextWith(platformHandle, f.platformHandle, origin.x, origin.y, 0, text, origin.color.r, origin.color.g, origin.color.b, origin.color.a)
-					}
-					else
-					{
-					PixelMap px = f.getPixels(text, origin.color)
-					lib.addBitmap(platformHandle, px, null, origin.x, origin.y, px.size.width, px.size.height, 0)
-					}
-				}
-			}
-		
-		void IOWindow:drawTextEx(Point2D origin, Font f, char text[], int rotation)
+		void IOWindow:text(Point2D origin, Font f, char text[], opt int rotation)
 			{
 			//check if f is implemented by this component and if so we use its internal font handle; otherwise we fall back on Font.getBitmap() (which is slow)
 			mutex(windowStateLock)

@@ -1,0 +1,14 @@
+/*
+* Ellipse2D type
+* This data type describes an ellipse with a color; x/y represents the coordinates of the ellipse's centrepoint and width/height represent its size.
+*/
+
+uses Color
+
+data Ellipse2D{
+	int x
+	int y
+	int xRadius
+	int yRadius
+	Color color
+	}

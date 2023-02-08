@@ -242,17 +242,17 @@ component provides CategoryMulti:boxH requires ChartCore, stats.StatCore stcore,
 		int totalLegendHeight = ((textHeight + 5) * (series.arrayLength-1)) + textHeight
 		int totalLegendWidth = (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
 		
-		c.drawRect(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), bgColor))
-		c.drawRectOutline(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), axisColor))
+		c.rect(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), bgColor))
+		c.rectOutline(new Rect2D(xStart - LEGEND_PAD_SIZE, yPos - LEGEND_PAD_SIZE, totalLegendWidth + (LEGEND_PAD_SIZE*2), totalLegendHeight + (LEGEND_PAD_SIZE*2), axisColor))
 		
 		yPos += (axisFont.getFontMetrics().descent)
 		
 		for (int i = series.arrayLength - 1; i != INT_MAX; i--)
 			{
-			c.drawRect(new Rect2D(xStart, yPos, LEGEND_SQ_SIZE, LEGEND_SQ_SIZE, series[i].seriesColor))
+			c.rect(new Rect2D(xStart, yPos, LEGEND_SQ_SIZE, LEGEND_SQ_SIZE, series[i].seriesColor))
 			
 			int yOffset = (yPos + (LEGEND_SQ_SIZE / 2)) - (textHeight / 2)
-			c.drawText(new Point2D(xStart + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE, yOffset, axisColor), axisFont, series[i].displayName)
+			c.text(new Point2D(xStart + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE, yOffset, axisColor), axisFont, series[i].displayName)
 			
 			yPos += textHeight + 5
 			}
@@ -305,19 +305,19 @@ component provides CategoryMulti:boxH requires ChartCore, stats.StatCore stcore,
 		int xyXA[] = getPlotPoint(thisX, 0.0)
 		
 		//box spanning 1st and 3rd quartiles (interquartile range)
-		c.drawRectOutline(new Rect2D(xy[0], centreY - (barHeightPX / 2), xyTR[0] - xy[0], barHeightPX, seriesLineColor))
-		if (xyTR[0] - xy[0] > 2) c.drawRect(new Rect2D(xy[0]+1, (centreY - (barHeightPX / 2))+1, (xyTR[0] - xy[0])-2, barHeightPX-2, color))
+		c.rectOutline(new Rect2D(xy[0], centreY - (barHeightPX / 2), xyTR[0] - xy[0], barHeightPX, seriesLineColor))
+		if (xyTR[0] - xy[0] > 2) c.rect(new Rect2D(xy[0]+1, (centreY - (barHeightPX / 2))+1, (xyTR[0] - xy[0])-2, barHeightPX-2, color))
 		
 		//median line
-		c.drawLine(new Rect2D(xyMedian[0], centreY - (barHeightPX / 2), xyMedian[0], (centreY + (barHeightPX / 2))-1, medianColor))
+		c.line(new Rect2D(xyMedian[0], centreY - (barHeightPX / 2), xyMedian[0], (centreY + (barHeightPX / 2))-1, medianColor))
 		
 		//low whisker
-		c.drawLine(new Rect2D(xyLowWhisker[0], centreY, xy[0], centreY, seriesLineColor))
-		c.drawLine(new Rect2D(xyLowWhisker[0], centreY - (barHeightPX / 2), xyLowWhisker[0], (centreY + (barHeightPX / 2))-1, seriesLineColor))
+		c.line(new Rect2D(xyLowWhisker[0], centreY, xy[0], centreY, seriesLineColor))
+		c.line(new Rect2D(xyLowWhisker[0], centreY - (barHeightPX / 2), xyLowWhisker[0], (centreY + (barHeightPX / 2))-1, seriesLineColor))
 		
 		//high whisker
-		c.drawLine(new Rect2D(xyHighWhisker[0], centreY, xyTR[0], centreY, seriesLineColor))
-		c.drawLine(new Rect2D(xyHighWhisker[0], centreY - (barHeightPX / 2), xyHighWhisker[0], (centreY + (barHeightPX / 2))-1, seriesLineColor))
+		c.line(new Rect2D(xyHighWhisker[0], centreY, xyTR[0], centreY, seriesLineColor))
+		c.line(new Rect2D(xyHighWhisker[0], centreY - (barHeightPX / 2), xyHighWhisker[0], (centreY + (barHeightPX / 2))-1, seriesLineColor))
 		}
 	
 	void CategoryMulti:paint(Canvas c)
@@ -334,7 +334,7 @@ component provides CategoryMulti:boxH requires ChartCore, stats.StatCore stcore,
 		preparePlotArea()
 		
 		//background
-		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		c.rect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
 		
 		//grid lines, if any
 		drawGrid(c)
@@ -374,7 +374,7 @@ component provides CategoryMulti:boxH requires ChartCore, stats.StatCore stcore,
 			
 			int textWidth = axisFont.getTextWidth(categories[i].string)
 			int textHeight = axisFont.getFontMetrics().height
-			c.drawText(new Point2D(getPlotArea().x - MARKER_LENGTH - textWidth, centreY - (textHeight / 2), axisColor), axisFont, categories[i].string)
+			c.text(new Point2D(getPlotArea().x - MARKER_LENGTH - textWidth, centreY - (textHeight / 2), axisColor), axisFont, categories[i].string)
 			
 			thisY += 1.0
 			}

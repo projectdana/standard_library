@@ -22,6 +22,10 @@ data ContextMenuSpec {
 	ClickableObject owner
 	}
 
+data MultiClickData {
+	int clicks
+}
+
 /* {"description" : "Data type describing a hot key which is active when a graphics object has focus."} */
 data HotKey {
 	/* {"@description" : "The key modifier for the hot key, which is a bitwise-or of values from KeyState."} */
@@ -39,6 +43,9 @@ interface ClickableObject extends GraphicsObject{
 	
 	/* {"@description" : "This application-level event is fired when a user clicks on this object."} */
 	event click()
+
+	/* {"@description" : "This application-level event is fired when a user clicks on this object."} */
+	event clickMulti(MultiClickData d)
 	
 	/* {"@description" : "This windowing event is intended for the windowing system only, and is fired when the object requests a context menu to be displayed."} */
 	event contextMenuOn(ContextMenuSpec menu)
@@ -55,6 +62,9 @@ interface ClickableObject extends GraphicsObject{
 	Rect getBounds()
 	/* {"@description" : "This function is called when the object receives a mouse click from the windowing system."} */
 	void click(int x, int y, int button)
+
+	/* {"@description" : "This function is called when the object receives a mouse click from the windowing system."} */
+	void clickMulti(int x, int y, int button, int clicks){}
 	
 	/* {"@description" : "This function is called by the windowing system when a context menu item is clicked on."} */
 	void contextClick(MenuItem item){}

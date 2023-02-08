@@ -329,7 +329,7 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 		{
 		c.pushSurface(new Rect(xPosition, yPosition, width, height), 0, 0, 255)
 		
-		if (backgroundColor != null) c.drawRect(new Rect2D(0, 0, width, height, backgroundColor))
+		if (backgroundColor != null) c.rect(new Rect2D(0, 0, width, height, backgroundColor))
 		
 		c.pushSurface(new Rect(0, 0, width, height), scrollX, scrollY, 255)
 
@@ -350,7 +350,7 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 		if (showScrollV && showScrollH)
 			{
 			//fill the square with something...
-			c.drawRect(new Rect2D(width-SCR_BUTTON_WIDTH, height-SCR_BUTTON_HEIGHT, SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, gapColor))
+			c.rect(new Rect2D(width-SCR_BUTTON_WIDTH, height-SCR_BUTTON_HEIGHT, SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, gapColor))
 			}
 		
 		c.popSurface()

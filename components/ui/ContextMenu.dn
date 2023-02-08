@@ -28,22 +28,22 @@ component provides ContextMenu requires ui.Font, os.SystemInfo sysInfo, io.Outpu
 	
 	void ContextMenu:paint(Canvas c)
 		{
-		c.drawRect(new Rect2D(xPosition+2, yPosition+2, width, height, shadowColor))
-		c.drawRect(new Rect2D(xPosition, yPosition, width, height, bgColor))
+		c.rect(new Rect2D(xPosition+2, yPosition+2, width, height, shadowColor))
+		c.rect(new Rect2D(xPosition, yPosition, width, height, bgColor))
 		
 		int ryPos = yPosition
 		for (int i = 0; i < menuItems.arrayLength; i++)
 			{
 			if (i == hoverIndex)
 				{
-				c.drawRect(new Rect2D(xPosition, ryPos, width, FONT_HEIGHT + ITEM_SEP, hlColor))
+				c.rect(new Rect2D(xPosition, ryPos, width, FONT_HEIGHT + ITEM_SEP, hlColor))
 				}
 			
-			c.drawText(new Point2D(xPosition+PAD_LEFT, ryPos, textColor), labelFont, menuItems[i].name)
+			c.text(new Point2D(xPosition+PAD_LEFT, ryPos, textColor), labelFont, menuItems[i].name)
 			ryPos += FONT_HEIGHT + ITEM_SEP
 			}
 		
-		c.drawRectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
+		c.rectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
 		}
 	
 	void ContextMenu:addItem(store MenuItem item)

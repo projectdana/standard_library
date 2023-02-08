@@ -1,0 +1,16 @@
+/*
+* Arc2D type
+* This data type describes an arc with a color; x/y represents the coordinates of the arc's centrepoint and width/height represent its size.
+*/
+
+uses Color
+
+data Arc2D{
+	int x
+	int y
+	int xRadius
+	int yRadius
+	int start
+	int end
+	Color color
+	}

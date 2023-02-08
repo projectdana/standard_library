@@ -59,6 +59,10 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 	bool fullScreen
 	
 	byte keyState //used for hot key triggers
+
+	//note if we currently have an override cursor in place, and if so also remember what the "base" cursor to return to is
+	bool cursorOverride
+	CursorSetEvent baseCursor
 	
 	bool closed
 	
@@ -73,7 +77,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 		if (ed.type == IOWindow.[mouseUp])
 			{
 			MouseEvent me = ed.details
-			mouseUp(me.x, me.y, me.button)
+			mouseUpClick(me.x, me.y, me.button, me.exd1)
 			}
 			else if (ed.type == IOWindow.[mouseDown])
 			{
@@ -171,12 +175,29 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			postRepaint()
 			}
 		}
+	
+	eventsink CursorEvents(EventData ed)
+		{
+		if (ed.type == XYMouseObject.[setCursor])
+			{
+			CursorSetEvent cse = ed.details
+
+			if (!cursorOverride)
+				{
+				canvas.setCursor(cse.type, cse.cursor)
+				}
+			
+			baseCursor = cse
+			}
+		}
 
 	Window:Window(char title[])
 		{
 		canvas = new IOWindow()
 		
 		canvas.setTitle(title)
+
+		repaintOn = true
 
 		sinkevent Events(canvas)
 		}
@@ -209,6 +230,28 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 	void Window:setIcon(PixelMap p)
 		{
 		canvas.setIcon(p)
+		}
+	
+	void Window:setCursor(byte cursorType, Cursor c)
+		{
+		if (cursorType != IOWindow.CURSOR_DEFAULT)
+			{
+			cursorOverride = true
+			canvas.setCursor(cursorType, c)
+			}
+			else
+			{
+			cursorOverride = false
+
+			if (baseCursor != null)
+				{
+				canvas.setCursor(baseCursor.type, baseCursor.cursor)
+				}
+				else
+				{
+				canvas.setCursor(IOWindow.CURSOR_DEFAULT)
+				}
+			}
 		}
 
 	void Window:close()
@@ -257,6 +300,8 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 		if (go hastype XYMouseObject)
 			{
 			addMouseEventTarget(go)
+			XYMouseObject mo = go
+			sinkevent CursorEvents(mo)
 			}
 
 		if (go hastype KeyEventObject)
@@ -294,7 +339,11 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 					remClickTarget(go)
 
 				if (go hastype XYMouseObject)
+					{
 					remMouseEventTarget(go)
+					XYMouseObject mo = go
+					stopevent CursorEvents(mo)
+					}
 
 				break
 				}
@@ -478,12 +527,15 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 		{
 		mutex(paintLock)
 			{
-			for (GraphicsItem bi = buffer; bi != null; bi = bi.next)
+			if (repaintOn)
 				{
-				bi.object.paint(canvas)
+				for (GraphicsItem bi = buffer; bi != null; bi = bi.next)
+					{
+					bi.object.paint(canvas)
+					}
 				}
 
-			canvas.drawRectOutline(new Rect2D(0, 0, currentWidth, currentHeight, borderColor))
+			canvas.rectOutline(new Rect2D(0, 0, currentWidth, currentHeight, borderColor))
 
 			if (contextMenu != null)
 				{
@@ -562,6 +614,24 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 				}
 			}
 		}
+	
+	void multiClick(int x, int y, int button, int clicks)
+		{
+		for (ClickableItem ci = clickItems; ci != null; ci = ci.next)
+			{
+			Rect r = ci.object.getBounds()
+
+			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+				{
+				if (clickDown === ci.object)
+					{
+					ci.object.clickMulti(x - r.x, y - r.y, button, clicks)
+					}
+
+				break
+				}
+			}
+		}
 
 	void Window:mouseDown(int x, int y, int button)
 		{
@@ -608,7 +678,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			}
 		}
 
-	void Window:mouseUp(int x, int y, int button)
+	void mouseUpClick(int x, int y, int button, int clicks)
 		{
 		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
 			{
@@ -632,9 +702,16 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 				}
 			}
 		
-		click(x, y, button)
+		if (clicks == 1)
+			click(x, y, button)
+			else
+			multiClick(x, y, button, clicks)
 		
 		clickDown = null
+		}
+	
+	void Window:mouseUp(int x, int y, int button)
+		{
 		}
 
 	void Window:mouseMove(int x, int y)
@@ -655,6 +732,9 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 					if (mouseOver != null)
 						{
 						mouseOver.mouseOut()
+
+						if (!cursorOverride) canvas.setCursor(IOWindow.CURSOR_DEFAULT)
+						baseCursor = null
 						}
 
 					mouseOver = contextMenu
@@ -669,6 +749,8 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			if (!overSomething && mouseOver != null)
 				{
 				mouseOver.mouseOut()
+				if (!cursorOverride) canvas.setCursor(IOWindow.CURSOR_DEFAULT)
+				baseCursor = null
 				mouseOver = null
 				}
 
@@ -703,6 +785,8 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 		if (!overSomething && mouseOver != null)
 			{
 			mouseOver.mouseOut()
+			if (!cursorOverride) canvas.setCursor(IOWindow.CURSOR_DEFAULT)
+			baseCursor = null
 			mouseOver = null
 			}
 		}
@@ -830,6 +914,14 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 	void Window:loseFocus()
 		{
 
+		}
+	
+	void Window:setRepaint(bool b)
+		{
+		repaintOn = b
+
+		if (repaintOn)
+			postRepaint()
 		}
 
 	}

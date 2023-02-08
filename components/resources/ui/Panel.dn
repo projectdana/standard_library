@@ -14,6 +14,8 @@ interface Panel extends KeyEventObject {
 	
 	transfer int width
 	transfer int height
+
+	transfer bool repaintOn
 	
 	/* {"@description" : "Instantiate a new panel."} */
 	Panel()
@@ -36,4 +38,7 @@ interface Panel extends KeyEventObject {
 	void setSize(int w, int h)
 	/* {"@description" : "Get the size of this panel."} */
 	WH getSize()
+
+	/* {"@description" : "Set global repaint on or off for this panel. When set to off, the panel will not act on repaint events that come from its hosted graphics objects. This can be useful when an application is updating a lot of graphics objects in a panel and wants to e.g. re-draw only once at the end. When repaint is set back to 'on' a full repaint is triggered for everything in the panel."} */
+	void setRepaint(bool b)
 	}

@@ -37,13 +37,13 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 		{
 		if (!disabled)
 			{
-			c.drawRect(new Rect2D(xPosition, yPosition, width, 20, buttonColor))
-			c.drawText(new Point2D(xPosition+TEXT_MARGIN, yPosition+1, textColor), labelFont, text)
+			c.rect(new Rect2D(xPosition, yPosition, width, 20, buttonColor))
+			c.text(new Point2D(xPosition+TEXT_MARGIN, yPosition+1, textColor), labelFont, text)
 			}
 			else
 			{
-			c.drawRect(new Rect2D(xPosition, yPosition, width, 20, buttonColorDisabled))
-			c.drawText(new Point2D(xPosition+TEXT_MARGIN, yPosition+1, textColorDisabled), labelFont, text)
+			c.rect(new Rect2D(xPosition, yPosition, width, 20, buttonColorDisabled))
+			c.text(new Point2D(xPosition+TEXT_MARGIN, yPosition+1, textColorDisabled), labelFont, text)
 			}
 		}
 	

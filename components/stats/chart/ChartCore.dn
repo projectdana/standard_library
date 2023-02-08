@@ -702,7 +702,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 			int xyTop[] = getPlotPoint(xLines[i], yAxMax)
 			int xyBot[] = getPlotPoint(xLines[i], yAxMin)
 			
-			c.drawLine(new Line2D(xyTop[0], xyTop[1], xyBot[0], xyBot[1], gridColor))
+			c.line(new Line2D(xyTop[0], xyTop[1], xyBot[0], xyBot[1], gridColor))
 			}
 		
 		// - y-axis
@@ -712,7 +712,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 			int xyTop[] = getPlotPoint(xAxMax, yLines[i])
 			int xyBot[] = getPlotPoint(xAxMin, yLines[i])
 			
-			c.drawLine(new Line2D(xyTop[0], xyTop[1], xyBot[0], xyBot[1], gridColor))
+			c.line(new Line2D(xyTop[0], xyTop[1], xyBot[0], xyBot[1], gridColor))
 			}
 		}
 	
@@ -748,7 +748,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 		
 		// - Y-axis
 		
-		c.drawLine(new Line2D(zeroXY[0], padTop, zeroXY[0], padTop + plotHeight, axisColor))
+		c.line(new Line2D(zeroXY[0], padTop, zeroXY[0], padTop + plotHeight, axisColor))
 		
 		// - markers
 		
@@ -756,7 +756,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 			{
 			int xy[] = getPlotPoint(0.0, yMarkers[i])
 			
-			c.drawLine(new Line2D(yAxisX, xy[1], yAxisX - MARKER_LENGTH, xy[1], axisColor))
+			c.line(new Line2D(yAxisX, xy[1], yAxisX - MARKER_LENGTH, xy[1], axisColor))
 			}
 		
 		// - numbers
@@ -769,12 +769,12 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 			int textWidth = axisFont.getTextWidth(yNumStr[i].string)
 			int textHeight = axisFont.getFontMetrics().height
 			
-			c.drawText(new Point2D(padLeft - textWidth - MARKER_LENGTH, xy[1] - (textHeight / 2), axisColor), axisFont, yNumStr[i].string)
+			c.text(new Point2D(padLeft - textWidth - MARKER_LENGTH, xy[1] - (textHeight / 2), axisColor), axisFont, yNumStr[i].string)
 			}
 		
 		// - X-axis
 		
-		c.drawLine(new Line2D(padLeft, xAxisY, padLeft + plotWidth, xAxisY, axisColor))
+		c.line(new Line2D(padLeft, xAxisY, padLeft + plotWidth, xAxisY, axisColor))
 		
 		// - markers
 		
@@ -783,9 +783,9 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 			int xy[] = getPlotPoint(xMarkers[i], 0.0)
 			
 			if (xMarkersBelow)
-				c.drawLine(new Line2D(xy[0], xAxisY, xy[0], xAxisY + MARKER_LENGTH, axisColor))
+				c.line(new Line2D(xy[0], xAxisY, xy[0], xAxisY + MARKER_LENGTH, axisColor))
 				else
-				c.drawLine(new Line2D(xy[0], xAxisY, xy[0], xAxisY - MARKER_LENGTH, axisColor))
+				c.line(new Line2D(xy[0], xAxisY, xy[0], xAxisY - MARKER_LENGTH, axisColor))
 			}
 		
 		// - numbers
@@ -797,7 +797,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 			int textWidth = axisFont.getTextWidth(xNumStr[i].string)
 			int textHeight = axisFont.getFontMetrics().height
 			
-			c.drawText(new Point2D(xy[0] - (textWidth / 2), padTop + plotHeight + MARKER_LENGTH, axisColor), axisFont, xNumStr[i].string)
+			c.text(new Point2D(xy[0] - (textWidth / 2), padTop + plotHeight + MARKER_LENGTH, axisColor), axisFont, xNumStr[i].string)
 			}
 		
 		//axis text labels
@@ -811,7 +811,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 			
 			xpos -= (textWidth / 2)
 			
-			c.drawText(new Point2D(xpos, padTop + plotHeight + MARKER_LENGTH + textHeight, axisColor), labelFont, xAxisLabel)
+			c.text(new Point2D(xpos, padTop + plotHeight + MARKER_LENGTH + textHeight, axisColor), labelFont, xAxisLabel)
 			}
 		
 		if (yAxisLabel != null)
@@ -823,7 +823,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 			int ypos = padTop + (plotHeight / 2)
 			ypos += (textWidth / 2)
 			
-			c.drawTextEx(new Point2D(xpos, ypos, axisColor), labelFont, yAxisLabel, 270)
+			c.text(new Point2D(xpos, ypos, axisColor), labelFont, yAxisLabel, 270)
 			}
 		}
 	

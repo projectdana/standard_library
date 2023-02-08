@@ -22,9 +22,9 @@ component provides Button(AdaptEvents) requires io.Output out, data.IntUtil iu, 
 	
 	void Button:paint(Canvas c)
 		{
-		c.drawRect(new Rect2D(xPosition+1, yPosition+1, 40, 20, new Color(150, 140, 140, 255)))
-		c.drawRect(new Rect2D(xPosition, yPosition, 40, 20, new Color(220, 188, 157, 255)))
-		c.drawText(new Point2D(xPosition+3, yPosition+1, new Color(0, 0, 0, 255)), labelFont, text)
+		c.rect(new Rect2D(xPosition+1, yPosition+1, 40, 20, new Color(150, 140, 140, 255)))
+		c.rect(new Rect2D(xPosition, yPosition, 40, 20, new Color(220, 188, 157, 255)))
+		c.text(new Point2D(xPosition+3, yPosition+1, new Color(0, 0, 0, 255)), labelFont, text)
 		}
 	
 	void Button:click(int x, int y, int button)

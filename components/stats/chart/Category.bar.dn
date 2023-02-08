@@ -197,7 +197,7 @@ component provides Category:bar requires ChartCore, stats.StatCore stcore, io.Ou
 		preparePlotArea()
 		
 		//background
-		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		c.rect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
 		
 		//grid lines, if any
 		drawGrid(c)
@@ -231,7 +231,7 @@ component provides Category:bar requires ChartCore, stats.StatCore stcore, io.Ou
 			
 			int centreX = xy[0] + ((xyTR[0] - xy[0]) / 2)
 			
-			c.drawRect(new Rect2D((centreX - (barWidthPX / 2)) + barPad, yHigh, barWidthPX, yLow - yHigh, seriesColor))
+			c.rect(new Rect2D((centreX - (barWidthPX / 2)) + barPad, yHigh, barWidthPX, yLow - yHigh, seriesColor))
 			
 			if (showStdDev)
 				{
@@ -242,17 +242,17 @@ component provides Category:bar requires ChartCore, stats.StatCore stcore, io.Ou
 					int xyHigh[] = getPlotPoint(thisX, thisY+stdDev)
 					int xyLow[] = getPlotPoint(thisX, thisY-stdDev)
 					
-					c.drawLine(new Line2D(centreX, xyHigh[1], centreX, xyLow[1], stdDevColor))
+					c.line(new Line2D(centreX, xyHigh[1], centreX, xyLow[1], stdDevColor))
 					
-					c.drawLine(new Line2D(centreX-MARKER_SIZE/2, xyHigh[1], centreX+MARKER_SIZE/2, xyHigh[1], stdDevColor))
-					c.drawLine(new Line2D(centreX-MARKER_SIZE/2, xyLow[1], centreX+MARKER_SIZE/2, xyLow[1], stdDevColor))
+					c.line(new Line2D(centreX-MARKER_SIZE/2, xyHigh[1], centreX+MARKER_SIZE/2, xyHigh[1], stdDevColor))
+					c.line(new Line2D(centreX-MARKER_SIZE/2, xyLow[1], centreX+MARKER_SIZE/2, xyLow[1], stdDevColor))
 					}
 				}
 			
 			//category label
 			int textWidth = axisFont.getTextWidth(samples[i].category)
 			
-			c.drawText(new Point2D(centreX - (textWidth / 2), getPlotArea().y + getPlotArea().height + MARKER_LENGTH, axisColor), axisFont, samples[i].category)
+			c.text(new Point2D(centreX - (textWidth / 2), getPlotArea().y + getPlotArea().height + MARKER_LENGTH, axisColor), axisFont, samples[i].category)
 			
 			thisX += 1.0
 			}

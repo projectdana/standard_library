@@ -56,15 +56,15 @@ component provides FileDrop requires ui.Font, io.Output out, data.IntUtil iu, da
 	
 	void FileDrop:paint(Canvas c)
 		{
-		c.drawRect(new Rect2D(xPosition, yPosition, width, height, bgColor))
-		c.drawRectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
+		c.rect(new Rect2D(xPosition, yPosition, width, height, bgColor))
+		c.rectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
 		
 		int xp = xPosition + (width / 2)
 		int yp = yPosition + (height / 2) - (textHeight / 2)
 		for (int i = 0; i < textLines.arrayLength; i++)
 			{
 			int txp = xp - (textFont.getTextWidth(textLines[i].string) / 2)
-			c.drawText(new Point2D(txp, yp, textColor), textFont, textLines[i].string)
+			c.text(new Point2D(txp, yp, textColor), textFont, textLines[i].string)
 			yp += fontHeight + lineSkip
 			}
 		

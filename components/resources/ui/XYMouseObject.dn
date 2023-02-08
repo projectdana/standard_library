@@ -3,8 +3,18 @@
 */
 
 uses MouseButtons
+uses Cursor
+
+data CursorSetEvent {
+	byte type
+	Cursor cursor
+}
 
 interface XYMouseObject extends ClickableObject {
+
+	/* {"@description" : "This windowing event is intended for the windowing system only, and is fired when the object requests a specific cursor to be used."} */
+	event setCursor(CursorSetEvent cse)
+
 	/* {"@description" : "This function is called by the windowing system when a mouse button is pressed down over this object."} */
 	void mouseDown(int x, int y, int button){}
 	/* {"@description" : "This function is called by the windowing system when a mouse button is released over this object."} */

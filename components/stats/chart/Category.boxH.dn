@@ -160,7 +160,7 @@ component provides Category:boxH requires ChartCore, stats.StatCore stcore, io.O
 		preparePlotArea()
 		
 		//background
-		c.drawRect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		c.rect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
 		
 		//grid lines, if any
 		drawGrid(c)
@@ -204,25 +204,25 @@ component provides Category:boxH requires ChartCore, stats.StatCore stcore, io.O
 			int centreY = xyBL[1] + ((xyTR[1] - xyBL[1]) / 2)
 			
 			//box spanning 1st and 3rd quartiles (interquartile range)
-			c.drawRectOutline(new Rect2D(xy[0], centreY - (barHeightPX / 2), xyTR[0] - xy[0], barHeightPX, seriesColor))
-			if (xyTR[0] - xy[0] > 2) c.drawRect(new Rect2D(xy[0]+1, (centreY - (barHeightPX / 2))+1, (xyTR[0] - xy[0])-2, barHeightPX-2, seriesFillColor))
+			c.rectOutline(new Rect2D(xy[0], centreY - (barHeightPX / 2), xyTR[0] - xy[0], barHeightPX, seriesColor))
+			if (xyTR[0] - xy[0] > 2) c.rect(new Rect2D(xy[0]+1, (centreY - (barHeightPX / 2))+1, (xyTR[0] - xy[0])-2, barHeightPX-2, seriesFillColor))
 			
 			//median line
-			c.drawLine(new Rect2D(xyMedian[0], centreY - (barHeightPX / 2), xyMedian[0], (centreY + (barHeightPX / 2))-1, medianColor))
+			c.line(new Rect2D(xyMedian[0], centreY - (barHeightPX / 2), xyMedian[0], (centreY + (barHeightPX / 2))-1, medianColor))
 			
 			//low whisker
-			c.drawLine(new Rect2D(xyLowWhisker[0], centreY, xy[0], centreY, seriesColor))
-			c.drawLine(new Rect2D(xyLowWhisker[0], centreY - (barHeightPX / 2), xyLowWhisker[0], (centreY + (barHeightPX / 2))-1, seriesColor))
+			c.line(new Rect2D(xyLowWhisker[0], centreY, xy[0], centreY, seriesColor))
+			c.line(new Rect2D(xyLowWhisker[0], centreY - (barHeightPX / 2), xyLowWhisker[0], (centreY + (barHeightPX / 2))-1, seriesColor))
 			
 			//high whisker
-			c.drawLine(new Rect2D(xyHighWhisker[0], centreY, xyTR[0], centreY, seriesColor))
-			c.drawLine(new Rect2D(xyHighWhisker[0], centreY - (barHeightPX / 2), xyHighWhisker[0], (centreY + (barHeightPX / 2))-1, seriesColor))
+			c.line(new Rect2D(xyHighWhisker[0], centreY, xyTR[0], centreY, seriesColor))
+			c.line(new Rect2D(xyHighWhisker[0], centreY - (barHeightPX / 2), xyHighWhisker[0], (centreY + (barHeightPX / 2))-1, seriesColor))
 			
 			//category label
 			int textWidth = axisFont.getTextWidth(samples[i].category)
 			int textHeight = axisFont.getFontMetrics().height
 			
-			c.drawText(new Point2D(getPlotArea().x - MARKER_LENGTH - textWidth, centreY - (textHeight / 2), axisColor), axisFont, samples[i].category)
+			c.text(new Point2D(getPlotArea().x - MARKER_LENGTH - textWidth, centreY - (textHeight / 2), axisColor), axisFont, samples[i].category)
 			
 			thisY += 1.0
 			}

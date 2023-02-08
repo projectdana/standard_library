@@ -13,7 +13,7 @@ component provides SVGCanvas requires data.DecUtil du, data.IntUtil iu, encoding
 	
 	FontInclude fontTable[]
 	
-	void SVGCanvas:drawRect(Rect2D rect)
+	void SVGCanvas:rect(Rect2D rect)
 		{
 		dec opacity = rect.color.a
 		opacity = opacity / 255.0
@@ -21,7 +21,7 @@ component provides SVGCanvas requires data.DecUtil du, data.IntUtil iu, encoding
 		svg = new char[](svg, "<rect x = \"$(rect.x)\" y = \"$(rect.y)\" width=\"$(rect.width)\" height=\"$(rect.height)\" style=\"fill:rgb($(rect.color.r),$(rect.color.g),$(rect.color.b)); fill-opacity: $opacity\"/>")
 		}
 	
-	void SVGCanvas:drawRectOutline(Rect2D rect)
+	void SVGCanvas:rectOutline(Rect2D rect, opt int thickness)
 		{
 		dec opacity = rect.color.a
 		opacity = opacity / 255.0
@@ -29,7 +29,25 @@ component provides SVGCanvas requires data.DecUtil du, data.IntUtil iu, encoding
 		svg = new char[](svg, "<rect x = \"$(rect.x)\" y = \"$(rect.y)\" width=\"$(rect.width)\" height=\"$(rect.height)\" style=\"stroke-width:1;stroke:rgb($(rect.color.r),$(rect.color.g),$(rect.color.b)); stroke-opacity: $opacity; fill-opacity: 0.0\" />")
 		}
 	
-	void SVGCanvas:drawLine(Line2D line)
+	void SVGCanvas:roundedRect(Rect2D r, int xRadius, int yRadius)
+		{
+		}
+	
+	void SVGCanvas:roundedRectOutline(Rect2D r, int xRadius, int yRadius, opt int thickness)
+		{
+		if (!(isset thickness)) thickness = 1
+
+		int offset = thickness / 2
+
+		/*
+		drawLine(new Line2D(r.x - offset, r.y, (r.x + r.width) + offset - 1, r.y, r.color), thickness)
+		drawLine(new Line2D(r.x, r.y, r.x, (r.y + r.height) + offset - 1, r.color), thickness)
+		drawLine(new Line2D((r.x + r.width) - 1, r.y, (r.x + r.width) - 1, (r.y + r.height) + offset - 1, r.color), thickness)
+		drawLine(new Line2D(r.x, (r.y + r.height) - 1, (r.x + r.width) - 1, (r.y + r.height) - 1, r.color), thickness)
+		*/
+		}
+	
+	void SVGCanvas:line(Line2D line, opt int thickness)
 		{
 		dec opacity = line.color.a
 		opacity = opacity / 255.0
@@ -37,47 +55,60 @@ component provides SVGCanvas requires data.DecUtil du, data.IntUtil iu, encoding
 		svg = new char[](svg, "<line x1=\"$(line.sx)\" y1=\"$(line.sy)\" x2=\"$(line.ex)\" y2=\"$(line.ey)\" style=\"stroke:rgb($(line.color.r),$(line.color.g),$(line.color.b));stroke-width:1; stroke-opacity: $opacity\" />")
 		}
 	
-	void SVGCanvas:drawPoint(Point2D point)
+	void SVGCanvas:curve(Curve2D line, int isteps, opt int thickness)
+		{
+		}
+	
+	void SVGCanvas:point(Point2D point)
 		{
 		
 		}
 	
-	void SVGCanvas:drawPixels(PixelMap map, int x, int y, int rotation)
+	void SVGCanvas:ellipse(Ellipse2D r)
+		{
+		}
+	
+	void SVGCanvas:ellipseOutline(Ellipse2D r, opt int thickness)
+		{
+		}
+	
+	void SVGCanvas:arc(Arc2D r)
+		{
+		}
+	
+	void SVGCanvas:arcOutline(Arc2D r, opt int lineWidth)
+		{
+		}
+	
+	void SVGCanvas:pie(Arc2D r)
+		{
+		}
+	
+	void SVGCanvas:polygon(Polygon2D r)
+		{
+		}
+	
+	void SVGCanvas:polygonOutline(Polygon2D r)
+		{
+		}
+	
+	void SVGCanvas:polygonBezier(Polygon2D r, int isteps)
+		{
+		}
+	
+	void SVGCanvas:pixels(PixelMap map, int x, int y, opt int scaledWidth, int scaledHeight, int rotation, Rect subRect)
 		{
 		
 		}
 	
-	void SVGCanvas:drawPixelsEx(PixelMap map, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
-		{
-		
-		}
-	
-	void SVGCanvas:drawText(Point2D position, Font f, char text[])
+	void SVGCanvas:text(Point2D position, Font f, char text[], opt int rotation)
 		{
 		dec opacity = position.color.a
 		opacity = opacity / 255.0
 		
 		//SVG uses bottom-left anchoring for the text *baseline* location, but the screen renderer uses top-left absolute height anchoring, so here we adjust...
 		int adjustedY = position.y + f.getFontMetrics().ascent
-		
-		//note that Dana's screen-rendered fonts are effectively sized in pixels (sized in points at a fixed 72 DPI), so here we use pixels to avoid scaling issues with different DPI ranges
-		svg = new char[](svg, "<text x=\"$(position.x)\" y=\"$(adjustedY)\" fill=\"rgb($(position.color.r),$(position.color.g),$(position.color.b))\" style=\"font-family: '$(f.getFontName())'; font-size: $(f.getSize())px; fill-opacity: $opacity\">$text</text>")
-		
-		//note the font details as we'll need to define its source data in the header
-		if (fontTable.search(FontInclude.[name], new FontInclude(f.getFontName())) == null)
-			{
-			fontTable = new FontInclude[](fontTable, new FontInclude(f.getFontName(), f.getSource()))
-			}
-		}
-	
-	void SVGCanvas:drawTextEx(Point2D position, Font f, char text[], int rotation)
-		{
-		dec opacity = position.color.a
-		opacity = opacity / 255.0
-		
-		//SVG uses bottom-left anchoring for the text *baseline* location, but the screen renderer uses top-left absolute height anchoring, so here we adjust...
-		int adjustedY = position.y + f.getFontMetrics().ascent
-		
+
 		int rotationX = position.x
 		int rotationY = position.y
 		

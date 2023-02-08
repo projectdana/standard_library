@@ -1,0 +1,12 @@
+/*
+* Curve2D type
+* This data type describes a curve with a color; x/y typically represents the coordinates of the top left corner and width/height represent its size.
+*/
+
+uses Color
+uses Point
+
+data Curve2D{
+	Point points[]
+	Color color
+	}
