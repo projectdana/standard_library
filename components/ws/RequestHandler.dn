@@ -529,6 +529,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 						else
 						stream.send("Connection: close\r\n")
 					stream.send("Content-length: $(MSG_404.arrayLength)\r\n")
+					stream.send("Content-type: text/plain \r\n")
 					stream.send("Date: $(util.getDateString(cal.getTime()))\r\n")
 					stream.send("\r\n")
 					stream.send(MSG_404)

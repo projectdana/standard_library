@@ -66,8 +66,10 @@ component provides MarkdownToHTML requires data.IntUtil iu, data.StringBuilder, 
 			}
 		}
 	
-	void docToHTML(MDElement doc, MDCodeStyle codeStyling[], StringBuilder bld)
+	int docToHTML(MDElement doc, MDCodeStyle codeStyling[], StringBuilder bld, int anchorCount)
 		{
+		int aci = 0
+
 		if (doc.type == MDElement.PARAGRAPH)
 			{
 			bld.add("<p>")
@@ -110,9 +112,12 @@ component provides MarkdownToHTML requires data.IntUtil iu, data.StringBuilder, 
 			}
 			else if (doc.type == MDElement.HEADING)
 			{
-			bld.add("<h$(doc.extType)>")
+			bld.add("<h$(doc.extType) id = \"anchor$anchorCount\">")
 			bld.add(doc.content)
 			bld.add("</h$(doc.extType)>")
+			
+			anchorCount ++
+			aci ++
 			}
 			else if (doc.type == MDElement.LIST_UNORDERED)
 			{
@@ -151,7 +156,7 @@ component provides MarkdownToHTML requires data.IntUtil iu, data.StringBuilder, 
 		
 		for (int i = 0; i < doc.children.arrayLength; i++)
 			{
-			docToHTML(doc.children[i], codeStyling, bld)
+			anchorCount += docToHTML(doc.children[i], codeStyling, bld, anchorCount)
 			}
 		
 		if (doc.type == MDElement.PARAGRAPH)
@@ -178,12 +183,47 @@ component provides MarkdownToHTML requires data.IntUtil iu, data.StringBuilder, 
 			{
 			bld.add("</blockquote>")
 			}
+		
+		return aci
 		}
 	
-	char[] MarkdownToHTML:process(MDElement doc, opt MDCodeStyle codeStyling[])
+	int makeTOC(MDElement doc, StringBuilder bld, int anchorCount)
+		{
+		int aci = 0
+		if (doc.type == MDElement.HEADING)
+			{
+			bld.add("<p><a href = \"#anchor$anchorCount\">$(doc.content)</a></p>")
+			anchorCount ++
+			aci ++
+			}
+
+		for (int i = 0; i < doc.children.arrayLength; i++)
+			{
+			anchorCount += makeTOC(doc.children[i], bld, anchorCount)
+			}
+		
+		return aci
+		}
+	
+	char[] MarkdownToHTML:process(MDElement doc, opt MDCodeStyle codeStyling[], bool generateTOC)
 		{
 		StringBuilder sbld = new StringBuilder()
-		docToHTML(doc, codeStyling, sbld)
+
+		if (generateTOC)
+			{
+			StringBuilder tocBuild = new StringBuilder()
+			makeTOC(doc, tocBuild, 0)
+
+			char toc[] = tocBuild.get()
+			if (toc.arrayLength > 0)
+				{
+				sbld.add("<div style = \"float:right; margin-left: 10px; margin-bottom: 10px; border-left: medium solid silver; border-bottom: medium solid silver; padding-left: 10px; padding-bottom: 10px\">")
+				sbld.add(toc)
+				sbld.add("</div>")
+				}
+			}
+
+		docToHTML(doc, codeStyling, sbld, 0)
 		
 		return sbld.get()
 		}

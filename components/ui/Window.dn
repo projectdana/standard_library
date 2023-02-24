@@ -50,6 +50,9 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 	int currentWidth = 500
 	int currentHeight = 500
 
+	int windowedWidth = 500
+	int windowedHeight = 500
+
 	bool isMaximised
 	int restoredWidth
 	int restoredHeight
@@ -110,6 +113,9 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			
 			currentWidth = wh.width
 			currentHeight = wh.height
+
+			windowedWidth = currentWidth
+			windowedHeight = currentHeight
 			
 			emitevent resize(wh)
 			
@@ -217,9 +223,22 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 		canvas.setFullScreen(b)
 		fullScreen = b
 
-		WH sz = canvas.getResolution()
-		currentWidth = sz.width
-		currentHeight = sz.height
+		if (b)
+			{
+			windowedWidth = currentWidth
+			windowedHeight = currentHeight
+
+			WH sz = canvas.getResolution()
+			currentWidth = sz.width
+			currentHeight = sz.height
+			}
+			else
+			{
+			currentWidth = windowedWidth
+			currentHeight = windowedHeight
+			}
+
+		postRepaint()
 		}
 
 	void Window:setTitle(char title[])
@@ -252,6 +271,40 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 				canvas.setCursor(IOWindow.CURSOR_DEFAULT)
 				}
 			}
+		}
+	
+	void Window:setPosition(int x, int y)
+		{
+		currentX = x
+		currentY = y
+		canvas.setPosition(x, y)
+		}
+
+	void Window:setSize(int x, int y)
+		{
+		if (!fullScreen)
+			{
+			currentWidth = x
+			currentHeight = y
+
+			windowedWidth = currentWidth
+			windowedHeight = currentHeight
+			
+			canvas.setSize(x, y)
+			}
+			else
+			{
+			WH sz = canvas.getResolution()
+			currentWidth = sz.width
+			currentHeight = sz.height
+			}
+
+		paint(null)
+		}
+
+	WH Window:getSize()
+		{
+		return new WH(currentWidth, currentHeight)
 		}
 
 	void Window:close()
@@ -471,36 +524,6 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 				break
 				}
 			}
-		}
-
-	void Window:setPosition(int x, int y)
-		{
-		currentX = x
-		currentY = y
-		canvas.setPosition(x, y)
-		}
-
-	void Window:setSize(int x, int y)
-		{
-		if (!fullScreen)
-			{
-			currentWidth = x
-			currentHeight = y
-			canvas.setSize(x, y)
-			}
-			else
-			{
-			WH sz = canvas.getResolution()
-			currentWidth = sz.width
-			currentHeight = sz.height
-			}
-
-		paint(null)
-		}
-
-	WH Window:getSize()
-		{
-		return new WH(currentWidth, currentHeight)
 		}
 
 	Rect Window:getRect()

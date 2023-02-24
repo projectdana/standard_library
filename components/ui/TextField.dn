@@ -453,14 +453,64 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			}
 		}
 	
+	bool isAlphaNum(char x[])
+		{
+		if (x.arrayLength > 1) return false
+		
+		if ((x[0] >= "a") && (x[0] <= "z")) return true
+		
+		if ((x[0] >= "A") && (x[0] <= "Z")) return true
+		
+		if ((x[0] >= "0") && (x[0] <= "9")) return true
+		
+		return false
+		}
+	
 	void TextField:clickMulti(int x, int y, int button, int clicks)
 		{
 		focus = true
 		if (button == MouseButtons.BUTTON_LEFT && clicks == 2)
 			{
-			//TODO: check if this position is inside a word, with no special characters; if so, highlight that word  and place the cursor at its end
+			//check if this position is inside a word, with no special characters; if so, highlight that word and place the cursor at its end
+			// - we keep doing subString() on either side of the cursor position, for a length of one character, to see if that single character is a <a-x/A-Z/0-9> character, and if so we keep expanding our selection box on both sides until we hit something else
 			cursorPosition = findCursorPos(x + hScroll)
 			selectStartPos = cursorPosition
+			
+			int xl = cursorPosition
+			
+			while (xl < currentText.length())
+				{
+				char n[] = currentText.subString(xl, 1)
+				
+				if (isAlphaNum(n))
+					{
+					xl ++
+					}
+					else
+					{
+					break
+					}
+				}
+			
+			cursorPosition = xl
+			
+			int xr = selectStartPos
+			
+			while (xr > 0)
+				{
+				char n[] = currentText.subString(xr-1, 1)
+				
+				if (isAlphaNum(n))
+					{
+					xr --
+					}
+					else
+					{
+					break
+					}
+				}
+			
+			selectStartPos = xr
 
 			updateCursorPosition()
 
