@@ -92,6 +92,11 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			MouseEvent me = ed.details
 			mouseMove(me.x, me.y)
 			}
+			else if (ed.type == IOWindow.[mouseWheel])
+			{
+			MouseEvent me = ed.details
+			mouseWheel(me.x, me.exd1, me.y, me.exd2)
+			}
 			else if (ed.type == IOWindow.[fileDrop])
 			{
 			DropEvent de = ed.details
@@ -710,6 +715,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 				{
 				//we only register a mouse-up if this was the thing that got the mouse-down
+
 				if (ci === clickDown)
 					{
 					ci.object.mouseUp(x - r.x, y - r.y, button)
@@ -811,6 +817,14 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			if (!cursorOverride) canvas.setCursor(IOWindow.CURSOR_DEFAULT)
 			baseCursor = null
 			mouseOver = null
+			}
+		}
+	
+	void Window:mouseWheel(int xAdd, int xSub, int yAdd, int ySub)
+		{
+		if (mouseOver != null)
+			{
+			mouseOver.mouseWheel(xAdd, xSub, yAdd, ySub)
 			}
 		}
 	

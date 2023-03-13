@@ -531,6 +531,14 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 			}
 		}
 	
+	void Panel:mouseWheel(int xAdd, int xSub, int yAdd, int ySub)
+		{
+		if (mouseOver != null)
+			{
+			mouseOver.mouseWheel(xAdd, xSub, yAdd, ySub)
+			}
+		}
+	
 	void Panel:mouseOut()
 		{
 		if (mouseOver != null)

@@ -29,4 +29,6 @@ interface XYMouseObject extends ClickableObject {
 	void mouseOver(){}
 	/* {"@description" : "This function is called by the windowing system when the mouse pointer exits the bounding box of this object."} */
 	void mouseOut(){}
+	/* {"@description" : "This function is called by the windowing system when the mouse wheel is moved, and indicates how much movement is suggested by the mouse wheel input in left, right, up, and down directions."} */
+	void mouseWheel(int xAdd, int xSub, int yAdd, int ySub){}
 	}

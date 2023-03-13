@@ -3,6 +3,8 @@ const int SCR_BUTTON_WIDTH = 20
 
 const int SLIDER_MIN_HEIGHT = 20
 
+const int SCROLL_TICK = 5
+
 component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar, ScrollBar:h {
 
 	int width
@@ -281,6 +283,41 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 			XYMouseObject cco = content
 			cco.mouseOut()
 			}
+		}
+	
+	void ScrollPane:mouseWheel(int xAdd, int xSub, int yAdd, int ySub)
+		{
+		int maxScrollY = content.getPreferredSize().height - height
+
+		if (ySub != 0)
+			{
+			if ((scrollY + (ySub * SCROLL_TICK)) > maxScrollY)
+				{
+				scrollY = maxScrollY
+				}
+				else
+				{
+				scrollY += (ySub * SCROLL_TICK)
+				}
+			
+			scrollV.setScrollPos(scrollY)
+			}
+		
+		if (yAdd != 0)
+			{
+			if (scrollY <= (yAdd * SCROLL_TICK))
+				{
+				scrollY = 0
+				}
+				else
+				{
+				scrollY -= (yAdd * SCROLL_TICK)
+				}
+			
+			scrollV.setScrollPos(scrollY)
+			}
+		
+		postRepaint()
 		}
 	
 	void ScrollPane:dropFile(int x, int y, char path[])

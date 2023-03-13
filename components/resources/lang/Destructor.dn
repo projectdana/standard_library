@@ -1,10 +1,8 @@
 /*
- {"description" : "This interface can be provided as a secondary interface of an object, allowing it to be notified of when it is being destroyed."}
+ {"description" : "This interface can be provided as a secondary interface of an object, allowing it to be notified of when it is being destroyed. A destructor is called on an object when there are no further external references to that object. Note that asynchronous threads started by that object are not treated as external references and so a destructor can be called while such threads are still running; a destructor should therefore be used to stop any created threads."}
 */
 
 interface Destructor{
-	/*
-	 {"@description" : "This function is called when an object is being destroyed."}
-	*/
+	/* {"@description" : "This function is called when an object is being destroyed."}*/
 	void destroy()
 	}

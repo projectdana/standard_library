@@ -24,6 +24,9 @@ interface TextField extends KeyEventObject {
 	
 	/* {"@description" : "Set whether or not text is obscured by password mask characters (default is false)."} */
 	void setPasswordMask(bool t)
+
+	/* {"@description" : "Set placeholder text, which is shown when the text field is empty."} */
+	void setPlaceholder(char text[])
 	
 	/* {"@description" : "Set a clickable object (such as a button) to send a 'click' notification to when the user presses the return key."} */
 	void setClickTarget(store ClickableObject o)

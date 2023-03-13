@@ -1,0 +1,42 @@
+/*
+ {"description" : "A text area for multiple lines of text."}
+*/
+
+uses Color
+uses Font
+uses data.String
+
+interface TextArea extends KeyEventObject {
+	
+	/* {"@description" : "An event which reports whenever the content of the text area is changed (which could be by entering new text, cutting or pasting, deleting text, etc.)."} */
+	event textChanged()
+	
+	TextArea()
+	
+	/* {"@description" : "Get the current text in the area."} */
+	char[] getText(opt char lineSeparator[])
+	
+	/* {"@description" : "Set the current text in the area."} */
+	void setText(char text[])
+	
+	/* {"@description" : "Set the width and height of the area in pixels."} */
+	void setSize(int w, int h)
+	
+	/* {"@description" : "Set the background of the text area."} */
+	void setBackground(store Color c)
+	/* {"@description" : "Set the border of the text area."} */
+	void setBorder(store Color c)
+	/* {"@description" : "Set the text highlight style of the text area."} */
+	void setHighlight(store Color c)
+	/* {"@description" : "Set the text color of the text area."} */
+	void setTextColor(store Color c)
+	
+	/* {"@description" : "Set the font used in the text area."} */
+	void setFont(store Font f)
+	
+	/* {"@description" : "Set the position of the cursor, as a character index starting from zero."} */
+	void setCursorPos(int p)
+	
+	/* {"@description" : "Get the current position of the cursor, as a character index starting from zero."} */
+	int getCursorPos()
+	}

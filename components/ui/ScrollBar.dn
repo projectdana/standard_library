@@ -85,7 +85,7 @@ component provides ScrollBar requires io.Output out, data.IntUtil iu {
 	
 	void ScrollBar:setScrollPos(int v)
 		{
-		if (v < maxScroll)
+		if (v <= maxScroll)
 			{
 			scroll = v
 			postRepaint()

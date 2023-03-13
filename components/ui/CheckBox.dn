@@ -50,6 +50,25 @@ component provides CheckBox requires ui.Font, os.SystemInfo sysInfo, io.Output o
 	void CheckBox:setChecked(bool t)
 		{
 		checked = t
+		postRepaint()
+		}
+	
+	void CheckBox:setBackground(store Color c)
+		{
+		background = c
+		postRepaint()
+		}
+	
+	void CheckBox:setCheckColor(store Color c)
+		{
+		checkColor = c
+		postRepaint()
+		}
+	
+	void CheckBox:setTextColor(store Color c)
+		{
+		textColor = c
+		postRepaint()
 		}
 	
 	void CheckBox:setPosition(int x, int y)

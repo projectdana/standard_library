@@ -594,7 +594,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 	
 	void timerThread()
 		{
-		while (true)
+		while (!shutdown)
 			{
 			timer.sleep(TIMEOUT_INTERVAL)
 
@@ -671,7 +671,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 	void Destructor:destroy()
 		{
 		shutdown = true
-		
+
 		for (int i = 0; i < threadPool.arrayLength; i++)
 			{
 			threadPool[i].thread.signal()

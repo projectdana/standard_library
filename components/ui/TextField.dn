@@ -9,6 +9,8 @@ const int CURSOR_WIDTH = 1
 const byte CONTEXT_MENU = 0
 const byte CONTEXT_HINT = 1
 
+const int SCROLL_TICKS = 5
+
 uses IOWindow
 
 component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, os.SystemInfo sysInfo, os.Clipboard clipboard, locale.KeyMapping keyMapping, encoding.StringUTF {
@@ -16,6 +18,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	bool passwordMask
 	
 	StringUTF currentText
+	StringUTF placeholder
 	char maskedText[]
 	Font textFont
 	
@@ -33,6 +36,8 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	bool shiftDown
 	
 	byte keyState
+
+	bool mouseDragCapture
 	
 	ClickableObject clickTarget
 	
@@ -56,6 +61,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	Color borderColor = new Color(180, 180, 190, 255)
 	Color highlightColor = new Color(160, 160, 200, 255)
 	Color textColor = new Color(0, 0, 0, 255)
+	Color placeholderTextColor = new Color(90, 90, 90, 255)
 	
 	TextField:TextField()
 		{
@@ -437,14 +443,8 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	void TextField:click(int x, int y, int button)
 		{
 		focus = true
-		if (button == MouseButtons.BUTTON_LEFT)
-			{
-			//locate this position in the text, and set the cursor there
-			cursorPosition = findCursorPos(x + hScroll)
-			selectStartPos = cursorPosition
-			postRepaint()
-			}
-			else if (button == MouseButtons.BUTTON_RIGHT)
+		
+		if (button == MouseButtons.BUTTON_RIGHT)
 			{
 			menu.xAnchor = x
 			menu.yAnchor = y
@@ -598,12 +598,62 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	
 	void TextField:mouseUp(int x, int y, int button)
 		{
-		
+		if (button == MouseButtons.BUTTON_LEFT)
+			{
+			mouseDragCapture = false
+			}
+		}
+	
+	void TextField:mouseMove(int x, int y)
+		{
+		if (mouseDragCapture)
+			{
+			int newPos = findCursorPos(x + hScroll)
+
+			if (newPos != cursorPosition)
+				{
+				cursorPosition = newPos
+				postRepaint()
+				}
+			}
 		}
 	
 	void TextField:mouseDown(int x, int y, int button)
 		{
+		if (button == MouseButtons.BUTTON_LEFT)
+			{
+			//locate this position in the text, and set the cursor there
+			cursorPosition = findCursorPos(x + hScroll)
+
+			if (!shiftDown)
+				selectStartPos = cursorPosition
+			
+			mouseDragCapture = true
+			
+			postRepaint()
+			}
+		}
+	
+	void TextField:mouseWheel(int xAdd, int xSub, int yAdd, int ySub)
+		{
+		int maxScroll = 0
 		
+		int textWidth = textFont.getTextWidth(currentText.getRaw())
+
+		if (textWidth > (width - (TEXT_BORDER_H*2) - CURSOR_WIDTH))
+			maxScroll = textWidth - (width - (TEXT_BORDER_H*2) - CURSOR_WIDTH)
+
+		if (yAdd != 0 && hScroll < SCROLL_TICKS)
+			hScroll = 0
+			else
+			hScroll -= (yAdd*SCROLL_TICKS)
+		
+		if (ySub != 0 && (hScroll + (ySub*SCROLL_TICKS)) > maxScroll)
+			hScroll = maxScroll
+			else
+			hScroll += (ySub*SCROLL_TICKS)
+		
+		postRepaint()
 		}
 
 	char[] TextField:getText()
@@ -621,6 +671,16 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			k[i] = "*"
 			}
 		maskedText = k
+		postRepaint()
+		}
+	
+	void TextField:setPlaceholder(char text[])
+		{
+		if (text != null)
+			placeholder = new StringUTF(text)
+			else
+			placeholder = null
+		
 		postRepaint()
 		}
 	
@@ -718,6 +778,11 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		if (focus)
 			{
 			drawCursor(c, cursorPosition)
+			}
+		
+		if (currentText.length() == 0 && placeholder != null)
+			{
+			c.text(new Point2D(0, TEXT_BORDER_V, placeholderTextColor), textFont, placeholder.getRaw())
 			}
 		
 		c.popSurface()

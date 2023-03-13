@@ -1,0 +1,1744 @@
+//this is the horizontal border between the textual contents of the TextArea, and the outer edge of its background
+const int TEXT_BORDER_H = 3
+
+//and the vertical border
+const int TEXT_BORDER_V = 1
+
+const int CURSOR_WIDTH = 1
+
+const byte CONTEXT_MENU = 0
+const byte CONTEXT_HINT = 1
+
+const int SCR_BUTTON_HEIGHT = 20
+const int SCR_BUTTON_WIDTH = 20
+
+uses IOWindow
+
+data TextLine {
+	StringUTF text
+	int pixelLength
+
+	//these references track the in-order list of lines in the text area
+	TextLine next
+	TextLine prev
+
+	//these references are used to keep a sorted list of line-lengths (by pixel length) for scroll area calculations
+	TextLine nextLen
+	TextLine prevLen
+	}
+
+data CursorPos {
+	int character
+	int yPosition
+	TextLine line
+	}
+
+component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu, ui.Font, os.SystemInfo sysInfo, os.Clipboard clipboard, locale.KeyMapping keyMapping, encoding.StringUTF, ScrollBar, ScrollBar:h {
+	
+	Mutex textLock = new Mutex()
+
+	TextLine lines
+	TextLine lastLine
+
+	TextLine shortestLine
+	TextLine longestLine
+	
+	int cursorPosition
+	TextLine cursorLine
+	int cursorPositionY
+
+	int selectStartPos
+	TextLine selectStartLine
+	int selectStartY
+
+	Font textFont
+	
+	int width = 40
+	int height = 20
+	int textAreaWidth = 20
+	int textAreaHeight = 20
+	int cursorHeight = 20
+	
+	bool focus
+	
+	bool shiftDown
+
+	bool mouseDragCapture
+
+	int lineCount
+	
+	byte keyState
+
+	bool showScrollV = true
+	ScrollBar scrollV
+	int yScroll
+	
+	bool showScrollH = true
+	ScrollBar scrollH
+	int xScroll
+
+	GraphicsObject clickDown
+
+	byte cursorType
+
+	int SCROLL_TICKS = 20
+	
+	ContextMenuSpec menu
+	MenuItem cutMenu = new MenuItem("Cut", "Ctrl+X")
+	MenuItem copyMenu = new MenuItem("Copy", "Ctrl+C")
+	MenuItem pasteMenu = new MenuItem("Paste", "Ctrl+V")
+	MenuItem selectAllMenu= new MenuItem("Select All", "Ctrl+A")
+	
+	HotKey hkeys[]
+	HotKey hkCut = new HotKey(KeyState.KEY_CTRL, KeyCode.X)
+	HotKey hkCopy = new HotKey(KeyState.KEY_CTRL, KeyCode.C)
+	HotKey hkPaste = new HotKey(KeyState.KEY_CTRL, KeyCode.V)
+	HotKey hkSelectAll = new HotKey(KeyState.KEY_CTRL, KeyCode.A)
+	
+	Color bgColor = new Color(200, 200, 220, 255)
+	Color borderColor = new Color(180, 180, 190, 255)
+	Color highlightColor = new Color(160, 160, 200, 255)
+	Color textColor = new Color(0, 0, 0, 255)
+	
+	TextArea:TextArea()
+		{
+		textFont = new Font(sysInfo.getSystemFont(false), 15)
+		
+		menu = new ContextMenuSpec()
+		
+		menu.items = new MenuItem[](cutMenu,
+									copyMenu,
+									pasteMenu,
+									selectAllMenu
+									)
+		
+		hkeys = new HotKey[](hkCut,
+							hkCopy,
+							hkPaste,
+							hkSelectAll
+							)
+		
+		height = textFont.getFontMetrics().height + (TEXT_BORDER_V*2)
+		cursorHeight = textFont.getFontMetrics().height + (TEXT_BORDER_V*2)
+		SCROLL_TICKS = cursorHeight
+		
+		lines = new TextLine(new StringUTF(""))
+		lastLine = lines
+		cursorLine = lines
+		selectStartLine = cursorLine
+
+		shortestLine = lines
+		longestLine = lines
+
+		scrollV = new ScrollBar()
+		scrollV.setPosition(width - SCR_BUTTON_WIDTH, 0)
+		
+		scrollH = new ScrollBar:h()
+		scrollH.setPosition(0, height - SCR_BUTTON_WIDTH)
+
+		sinkevent ScrollEvents(scrollV)
+		sinkevent ScrollEvents(scrollH)
+		}
+	
+	eventsink ScrollEvents(EventData ed)
+		{
+		if (ed.source === scrollV && ed.type == ScrollBar.[scrollMoved])
+			{
+			yScroll = scrollV.getScrollPos()
+			}
+			else if (ed.source === scrollV && ed.type == ScrollBar.[repaint])
+			{
+			postRepaint()
+			}
+			else if (ed.source === scrollH && ed.type == ScrollBar.[scrollMoved])
+			{
+			xScroll = scrollH.getScrollPos()
+			}
+			else if (ed.source === scrollH && ed.type == ScrollBar.[repaint])
+			{
+			postRepaint()
+			}
+		}
+	
+	void TextArea:setBackground(Color c)
+		{
+		bgColor = c
+		
+		postRepaint()
+		}
+	
+	void TextArea:setBorder(Color c)
+		{
+		borderColor = c
+		
+		postRepaint()
+		}
+	
+	void TextArea:setHighlight(Color c)
+		{
+		highlightColor = c
+		
+		postRepaint()
+		}
+	
+	void TextArea:setTextColor(Color c)
+		{
+		textColor = c
+		
+		postRepaint()
+		}
+	
+	void TextArea:setFont(Font f)
+		{
+		textFont = f
+		
+		cursorHeight = textFont.getFontMetrics().height + (TEXT_BORDER_V*2)
+		
+		postRepaint()
+		}
+	
+	char[] getTextRegion(TextLine startLine, int startPos, TextLine endLine, int endPos, char lineSeparator[])
+		{
+		if (startLine !== endLine)
+			{
+			//here we use the process from highlight, but to collect those sections (and add newline characters between lines!)
+			char result[] = null
+
+			TextLine ssline = startLine
+			TextLine seline = endLine
+			int sspos = startPos
+			int sepos = endPos
+
+			int cy = 0
+			bool inSelect
+
+			TextLine lw = lines
+
+			while (lw != null)
+				{
+				if (lw === ssline)
+					{
+					inSelect = true
+
+					result = lw.text.subString(sspos, lw.text.length()-sspos)
+					}
+					else if (lw === seline)
+					{
+					result = new char[](result, lineSeparator, lw.text.subString(0, sepos))
+					}
+					else if (inSelect)
+					{
+					result = new char[](result, lineSeparator, lw.text.getRaw())
+					}
+				
+				if (lw === seline)
+					{
+					inSelect = false
+					break
+					}
+
+				lw = lw.next
+				cy += cursorHeight
+				}
+
+			return result
+			}
+			else
+			{
+			int s = startPos
+			int e = endPos
+			
+			return startLine.text.subString(s, e-s)
+			}
+
+		return null
+		}
+	
+	char[] getSelectedText()
+		{
+		if (selectStartLine !== cursorLine)
+			{
+			//here we use the process from highlight, but to collect those sections (and add newline characters between lines!)
+			TextLine ssline
+			TextLine seline
+			int sspos
+			int sepos
+
+			if (cursorPositionY < selectStartY)
+				{
+				ssline = cursorLine
+				seline = selectStartLine
+				sspos = cursorPosition
+				sepos = selectStartPos
+				}
+				else
+				{
+				ssline = selectStartLine
+				seline = cursorLine
+				sspos = selectStartPos
+				sepos = cursorPosition
+				}
+			
+			return getTextRegion(ssline, sspos, seline, sepos, "\n")
+			}
+			else
+			{
+			int s
+			int e
+			
+			if (selectStartPos < cursorPosition)
+				{
+				s = selectStartPos
+				e = cursorPosition
+				}
+				else
+				{
+				e = selectStartPos
+				s = cursorPosition
+				}
+			
+			return cursorLine.text.subString(s, e-s)
+			}
+		}
+	
+	void updateScrollMax()
+		{
+		//vertical scroll
+		int maxHeight = (lineCount * cursorHeight) + cursorHeight
+		int maxScrollY = 0
+		if (maxHeight > textAreaHeight)
+			maxScrollY = maxHeight - textAreaHeight
+		scrollV.setMaxValue(maxScrollY)
+
+		//horizontal scroll
+		int maxWidth = (longestLine.pixelLength) + CURSOR_WIDTH
+		int maxScrollX = 0
+		if (maxWidth > textAreaWidth)
+			maxScrollX = maxWidth - textAreaWidth
+		scrollH.setMaxValue(maxScrollX)
+		}
+
+	void removeLine(TextLine td)
+		{
+		if (td.prev != null) td.prev.next = td.next
+		if (td.next != null) td.next.prev = td.prev
+
+		if (lastLine === td) lastLine = td.prev
+
+		td.prev = null
+		td.next = null
+
+		td = null
+
+		lineCount --
+
+		updateScrollMax()
+		}
+	
+	void addLine(TextLine nl)
+		{
+		TextLine tw = shortestLine
+		while ((tw != null) && (nl.pixelLength > tw.pixelLength))
+			{
+			tw = tw.nextLen
+			}
+		
+		if (tw != null)
+			{
+			nl.nextLen = tw
+			if (tw.prevLen != null)
+				tw.prevLen.nextLen = nl
+				else
+				shortestLine = nl
+			nl.prevLen = tw.prevLen
+			tw.prevLen = nl
+			}
+			else
+			{
+			longestLine.nextLen = nl
+			nl.prevLen = longestLine
+			longestLine = nl
+			}
+
+		updateScrollMax()
+		}
+	
+	void deleteSelection()
+		{
+		if (selectStartLine !== cursorLine)
+			{
+			//use process from highlight, but to delete those sections
+
+			TextLine ssline
+			TextLine seline
+			int sspos
+			int sepos
+
+			bool cursorLineFirst = cursorPositionY < selectStartY
+
+			if (cursorPositionY < selectStartY)
+				{
+				ssline = cursorLine
+				seline = selectStartLine
+				sspos = cursorPosition
+				sepos = selectStartPos
+				}
+				else
+				{
+				ssline = selectStartLine
+				seline = cursorLine
+				sspos = selectStartPos
+				sepos = cursorPosition
+				}
+
+			int cy = 0
+			bool inSelect
+
+			TextLine lw = lines
+			TextLine td = null
+
+			while (lw != null)
+				{
+				if (lw === ssline)
+					{
+					inSelect = true
+
+					lw.text.delete(sspos, lw.text.length()-sspos)
+					updateLineLength(lw)
+					}
+					else if (lw === seline)
+					{
+					lw.text.delete(0, sepos)
+					updateLineLength(lw)
+
+					cursorPosition = ssline.text.length()
+					cursorLine = ssline
+
+					ssline.text.append(lw.text.getRaw())
+					updateLineLength(ssline)
+
+					td = lw
+					if (!cursorLineFirst) cursorPositionY -= cursorHeight
+					}
+					else if (inSelect)
+					{
+					td = lw
+					if (!cursorLineFirst) cursorPositionY -= cursorHeight
+					}
+				
+				if (lw === seline)
+					{
+					inSelect = false
+
+					if (td != null)
+						{
+						removeLine(td)
+						}
+
+					break
+					}
+
+				lw = lw.next
+				cy += cursorHeight
+
+				if (td != null)
+					{
+					removeLine(td)
+					}
+				}
+			
+			selectStartLine = cursorLine
+			selectStartPos = cursorPosition
+			selectStartY = cursorPositionY
+
+			emitevent textChanged()
+			}
+			else
+			{
+			int s
+			int e
+			
+			if (selectStartPos < cursorPosition)
+				{
+				s = selectStartPos
+				e = cursorPosition
+				}
+				else
+				{
+				e = selectStartPos
+				s = cursorPosition
+				}
+			
+			if (s != e)
+				{
+				cursorLine.text.delete(s, e-s)
+				emitevent textChanged()
+				}
+			}
+		}
+	
+	void insertText(char text[])
+		{
+		StringUTF str = new StringUTF(text)
+
+		for (int i = 0; i < str.length(); i++)
+			{
+			char k[] = str.charAt(i)
+			if (k == "\n")
+				{
+				//make a new line
+
+				TextLine ntl = new TextLine(new StringUTF(""))
+
+				ntl.next = cursorLine.next
+				ntl.prev = cursorLine
+
+				if (cursorLine.next != null)
+					cursorLine.next.prev = ntl
+					else
+					lastLine = ntl
+				
+				cursorLine.next = ntl
+
+				//check if we should split the current line at this point, appending it to the next line
+				if (cursorPosition != cursorLine.text.length())
+					{
+					ntl.text = new StringUTF(cursorLine.text.subString(cursorPosition, cursorLine.text.length() - cursorPosition))
+					cursorLine.text.delete(cursorPosition, cursorLine.text.length() - cursorPosition)
+					updateLineLength(cursorLine)
+					}
+
+				cursorLine = ntl
+				cursorPosition = 0
+				cursorPositionY += cursorHeight
+				
+				lineCount ++
+				addLine(ntl)
+				}
+				else if (k == "\r")
+				{
+				//do nothing
+				}
+				else
+				{
+				//append/insert to current line
+				if (cursorPosition == cursorLine.text.length())
+					{
+					cursorLine.text.append(k)
+					updateLineLength(cursorLine)
+					cursorPosition ++
+					}
+					else
+					{
+					cursorLine.text.insert(cursorPosition, k)
+					updateLineLength(cursorLine)
+					cursorPosition ++
+					}
+				}
+			}
+
+		selectStartLine = cursorLine
+		selectStartPos = cursorPosition
+		selectStartY = cursorPositionY
+		
+		emitevent textChanged()
+		}
+	
+	void updateLineLength(TextLine line)
+		{
+		//re-calculate the length-in-pixels of this line
+		int preLength = line.pixelLength
+
+		line.pixelLength = textFont.getTextWidth(line.text.getRaw())
+
+		//...and now adjust sorting order relative to lines around us
+
+		if (preLength < line.pixelLength && longestLine !== line)
+			{
+			TextLine tw = line.nextLen
+
+			while ((tw != null) && (line.pixelLength > tw.pixelLength))
+				{
+				tw = tw.nextLen
+				}
+			
+			if (tw !== line.nextLen)
+				{
+				//remove it from its old position
+				if (line.prevLen != null)
+					line.prevLen.nextLen = line.nextLen
+					else
+					shortestLine = line.nextLen
+				
+				line.nextLen.prevLen = line.prevLen
+
+				//add it to its new position
+				if (tw != null)
+					{
+					tw.prevLen.nextLen = line
+					line.prevLen = tw.prevLen
+					tw.prevLen = line
+					}
+					else
+					{
+					line.prevLen = longestLine
+					longestLine.nextLen = line
+					longestLine = line
+					}
+
+				line.nextLen = tw
+				}
+			}
+			else if (line.pixelLength < preLength && shortestLine !== line)
+			{
+			//search in the other direction (we got shorter)
+
+			TextLine tw = line.prevLen
+
+			while ((tw != null) && (line.pixelLength < tw.pixelLength))
+				{
+				tw = tw.prevLen
+				}
+			
+			if (tw !== line.prevLen)
+				{
+				//remove it from its old position
+				if (line.nextLen != null)
+					line.nextLen.prevLen = line.prevLen
+					else
+					longestLine = line.prevLen
+				
+				line.prevLen.nextLen = line.nextLen
+
+				//add it to its new position
+				if (tw != null)
+					{
+					tw.nextLen.prevLen = line
+					line.nextLen = tw.nextLen
+					tw.nextLen = line
+					}
+					else
+					{
+					line.nextLen = shortestLine
+					shortestLine.prevLen = line
+					shortestLine = line
+					}
+
+				line.prevLen = tw
+				}
+			}
+		
+		updateScrollMax()
+		}
+	
+	void TextArea:keyDown(int keyCode)
+		{
+		//here we check if the key press was a printable character and if so insert it, else handle other key strokes
+		
+		char ch[] = keyMapping.getCharacter(keyCode, keyState)
+		byte kCode
+		
+		if (ch != null)
+			{
+			mutex(textLock)
+				{
+				if (selectStartLine !== cursorLine || selectStartPos != cursorPosition)
+					{
+					deleteSelection()
+					if (selectStartPos > cursorPosition)
+						selectStartPos = cursorPosition
+						else
+						cursorPosition = selectStartPos
+					}
+				
+				if (cursorPosition == cursorLine.text.length())
+					{
+					cursorLine.text.append(ch)
+					}
+					else
+					{
+					cursorLine.text.insert(cursorPosition, ch)
+					}
+				
+				cursorPosition ++
+				selectStartPos = cursorPosition
+
+				updateLineLength(cursorLine)
+				}
+			
+			updateCursorPosition()
+			
+			emitevent textChanged()
+			
+			postRepaint()
+			}
+			else if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.UNKNOWN)
+			{
+			if (kCode == KeyCode.SHIFT_LEFT || kCode == KeyCode.SHIFT_RIGHT)
+				{
+				keyState |= KeyState.KEY_SHIFT
+				shiftDown = true
+				return
+				}
+			
+			if (kCode == KeyCode.CTRL_LEFT || kCode == KeyCode.CTRL_RIGHT)
+				{
+				keyState |= KeyState.KEY_CTRL
+				return
+				}
+			
+			if (kCode == KeyCode.ALT_LEFT || kCode == KeyCode.ALT_RIGHT)
+				{
+				keyState |= KeyState.KEY_ALT
+				return
+				}
+			
+			if (kCode == KeyCode.CMD)
+				{
+				keyState |= KeyState.KEY_CMD
+				return
+				}
+			
+			if (kCode == KeyCode.DELETE)
+				{
+				mutex(textLock)
+					{
+					if (cursorLine === selectStartLine && cursorPosition == selectStartPos)
+						{
+						//deal with cursor at the end of a line, deleting the next line and appending any content to this one
+
+						if (cursorPosition < cursorLine.text.length())
+							{
+							selectStartPos = cursorPosition + 1
+							deleteSelection()
+							selectStartPos --
+
+							updateLineLength(cursorLine)
+							}
+							else if (cursorLine.next != null)
+							{
+							TextLine td = cursorLine.next
+
+							cursorLine.text.append(cursorLine.next.text.getRaw())
+
+							removeLine(td)
+
+							updateLineLength(cursorLine)
+							}
+						}
+						else
+						{
+						deleteSelection()
+						
+						if (cursorPosition > selectStartPos)
+							{
+							cursorPosition = selectStartPos
+							}
+							else
+							{
+							selectStartPos = cursorPosition
+							}
+						}
+					}
+				
+				updateCursorPosition()
+				}
+			
+			if (kCode == KeyCode.BACKSPACE)
+				{
+				mutex(textLock)
+					{
+					if (cursorLine === selectStartLine && cursorPosition == selectStartPos)
+						{
+						//deal with cursor at the start of a line, deleting the current line and appending any content to the previous one
+
+						if (cursorPosition > 0)
+							{
+							selectStartPos = cursorPosition - 1
+							deleteSelection()
+							cursorPosition --
+
+							updateLineLength(cursorLine)
+							}
+							else if (cursorLine.prev != null)
+							{
+							cursorPosition = cursorLine.prev.text.length()
+							selectStartPos = cursorPosition
+
+							cursorPositionY -= cursorHeight
+
+							TextLine td = cursorLine
+
+							cursorLine.prev.text.append(cursorLine.text.getRaw())
+							cursorLine = cursorLine.prev
+
+							removeLine(td)
+
+							selectStartLine = cursorLine
+							selectStartY = cursorPositionY
+
+							updateLineLength(cursorLine)
+							}
+						}
+						else
+						{
+						deleteSelection()
+						
+						if (cursorPosition > selectStartPos)
+							{
+							cursorPosition = selectStartPos
+							}
+							else
+							{
+							selectStartPos = cursorPosition
+							}
+						}
+					}
+				
+				updateCursorPosition()
+				}
+			
+			if (kCode == KeyCode.RETURN)
+				{
+				mutex(textLock)
+					{
+					//delete selection, if any
+					deleteSelection()
+
+					//check if any text comes after this cursor position on the current line; if so move it down to the next line
+					TextLine ntl = new TextLine(new StringUTF(""))
+					lineCount ++
+					addLine(ntl)
+					
+					if (cursorPosition < cursorLine.text.length())
+						{
+						ntl.text = new StringUTF(cursorLine.text.subString(cursorPosition, cursorLine.text.length() - cursorPosition))
+						cursorLine.text = new StringUTF(cursorLine.text.subString(0, cursorPosition))
+						updateLineLength(cursorLine)
+						}
+					
+					//if we're NOT currently on the last line, we need to INSERT a line after the current one
+					if (cursorLine.next != null)
+						{
+						ntl.next = cursorLine.next
+						ntl.prev = cursorLine
+						
+						cursorLine.next.prev = ntl
+						cursorLine.next = ntl
+						}
+						else
+						{
+						lastLine.next = ntl
+						ntl.prev = lastLine
+						lastLine = ntl
+						}
+					
+					cursorLine = ntl
+					selectStartLine = cursorLine
+					cursorPosition = 0
+					selectStartPos = 0
+					
+					cursorPositionY += cursorHeight
+					selectStartY = cursorPositionY
+
+					updateCursorPosition()
+					}
+				}
+			
+			if (kCode == KeyCode.ARROW_LEFT)
+				{
+				if (cursorPosition > 0)
+					{
+					cursorPosition --
+					
+					if (!shiftDown)
+						{
+						selectStartPos = cursorPosition
+						selectStartLine = cursorLine
+						}
+					
+					updateCursorPosition()
+					}
+					else if (cursorLine.prev != null)
+					{
+					cursorPosition = cursorLine.prev.text.length()
+					cursorPositionY -= cursorHeight
+
+					cursorLine = cursorLine.prev
+
+					if (!shiftDown)
+						{
+						selectStartPos = cursorPosition
+						selectStartLine = cursorLine
+						selectStartY = cursorPositionY
+						}
+					
+					updateCursorPosition()
+					}
+				}
+			
+			if (kCode == KeyCode.ARROW_RIGHT)
+				{
+				if (cursorPosition < cursorLine.text.length())
+					{
+					cursorPosition ++
+					
+					if (!shiftDown)
+						{
+						selectStartPos = cursorPosition
+						selectStartLine = cursorLine
+						}
+					
+					updateCursorPosition()
+					}
+					else if (cursorLine.next != null)
+					{
+					cursorPosition = 0
+					cursorPositionY += cursorHeight
+
+					cursorLine = cursorLine.next
+
+					if (!shiftDown)
+						{
+						selectStartPos = cursorPosition
+						selectStartLine = cursorLine
+						selectStartY = cursorPositionY
+						}
+					
+					updateCursorPosition()
+					}
+				}
+			
+			if (kCode == KeyCode.ARROW_UP)
+				{
+				if (cursorLine.prev != null)
+					{
+					TextLine goto = cursorLine.prev
+					
+					if (goto.text.length() < cursorPosition)
+						{
+						cursorPosition = goto.text.length()
+						}
+					
+					cursorLine = goto
+					
+					cursorPositionY -= cursorHeight
+
+					if (!shiftDown)
+						{
+						selectStartPos = cursorPosition
+						selectStartLine = cursorLine
+						selectStartY = cursorPositionY
+						}
+					
+					updateCursorPosition()
+					}
+				}
+			
+			if (kCode == KeyCode.ARROW_DOWN)
+				{
+				if (cursorLine.next != null)
+					{
+					TextLine goto = cursorLine.next
+					
+					if (goto.text.length() < cursorPosition)
+						{
+						cursorPosition = goto.text.length()
+						}
+					
+					cursorLine = goto
+					
+					cursorPositionY += cursorHeight
+
+					if (!shiftDown)
+						{
+						selectStartPos = cursorPosition
+						selectStartLine = cursorLine
+						selectStartY = cursorPositionY
+						}
+					
+					updateCursorPosition()
+					}
+				}
+			
+			if (kCode == KeyCode.END)
+				{
+				cursorPosition = cursorLine.text.length()
+				
+				if (!shiftDown)
+					selectStartPos = cursorPosition
+				
+				updateCursorPosition()
+				}
+			
+			if (kCode == KeyCode.HOME)
+				{
+				cursorPosition = 0
+				
+				if (!shiftDown)
+					selectStartPos = cursorPosition
+				
+				updateCursorPosition()
+				}
+			
+			postRepaint()
+			}
+		}
+	
+	void TextArea:keyUp(int keyCode)
+		{
+		byte kCode
+		
+		if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.UNKNOWN)
+			{
+			if (kCode == KeyCode.SHIFT_LEFT || kCode == KeyCode.SHIFT_RIGHT)
+				{
+				keyState &= ~KeyState.KEY_SHIFT
+				shiftDown = false
+				return
+				}
+			
+			if (kCode == KeyCode.CTRL_LEFT || kCode == KeyCode.CTRL_RIGHT)
+				{
+				keyState &= ~KeyState.KEY_CTRL
+				return
+				}
+			
+			if (kCode == KeyCode.ALT_LEFT)
+				{
+				keyState &= ~KeyState.KEY_ALT
+				}
+			
+			if (kCode == KeyCode.CMD)
+				{
+				keyState &= ~KeyState.KEY_CMD
+				}
+			}
+		}
+	
+	Rect TextArea:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, height)
+		}
+	
+	CursorPos findCursorPos(int x, int y)
+		{
+		//first we find the line
+		TextLine lw = lines
+		int lineBottom = cursorHeight
+		while (lw != null)
+			{
+			if (y < lineBottom)
+				break
+			
+			lineBottom += cursorHeight
+			lw = lw.next
+			}
+		
+		if (lw == null)
+			{
+			lw = lastLine
+			lineBottom -= cursorHeight
+			}
+
+		//now find the character on that line
+		char test[]
+		for (int i = 0; i < lw.text.length(); i++)
+			{
+			test = new char[](test, lw.text.subString(i, 1))
+			
+			int text_xp = textFont.getTextWidth(test)
+
+			if (text_xp >= x) return new CursorPos(i, lineBottom - cursorHeight, lw)
+			}
+		
+		return new CursorPos(lw.text.length(), lineBottom - cursorHeight, lw)
+		}
+	
+	void TextArea:click(int x, int y, int button)
+		{
+		focus = true
+		
+		if (button == MouseButtons.BUTTON_RIGHT)
+			{
+			menu.xAnchor = x
+			menu.yAnchor = y
+			emitevent contextMenuOn(menu)
+			}
+		}
+	
+	bool isAlphaNum(char x[])
+		{
+		if (x.arrayLength > 1) return false
+		
+		if ((x[0] >= "a") && (x[0] <= "z")) return true
+		
+		if ((x[0] >= "A") && (x[0] <= "Z")) return true
+		
+		if ((x[0] >= "0") && (x[0] <= "9")) return true
+		
+		return false
+		}
+	
+	void TextArea:clickMulti(int x, int y, int button, int clicks)
+		{
+		focus = true
+		if (button == MouseButtons.BUTTON_LEFT && clicks == 2)
+			{
+			//check if this position is inside a word, with no special characters; if so, highlight that word and place the cursor at its end
+			// - we keep doing subString() on either side of the cursor position, for a length of one character, to see if that single character is a <a-x/A-Z/0-9> character, and if so we keep expanding our selection box on both sides until we hit something else
+			CursorPos cp = findCursorPos(x + xScroll, y + yScroll)
+
+			cursorPosition = cp.character
+			selectStartPos = cursorPosition
+			
+			int xl = cursorPosition
+			
+			while (xl < cursorLine.text.length())
+				{
+				char n[] = cursorLine.text.subString(xl, 1)
+				
+				if (isAlphaNum(n))
+					{
+					xl ++
+					}
+					else
+					{
+					break
+					}
+				}
+			
+			cursorPosition = xl
+			
+			int xr = selectStartPos
+			
+			while (xr > 0)
+				{
+				char n[] = cursorLine.text.subString(xr-1, 1)
+				
+				if (isAlphaNum(n))
+					{
+					xr --
+					}
+					else
+					{
+					break
+					}
+				}
+			
+			selectStartPos = xr
+
+			updateCursorPosition()
+
+			postRepaint()
+			}
+			else if (button == MouseButtons.BUTTON_LEFT && clicks == 3)
+			{
+			//select all
+			selectStartPos = 0
+			cursorPosition = cursorLine.text.length()
+
+			postRepaint()
+			}
+		}
+	
+	void processMenuClick(MenuItem item)
+		{
+		if (item === copyMenu)
+			{
+			clipboard.setContent(getSelectedText())
+			}
+			else if (item === cutMenu)
+			{
+			mutex(textLock)
+				{
+				clipboard.setContent(getSelectedText())
+				deleteSelection()
+				if (selectStartPos > cursorPosition)
+					selectStartPos = cursorPosition
+					else
+					cursorPosition = selectStartPos
+				}
+			
+			updateCursorPosition()
+			
+			emitevent repaint()
+			}
+			else if (item === pasteMenu)
+			{
+			mutex(textLock)
+				{
+				char itext[] = clipboard.getContent()
+				deleteSelection()
+				if (selectStartPos > cursorPosition)
+					selectStartPos = cursorPosition
+					else
+					cursorPosition = selectStartPos
+				insertText(itext)
+				}
+			
+			updateCursorPosition()
+			
+			emitevent repaint()
+			}
+			else if (item === selectAllMenu)
+			{
+			selectStartLine = lines
+			cursorLine = lastLine
+
+			selectStartPos = 0
+			cursorPosition = cursorLine.text.length()
+
+			selectStartY = 0
+			cursorPositionY = lineCount * cursorHeight
+
+			updateCursorPosition()
+			
+			emitevent repaint()
+			}
+		}
+	
+	void TextArea:contextClick(MenuItem item)
+		{
+		processMenuClick(item)
+		}
+	
+	void TextArea:hotKeyClick(HotKey h)
+		{
+		if (h === hkCut)
+			processMenuClick(cutMenu)
+			else if (h === hkCopy)
+			processMenuClick(copyMenu)
+			else if (h === hkPaste)
+			processMenuClick(pasteMenu)
+			else if (h === hkSelectAll)
+			processMenuClick(selectAllMenu)
+		}
+	
+	void TextArea:mouseWheel(int xAdd, int xSub, int yAdd, int ySub)
+		{
+		int maxHeight = (lineCount * cursorHeight) + cursorHeight
+		int maxScrollY = 0
+		if (maxHeight > textAreaHeight)
+			maxScrollY = maxHeight - textAreaHeight
+
+		if (ySub != 0)
+			{
+			if (yScroll + (ySub*SCROLL_TICKS) > maxScrollY)
+				{
+				scrollV.setScrollPos(maxScrollY)
+				yScroll = maxScrollY
+				}
+				else
+				{
+				scrollV.setScrollPos(yScroll + (ySub*SCROLL_TICKS))
+				yScroll += (ySub*SCROLL_TICKS)
+				}
+			}
+		
+		if (yAdd != 0)
+			{
+			if (yScroll < (yAdd*SCROLL_TICKS))
+				{
+				scrollV.setScrollPos(0)
+				yScroll = 0
+				}
+				else
+				{
+				scrollV.setScrollPos(yScroll - (yAdd*SCROLL_TICKS))
+				yScroll -= (yAdd*SCROLL_TICKS)
+				}
+			}
+		
+		postRepaint()
+		}
+	
+	void TextArea:mouseUp(int x, int y, int button)
+		{
+		if (showScrollV && (x >= width-SCR_BUTTON_WIDTH && x <= width))
+			{
+			scrollV.mouseUp(x - (width-SCR_BUTTON_WIDTH), y, button)
+			}
+			else if (showScrollH && ((y >= height-SCR_BUTTON_HEIGHT && y <= height) || clickDown === scrollH))
+			{
+			scrollH.mouseUp(x, y - height, button)
+			}
+			else if (button == MouseButtons.BUTTON_LEFT)
+			{
+			mouseDragCapture = false
+			}
+		
+		clickDown = null
+		}
+	
+	void TextArea:mouseMove(int x, int y)
+		{
+		if (showScrollV && ((x >= width-SCR_BUTTON_WIDTH && x <= width) || clickDown === scrollV))
+			{
+			if (cursorType != IOWindow.CURSOR_DEFAULT)
+				{
+				emitevent setCursor(new CursorSetEvent(IOWindow.CURSOR_DEFAULT))
+				cursorType = IOWindow.CURSOR_DEFAULT
+				}
+			
+			scrollV.mouseMove(x, y)
+			}
+			else if (showScrollH && ((y >= height-SCR_BUTTON_HEIGHT && y <= height) || clickDown === scrollH))
+			{
+			if (cursorType != IOWindow.CURSOR_DEFAULT)
+				{
+				emitevent setCursor(new CursorSetEvent(IOWindow.CURSOR_DEFAULT))
+				cursorType = IOWindow.CURSOR_DEFAULT
+				}
+			
+			scrollH.mouseMove(x, y)
+			}
+			else
+			{
+			if (cursorType != IOWindow.CURSOR_IBEAM)
+				{
+				emitevent setCursor(new CursorSetEvent(IOWindow.CURSOR_IBEAM))
+				cursorType = IOWindow.CURSOR_IBEAM
+				}
+			
+			if (mouseDragCapture)
+				{
+				CursorPos cp = findCursorPos(x + xScroll, y + yScroll)
+
+				if (cp.character != cursorPosition || cp.line != cursorLine)
+					{
+					cursorPosition = cp.character
+					cursorLine = cp.line
+					cursorPositionY = cp.yPosition
+					postRepaint()
+					}
+				}
+			}
+		}
+	
+	void TextArea:mouseDown(int x, int y, int button)
+		{
+		if (showScrollV && (x >= width-SCR_BUTTON_WIDTH && x <= width))
+			{
+			scrollV.mouseDown(x - (width-SCR_BUTTON_WIDTH), y, button)
+			clickDown = scrollV
+			}
+			else if (showScrollH && (y >= height-SCR_BUTTON_WIDTH && y <= height))
+			{
+			scrollH.mouseDown(x, y - (height - SCR_BUTTON_HEIGHT), button)
+			clickDown = scrollH
+			}
+			else if (button == MouseButtons.BUTTON_LEFT)
+			{
+			//locate this position in the text, and set the cursor there
+			CursorPos cp = findCursorPos(x + xScroll, y + yScroll)
+
+			cursorPosition = cp.character
+			cursorLine = cp.line
+			
+			cursorPositionY = cp.yPosition
+
+			if (!shiftDown)
+				{
+				selectStartPos = cursorPosition
+				selectStartLine = cursorLine
+				selectStartY = cursorPositionY
+				}
+
+			mouseDragCapture = true
+
+			clickDown = null
+
+			postRepaint()
+			}
+		}
+
+	char[] TextArea:getText(opt char lineSeparator[])
+		{
+		if (lineSeparator == null) lineSeparator = "\n"
+
+		return getTextRegion(lines, 0, lastLine, lastLine.text.length(), lineSeparator)
+		}
+	
+	void clearText()
+		{
+		TextLine lw = lines.next
+		while (lw != null)
+			{
+			TextLine td = lw
+			lw = lw.next
+
+			td.next = null
+			td.prev = null
+			td = null
+			}
+		
+		lw = shortestLine
+		while (lw != null)
+			{
+			TextLine td = lw
+			lw = lw.nextLen
+
+			td.nextLen = null
+			td.prevLen = null
+			td = null
+			}
+		
+		lineCount = 0
+		
+		lines.next = null
+		
+		lines.text = new StringUTF("")
+		lastLine = lines
+
+		shortestLine = lines
+		longestLine = lines
+
+		cursorPosition = 0
+		selectStartPos = cursorPosition
+		cursorLine = lines
+		selectStartLine = cursorLine
+		}
+	
+	void TextArea:setText(char text[])
+		{
+		mutex(textLock)
+			{
+			//delete all lines except the first one, clear the first line, then do a text-insert
+			clearText()
+
+			insertText(text)
+			}
+
+		updateScrollMax()
+
+		postRepaint()
+		}
+	
+	int getX(TextLine forLine, int pos)
+		{
+		char mt[] = new char[pos]
+		
+		mt = forLine.text.subString(0, pos)
+		
+		return textFont.getTextWidth(mt)
+		}
+	
+	int getY(TextLine forLine)
+		{
+		int y = cursorHeight
+		TextLine lw = lines
+
+		while (lw !== forLine)
+			{
+			y += cursorHeight
+			lw = lw.next
+			}
+		
+		return y
+		}
+	
+	void drawCursor(Canvas c, TextLine forLine, int pos, int ypos)
+		{
+		int xp = getX(forLine, pos)
+		
+		c.line(new Line2D(xp, ypos, xp, ypos+cursorHeight, new Color(0, 0, 0, 255)))
+		}
+	
+	void drawSelectionBox(Canvas c)
+		{
+		if (selectStartLine !== cursorLine)
+			{
+			TextLine ssline
+			TextLine seline
+			int sspos
+			int sepos
+
+			if (cursorPositionY < selectStartY)
+				{
+				ssline = cursorLine
+				seline = selectStartLine
+				sspos = cursorPosition
+				sepos = selectStartPos
+				}
+				else
+				{
+				ssline = selectStartLine
+				seline = cursorLine
+				sspos = selectStartPos
+				sepos = cursorPosition
+				}
+
+			int cy = 0
+			bool inSelect
+
+			TextLine lw = lines
+
+			while (lw != null)
+				{
+				int selectStartX
+				int selectEndX
+
+				if (lw === ssline)
+					{
+					selectStartX = getX(lw, sspos)
+					selectEndX = getX(lw, lw.text.length())
+
+					inSelect = true
+					}
+					else if (lw === seline)
+					{
+					selectStartX = getX(lw, 0)
+					selectEndX = getX(lw, sepos)
+					}
+					else if (inSelect)
+					{
+					selectStartX = getX(lw, 0)
+					selectEndX = getX(lw, lw.text.length())
+					}
+				
+				if (inSelect)
+					{
+					c.rect(new Rect2D(selectStartX, cy, selectEndX - selectStartX, cursorHeight, highlightColor))
+					}
+				
+				if (lw === seline)
+					{
+					inSelect = false
+					}
+
+				lw = lw.next
+				cy += cursorHeight
+				}
+			}
+			else if (selectStartPos != cursorPosition)
+			{
+			int startPos = 0
+			int endPos = 0
+			
+			if (selectStartPos < cursorPosition)
+				{
+				startPos = selectStartPos
+				endPos = cursorPosition
+				}
+				else
+				{
+				startPos = cursorPosition
+				endPos = selectStartPos
+				}
+			
+			int selectStartX = getX(cursorLine, startPos)
+			int selectEndX = getX(cursorLine, endPos)
+			
+			c.rect(new Rect2D(selectStartX, cursorPositionY, selectEndX - selectStartX, cursorHeight, highlightColor))
+			}
+		}
+	
+	//this function is called whenever the cursor moves; it updates (if needed) the scroll position of the text relative to the cursor
+	void updateCursorPosition()
+		{
+		int efx = getX(cursorLine, cursorPosition)
+
+		if (efx > (xScroll + textAreaWidth))
+			{
+			xScroll = (efx - textAreaWidth) + CURSOR_WIDTH
+			scrollH.setScrollPos(xScroll)
+			}
+			else if (efx < xScroll)
+			{
+			xScroll = efx
+			scrollH.setScrollPos(xScroll)
+			}
+		
+		//test if the total text width has become less than the scroll width (i.e., there's empty space and xScroll is not 0)
+		int qfx = getX(cursorLine, cursorLine.text.length())
+		
+		if ((xScroll != 0) && (qfx + CURSOR_WIDTH < (xScroll + textAreaWidth)))
+			{
+			if (qfx > (textAreaWidth))
+				xScroll = (qfx - textAreaWidth) + CURSOR_WIDTH
+				else
+				xScroll = 0
+			
+			scrollH.setScrollPos(xScroll)
+			}
+		
+		//check if the cursor is out of view
+		int efy = getY(cursorLine)
+
+		if (efy > (yScroll + textAreaHeight))
+			{
+			yScroll = (efy - textAreaHeight)
+			scrollV.setScrollPos(yScroll)
+			}
+			else if ((efy-cursorHeight) < yScroll)
+			{
+			yScroll = (efy-cursorHeight)
+			scrollV.setScrollPos(yScroll)
+			}
+		}
+	
+	void TextArea:paint(Canvas c)
+		{
+		c.rect(new Rect2D(xPosition, yPosition, width, height, bgColor))
+		
+		c.pushSurface(new Rect(xPosition + TEXT_BORDER_H, yPosition, width - (TEXT_BORDER_H*2), height), xScroll, yScroll, 255)
+		
+		c.rect(new Rect2D(xScroll, yScroll, width, height, bgColor))
+		 
+		mutex(textLock)
+			{
+			drawSelectionBox(c)
+			
+			int yDraw = TEXT_BORDER_V
+			
+			TextLine lw = lines
+			
+			while (lw != null)
+				{
+				c.text(new Point2D(0, yDraw, textColor), textFont, lw.text.getRaw())
+				
+				lw = lw.next
+				yDraw += cursorHeight
+				}
+			
+			if (focus)
+				{
+				drawCursor(c, cursorLine, cursorPosition, cursorPositionY)
+				}
+			}
+		
+		c.popSurface()
+
+		if (showScrollV)
+			{
+			scrollV.paint(c)
+			}
+		
+		if (showScrollH)
+			{
+			scrollH.paint(c)
+			}
+		
+		if (showScrollV && showScrollH)
+			{
+			//fill the square with something...
+			c.rect(new Rect2D(xPosition + (width-SCR_BUTTON_WIDTH), yPosition + (height-SCR_BUTTON_HEIGHT), SCR_BUTTON_WIDTH, SCR_BUTTON_HEIGHT, bgColor))
+			}
+
+		c.rectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
+		}
+	
+	void TextArea:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	void TextArea:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+
+		scrollV.setPosition(xPosition + (width - SCR_BUTTON_WIDTH - 1), yPosition+1)
+		scrollH.setPosition(xPosition + 1, yPosition + (height - SCR_BUTTON_HEIGHT - 1))
+		}
+	
+	Point TextArea:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+	
+	WH TextArea:getPreferredSize()
+		{
+		return new WH(width, height)
+		}
+	
+	void TextArea:mouseOver()
+		{
+		emitevent setCursor(new CursorSetEvent(IOWindow.CURSOR_IBEAM))
+		cursorType = IOWindow.CURSOR_IBEAM
+		}
+	
+	void TextArea:setFocus()
+		{
+		emitevent requestFocus()
+		}
+	
+	void TextArea:setDisabled(bool d)
+		{
+		disabled = d
+		postRepaint()
+		}
+	
+	HotKey[] TextArea:recvFocus()
+		{
+		focus = true
+		
+		return hkeys
+		}
+	
+	void TextArea:loseFocus()
+		{
+		focus = false
+		selectStartPos = cursorPosition
+		}
+	
+	void TextArea:setSize(int w, int h)
+		{
+		width = w
+		height = h
+
+		textAreaWidth = width-(TEXT_BORDER_H*2)
+		textAreaHeight = height
+
+		if (showScrollV)
+			{
+			textAreaWidth -= SCR_BUTTON_WIDTH
+
+			scrollV.setPosition(xPosition + (width - SCR_BUTTON_WIDTH - 1), yPosition+1)
+			
+			if (!showScrollH)
+				scrollV.setLength(height - 2)
+				else
+				scrollV.setLength(height - SCR_BUTTON_HEIGHT - 2)
+			}
+		
+		if (showScrollH)
+			{
+			textAreaHeight -= SCR_BUTTON_WIDTH
+
+			scrollH.setPosition(xPosition + 1, yPosition + (height - SCR_BUTTON_HEIGHT - 1))
+			
+			if (!showScrollV)
+				scrollH.setLength(width - 2)
+				else
+				scrollH.setLength(width - SCR_BUTTON_HEIGHT - 2)
+			}
+		}
+	
+	void TextArea:setCursorPos(int p)
+		{
+		if (p <= cursorLine.text.length())
+			{
+			cursorPosition = p
+			selectStartPos = cursorPosition
+			updateCursorPosition()
+			postRepaint()
+			}
+			else
+			{
+			throw new Exception("index out of bounds")
+			}
+		}
+	
+	int TextArea:getCursorPos()
+		{
+		return cursorPosition
+		}
+	
+	void Destructor:destroy()
+		{
+		clearText()
+		}
+	
+	}

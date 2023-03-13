@@ -12,5 +12,12 @@ interface CheckBox extends ui.Button {
 	
 	/* {"@description" : "Set the ticked status of the check box."} */
 	void setChecked(bool t)
+
+	/* {"@description" : "Set the background of the check box."} */
+	void setBackground(store Color c)
+	/* {"@description" : "Set the color of the check mark."} */
+	void setCheckColor(store Color c)
+	/* {"@description" : "Set the text color."} */
+	void setTextColor(store Color c)
 	
 	}

@@ -3,6 +3,7 @@ data WindowEventData {
 	int x
 	int y
 	int exd1
+	int exd2
 }
 
 data DropEventData {
@@ -18,6 +19,7 @@ interface UIPlaneLib {
 	event mouseUp(WindowEventData wed)
 	event mouseDown(WindowEventData wed)
 	event mouseMove(WindowEventData wed)
+	event mouseWheel(WindowEventData wed)
 	event keyDown(WindowEventData wed)
 	event keyUp(WindowEventData wed)
 	event resize(WindowEventData wed)
@@ -108,6 +110,11 @@ component provides IOLayer, IOWindow(Destructor), Font(Destructor) requires nati
 				{
 				WindowEventData wed = ed.details
 				emitevent mouseMove(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.[mouseWheel])
+				{
+				WindowEventData wed = ed.details
+				emitevent mouseWheel(new MouseEvent(ed.type, wed.button_id, wed.x, wed.y, wed.exd1, wed.exd2))
 				}
 				else if (ed.type == UIPlaneLib.[keyDown])
 				{

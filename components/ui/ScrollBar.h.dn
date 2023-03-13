@@ -84,7 +84,7 @@ component provides ScrollBar:h {
 	
 	void ScrollBar:setScrollPos(int v)
 		{
-		if (v < maxScroll)
+		if (v <= maxScroll)
 			{
 			scroll = v
 			postRepaint()
