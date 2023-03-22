@@ -22,8 +22,75 @@ body{text-align:left}
 #doc3{margin:auto 10px;width:auto}
 #doc4{width:74.923em;*width:73.05em}
 
+strong {
+	font-weight: bold;
+	}
+
+em {
+	font-style: italic;
+}
+
+h1 {
+	font-size: 1.5em;
+	margin-top: 0.7em;
+}
+
+h2 {
+	font-size: 1.4em;
+	margin-top: 0.6em;
+}
+
+h3 {
+	font-size: 1.2em;
+	margin-top: 0.5em;
+}
+
+h4 {
+	font-size: 1.1em;
+	margin-top: 0.4em;
+}
+
+code {
+	font-family:monospace;
+	*font-size:108%;
+	line-height:120%;
+	font-weight: 130%;
+	background-color: #EEE;
+}
+
+pre {
+	margin-top: 1em;
+	display: block;
+	background-color: #EEE;
+	overflow-x: auto;
+	overflow-y: hidden;
+}
+
+p{
+	margin-top: 1em;
+}
+
+li{
+	padding-top: 6pt;
+	padding-left: 20px;
+	list-style-position: inside;
+	text-indent: -1em;
+}
+
 body{
 	margin: 5px;
+}
+
+A:link{
+text-decoration: none;
+font-weight: bold;
+color: #88D;
+}
+
+A:visited{
+text-decoration: none;
+font-weight: bold;
+color: #88D;
 }
 
 .index_pkg_dis{
@@ -240,23 +307,27 @@ body{
 
 a.doc_type_link:visited {
 	color: black;
+	font-weight: normal;
     text-decoration: none;
 }
 
 a.doc_type_link:link {
 	color: black;
     text-decoration: none;
+    font-weight: normal;
 	border-bottom: 1px dotted black;
 }
 
 a.doc_type_link:hover {
 	color: black;
     text-decoration: none;
+    font-weight: normal;
 	border-bottom: 1px solid black;
 }
 
 a.doc_type_link_opt:visited {
 	color: rgb(170, 100, 0);
+	font-weight: normal;
     text-decoration: none;
 }
 
@@ -294,10 +365,75 @@ a.doc_type_link_opt:hover {
 
 .typelist a:link {
 	text-decoration: none;
+	font-weight: normal;
 	color: blue;
+	font-size: 1.15em;
 }
 
 .typelist a:visited {
 	text-decoration: none;
+	font-weight: normal;
 	color: blue;
+	font-size: 1.15em;
+}
+
+a.pkg_link:visited {
+	text-decoration: none;
+	color: teal;
+	font-size: 1.15em;
+}
+
+a.pkg_link:link {
+	text-decoration: none;
+	color: teal;
+	font-size: 1.15em;
+}
+
+.nav_header{
+	font-size: large;
+	margin-bottom: 10pt;
+}
+
+.nav_view_options{
+	font-size: 1.2em;
+	margin-bottom: 10pt;
+}
+
+.pacdoc_icon{
+	font-size: 0.9em;
+	border: 1px solid silver;
+	padding-left: 2px;
+	padding-right: 2px;
+	background-color: rgba(170, 100, 0, 0.1);
+	font-weight: bold;
+}
+
+a.pacdoc_link:link{
+	text-decoration: none;
+	color: olive;
+}
+
+a.pacdoc_link:visited{
+	text-decoration: none;
+	color: olive;
+}
+
+.keywords_a {
+	color: rgb(30, 20, 170);
+}
+
+.keywords_b {
+	color: blue;
+}
+
+.keywords_c {
+	color: brown;
+}
+
+.src_string {
+	color: purple;
+}
+
+.src_comment {
+	color: green;
 }

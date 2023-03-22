@@ -38,6 +38,7 @@ data Component {
 	bool proxy
 	char proxyTag[]
 	char proxyParams[]
+	char proxyInterface[]
 
 	Component next
 	}
@@ -323,7 +324,9 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 				{
 				if (ploaders[i].tag == proxyTag)
 					{
-					c.com = ploaders[i].loader.loadProxy(comp, proxyTag, proxyParams)
+					ProxyInstance pinstance = ploaders[i].loader.loadProxy(comp, proxyTag, proxyParams)
+					c.com = pinstance.com
+					c.proxyInterface = pinstance.providedInterface
 					break
 					}
 				}
@@ -410,6 +413,9 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 		
 		Interface iq = getInterface(fromComponent, intfName)
 
+		char toIntfName[] = intfName
+		if (toComponent.proxyInterface != null) toIntfName = toComponent.proxyInterface
+
 		if (iq == null)
 			{
 			out.println("null IQ: $(comps[fromIndex].string) / $intfName")
@@ -420,7 +426,7 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			if (verbose) out.println(" -- wiring $(fromComponent.path) :: $intfName >> $(toComponent.path)")
 
 			//it's new, so just connect it
-			fromComponent.com.wire(intfName, toComponent.com, intfName)
+			fromComponent.com.wire(intfName, toComponent.com, toIntfName)
 			fromComponent.completeWirings ++
 
 			//check if we need to inject a proxy from an intercept rule
@@ -453,7 +459,7 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 
 			//check if there's a proxy on this interface, and adapt the proxy's RI if so
 			if (iq.intercept == null)
-				adaptAPI.adaptRequiredInterface(fromComponent.com, intfName, toComponent.com)
+				adaptAPI.adaptRequiredInterface(fromComponent.com, intfName, toComponent.com, toIntfName)
 				else
 				adaptAPI.adaptRequiredInterface(iq.intercept.com, iq.intercept.reqIntf, toComponent.com, intfName)
 			

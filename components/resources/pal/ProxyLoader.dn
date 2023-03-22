@@ -1,6 +1,11 @@
+data ProxyInstance {
+	IDC com
+	char providedInterface[]
+}
+
 interface ProxyLoader {
 	
-	IDC loadProxy(char proxyComponent[], char tag[], char parameters[])
+	ProxyInstance loadProxy(char proxyComponent[], char tag[], char parameters[])
 
 	void unloadProxy(IDC com, char proxyComponent[], char tag[], char parameters[])
 

@@ -4,10 +4,30 @@ data PrimaryType{
 	char htmlFile[]
 	}
 
+data PackageNode {
+	const byte T_PACKAGE = 1
+	const byte T_TYPE = 2
+	byte type
+	char path[]
+	char htmlFile[]
+	PackageNode members[]
+}
+
 const char OUTPUT_DIR[] = "_docs"
+const char PACDOC_DIR[] = "_xpacdoc"
 const bool SHOW_WARNINGS = true
 
-component provides App requires parsing.TypeParser, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, System system, composition.Search csearch, util.ObjectFile, data.query.Search dsearch {
+component provides App requires parsing.TypeParser, io.File, io.FileSystem fileSystem, data.json.JSONParser parser, data.StringUtil stringUtil, io.Output out, System system, composition.Search csearch, util.ObjectFile, data.query.Search dsearch, data.query.Sort sort, data.IntUtil iu, util.ParamParser, parsing.Markdown mdParser, parsing.MarkdownToHTML mdHTML {
+
+	String danaTokens[] = new String[](new String("."), new String(":"), new String("("), new String(")"), new String("["), new String("]"), new String("{"), new String("}"), new String("<"), new String(">"), new String(","), new String("+"), new String("-"), new String("/"), new String("*"), new String("%"), new String("&"), new String("|"), new String("!"), new String("~"), new String("^"), new String("="), new String(";"))
+
+	KeywordGroup keywordsA = new KeywordGroup("keywords_a", new String[](new String("component"), new String("interface"), new String("data"), new String("uses"), new String("provides"), new String("requires"), new String("extends"), new String("implementation"), new String("static"), new String("else"), new String("opt"), new String("transfer"), new String("store"), new String("const"), new String("native")))
+	
+	KeywordGroup keywordsB = new KeywordGroup("keywords_b", new String[](new String("int"), new String("char"), new String("byte"), new String("bool"), new String("dec"), new String("true"), new String("false"), new String("null"), new String("void"), new String("super"), new String("clone"), new String("rclone"), new String("delink"), new String("from"), new String("if"), new String("else"), new String("while"), new String("for"), new String("break"), new String("mutex"), new String("fold"), new String("return"), new String("new"), new String("throw"), new String("typeof"), new String("this"), new String("asynch"), new String("eventsink"), new String("sinkevent"), new String("stopevent"), new String("event"), new String("emitevent")))
+	
+	KeywordGroup keywordsC = new KeywordGroup("keywords_c", new String[](new String("implements"), new String("hastype"), new String("isset")))
+	
+	MDCodeStyle codeStyling = new MDCodeStyle("dana", danaTokens, new String[](new String("/*"), new String("*/")), "//", new String[](new String("\""), new String("\"")), "src_comment", "src_string", new KeywordGroup[](keywordsA, keywordsB, keywordsC))
 	
 	char[] getHTMLFileFor(char sourceFile[], char type[])
 		{
@@ -794,7 +814,186 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 			}
 		}
 	
-	void writeDocs(ParsedFiles p, bool writeIndex)
+	void addPackageNode(PackageNode root, PrimaryType t, char package[])
+		{
+		String parts[] = package.lsplit(".")
+
+		char thisNode[] = null
+		char nextNode[] = null
+
+		if (parts != null && parts[0].string.arrayLength > 0)
+			{
+			//there's more to come...
+			thisNode = parts[0].string
+			nextNode = parts[1].string
+			}
+			else
+			{
+			//it's the last one
+			thisNode = package
+			}
+		
+		//insert this node, if it's new
+		PackageNode subNode = null
+		if (thisNode.arrayLength == 0)
+			{
+			subNode = root
+			}
+			else if ((subNode = root.members.findFirst(PackageNode.[path], new PackageNode(path = thisNode))) == null)
+			{
+			root.members = new PackageNode[](root.members, subNode = new PackageNode(PackageNode.T_PACKAGE, thisNode))
+			}
+
+		//either recurse, or insert the actual type within this node
+		if (nextNode != null)
+			{
+			addPackageNode(subNode, t, nextNode)
+			}
+			else
+			{
+			subNode.members = new PackageNode[](subNode.members, new PackageNode(PackageNode.T_TYPE, t.type, t.htmlFile))
+			}
+		}
+	
+	void createPath(char path[])
+		{
+		String parts[] = path.explode("/")
+		char partial[] = parts[0].string
+
+		if (!fileSystem.exists(partial))
+			{
+			fileSystem.createDirectory(partial)
+			}
+		
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			partial = new char[](partial, "/", parts[i].string)
+
+			if (!fileSystem.exists(partial))
+				{
+				fileSystem.createDirectory(partial)
+				}
+			}
+		}
+	
+	bool validPacdoc(char path[])
+		{
+		if (!fileSystem.exists("$path/index.md"))
+			return false
+		
+		return true
+		}
+	
+	void parsePackageDocs(char srcDir[], char destDir[], char cssRelative[])
+		{
+		//ensure that destDir exists
+		createPath(destDir)
+
+		//parse all .md files
+		FileEntry files[] = fileSystem.getDirectoryContents(srcDir)
+
+		for (int i = 0; i < files.arrayLength; i++)
+			{
+			if (files[i].name.endsWith(".md"))
+				{
+				File fd = new File("$(srcDir)/$(files[i].name)", File.READ)
+				char doc[] = fd.read(fd.getSize())
+				fd.close()
+
+				MDElement mdDoc = mdParser.parse(doc)
+
+				char html[] = mdHTML.process(mdDoc, codeStyling, true)
+
+				char plainName[] = files[i].name.rsplit(".")[0].string
+				fd = new File("$(destDir)/$(plainName).html", File.CREATE)
+				fd.write("<html>")
+				fd.write("<head>")
+				fd.write("<link href=\"$cssRelative/doc.css\" rel=\"stylesheet\" type=\"text/css\">")
+				fd.write("<title>Package documentation</title>")
+				fd.write("</head>")
+				fd.write(html)
+				fd.write("</html>")
+				fd.close()
+				}
+				else
+				{
+				//just copy the file
+				fileSystem.copy("$(srcDir)/$(files[i].name)", "$(destDir)/$(files[i].name)")
+				}
+			}
+		}
+	
+	char[] getBasePath(char path[])
+		{
+		String parts[] = path.explode("/")
+
+		path = null
+
+		for (int i = 1; i < parts.arrayLength; i++)
+			{
+			path = "../$path"
+			}
+		
+		return path
+		}
+
+	int writePackageTree(File fd, PackageNode n, bool isRoot, int nestingLevel, int uid, char path[])
+		{
+		//sort and write the top-level, then write every other level as hidden with js-unhides
+		int uidAdd = 0
+
+		n.members = n.members.sort(PackageNode.[path], true)
+
+		for (int i = 0; i < n.members.arrayLength; i++)
+			{
+			if (n.members[i].type == PackageNode.T_PACKAGE)
+				{
+				char doclink[] = null
+
+				//check for a pacdoc directory, and generate package-level documentation if present (parse all .md files to html and copy all other files over)
+				if (fileSystem.exists("$path/$(n.members[i].path)/$(PACDOC_DIR)"))
+					{
+					out.println("> parsing package documentation for $path/$(n.members[i].path)")
+
+					if (validPacdoc("$path/$(n.members[i].path)/$(PACDOC_DIR)"))
+						{
+						parsePackageDocs("$path/$(n.members[i].path)/$(PACDOC_DIR)", "$OUTPUT_DIR/pacdoc/$path/$(n.members[i].path)/", getBasePath("pacdoc/$path/$(n.members[i].path)/"))
+
+						doclink = "<span class = \"pacdoc_icon\"><a href = \"pacdoc/$path/$(n.members[i].path)/index.html\" target = \"_core\" class = \"pacdoc_link\">doc</a></span>"
+						}
+						else
+						{
+						out.println("warning: pacdoc structure in $path/$(n.members[i].path)/$(PACDOC_DIR) is not valid, skipping this folder")
+						}
+					}
+
+				fd.write("<div>")
+				fd.write("<a class = \"pkg_link\" href = \"#\" onclick=\"visToggle('node$uid')\">$(n.members[i].path)</a> $doclink")
+				fd.write("</div>")
+
+				fd.write("<div style = \"margin-left: 6px; display: none\" id = \"node$uid\">")
+				int increment = writePackageTree(fd, n.members[i], false, nestingLevel + 1, uid+1, "$path/$(n.members[i].path)")
+				fd.write("</div>")
+
+				uidAdd += increment + 1
+				uid += increment + 1
+				}
+			}
+		
+		for (int i = 0; i < n.members.arrayLength; i++)
+			{
+			if (n.members[i].type == PackageNode.T_TYPE)
+				{
+				fd.write("<div>")
+				fd.write("<a href = \"files/$(n.members[i].htmlFile)\" target = \"_core\">$(n.members[i].path)</a>")
+				fd.write("</div>")
+				}
+			}
+		
+		return uidAdd
+		}
+	
+	void writeDocs(ParsedFiles p, bool writeIndex, char flatIndex[], char packageIndex[])
 		{
 		if (!fileSystem.exists(OUTPUT_DIR))
 			fileSystem.createDirectory(OUTPUT_DIR)
@@ -814,11 +1013,8 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 			{
 			out.println("Generating index page")
 			
-			if (fileSystem.exists("$OUTPUT_DIR/index.html"))
-				fileSystem.delete("$OUTPUT_DIR/index.html")
-			
 			//generate the index HTML file
-			File fd = new File("$OUTPUT_DIR/index.html", File.WRITE)
+			File fd = new File("$OUTPUT_DIR/$(flatIndex).html", File.CREATE)
 			
 			if (fd != null)
 				{
@@ -843,16 +1039,28 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 						}
 					}
 				
+				char splashPage[] = ""
+
+				if (fileSystem.exists("$(PACDOC_DIR)") && validPacdoc("$(PACDOC_DIR)"))
+					{
+					//make this page the default for the content iframe
+					splashPage = "src = \"pacdoc/_root/index.html\""
+					}
+				
 				//sort alphabetically
 				sortTypes(types)
 				
 				PrimaryType duplicateNames[] = dsearch.findDuplicates(types, PrimaryType.[type])
+
+				PackageNode pkgTree = new PackageNode(PackageNode.T_PACKAGE, "")
 				
 				char dana_home[] = system.getDanaHome()
 				
 				File ref = new File("$dana_home/components/resources-ext/doc/index_a.html", File.READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()
+
+				fd.write("<div class = \"nav_view_options\">[flat] [<a href = \"$(packageIndex).html\">package</a>]</div>")
 				
 				for (int i = 0; i < types.arrayLength; i++)
 					{
@@ -864,13 +1072,59 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 						fd.write("<a href = \"files/$(types[i].htmlFile)\" target = \"_core\">$(types[i].type)</a>")
 					
 					fd.write("</div>")
+
+					addPackageNode(pkgTree, types[i], types[i].package)
 					}
 				
 				ref = new File("$dana_home/components/resources-ext/doc/index_b.html", File.READ)
 				fd.write(ref.read(ref.getSize()))
 				ref.close()
+
+				fd.write("<iframe name = \"_core\" style = \"width:100%; height: 100%; border: 0px\" $splashPage> </iframe>")
+
+				ref = new File("$dana_home/components/resources-ext/doc/index_c.html", File.READ)
+				fd.write(ref.read(ref.getSize()))
+				ref.close()
 				
 				fd.close()
+
+				//now read the package tree to build the package index page
+				fd = new File("$OUTPUT_DIR/$(packageIndex).html", File.CREATE)
+				if (fd != null)
+					{
+					ref = new File("$dana_home/components/resources-ext/doc/index_a.html", File.READ)
+					fd.write(ref.read(ref.getSize()))
+					ref.close()
+
+					fd.write("<script>function visToggle(el){if (document.getElementById(el).style.display == 'none') {document.getElementById(el).style.display = 'block';} else {document.getElementById(el).style.display = 'none';} }</script>")
+
+					fd.write("<div class = \"nav_view_options\">[<a href = \"$(flatIndex).html\">flat</a>] [package]</div>")
+
+					if (fileSystem.exists("$(PACDOC_DIR)"))
+						{
+						out.println("> parsing package documentation for .")
+
+						//parse all md files to html, and copy all other files over to our docs
+						if (validPacdoc("$(PACDOC_DIR)"))
+							parsePackageDocs("$(PACDOC_DIR)", "$OUTPUT_DIR/pacdoc/_root/", getBasePath("/pacdoc/./_root/"))
+							else
+							out.println("warning: pacdoc structure in ./$(PACDOC_DIR) is not valid, skipping this folder")
+						}
+
+					writePackageTree(fd, pkgTree, true, 0, 0, ".")
+
+					ref = new File("$dana_home/components/resources-ext/doc/index_b.html", File.READ)
+					fd.write(ref.read(ref.getSize()))
+					ref.close()
+
+					fd.write("<iframe name = \"_core\" style = \"width:100%; height: 100%; border: 0px\" $splashPage> </iframe>")
+
+					ref = new File("$dana_home/components/resources-ext/doc/index_c.html", File.READ)
+					fd.write(ref.read(ref.getSize()))
+					ref.close()
+
+					fd.close()
+					}
 				
 				//copy in the CSS file
 				fd = new File("$OUTPUT_DIR/doc.css", File.WRITE)
@@ -916,14 +1170,25 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 		TypeParser docBuilder = new TypeParser()
 		
 		bool writeIndex = false
-		
-		if (params.arrayLength > 0)
+
+		ParamParser pp = new ParamParser(params, new String[](new String("-df"), new String("-dp")))
+
+		char flatIndex[] = "index"
+		char packageIndex[] = "index_pkg"
+
+		if (pp.hasSwitch("-dp"))
 			{
-			out.println("Parsing $(params[0].string)")
-			File fd = new File(params[0].string, File.READ)
+			flatIndex = "index_flat"
+			packageIndex = "index"
+			}
+		
+		if (pp.getFreeValues().arrayLength > 0)
+			{
+			out.println("Parsing $(pp.getFreeValues()[0].string)")
+			File fd = new File(pp.getFreeValues()[0].string, File.READ)
 			char content[] = fd.read(fd.getSize())
 			fd.close()
-			docBuilder.parseFile(content, params[0].string)
+			docBuilder.parseFile(content, pp.getFreeValues()[0].string)
 			}
 			else
 			{
@@ -936,7 +1201,7 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 		
 		ParsedFiles p = docBuilder.getParsedFiles()
 		
-		writeDocs(p, writeIndex)
+		writeDocs(p, writeIndex, flatIndex, packageIndex)
 		
 		return 0
 		}
