@@ -708,26 +708,38 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 
 	void mouseUpClick(int x, int y, int button, int clicks)
 		{
-		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+		if (clickDown !== null)
 			{
-			Rect r = ci.object.getBounds()
-
-			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+			if (clickDown hastype XYMouseObject)
 				{
-				//we only register a mouse-up if this was the thing that got the mouse-down
+				XYMouseObject co = clickDown
+				Rect r = co.getBounds()
+				co.mouseUp(x - r.x, y - r.y, button)
+				}
+			}
+			else
+			{
+			for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+				{
+				Rect r = ci.object.getBounds()
 
-				if (ci === clickDown)
+				if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
 					{
-					ci.object.mouseUp(x - r.x, y - r.y, button)
+					//we only register a mouse-up if this was the thing that got the mouse-down
+
+					if (ci === clickDown)
+						{
+						ci.object.mouseUp(x - r.x, y - r.y, button)
+						}
+						else if (clickDown hastype XYMouseObject)
+						{
+						XYMouseObject co = clickDown
+						r = co.getBounds()
+						co.mouseUp(x - r.x, y - r.y, button)
+						}
+					
+					break
 					}
-					else if (clickDown hastype XYMouseObject)
-					{
-					XYMouseObject co = clickDown
-					r = co.getBounds()
-					co.mouseUp(x - r.x, y - r.y, button)
-					}
-				
-				break
 				}
 			}
 		
@@ -745,34 +757,83 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 
 	void Window:mouseMove(int x, int y)
 		{
-		mouseX = x
-		mouseY = y
-
-		bool overSomething
-
-		if (contextMenu != null)
+		if (clickDown !== null)
 			{
-			Rect r = contextMenu.getBounds()
-
-			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+			if (clickDown hastype XYMouseObject)
 				{
-				if (mouseOver !== contextMenu)
-					{
-					if (mouseOver != null)
-						{
-						mouseOver.mouseOut()
+				XYMouseObject co = clickDown
+				Rect r = co.getBounds()
+				if (x < r.x) x = r.x
+				if (y < r.y) y = r.y
+				co.mouseMove(x - r.x, y - r.y)
+				}
+			}
+			else
+			{
+			mouseX = x
+			mouseY = y
 
-						if (!cursorOverride) canvas.setCursor(IOWindow.CURSOR_DEFAULT)
-						baseCursor = null
+			bool overSomething
+
+			if (contextMenu != null)
+				{
+				Rect r = contextMenu.getBounds()
+
+				if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+					{
+					if (mouseOver !== contextMenu)
+						{
+						if (mouseOver != null)
+							{
+							mouseOver.mouseOut()
+
+							if (!cursorOverride) canvas.setCursor(IOWindow.CURSOR_DEFAULT)
+							baseCursor = null
+							}
+
+						mouseOver = contextMenu
+						mouseOver.mouseOver()
 						}
 
-					mouseOver = contextMenu
-					mouseOver.mouseOver()
+					overSomething = true
+
+					contextMenu.mouseMove(x - r.x, y - r.y)
 					}
 
-				overSomething = true
+				if (!overSomething && mouseOver != null)
+					{
+					mouseOver.mouseOut()
+					if (!cursorOverride) canvas.setCursor(IOWindow.CURSOR_DEFAULT)
+					baseCursor = null
+					mouseOver = null
+					}
 
-				contextMenu.mouseMove(x - r.x, y - r.y)
+				return
+				}
+
+			for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
+				{
+				Rect r = ci.object.getBounds()
+
+				if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
+					{
+					if (mouseOver !== ci.object)
+						{
+						if (mouseOver != null)
+							{
+							mouseOver.mouseOut()
+							}
+
+						mouseOver = ci.object
+						mouseOver.mouseOver()
+						}
+
+					overSomething = true
+
+					ci.object.mouseMove(x - r.x, y - r.y)
+
+					break
+					}
 				}
 
 			if (!overSomething && mouseOver != null)
@@ -782,41 +843,6 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 				baseCursor = null
 				mouseOver = null
 				}
-
-			return
-			}
-
-		for (XYListener ci = mouseListeners; ci != null; ci = ci.next)
-			{
-			Rect r = ci.object.getBounds()
-
-			if (x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height)
-				{
-				if (mouseOver !== ci.object)
-					{
-					if (mouseOver != null)
-						{
-						mouseOver.mouseOut()
-						}
-
-					mouseOver = ci.object
-					mouseOver.mouseOver()
-					}
-
-				overSomething = true
-
-				ci.object.mouseMove(x - r.x, y - r.y)
-
-				break
-				}
-			}
-
-		if (!overSomething && mouseOver != null)
-			{
-			mouseOver.mouseOut()
-			if (!cursorOverride) canvas.setCursor(IOWindow.CURSOR_DEFAULT)
-			baseCursor = null
-			mouseOver = null
 			}
 		}
 	

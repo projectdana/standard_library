@@ -25,8 +25,7 @@ component provides ScrollBar:h {
 	int sliderX = 0
 
 	bool dragging = false
-	int dragStartX = 0
-	int dragSliderStartX = 0
+	int dragOffset = 0
 
 	void updateScrollBarV(int max)
 		{
@@ -124,9 +123,9 @@ component provides ScrollBar:h {
 			{
 			if (x >= sliderX && x <= sliderX + sliderWidth)
 				{
+				//we track the click-down position relative to the edge of the slider, otherwise the slider's edge with jump to the mouse pointer
 				dragging = true
-				dragStartX = x
-				dragSliderStartX = sliderX
+				dragOffset = x - sliderX
 				}
 			}
 		}
@@ -136,61 +135,29 @@ component provides ScrollBar:h {
 		//if in dragging mode, move slider and update scroll view
 		if (dragging)
 			{
-			//check if the slider can actually move any further in this direction, and if so repaint()
-			if (x < dragStartX)
-				{
-				int sliderMinX = SCR_BUTTON_WIDTH
+			int sliderMinX = SCR_BUTTON_WIDTH
+			int sliderMaxX = ((width) - (SCR_BUTTON_WIDTH)) - sliderWidth
 
-				int diff = dragStartX - x
+			int startScroll = scroll
 
-				if (diff <= dragSliderStartX - sliderMinX)
-					{
-					int sliderNewX = dragSliderStartX - diff
-
-					//calculate new scrollY, then postRepaint
-
-					int percent = (sliderNewX - SCR_BUTTON_WIDTH) * 100 / ((width - (SCR_BUTTON_WIDTH*2)) - sliderWidth)
-
-					scroll = (percent * maxScroll) / 100
-
-					emitevent scrollMoved()
-					postRepaint()
-					}
-					else
-					{
-					dragSliderStartX = sliderMinX
-					
-					emitevent scrollMoved()
-					postRepaint()
-					}
-				}
+			if (x > dragOffset)
+				x = x - dragOffset
 				else
-				{
-				int sliderMaxX = ((width) - (SCR_BUTTON_WIDTH)) - sliderWidth
+				x = 0
 
-				int diff = x - dragStartX
+			if (x < sliderMinX) x = sliderMinX
+			if (x > sliderMaxX) x = sliderMaxX
 
-				if (dragSliderStartX + diff <= sliderMaxX)
-					{
-					int sliderNewX = dragSliderStartX + diff
+			int sliderNewX = x
 
-					//calculate new scrollY, then postRepaint
+			int percent = (sliderNewX - SCR_BUTTON_WIDTH) * 100 / ((width - (SCR_BUTTON_WIDTH*2)) - sliderWidth)
 
-					int percent = (sliderNewX - SCR_BUTTON_WIDTH) * 100 / ((width - (SCR_BUTTON_WIDTH*2)) - sliderWidth)
+			scroll = (percent * maxScroll) / 100
 
-					scroll = (percent * maxScroll) / 100
-					
-					emitevent scrollMoved()
-					postRepaint()
-					}
-					else
-					{
-					scroll = maxScroll
-					
-					emitevent scrollMoved()
-					postRepaint()
-					}
-				}
+			if (scroll != startScroll)
+				emitevent scrollMoved()
+			
+			postRepaint()
 			}
 		}
 	

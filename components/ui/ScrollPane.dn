@@ -230,11 +230,11 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 	
 	void ScrollPane:mouseMove(int x, int y)
 		{
-		if (showScrollV && (x >= width-SCR_BUTTON_WIDTH && x <= width))
+		if (showScrollV && clickDown === scrollV)
 			{
 			scrollV.mouseMove(x, y)
 			}
-			else if (showScrollH && (y >= height-SCR_BUTTON_HEIGHT && y <= height))
+			else if (showScrollH && clickDown === scrollH)
 			{
 			scrollH.mouseMove(x, y)
 			}
@@ -250,11 +250,11 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 	
 	void ScrollPane:mouseUp(int x, int y, int button)
 		{
-		if (showScrollV && (x >= width-SCR_BUTTON_WIDTH && x <= width))
+		if (showScrollV && clickDown === scrollV)
 			{
 			scrollV.mouseUp(x - (width-SCR_BUTTON_WIDTH), y, button)
 			}
-			else if (showScrollH && (y >= height-SCR_BUTTON_HEIGHT && y <= height))
+			else if (showScrollH && clickDown === scrollH)
 			{
 			scrollH.mouseUp(x, y - (height-SCR_BUTTON_HEIGHT), button)
 			}
