@@ -123,9 +123,9 @@ component provides App requires io.Output out, data.IntUtil iu, data.StringUtil 
 			return 1
 			}
 
-		if (vd.number != sys.getVersion().intFromString())
+		if (vd.number != sys.getVersion())
 			{
-			ChangeLog changes[] = getChangeLog(sys.getVersion().intFromString())
+			ChangeLog changes[] = getChangeLog(sys.getVersion())
 			
 			out.println("Updates since your current version:")
 			
