@@ -1,3 +1,5 @@
+//NEXT: optimise, e.g. by storing character lengths
+
 //this is the horizontal border between the textual contents of the TextArea, and the outer edge of its background
 const int TEXT_BORDER_H = 3
 
@@ -14,8 +16,21 @@ const int SCR_BUTTON_WIDTH = 20
 
 uses IOWindow
 
+data TextFrag {
+	const byte T_TEXT = 1
+	const byte T_TAB = 2
+	byte type
+	StringUTF value
+
+	TextFrag next
+	TextFrag prev
+}
+
 data TextLine {
-	StringUTF text
+	TextFrag text
+	TextFrag textEnd
+
+	int charLength
 	int pixelLength
 
 	//these references track the in-order list of lines in the text area
@@ -58,6 +73,9 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 	int textAreaWidth = 20
 	int textAreaHeight = 20
 	int cursorHeight = 20
+
+	int TAB_SPACES = 4
+	int spaceWidth = 2
 	
 	bool focus
 	
@@ -122,7 +140,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		cursorHeight = textFont.getFontMetrics().height + (TEXT_BORDER_V*2)
 		SCROLL_TICKS = cursorHeight
 		
-		lines = new TextLine(new StringUTF(""))
+		lines = makeLine()
 		lastLine = lines
 		cursorLine = lines
 		selectStartLine = cursorLine
@@ -136,8 +154,114 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		scrollH = new ScrollBar:h()
 		scrollH.setPosition(0, height - SCR_BUTTON_WIDTH)
 
+		spaceWidth = textFont.getTextWidth(" ")
+
 		sinkevent ScrollEvents(scrollV)
 		sinkevent ScrollEvents(scrollH)
+		}
+	
+	TextLine makeLine()
+		{
+		TextLine newLine = new TextLine(new TextFrag(TextFrag.T_TEXT, new StringUTF("")))
+		newLine.textEnd = newLine.text
+
+		return newLine
+		}
+	
+	void insertFragAfter(TextLine line, TextFrag newFrag, TextFrag after)
+		{
+		if (after.next != null)
+			after.next.prev = newFrag
+			else
+			line.textEnd = newFrag
+		newFrag.next = after.next
+		newFrag.prev = after
+		after.next = newFrag
+		}
+	
+	void insertTab(TextLine line, int atCharacter)
+		{
+		TextFrag newFrag = new TextFrag(TextFrag.T_TAB, new StringUTF("\t"))
+
+		if (atCharacter == 0)
+			{
+			newFrag.next = line.text
+			line.text.prev = newFrag
+			line.text = newFrag
+			}
+
+		TextFrag fw = line.text
+		int pos = atCharacter
+		while (fw != null)
+			{
+			if (fw.type == TextFrag.T_TEXT)
+				{
+				if (fw.value.length() == pos)
+					{
+					//insert the tab after this text section
+					insertFragAfter(line, newFrag, fw)
+					break
+					}
+					else if (pos < fw.value.length())
+					{
+					//break this text section into two, with the tab inserted in the middle
+					TextFrag fragB = new TextFrag(TextFrag.T_TEXT, new StringUTF(fw.value.subString(pos, fw.value.length() - pos)))
+					fw.value = new StringUTF(fw.value.subString(0, pos))
+					insertFragAfter(line, fragB, fw)
+					insertFragAfter(line, newFrag, fw)
+					break
+					}
+					else
+					{
+					pos -= fw.value.length()
+					}
+				}
+				else
+				{
+				if (pos == 1)
+					{
+					//insert the tab after this tab
+					insertFragAfter(line, newFrag, fw)
+					break
+					}
+					else
+					{
+					pos --
+					}
+				}
+			
+			fw = fw.next
+			}
+		}
+	
+	void appendTab(TextLine line)
+		{
+		TextFrag newFrag = new TextFrag(TextFrag.T_TAB, new StringUTF("\n"))
+		newFrag.prev = line.textEnd
+		line.textEnd.next = newFrag
+
+		line.textEnd = newFrag
+		}
+	
+	int getLineCharLength(TextLine line)
+		{
+		TextFrag fw = line.text
+		int len = 0
+		while (fw != null)
+			{
+			if (fw.type == TextFrag.T_TEXT)
+				{
+				len += fw.value.length()
+				}
+				else
+				{
+				len ++
+				}
+			
+			fw = fw.next
+			}
+		
+		return len
 		}
 	
 	eventsink ScrollEvents(EventData ed)
@@ -197,6 +321,105 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		postRepaint()
 		}
 	
+	char[] getCharacters(TextLine line, int start, int len)
+		{
+		TextFrag fw = line.text
+		TextFrag dfrom = null
+		TextFrag dto = null
+
+		char result[]
+		char end[]
+
+		if (start == 0)
+			{
+			dfrom = fw
+
+			if (start+len <= fw.value.length())
+				{
+				result = fw.value.subString(start, len)
+				len = 0
+				}
+				else
+				{
+				result = fw.value.subString(start, fw.value.length() - start)
+				}
+			}
+			else
+			{
+			int pos = start
+			while (fw != null && pos > 0)
+				{
+				if (fw.type == TextFrag.T_TEXT)
+					{
+					if (pos < fw.value.length())
+						{
+						if (pos+len <= fw.value.length())
+							{
+							result = fw.value.subString(pos, len)
+							len = 0
+							pos = 0
+							}
+							else
+							{
+							result = fw.value.subString(pos, fw.value.length() - pos)
+							pos = 0
+							}
+						}
+						else
+						{
+						pos -= fw.value.length()
+						}
+					}
+					else
+					{
+					pos --
+					}
+				
+				dfrom = fw
+				fw = fw.next
+				}
+			}
+		
+		if (len != 0)
+			{
+			while (fw != null && len > 0)
+				{
+				if (fw.type == TextFrag.T_TEXT)
+					{
+					if (len < fw.value.length())
+						{
+						end = fw.value.subString(0, len)
+						dto = fw.prev
+						break
+						}
+						else
+						{
+						len -= fw.value.length()
+						}
+					}
+					else
+					{
+					len --
+					}
+
+				dto = fw
+				fw = fw.next
+				}
+			
+			TextFrag td = dfrom.next
+			TextFrag stop = dto.next
+			while (td !== stop)
+				{
+				result = new char[](result, td.value.getRaw())
+				td = td.next
+				}
+			
+			result = new char[](result, end)
+			}
+		
+		return result
+		}
+	
 	char[] getTextRegion(TextLine startLine, int startPos, TextLine endLine, int endPos, char lineSeparator[])
 		{
 		if (startLine !== endLine)
@@ -220,15 +443,15 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					{
 					inSelect = true
 
-					result = lw.text.subString(sspos, lw.text.length()-sspos)
+					result = getCharacters(lw, sspos, getLineCharLength(lw)-sspos)
 					}
 					else if (lw === seline)
 					{
-					result = new char[](result, lineSeparator, lw.text.subString(0, sepos))
+					result = new char[](result, lineSeparator, getCharacters(lw, 0, sepos))
 					}
 					else if (inSelect)
 					{
-					result = new char[](result, lineSeparator, lw.text.getRaw())
+					result = new char[](result, lineSeparator, getCharacters(lw, 0, getLineCharLength(lw)))
 					}
 				
 				if (lw === seline)
@@ -248,7 +471,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			int s = startPos
 			int e = endPos
 			
-			return startLine.text.subString(s, e-s)
+			return startLine.text.value.subString(s, e-s)
 			}
 
 		return null
@@ -297,7 +520,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				s = cursorPosition
 				}
 			
-			return cursorLine.text.subString(s, e-s)
+			return cursorLine.text.value.subString(s, e-s)
 			}
 		}
 	
@@ -363,6 +586,139 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		updateScrollMax()
 		}
 	
+	void removeFrag(TextLine line, TextFrag frag)
+		{
+		if (line.text === frag)
+			{
+			line.text = frag.next
+			line.text.prev = null
+			}
+			else if (line.textEnd === frag)
+			{
+			line.textEnd = frag.prev
+			line.textEnd.next = null
+			}
+			else
+			{
+			frag.prev.next = frag.next
+			frag.next.prev = frag.prev
+			}
+		
+		frag.next = null
+		frag.prev = null
+		}
+	
+	void deleteCharacters(TextLine line, int start, int len)
+		{
+		TextFrag fw = line.text
+		TextFrag dfrom = null
+		TextFrag dto = null
+
+		if (start == 0)
+			{
+			dfrom = fw
+
+			if (start+len <= fw.value.length())
+				{
+				fw.value.delete(start, len)
+				len = 0
+				}
+				else
+				{
+				//TODO: just delete this frag entirely?
+				fw.value = new StringUTF("")
+				}
+			}
+			else
+			{
+			int pos = start
+			while (fw != null && pos > 0)
+				{
+				if (fw.type == TextFrag.T_TEXT)
+					{
+					if (pos < fw.value.length())
+						{
+						if (pos+len <= fw.value.length())
+							{
+							fw.value.delete(pos, len)
+							len = 0
+							pos = 0
+							}
+							else
+							{
+							fw.value = new StringUTF(fw.value.subString(0, pos))
+							pos = 0
+							}
+						}
+						else
+						{
+						pos -= fw.value.length()
+						}
+					}
+					else
+					{
+					pos --
+					}
+				
+				dfrom = fw
+				fw = fw.next
+				}
+			}
+		
+		if (len != 0)
+			{
+			while (fw != null && len > 0)
+				{
+				if (fw.type == TextFrag.T_TEXT)
+					{
+					if (len < fw.value.length())
+						{
+						//break this text section into two, with the tab inserted in the middle
+						fw.value = new StringUTF(fw.value.subString(len, fw.value.length() - len))
+						dto = fw.prev
+						break
+						}
+						else
+						{
+						len -= fw.value.length()
+						}
+					}
+					else
+					{
+					len --
+					}
+
+				dto = fw
+				fw = fw.next
+				}
+			
+			TextFrag td = dfrom.next
+			TextFrag stop = dto.next
+			while (td !== stop)
+				{
+				TextFrag del = td
+				td = td.next
+				removeFrag(line, del)
+				}
+			}
+		}
+	
+	void appendLine(TextLine line, TextLine append)
+		{
+		/*
+		if (line.textEnd.type == TextFrag.T_TEXT && append.text.type == TextFrag.T_TEXT)
+			{
+			line.textEnd.value.append(append.text.getRaw())
+			append.text = append.text.next
+			append.text.prev = null
+			}
+		*/
+
+		line.textEnd.next = append.text
+		append.text.prev = line.textEnd
+		line.textEnd = append.textEnd
+		}
+	
 	void deleteSelection()
 		{
 		if (selectStartLine !== cursorLine)
@@ -403,19 +759,27 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					{
 					inSelect = true
 
-					lw.text.delete(sspos, lw.text.length()-sspos)
+					//lw.text.value.delete(sspos, lw.text.value.length()-sspos)
+					TextLine part = splitLine(lw, sspos)
 					updateLineLength(lw)
 					}
 					else if (lw === seline)
 					{
-					lw.text.delete(0, sepos)
-					updateLineLength(lw)
+					TextLine part = splitLine(lw, sepos)
 
-					cursorPosition = ssline.text.length()
+					cursorPosition = getLineCharLength(ssline)
+
+					if (getLineCharLength(part) != 0)
+						{
+						ssline.textEnd.next = part.text
+						part.text.prev = ssline.textEnd
+						ssline.textEnd = part.textEnd
+
+						part.text = null
+						part.textEnd = null
+						}
+					
 					cursorLine = ssline
-
-					ssline.text.append(lw.text.getRaw())
-					updateLineLength(ssline)
 
 					td = lw
 					if (!cursorLineFirst) cursorPositionY -= cursorHeight
@@ -471,9 +835,83 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			
 			if (s != e)
 				{
-				cursorLine.text.delete(s, e-s)
+				deleteCharacters(cursorLine, s, e-s)
 				emitevent textChanged()
 				}
+			}
+		}
+	
+	void appendTextTo(TextLine line, char txt[])
+		{
+		if (line.textEnd.type == TextFrag.T_TEXT)
+			{
+			line.textEnd.value.append(txt)
+			}
+			else
+			{
+			TextFrag nf = new TextFrag(TextFrag.T_TEXT, new StringUTF(txt))
+			line.textEnd.next = nf
+			nf.prev = line.textEnd
+			line.textEnd = nf
+			}
+		}
+	
+	void insertTextTo(TextLine line, int atCharacter, char txt[])
+		{
+		if (atCharacter == 0)
+			{
+			if (line.text.type == TextFrag.T_TEXT)
+				{
+				line.text.value.insert(0, txt)
+				}
+				else
+				{
+				TextFrag nf = new TextFrag(TextFrag.T_TEXT, new StringUTF(txt))
+				nf.next = line.text
+				line.text.prev = nf
+				line.text = nf
+				}
+			return
+			}
+
+		TextFrag fw = line.text
+		int pos = atCharacter
+		while (fw != null)
+			{
+			if (fw.type == TextFrag.T_TEXT)
+				{
+				if (fw.value.length() == pos)
+					{
+					fw.value.append(txt)
+					break
+					}
+					else if (pos < fw.value.length())
+					{
+					fw.value.insert(pos, txt)
+					break
+					}
+					else
+					{
+					pos -= fw.value.length()
+					}
+				}
+				else
+				{
+				if (pos == 1)
+					{
+					//insert the text after this tab
+					out.println("insert-text-after-tab")
+					TextFrag nf = new TextFrag(TextFrag.T_TEXT, new StringUTF(txt))
+					insertFragAfter(line, nf, fw)
+					break
+					}
+					else
+					{
+					pos --
+					}
+				}
+			
+			fw = fw.next
 			}
 		}
 	
@@ -490,21 +928,21 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				char nxt[] = text.subString(lastIndex, i - lastIndex)
 
 				//append/insert to current line
-				if (cursorPosition == cursorLine.text.length())
+				if (cursorPosition == getLineCharLength(cursorLine))
 					{
-					cursorLine.text.append(nxt)
+					appendTextTo(cursorLine, nxt)
 					updateLineLength(cursorLine)
-					cursorPosition = cursorLine.text.length()
+					cursorPosition = getLineCharLength(cursorLine)
 					}
 					else
 					{
-					cursorLine.text.insert(cursorPosition, nxt)
+					insertTextTo(cursorLine, cursorPosition, nxt)
 					updateLineLength(cursorLine)
 					StringUTF nxtUTF = new StringUTF(nxt)
 					cursorPosition += nxtUTF.length()
 					}
 
-				TextLine ntl = new TextLine(new StringUTF(""))
+				TextLine ntl = makeLine()
 
 				ntl.next = cursorLine.next
 				ntl.prev = cursorLine
@@ -517,10 +955,15 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				cursorLine.next = ntl
 
 				//check if we should split the current line at this point, appending it to the next line
-				if (cursorPosition != cursorLine.text.length())
+				if (cursorPosition != getLineCharLength(cursorLine))
 					{
-					ntl.text = new StringUTF(cursorLine.text.subString(cursorPosition, cursorLine.text.length() - cursorPosition))
-					cursorLine.text.delete(cursorPosition, cursorLine.text.length() - cursorPosition)
+					TextLine part = splitLine(cursorLine, cursorPosition)
+					ntl.text = part.text
+					ntl.textEnd = part.textEnd
+
+					part.text = null
+					part.textEnd = null
+
 					updateLineLength(cursorLine)
 					}
 
@@ -537,20 +980,48 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				{
 				//do nothing
 				}
+				else if (k == "\t")
+				{
+				//insert a tab
+				if (lastIndex != i)
+					{
+					char nxt[] = text.subString(lastIndex, i - lastIndex)
+
+					//append/insert to current line
+					if (cursorPosition == getLineCharLength(cursorLine))
+						{
+						appendTextTo(cursorLine, nxt)
+						updateLineLength(cursorLine)
+						cursorPosition = getLineCharLength(cursorLine)
+						}
+						else
+						{
+						insertTextTo(cursorLine, cursorPosition, nxt)
+						updateLineLength(cursorLine)
+						StringUTF nxtUTF = new StringUTF(nxt)
+						cursorPosition += nxtUTF.length()
+						}
+					}
+				
+				insertTab(cursorLine, cursorPosition)
+				cursorPosition ++
+				
+				lastIndex = i + 1
+				}
 			}
 		
 		char nxt[] = text.subString(lastIndex, text.arrayLength - lastIndex)
 		
 		//append/insert to current line
-		if (cursorPosition == cursorLine.text.length())
+		if (cursorPosition == getLineCharLength(cursorLine))
 			{
-			cursorLine.text.append(nxt)
+			appendTextTo(cursorLine, nxt)
 			updateLineLength(cursorLine)
-			cursorPosition = cursorLine.text.length()
+			cursorPosition = getLineCharLength(cursorLine)
 			}
 			else
 			{
-			cursorLine.text.insert(cursorPosition, nxt)
+			insertTextTo(cursorLine, cursorPosition, nxt)
 			updateLineLength(cursorLine)
 			StringUTF nxtUTF = new StringUTF(nxt)
 			cursorPosition += nxtUTF.length()
@@ -563,12 +1034,79 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		emitevent textChanged()
 		}
 	
+	TextLine splitLine(TextLine line, int currentPosition)
+		{
+		TextLine result = makeLine()
+
+		TextFrag fw = line.text
+		TextFrag dfrom = null
+
+		if (currentPosition == 0)
+			{
+			result.text.value = fw.value
+			fw.value = new StringUTF("")
+
+			fw = fw.next
+
+			dfrom = line.text
+			}
+			else
+			{
+			int pos = currentPosition
+			while (fw != null && pos > 0)
+				{
+				if (fw.type == TextFrag.T_TEXT)
+					{
+					if (pos < fw.value.length())
+						{
+						result.text.value = new StringUTF(fw.value.subString(pos, fw.value.length() - pos))
+						fw.value = new StringUTF(fw.value.subString(0, pos))
+						}
+						else
+						{
+						pos -= fw.value.length()
+						}
+					}
+					else
+					{
+					pos --
+					}
+				
+				dfrom = fw
+				fw = fw.next
+				}
+			}
+		
+		result.textEnd.next = fw
+		result.textEnd = line.textEnd
+
+		if (line.text === line.textEnd)
+			{
+			result.textEnd = result.text
+			}
+
+		line.textEnd = dfrom
+		line.textEnd.next = null
+
+		return result
+		}
+	
 	void updateLineLength(TextLine line)
 		{
 		//re-calculate the length-in-pixels of this line
 		int preLength = line.pixelLength
 
-		line.pixelLength = textFont.getTextWidth(line.text.getRaw())
+		line.pixelLength = 0
+
+		TextFrag fw = line.text
+		while (fw != null)
+			{
+			if (fw.type == TextFrag.T_TEXT)
+				line.pixelLength += textFont.getTextWidth(fw.value.getRaw())
+				else
+				line.pixelLength += (TAB_SPACES * spaceWidth)
+			fw = fw.next
+			}
 
 		//...and now adjust sorting order relative to lines around us
 
@@ -670,13 +1208,13 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 						cursorPosition = selectStartPos
 					}
 				
-				if (cursorPosition == cursorLine.text.length())
+				if (cursorPosition == getLineCharLength(cursorLine))
 					{
-					cursorLine.text.append(ch)
+					appendTextTo(cursorLine, ch)
 					}
 					else
 					{
-					cursorLine.text.insert(cursorPosition, ch)
+					insertTextTo(cursorLine, cursorPosition, ch)
 					}
 				
 				cursorPosition ++
@@ -718,6 +1256,42 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				return
 				}
 			
+			if (kCode == KeyCode.TAB)
+				{
+				mutex(textLock)
+					{
+					if (selectStartLine !== cursorLine)
+						{
+						//TODO: indent+ this text region?
+						}
+						else
+						{
+						if (selectStartPos != cursorPosition)
+							{
+							deleteSelection()
+							if (selectStartPos > cursorPosition)
+								selectStartPos = cursorPosition
+								else
+								cursorPosition = selectStartPos
+							}
+						
+						if (cursorPosition == getLineCharLength(cursorLine))
+							{
+							appendTab(cursorLine)
+							}
+							else
+							{
+							insertTab(cursorLine, cursorPosition)
+							}
+						
+						cursorPosition ++
+						selectStartPos = cursorPosition
+						}
+
+					updateLineLength(cursorLine)
+					}
+				}
+			
 			if (kCode == KeyCode.DELETE)
 				{
 				mutex(textLock)
@@ -726,7 +1300,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 						{
 						//deal with cursor at the end of a line, deleting the next line and appending any content to this one
 
-						if (cursorPosition < cursorLine.text.length())
+						if (cursorPosition < getLineCharLength(cursorLine))
 							{
 							selectStartPos = cursorPosition + 1
 							deleteSelection()
@@ -738,7 +1312,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 							{
 							TextLine td = cursorLine.next
 
-							cursorLine.text.append(cursorLine.next.text.getRaw())
+							appendLine(cursorLine, cursorLine.next)
 
 							removeLine(td)
 
@@ -781,14 +1355,15 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 							}
 							else if (cursorLine.prev != null)
 							{
-							cursorPosition = cursorLine.prev.text.length()
+							cursorPosition = cursorLine.prev.text.value.length()
 							selectStartPos = cursorPosition
 
 							cursorPositionY -= cursorHeight
 
 							TextLine td = cursorLine
 
-							cursorLine.prev.text.append(cursorLine.text.getRaw())
+							appendLine(cursorLine.prev, cursorLine)
+
 							cursorLine = cursorLine.prev
 
 							removeLine(td)
@@ -825,14 +1400,19 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					deleteSelection()
 
 					//check if any text comes after this cursor position on the current line; if so move it down to the next line
-					TextLine ntl = new TextLine(new StringUTF(""))
+					TextLine ntl = makeLine()
 					lineCount ++
 					addLine(ntl)
 					
-					if (cursorPosition < cursorLine.text.length())
+					if (cursorPosition < getLineCharLength(cursorLine))
 						{
-						ntl.text = new StringUTF(cursorLine.text.subString(cursorPosition, cursorLine.text.length() - cursorPosition))
-						cursorLine.text = new StringUTF(cursorLine.text.subString(0, cursorPosition))
+						TextLine part = splitLine(cursorLine, cursorPosition)
+						ntl.text = part.text
+						ntl.textEnd = part.textEnd
+
+						part.text = null
+						part.textEnd = null
+
 						updateLineLength(cursorLine)
 						}
 					
@@ -880,7 +1460,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					}
 					else if (cursorLine.prev != null)
 					{
-					cursorPosition = cursorLine.prev.text.length()
+					cursorPosition = getLineCharLength(cursorLine.prev)
 					cursorPositionY -= cursorHeight
 
 					cursorLine = cursorLine.prev
@@ -898,7 +1478,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			
 			if (kCode == KeyCode.ARROW_RIGHT)
 				{
-				if (cursorPosition < cursorLine.text.length())
+				if (cursorPosition < getLineCharLength(cursorLine))
 					{
 					cursorPosition ++
 					
@@ -934,9 +1514,9 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					{
 					TextLine goto = cursorLine.prev
 					
-					if (goto.text.length() < cursorPosition)
+					if (getLineCharLength(goto) < cursorPosition)
 						{
-						cursorPosition = goto.text.length()
+						cursorPosition = getLineCharLength(goto)
 						}
 					
 					cursorLine = goto
@@ -960,9 +1540,9 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					{
 					TextLine goto = cursorLine.next
 					
-					if (goto.text.length() < cursorPosition)
+					if (getLineCharLength(goto) < cursorPosition)
 						{
-						cursorPosition = goto.text.length()
+						cursorPosition = getLineCharLength(goto)
 						}
 					
 					cursorLine = goto
@@ -982,7 +1562,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			
 			if (kCode == KeyCode.END)
 				{
-				cursorPosition = cursorLine.text.length()
+				cursorPosition = cursorLine.text.value.length()
 				
 				if (!shiftDown)
 					selectStartPos = cursorPosition
@@ -1061,17 +1641,35 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			}
 
 		//now find the character on that line
-		char test[]
-		for (int i = 0; i < lw.text.length(); i++)
+		TextFrag fw = lw.text
+		int subIndex = 0
+		int charCount = 0
+		int totalWidth = 0
+		for (int i = 0; i < getLineCharLength(lw); i++)
 			{
-			test = new char[](test, lw.text.subString(i, 1))
-			
-			int text_xp = textFont.getTextWidth(test)
+			if (fw.type == TextFrag.T_TEXT)
+				{
+				totalWidth += textFont.getTextWidth(fw.value.subString(subIndex, 1))
+				charCount ++
+				subIndex ++
 
-			if (text_xp >= x) return new CursorPos(i, lineBottom - cursorHeight, lw)
+				if (subIndex == fw.value.length())
+					{
+					fw = fw.next
+					subIndex = 0
+					}
+				}
+				else if (fw.type == TextFrag.T_TAB)
+				{
+				int nspaces = TAB_SPACES - (charCount % TAB_SPACES)
+				totalWidth += nspaces * spaceWidth
+				fw = fw.next
+				}
+			
+			if (totalWidth >= x) return new CursorPos(i, lineBottom - cursorHeight, lw)
 			}
 		
-		return new CursorPos(lw.text.length(), lineBottom - cursorHeight, lw)
+		return new CursorPos(getLineCharLength(lw), lineBottom - cursorHeight, lw)
 		}
 	
 	void TextArea:click(int x, int y, int button)
@@ -1137,9 +1735,9 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				
 				int xl = cursorPosition
 				
-				while (xl < cursorLine.text.length())
+				while (xl < getLineCharLength(cursorLine))
 					{
-					char n[] = cursorLine.text.subString(xl, 1)
+					char n[] = getCharacters(cursorLine, xl, 1)
 					
 					if (isAlphaNum(n))
 						{
@@ -1157,7 +1755,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				
 				while (xr > 0)
 					{
-					char n[] = cursorLine.text.subString(xr-1, 1)
+					char n[] = getCharacters(cursorLine, xr-1, 1)
 					
 					if (isAlphaNum(n))
 						{
@@ -1179,7 +1777,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				{
 				//select all
 				selectStartPos = 0
-				cursorPosition = cursorLine.text.length()
+				cursorPosition = getLineCharLength(cursorLine)
 
 				postRepaint()
 				}
@@ -1231,7 +1829,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			cursorLine = lastLine
 
 			selectStartPos = 0
-			cursorPosition = cursorLine.text.length()
+			cursorPosition = getLineCharLength(cursorLine)
 
 			selectStartY = 0
 			cursorPositionY = lineCount * cursorHeight
@@ -1407,7 +2005,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		{
 		if (lineSeparator == null) lineSeparator = "\n"
 
-		return getTextRegion(lines, 0, lastLine, lastLine.text.length(), lineSeparator)
+		return getTextRegion(lines, 0, lastLine, lastLine.text.value.length(), lineSeparator)
 		}
 	
 	void clearText()
@@ -1438,7 +2036,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		
 		lines.next = null
 		
-		lines.text = new StringUTF("")
+		lines.text.value = new StringUTF("")
 		lastLine = lines
 
 		shortestLine = lines
@@ -1467,11 +2065,37 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 	
 	int getX(TextLine forLine, int pos)
 		{
-		char mt[] = new char[pos]
+		TextFrag fw = forLine.text
+		int xpos = 0
+		int charCount = 0
+		while (pos > 0)
+			{
+			if (fw.type == TextFrag.T_TEXT)
+				{
+				if (fw.value.length() > pos)
+					{
+					char mt[] = fw.value.subString(0, pos)
+					return xpos + textFont.getTextWidth(mt)
+					}
+					else
+					{
+					xpos += textFont.getTextWidth(fw.value.getRaw())
+					pos -= fw.value.length()
+					charCount += fw.value.length()
+					}
+				}
+				else
+				{
+				int nspaces = TAB_SPACES - (charCount % TAB_SPACES)
+				xpos += (nspaces * spaceWidth)
+				pos --
+				charCount += nspaces
+				}
+			
+			fw = fw.next
+			}
 		
-		mt = forLine.text.subString(0, pos)
-		
-		return textFont.getTextWidth(mt)
+		return xpos
 		}
 	
 	int getY(TextLine forLine)
@@ -1532,7 +2156,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				if (lw === ssline)
 					{
 					selectStartX = getX(lw, sspos)
-					selectEndX = getX(lw, lw.text.length())
+					selectEndX = getX(lw, getLineCharLength(lw))
 
 					inSelect = true
 					}
@@ -1544,7 +2168,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					else if (inSelect)
 					{
 					selectStartX = getX(lw, 0)
-					selectEndX = getX(lw, lw.text.length())
+					selectEndX = getX(lw, getLineCharLength(lw))
 					}
 				
 				if (inSelect)
@@ -1601,7 +2225,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			}
 		
 		//test if the total text width has become less than the scroll width (i.e., there's empty space and xScroll is not 0)
-		int qfx = getX(cursorLine, cursorLine.text.length())
+		int qfx = getX(cursorLine, getLineCharLength(cursorLine))
 		
 		if ((xScroll != 0) && (qfx + CURSOR_WIDTH < (xScroll + textAreaWidth)))
 			{
@@ -1646,7 +2270,26 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			
 			while (lw != null)
 				{
-				c.text(new Point2D(0, yDraw, textColor), textFont, lw.text.getRaw())
+				TextFrag fw = lw.text
+				int xpos = 0
+				int charCount = 0
+				while (fw != null)
+					{
+					if (fw.type == TextFrag.T_TEXT)
+						{
+						c.text(new Point2D(xpos, yDraw, textColor), textFont, fw.value.getRaw())
+						charCount += fw.value.length()
+						xpos += textFont.getTextWidth(fw.value.getRaw())
+						}
+						else
+						{
+						int nspaces = TAB_SPACES - (charCount % TAB_SPACES)
+						xpos += (nspaces * spaceWidth)
+						charCount += nspaces
+						}
+					
+					fw = fw.next
+					}
 				
 				lw = lw.next
 				yDraw += cursorHeight
@@ -1766,13 +2409,12 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			}
 		
 		updateScrollMax()
-		updateCursorPosition()
 		postRepaint()
 		}
 	
 	void TextArea:setCursorPos(int p)
 		{
-		if (p <= cursorLine.text.length())
+		if (p <= getLineCharLength(cursorLine))
 			{
 			cursorPosition = p
 			selectStartPos = cursorPosition
