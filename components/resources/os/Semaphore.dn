@@ -1,0 +1,14 @@
+/*
+ {"description" : "A semaphore."}
+*/
+
+interface Semaphore {
+	/* {"@description" : "Instantiate a new semaphore object, initialised with a count of zero." } */
+	Semaphore()
+	
+	/* {"@description" : "Decrement the semaphore's value, or if zero wait until a thread calls signal()." } */
+	void wait()
+	/* {"@description" : "Iincrement semaphore's value, unblocking a wait() if the semaphore was previously zero." } */
+	void signal()
+	
+	}

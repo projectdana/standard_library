@@ -1,0 +1,34 @@
+interface SemaphoreLib {
+	int newInstance()
+	void wait(int hnd)
+	void signal(int hnd)
+	void destroy(int hnd)
+	}
+
+component provides Semaphore(Destructor) requires native SemaphoreLib lib {
+	int hnd
+	/* {"@description" : "Instantiate a new semaphore object, initialised with a count of zero." } */
+	Semaphore:Semaphore()
+		{
+		hnd = lib.newInstance()
+		if (hnd == 0) throw new Exception("failed to initialise semaphore")
+		}
+	
+	/* {"@description" : "Decrement the semaphore's value, or if zero wait until a thread calls signal()." } */
+	void Semaphore:wait()
+		{
+		lib.wait(hnd)
+		}
+
+	/* {"@description" : "Iincrement semaphore's value, unblocking a wait() if the semaphore was previously zero." } */
+	void Semaphore:signal()
+		{
+		lib.signal(hnd)
+		}
+	
+	void Destructor:destroy()
+		{
+		lib.destroy(hnd)
+		}
+	
+	}
