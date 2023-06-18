@@ -74,16 +74,21 @@ component provides CategoryMulti:box requires ChartCore, stats.StatCore stcore, 
 		series = new Series[](series, new Series(null, name, name, new Color(100, 100, 255, 255)))
 		}
 	
-	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[])
+	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[], opt bool redraw)
 		{
+		Series n = series.findFirst(Series.[name], new Series(name = seriesName))
+
+		if (n == null)
+			{
+			throw new Exception("unknown series '$seriesName'; series must first be added using addSeries()")
+			}
+		
 		//update our highest and lowest X and Y points, to use in normalising coordinates
 		dec hy = stcore.max(yvalues)
 		dec ly = stcore.min(yvalues)
 		
-		if (categories.search(String.[string], new String(cat)) == null)
+		if (categories.find(String.[string], new String(cat)) == null)
 			categories = new String[](categories, new String(cat))
-		
-		Series n = series.search(Series.[name], new Series(null, seriesName))[0]
 		
 		xAxMax += 1.0
 		
@@ -110,7 +115,7 @@ component provides CategoryMulti:box requires ChartCore, stats.StatCore stcore, 
 		setXMinMax(xAxMin, xAxMax)
 		setYMinMax(yAxMin, yAxMax)
 		
-		postRepaint()
+		if (redraw) postRepaint()
 		}
 	
 	void CategoryMulti:setYMinMax(dec min, dec max)
@@ -124,14 +129,14 @@ component provides CategoryMulti:box requires ChartCore, stats.StatCore stcore, 
 	
 	void CategoryMulti:setSeriesColor(char seriesName[], Color c)
 		{
-		Series n = series.search(Series.[name], new Series(null, seriesName))[0]
+		Series n = series.find(Series.[name], new Series(null, seriesName))[0]
 		
 		n.seriesColor = c
 		}
 	
 	void CategoryMulti:setSeriesName(char seriesName[], char displayName[])
 		{
-		Series n = series.search(Series.[name], new Series(null, seriesName))[0]
+		Series n = series.find(Series.[name], new Series(null, seriesName))[0]
 		
 		n.displayName = displayName
 		}
@@ -191,7 +196,7 @@ component provides CategoryMulti:box requires ChartCore, stats.StatCore stcore, 
 			
 			for (int j = 0; j < series.arrayLength; j++)
 				{
-				Sample s[] = series[j].samples.search(Sample.[cat], new Sample(null, categories[i].string))
+				Sample s[] = series[j].samples.find(Sample.[cat], new Sample(null, categories[i].string))
 				
 				if (s != null)
 					{
@@ -347,7 +352,7 @@ component provides CategoryMulti:box requires ChartCore, stats.StatCore stcore, 
 			
 			for (int j = 0; j < series.arrayLength; j++)
 				{
-				Sample s[] = series[j].samples.search(Sample.[cat], new Sample(null, categories[i].string))
+				Sample s[] = series[j].samples.find(Sample.[cat], new Sample(null, categories[i].string))
 				
 				if (s != null)
 					{

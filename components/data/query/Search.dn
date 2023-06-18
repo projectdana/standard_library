@@ -1,20 +1,5 @@
 component provides Search requires io.Output out {
 	
-	Data[] Search:search(Data list[], TypeField field, Data template)
-		{
-		Data result[]
-		
-		for (int i = 0; i < list.arrayLength; i++)
-			{
-			if (list[i]:.field == template:.field)
-				{
-				result = new Data[](result, list[i]) from typeof(template)
-				}
-			}
-		
-		return result
-		}
-	
 	Data[] Search:find(Data list[], TypeField field, Data template)
 		{
 		Data result[]
@@ -41,6 +26,34 @@ component provides Search requires io.Output out {
 			}
 		
 		return null
+		}
+	
+	int[] Search:findIndex(Data list[], TypeField field, Data template)
+		{
+		int result[]
+		
+		for (int i = 0; i < list.arrayLength; i++)
+			{
+			if (list[i]:.field == template:.field)
+				{
+				result = new int[](result, i)
+				}
+			}
+		
+		return result
+		}
+	
+	int Search:findFirstIndex(Data list[], TypeField field, Data template)
+		{
+		for (int i = 0; i < list.arrayLength; i++)
+			{
+			if (list[i]:.field == template:.field)
+				{
+				return i
+				}
+			}
+		
+		return INT_MAX
 		}
 	
 	Data[] Search:findDuplicates(Data list[], TypeField field)

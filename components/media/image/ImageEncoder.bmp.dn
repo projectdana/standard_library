@@ -186,6 +186,9 @@ component provides ImageEncoder:bmp requires io.Output out, data.IntUtil iu {
 	
 	bool ImageEncoder:saveImage(File fd)
 		{
+		if (map == null || map.size == null) throw new Exception("no image data to encode")
+		if (map.size.width == 0 || map.size.height == 0) throw new Exception("image data has a zero dimension")
+		
 		//by default, we write file in BITMAPINFOHEADER/24bpp format
 		
 		//bitmaps use padding to ensure each row is a multiple of 4, so we calculate the padding amount (if any)

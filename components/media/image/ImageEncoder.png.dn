@@ -39,6 +39,9 @@ component provides ImageEncoder:png requires native PNGLib lib {
 	
 	bool ImageEncoder:saveImage(File fd)
 		{
+		if (map == null || map.size == null) throw new Exception("no image data to encode")
+		if (map.size.width == 0 || map.size.height == 0) throw new Exception("image data has a zero dimension")
+
 		byte fdata[] = lib.saveImage(map)
 		
 		if (fdata == null)

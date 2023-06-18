@@ -59,7 +59,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 	
 	byte contextMode = CONTEXT_MENU
 	
-	Color bgColor = new Color(200, 200, 220, 255)
+	Color bgColor = new Color(230, 230, 250, 255)
 	Color borderColor = new Color(180, 180, 190, 255)
 	Color highlightColor = new Color(160, 160, 200, 255)
 	Color textColor = new Color(0, 0, 0, 255)
@@ -616,6 +616,12 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		if (button == MouseButtons.BUTTON_LEFT)
 			{
 			mouseDragCapture = false
+
+			if (!focus)
+				{
+				setFocus()
+				postRepaint()
+				}
 			}
 		}
 	

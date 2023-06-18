@@ -1,0 +1,30 @@
+uses time.DateTime
+
+interface ClockHDLib {
+	int init()
+	TimeHD getTime(int handle)
+	void destroy(int handle)
+	}
+
+component provides time.ClockHD(Destructor) requires native ClockHDLib lib
+	{
+	int handle
+	
+	ClockHD:ClockHD()
+		{
+		handle = lib.init()
+		
+		if (handle == 0) throw new Exception("failed to initialise HD clock")
+		}
+	
+	TimeHD ClockHD:getTime()
+		{
+		return lib.getTime(handle)
+		}
+	
+	void Destructor:destroy()
+		{
+		lib.destroy(handle)
+		}
+	
+	}

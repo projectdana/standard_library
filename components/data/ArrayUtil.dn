@@ -1,0 +1,255 @@
+component provides ArrayUtil {
+	
+	Data[] ArrayUtil:removeCell(Data array[], TypeField field, Data val, opt bool multi)
+		{
+		int removeCount = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			if (array[i]:.field == val:.field)
+				{
+				removeCount ++
+				if (!multi) break
+				}
+			}
+		
+		if (removeCount == 0) return array
+		
+		Data arrayB[] = new Data[array.arrayLength - removeCount] from typeof(array)
+		
+		int j = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			if (removeCount != 0 && (array[i]:.field == val:.field))
+				{
+				removeCount --
+				}
+				else
+				{
+				arrayB[j] = array[i]
+				j ++
+				}
+			}
+		
+		return arrayB
+		}
+	
+	Data[] ArrayUtil:removeIndex(Data array[], int index[])
+		{
+		Data arrayB[] = new Data[array.arrayLength - index.arrayLength] from typeof(array)
+		
+		int j = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			bool remove = false
+			for (int k = 0; k < index.arrayLength; k++)
+				{
+				if (i == index[k])
+					{
+					remove = true
+					break
+					}
+				}
+			
+			if (!remove)
+				{
+				arrayB[j] = array[i]
+				j ++
+				}
+			}
+		
+		return arrayB
+		}
+	
+	Object[] ArrayUtil:removeObjectCell(Object array[], Object val, opt bool multi)
+		{
+		int removeCount = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			if (array[i] == val)
+				{
+				removeCount ++
+				if (!multi) break
+				}
+			}
+		
+		if (removeCount == 0) return array
+		
+		Object arrayB[] = new Object[array.arrayLength - removeCount] from typeof(array)
+		
+		int j = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			if (removeCount != 0 && (array[i] == val))
+				{
+				removeCount --
+				}
+				else
+				{
+				arrayB[j] = array[i]
+				j ++
+				}
+			}
+		
+		return arrayB
+		}
+	
+	Object[] ArrayUtil:removeObjectIndex(Object array[], int index[])
+		{
+		Object arrayB[] = new Object[array.arrayLength - index.arrayLength] from typeof(array)
+		
+		int j = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			bool remove = false
+			for (int k = 0; k < index.arrayLength; k++)
+				{
+				if (i == index[k])
+					{
+					remove = true
+					break
+					}
+				}
+			
+			if (!remove)
+				{
+				arrayB[j] = array[i]
+				j ++
+				}
+			}
+		
+		return arrayB
+		}
+	
+	int[] ArrayUtil:removeIntCell(int array[], int val, opt bool multi)
+		{
+		int removeCount = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			if (array[i] == val)
+				{
+				removeCount ++
+				if (!multi) break
+				}
+			}
+		
+		if (removeCount == 0) return array
+		
+		int arrayB[] = new int[array.arrayLength - removeCount]
+		
+		int j = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			if (removeCount != 0 && (array[i] == val))
+				{
+				removeCount --
+				}
+				else
+				{
+				arrayB[j] = array[i]
+				j ++
+				}
+			}
+		
+		return arrayB
+		}
+	
+	int[] ArrayUtil:removeIntIndex(int array[], int index[])
+		{
+		int arrayB[] = new int[array.arrayLength - index.arrayLength]
+		
+		int j = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			bool remove = false
+			for (int k = 0; k < index.arrayLength; k++)
+				{
+				if (i == index[k])
+					{
+					remove = true
+					break
+					}
+				}
+			
+			if (!remove)
+				{
+				arrayB[j] = array[i]
+				j ++
+				}
+			}
+		
+		return arrayB
+		}
+	
+	dec[] ArrayUtil:removeDecCell(dec array[], dec val, opt bool multi)
+		{
+		int removeCount = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			if (array[i] == val)
+				{
+				removeCount ++
+				if (!multi) break
+				}
+			}
+		
+		if (removeCount == 0) return array
+		
+		dec arrayB[] = new dec[array.arrayLength - removeCount]
+		
+		int j = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			if (removeCount != 0 && (array[i] == val))
+				{
+				removeCount --
+				}
+				else
+				{
+				arrayB[j] = array[i]
+				j ++
+				}
+			}
+		
+		return arrayB
+		}
+	
+	dec[] ArrayUtil:removeDecIndex(dec array[], int index[])
+		{
+		dec arrayB[] = new dec[array.arrayLength - index.arrayLength]
+		
+		int j = 0
+		
+		for (int i = 0; i < array.arrayLength; i++)
+			{
+			bool remove = false
+			for (int k = 0; k < index.arrayLength; k++)
+				{
+				if (i == index[k])
+					{
+					remove = true
+					break
+					}
+				}
+			
+			if (!remove)
+				{
+				arrayB[j] = array[i]
+				j ++
+				}
+			}
+		
+		return arrayB
+		}
+	
+	}

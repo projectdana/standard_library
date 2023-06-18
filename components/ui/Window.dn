@@ -311,6 +311,11 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 		{
 		return new WH(currentWidth, currentHeight)
 		}
+	
+	PixelMap Window:getPixels()
+		{
+		return canvas.getPixels()
+		}
 
 	void Window:close()
 		{
@@ -325,17 +330,6 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			
 			closed = true
 			}
-		}
-
-	void Window:waitForClose()
-		{
-		mutex(closeLock)
-			{
-			if (closed) return
-			waitThread = this.thread
-			}
-		
-		this.thread.wait()
 		}
 
 	void Window:addObject(GraphicsObject go)

@@ -40,6 +40,11 @@ interface Assembly {
 		"@return" : "Returns true if adaptation was successful, false otherwise." }
 	*/
 	bool setConfig(char conf[], opt ProxyLoaderInfo loaders[])
+
+	/*
+	{ "@description" : "Get the current config (the caller would usually already have this information, but may not do if setConfig() fails)." }
+	*/
+	char[] getConfig()
 	
 	/*
 	{ "@description" : "Launches the main method of the program, blocking until that function completes." }

@@ -186,7 +186,7 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 					if (parser.getValue(pi, "semantic") != null)
 						semantic = parser.getValue(pi, "semantic").value
 					
-					if (dsearch.search(result, String.[string], new String(semantic)) == null)
+					if (dsearch.find(result, String.[string], new String(semantic)) == null)
 						{
 						result = new String[](result, new String(semantic))
 						}

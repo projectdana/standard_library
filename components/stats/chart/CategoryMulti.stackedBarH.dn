@@ -68,20 +68,25 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 	
 	void CategoryMulti:addSeries(char name[])
 		{
-		if (series.search(Series.[name], new Series(null, name)) == null)
+		if (series.find(Series.[name], new Series(null, name)) == null)
 			series = new Series[](series, new Series(null, name, name, new Color(100, 200, 200, 255)))
 		}
 	
-	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[])
+	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[], opt bool redraw)
 		{
+		Series n = series.findFirst(Series.[name], new Series(name = seriesName))
+
+		if (n == null)
+			{
+			throw new Exception("unknown series '$seriesName'; series must first be added using addSeries()")
+			}
+		
 		//update our highest and lowest X and Y points, to use in normalising coordinates
 		dec hy = stcore.max(yvalues)
 		dec ly = stcore.min(yvalues)
 		
-		if (categories.search(String.[string], new String(cat)) == null)
+		if (categories.find(String.[string], new String(cat)) == null)
 			categories = new String[](categories, new String(cat))
-		
-		Series n = series.search(Series.[name], new Series(null, seriesName))[0]
 		
 		yAxMax += 1.0
 		
@@ -108,7 +113,7 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 		setXMinMax(xAxMin, xAxMax)
 		setYMinMax(yAxMin, yAxMax)
 		
-		postRepaint()
+		if (redraw) postRepaint()
 		}
 	
 	void CategoryMulti:setYMinMax(dec min, dec max)
@@ -128,14 +133,14 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 	
 	void CategoryMulti:setSeriesColor(char seriesName[], Color c)
 		{
-		Series n = series.search(Series.[name], new Series(null, seriesName))[0]
+		Series n = series.find(Series.[name], new Series(null, seriesName))[0]
 		
 		n.seriesColor = c
 		}
 	
 	void CategoryMulti:setSeriesName(char seriesName[], char displayName[])
 		{
-		Series n = series.search(Series.[name], new Series(null, seriesName))[0]
+		Series n = series.find(Series.[name], new Series(null, seriesName))[0]
 		
 		n.displayName = displayName
 		}
@@ -181,7 +186,7 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 		paint(c)
 		}
 	
-	void prepAxisLimits()
+	bool prepAxisLimits()
 		{
 		dec highX
 		dec lowX
@@ -195,7 +200,7 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 			
 			for (int j = 0; j < series.arrayLength; j++)
 				{
-				Sample s[] = series[j].samples.search(Sample.[cat], new Sample(null, categories[i].string))
+				Sample s[] = series[j].samples.find(Sample.[cat], new Sample(null, categories[i].string))
 				
 				if (s != null)
 					{
@@ -224,8 +229,12 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 			highY += 1.0
 			}
 		
+		if (lowX == highX || lowY == highY) return false
+
 		setXMinMax(lowX, highX)
 		setYMinMax(lowY, highY)
+
+		return true
 		}
 	
 	int getLongestSeriesName()
@@ -288,7 +297,10 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 	
 	void CategoryMulti:paint(Canvas c)
 		{
-		prepAxisLimits()
+		if (!prepAxisLimits())
+			{
+			throw new Exception("chart has no data to plot (min and max data point values are equal)")
+			}
 		
 		int maxCatWidth = getMaxCatTextWidth()
 		setAxisLabelSpace(ChartCore.AXIS_Y, maxCatWidth)
@@ -333,7 +345,7 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 			
 			for (int j = 0; j < series.arrayLength; j++)
 				{
-				Sample s[] = series[j].samples.search(Sample.[cat], new Sample(null, categories[i].string))
+				Sample s[] = series[j].samples.find(Sample.[cat], new Sample(null, categories[i].string))
 				
 				if (s != null)
 					{

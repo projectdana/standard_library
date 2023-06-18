@@ -116,7 +116,7 @@ component provides SVGCanvas requires data.DecUtil du, data.IntUtil iu, encoding
 		svg = new char[](svg, "<text x=\"$(position.x)\" y=\"$(adjustedY)\" transform=\"rotate($rotation,$rotationX,$rotationY)\" fill=\"rgb($(position.color.r),$(position.color.g),$(position.color.b))\" style=\"font-family: '$(f.getFontName())'; font-size: $(f.getSize())px; fill-opacity: $opacity\">$text</text>")
 		
 		//note the font details as we'll need to define its source data in the header
-		if (fontTable.search(FontInclude.[name], new FontInclude(f.getFontName())) == null)
+		if (fontTable.find(FontInclude.[name], new FontInclude(f.getFontName())) == null)
 			{
 			fontTable = new FontInclude[](fontTable, new FontInclude(f.getFontName(), f.getSource()))
 			}

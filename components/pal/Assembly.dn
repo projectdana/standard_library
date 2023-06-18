@@ -325,9 +325,17 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 				if (ploaders[i].tag == proxyTag)
 					{
 					ProxyInstance pinstance = ploaders[i].loader.loadProxy(comp, proxyTag, proxyParams)
-					c.com = pinstance.com
-					c.proxyInterface = pinstance.providedInterface
-					break
+
+					if (pinstance != null)
+						{
+						c.com = pinstance.com
+						c.proxyInterface = pinstance.providedInterface
+						break
+						}
+						else
+						{
+						throw new Exception("failed to load proxy component '$comp'")
+						}
 					}
 				}
 			}
@@ -335,6 +343,11 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			{
 			//not a proxy - load it using our standard load approach
 			c.com = loader.load(comp)
+
+			if (c.com == null)
+				{
+				throw new Exception("failed to load component '$comp'")
+				}
 			
 			//c.lastModified = fileSystem.getInfo(comp).modified
 			
@@ -510,10 +523,24 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			}
 		}
 	
+	void setComponentUse(Component lst, bool val)
+		{
+		Component cw = lst
+		while (cw != null)
+			{
+			cw.used = val
+			cw = cw.next
+			}
+		}
+	
 	bool Assembly:setConfig(char config[], opt ProxyLoaderInfo loaders[])
 		{
 		//check if app has exited
 		if (appFinished) throw new Exception("Hosted application has completed execution")
+
+		bool adaptOK = true
+
+		int foundConfig = 0
 		
 		mutex(configLock)
 			{
@@ -524,7 +551,8 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 				if (config == configs[i].cflat)
 					{
 					found = true
-					currentConfig = i
+					foundConfig = i
+					break
 					}
 				}
 			
@@ -541,14 +569,10 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 				wirings = clone stringUtil.explode(els[1].string, ",")
 			
 			//mark all loaded components as not-used
-			Component cw = components
-			while (cw != null)
-				{
-				cw.used = false
-				cw = cw.next
-				}
+			setComponentUse(components, false)
 			
 			//load all components that are not yet loaded
+			bool loadFail = false
 			Component newComponents = null
 			Component end = null
 			
@@ -559,13 +583,22 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 					{
 					if (componentLoaded(newComponents, comps[j].string) == null)
 						{
-						Component c = loadComponent(configs[currentConfig].c, comps[j].string, loaders)
-						c.used = true
-						
-						if (end == null) end = c
-						
-						c.next = newComponents
-						newComponents = c
+						Component c = loadComponent(configs[foundConfig].c, comps[j].string, loaders)
+
+						if (c != null)
+							{
+							c.used = true
+							
+							if (end == null) end = c
+							
+							c.next = newComponents
+							newComponents = c
+							}
+							else
+							{
+							loadFail = true
+							break
+							}
 						}
 					}
 					else
@@ -579,6 +612,15 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 				mainComponent = end
 				}
 			
+			//if we experienced a failure during loading, mark all original components as used, and all new components as not-used
+			if (loadFail)
+				{
+				setComponentUse(components, true)
+				setComponentUse(newComponents, false)
+				
+				adaptOK = false
+				}
+			
 			//add new components into the in-use list
 			// (note, this list can be empty if we're setting to the same config)
 			if (end != null)
@@ -587,12 +629,18 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 				components = newComponents
 				}
 			
-			//update wirings
-			for (int i = 0; i < wirings.arrayLength; i++)
+			//perform the adaptation, if everything loaded OK
+			if (!loadFail)
 				{
-				if (wirings[i] != null)
+				currentConfig = foundConfig
+
+				//update wirings
+				for (int i = 0; i < wirings.arrayLength; i++)
 					{
-					forwardWire(comps, wirings, i)
+					if (wirings[i] != null)
+						{
+						forwardWire(comps, wirings, i)
+						}
 					}
 				}
 			
@@ -600,7 +648,12 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			removeUnusedComponents(loaders)
 			}
 		
-		return true
+		return adaptOK
+		}
+	
+	char[] Assembly:getConfig()
+		{
+		return configs[currentConfig].cflat
 		}
 	
 	bool updConfig(char newConfig[], ConfigOption coption, char updComponent[], opt ProxyLoaderInfo loaders[])

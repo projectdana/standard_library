@@ -1,0 +1,47 @@
+/*
+ {"description" : "Inspect and transform arrays."}
+*/
+
+interface ArrayUtil {
+	
+	/*
+	 {"@description" : "Remove array cell(s) by matching against a field."}
+	*/
+	Data[] removeCell(Data array[], TypeField field, Data val, opt bool multi)
+	
+	/*
+	 {"@description" : "Remove array cell(s) by index."}
+	*/
+	Data[] removeIndex(Data array[], int index[])
+	
+	/*
+	 {"@description" : "Remove array cell(s) by equality check."}
+	*/
+	Object[] removeObjectCell(Object array[], Object val, opt bool multi)
+	
+	/*
+	 {"@description" : "Remove array cell(s) by index."}
+	*/
+	Object[] removeObjectIndex(Object array[], int index[])
+	
+	/*
+	 {"@description" : "Remove array cell(s) by equality check."}
+	*/
+	int[] removeIntCell(int array[], int val, opt bool multi)
+	
+	/*
+	 {"@description" : "Remove array cell(s) by index."}
+	*/
+	int[] removeIntIndex(int array[], int index[])
+	
+	/*
+	 {"@description" : "Remove array cell(s) by equality check."}
+	*/
+	dec[] removeDecCell(dec array[], dec val, opt bool multi)
+	
+	/*
+	 {"@description" : "Remove array cell(s) by index."}
+	*/
+	dec[] removeDecIndex(dec array[], int index[])
+	
+	}

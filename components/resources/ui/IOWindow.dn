@@ -94,6 +94,9 @@ interface IOWindow extends Canvas {
 	
 	/* {"@description" : "Repaint the window and its contents."} */
 	void paint()
+
+	/* {"@description" : "Get the window's rendered content as a pixel map."} */
+	PixelMap getPixels()
 	
 	/* {"@description" : "Close the window (other functions on this API will not work after this)."} */
 	void close()

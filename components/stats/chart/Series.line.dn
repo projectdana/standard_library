@@ -42,7 +42,7 @@ component provides Series:line requires ChartCore, stats.StatCore stcore, io.Out
 		super()
 		}
 	
-	void Series:addSample(dec xv, dec yvalues[])
+	void Series:addSample(dec xv, dec yvalues[], opt bool redraw)
 		{
 		//update our highest and lowest X and Y points, to use in normalising coordinates
 		dec hy = stcore.max(yvalues)
@@ -77,7 +77,7 @@ component provides Series:line requires ChartCore, stats.StatCore stcore, io.Out
 		setXMinMax(xAxMin, xAxMax)
 		setYMinMax(yAxMin, yAxMax)
 		
-		postRepaint()
+		if (redraw) postRepaint()
 		}
 	
 	void Series:setXMinMax(dec min, dec max)

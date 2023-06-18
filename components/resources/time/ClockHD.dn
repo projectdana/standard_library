@@ -1,0 +1,21 @@
+/*
+ {"description" : "Retrieves a relative time using a high-definition clock."}
+*/
+
+data TimeHD {
+	int seconds
+	int nanoseconds
+	}
+
+interface ClockHD {
+	
+	/*
+	{ "@description" : "Initialises the clock; time points will be relative to this instantiation point." }
+	*/
+	ClockHD()
+	
+	/*
+	{ "@description" : "Returns the current date and time." }
+	*/
+	TimeHD getTime()
+	}

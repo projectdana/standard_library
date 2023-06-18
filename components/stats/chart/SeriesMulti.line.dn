@@ -62,15 +62,20 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 	
 	void SeriesMulti:setSeriesName(char name[], char displayName[])
 		{
-		Series n = series.search(Series.[name], new Series(name))[0]
+		Series n = series.findFirst(Series.[name], new Series(name))
 		
 		n.displayName = displayName
 		}
 	
-	void SeriesMulti:addSample(char name[], dec xv, dec yvalues[])
+	void SeriesMulti:addSample(char name[], dec xv, dec yvalues[], opt bool redraw)
 		{
 		//update our highest and lowest X and Y points, to use in normalising coordinates
-		Series sr = search.search(series, Series.[name], new Series(name))[0]
+		Series sr = search.findFirst(series, Series.[name], new Series(name))
+
+		if (sr == null)
+			{
+			throw new Exception("unknown series '$name'; series must first be added using addSeries()")
+			}
 		
 		dec hy = stcore.max(yvalues)
 		dec ly = stcore.min(yvalues)
@@ -104,7 +109,7 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 		setXMinMax(xAxMin, xAxMax)
 		setYMinMax(yAxMin, yAxMax)
 		
-		postRepaint()
+		if (redraw) postRepaint()
 		}
 	
 	void SeriesMulti:setXMinMax(dec min, dec max)
@@ -127,14 +132,14 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 	
 	void SeriesMulti:setSeriesColor(char name[], Color c)
 		{
-		Series sr = search.search(series, Series.[name], new Series(name))[0]
+		Series sr = search.findFirst(series, Series.[name], new Series(name))
 		
 		sr.color = c
 		}
 	
 	void SeriesMulti:setSeriesMarkers(char name[], byte b)
 		{
-		Series sr = search.search(series, Series.[name], new Series(name))[0]
+		Series sr = search.findFirst(series, Series.[name], new Series(name))
 		
 		sr.markerStyle = b
 		}

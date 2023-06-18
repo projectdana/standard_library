@@ -46,7 +46,7 @@ interface SSLLib{
 	void freeSSL(int hnd)
 	}
 
-component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TLSCertStore(Destructor), net.TLSContext(Destructor), net.TLS(Destructor) requires native TCPLib lib, native SSLLib slib, io.Output out {
+component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TLSCertStore(Destructor), net.TLSContext(Destructor), net.TLS(Destructor) requires native TCPLib lib, native SSLLib slib, io.Output out, data.IntUtil iu {
 	
 	implementation TCPSocket {
 		bool connected
@@ -118,7 +118,9 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TLSCertSt
 				int platformHandle = lib.connect(address, port)
 				
 				if (platformHandle == 0)
-					return false
+					{
+					throw new Exception("failed to connect to remote address $address:$port")
+					}
 				
 				platformSocket = platformHandle
 				connected = true

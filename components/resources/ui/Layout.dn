@@ -1,0 +1,60 @@
+/* {"description" : "A layout manager for graphical entities, supporting declarative layout rules relative to a containing rectangle or to other graphical entities."} */
+
+uses ui.GraphicsObject
+
+/* {"@description" : "This data type is used to specify layout rules for graphical entities."} */
+data LayoutRule {
+	/* {"@description" : "A layout rule constant, indicating that the object being laid out should be above the relative object."} */
+	const byte ABOVE = 1
+	/* {"@description" : "A layout rule constant, indicating that the object being laid out should be below the relative object."} */
+	const byte BELOW = 2
+	/* {"@description" : "A layout rule constant, indicating that the object being laid out should be to the left of the relative objec."} */
+	const byte LEFT = 3
+	/* {"@description" : "A layout rule constant, indicating that the object being laid out should be to the right of the relative object."} */
+	const byte RIGHT = 4
+	/* {"@description" : "A layout rule constant, indicating that the object being laid out should be centered horizonally to the relative object."} */
+	const byte ALIGN_CENTER_H = 5
+	/* {"@description" : "A layout rule constant, indicating that the object being laid out should be centered vertically to the relative object."} */
+	const byte ALIGN_CENTER_V = 6
+	/* {"@description" : "A layout rule constant, indicating that the object being laid out should be aligned with the left of the relative object."} */
+	const byte ALIGN_LEFT = 7
+	/* {"@description" : "A layout rule constant, indicating that the object being laid out should be aligned with the right of the relative object."} */
+	const byte ALIGN_RIGHT = 8
+	/* {"@description" : "A layout rule constant, indicating that the object being laid out should be aligned with the top of the relative object."} */
+	const byte ALIGN_TOP = 9
+	/* {"@description" : "A layout rule constant, indicating that the object being laid out should be aligned with the bottom of the relative object."} */
+	const byte ALIGN_BOTTOM = 10
+	/* {"@description" : "The direction constants of this layout rule; this must be one of the layout rule constants."} */
+	byte direction[]
+	/* {"@description" : "The distance in pixels by which to separate the object being laid out from its relative object or edge."} */
+	int distance
+	/* {"@description" : "The graphics object to which this rule is relative; if null it's relative to the edge(s) of the layout's containing rectangle."} */
+	GraphicsObject relative
+}
+
+interface Layout {
+	
+	/* {"@description" : "Instantiate a new layout context."} */
+	void Layout()
+	
+	/* {"@description" : "Set the size of the containing rectangle for this layout."} */
+	void setSize(int w, int h)
+
+	/* {"@description" : "Get the percentage of a given value, optionally passing in a margin by which to first reduce that value."} */
+	int getPercentOf(int percent, int val, opt int margin)
+
+	/* {"@description" : "Add a graphics object to this layout, with a set of layout rules."} */
+	void add(store GraphicsObject object, store LayoutRule pos[])
+
+	/* {"@description" : "Remove a graphics object from this layout."} */
+	void rem(GraphicsObject object)
+
+	/* {"@description" : "Get the amount of horizontal space between the left/right edges of two graphics objects."} */
+	int getSpaceX(GraphicsObject a, GraphicsObject b)
+	
+	/* {"@description" : "Get the amount of vertical space between the top/bottom edges of two graphics objects."} */
+	int getSpaceY(GraphicsObject a, GraphicsObject b)
+
+	/* {"@description" : "Re-apply the rules of this layout (for example if an object's size has changed)."} */
+	void refresh()
+	}

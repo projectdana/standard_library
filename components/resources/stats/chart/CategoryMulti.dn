@@ -25,7 +25,7 @@ interface CategoryMulti extends ChartCore {
 		"values" : "The values for this series data for this category."
 		}
 	*/
-	void addSample(char series[], char cat[], dec values[])
+	void addSample(char series[], char cat[], dec values[], opt bool redraw)
 	
 	/*
 	 {"@description" : "Sets a color used to display this series.",

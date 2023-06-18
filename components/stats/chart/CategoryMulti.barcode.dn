@@ -13,7 +13,7 @@ data Series {
 
 data Bar {
 	char category[]
-	Sample samples[]
+	List samples
 	}
 
 //marker length in pixels (the "ticks" on the axes)
@@ -24,7 +24,7 @@ const int MARKER_SIZE = 7
 const int LEGEND_SQ_SIZE = 10
 const int LEGEND_PAD_SIZE = 5
 
-component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font, data.query.Search search {
+component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stcore, io.Output out, data.IntUtil iu, data.DecUtil du, ui.Font, data.query.Search search, data.adt.List {
 	
 	Series series[]
 	Bar categories[]
@@ -76,22 +76,28 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 			series = new Series[](series, new Series(name, name, new Color(100, 200, 200, 255)))
 		}
 	
-	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[])
+	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[], opt bool redraw)
 		{
 		Bar bar = null
+
+		Series n = series.findFirst(Series.[name], new Series(seriesName))
+
+		if (n == null)
+			{
+			throw new Exception("unknown series '$seriesName'; series must first be added using addSeries()")
+			}
 		
 		if ((bar = categories.findFirst(Bar.[category], new Bar(cat))) == null)
 			{
 			bar = new Bar(cat)
+			bar.samples = new List()
 			categories = new Bar[](categories, bar)
 			}
 		
-		Series n = series.findFirst(Series.[name], new Series(seriesName))
-		
 		//add sample
-		bar.samples = new Sample[](bar.samples, new Sample(yvalues, n))
+		bar.samples.add(new Sample(yvalues, n))
 		
-		postRepaint()
+		if (redraw) postRepaint()
 		}
 	
 	void CategoryMulti:setYMinMax(dec min, dec max)
@@ -164,7 +170,7 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 		paint(c)
 		}
 	
-	void prepAxisLimits()
+	bool prepAxisLimits()
 		{
 		dec highX
 		dec lowX
@@ -176,11 +182,11 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 			dec barTop = 0.0
 			dec barLow = 0.0
 			
-			for (int j = 0; j < categories[i].samples.arrayLength; j++)
+			for (Sample s = categories[i].samples.getFirst(); s != null; s = categories[i].samples.getNext())
 				{
 				//add it to the bar, by going on to the top or below the bottom, depending on whether it's positive or negative...
 				
-				dec mean = stcore.mean(categories[i].samples[j].values)
+				dec mean = stcore.mean(s.values)
 				
 				if (mean > 0.0)
 					{
@@ -202,8 +208,12 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 			highX += 1.0
 			}
 		
+		if (lowY == highY) return false
+		
 		setXMinMax(lowX, highX)
 		setYMinMax(lowY, highY)
+
+		return true
 		}
 	
 	int getLongestSeriesName()
@@ -253,7 +263,10 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 	
 	void CategoryMulti:paint(Canvas c)
 		{
-		prepAxisLimits()
+		if (!prepAxisLimits())
+			{
+			throw new Exception("chart has no data to plot (min and max data point values are equal)")
+			}
 		
 		Point pos = getPosition()
 		WH wh = getSize()
@@ -293,10 +306,8 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 			
 			int barOffset = (centreX - (barWidthPX / 2)) - xyZ[0]
 			
-			for (int j = 0; j < categories[i].samples.arrayLength; j++)
+			for (Sample s = categories[i].samples.getFirst(); s != null; s = categories[i].samples.getNext())
 				{
-				Sample s = categories[i].samples[j]
-				
 				//add it to the bar, by going on to the top or below the bottom, depending on whether it's positive or negative...
 				
 				dec mean = stcore.mean(s.values)

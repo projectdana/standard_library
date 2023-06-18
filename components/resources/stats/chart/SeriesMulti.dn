@@ -25,7 +25,7 @@ interface SeriesMulti extends ChartCore {
 		"yvalues" : "The values for this series data."
 		}
 	*/
-	void addSample(char series[], dec xv, dec yvalues[])
+	void addSample(char series[], dec xv, dec yvalues[], opt bool redraw)
 	
 	/*
 	 {"@description" : "Sets a color used to display this series.",

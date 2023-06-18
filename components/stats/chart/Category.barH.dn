@@ -53,7 +53,7 @@ component provides Category:barH requires ChartCore, stats.StatCore stcore, io.O
 		setYMarkerInterval(1.0)
 		}
 	
-	void Category:addSample(char cat[], dec yvalues[])
+	void Category:addSample(char cat[], dec yvalues[], opt bool redraw)
 		{
 		//update our highest and lowest X and Y points, to use in normalising coordinates
 		dec hy = stcore.max(yvalues)
@@ -84,7 +84,7 @@ component provides Category:barH requires ChartCore, stats.StatCore stcore, io.O
 		setXMinMax(xAxMin, xAxMax)
 		setYMinMax(yAxMin, yAxMax)
 		
-		postRepaint()
+		if (redraw) postRepaint()
 		}
 	
 	void Category:setYLabelInterval(dec ivr)

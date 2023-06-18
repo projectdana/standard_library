@@ -1,0 +1,158 @@
+//NOTE: this implementation supports only PNG-encoded ico files; not all ico-compatible programs are capable of reading this format
+// - the alternative is BMP-and-mask-encoded, which is not yet implemented; in future we might select the encoding to use based on the dimensions of the ico (and support decoding of any format)
+
+data IconDir {
+	int2 reserved
+	const int2 TYPE_ICO = 1
+	const int2 TYPE_CUR = 2
+	int2 type
+	int2 entries
+}
+
+data IconDirEntry {
+	int1 width
+	int1 height
+	int1 palette
+	int1 reserved
+	int2 colorPlanes
+	int2 bitsPerPixel
+	int4 imageSizeBytes
+	int4 imageOffsetBytes
+}
+
+data Int2 {
+	int2 n
+	}
+
+data Int4 {
+	int4 n
+	}
+
+component provides ImageEncoder:ico requires io.File:mem, ImageEncoder:png, io.Output out, data.IntUtil iu {
+	
+	PixelMap map
+	
+	ImageEncoder:ImageEncoder()
+		{
+		
+		}
+	
+	PixelMap ImageEncoder:getPixels()
+		{
+		return map
+		}
+	
+	void ImageEncoder:setPixels(PixelMap pm)
+		{
+		map = pm
+		}
+	
+	bool ImageEncoder:loadImage(File fd)
+		{
+		IconDir icd = new IconDir()
+
+		byte stream[] = dana.serial(icd)
+
+		byte buf[] = fd.read(stream.arrayLength)
+		if (buf != stream.arrayLength) throw new Exception("insufficient header bytes read from file")
+		stream =[] buf
+
+		IconDirEntry entries[] = new IconDirEntry[icd.entries]
+
+		for (int i = 0; i < entries.arrayLength; i++)
+			{
+			IconDirEntry entry = new IconDirEntry()
+			stream = dana.serial(entry)
+
+			buf = fd.read(stream.arrayLength)
+			if (buf != stream.arrayLength) throw new Exception("insufficient header bytes read from file")
+			stream =[] buf
+
+			entries[i] = entry
+			}
+		
+		//now we just read the image data for the first entry, and decode it (currently only supporting PNG encoding)
+		fd.setPos(entries[0].imageOffsetBytes)
+
+		buf = fd.read(entries[0].imageSizeBytes)
+		if (buf.arrayLength != entries[0].imageSizeBytes) throw new Exception("insufficient content bytes read from file")
+
+		File mfd = new File:mem(null, File.WRITE)
+		mfd.write(buf)
+		mfd.setPos(0)
+		ImageEncoder decoder = new ImageEncoder:png()
+		decoder.loadImage(mfd)
+
+		map = decoder.getPixels()
+		
+		return true
+		}
+	
+	void reverseEndian(byte num[])
+		{
+		int j = num.arrayLength - 1
+		for (int i = 0; i < num.arrayLength / 2; i++)
+			{
+			byte tmp = num[j]
+			num[j] = num[i]
+			num[i] = tmp
+			j --
+			}
+		}
+	
+	int2 reverseInt2(int2 i2)
+		{
+		Int2 ct = new Int2(i2)
+		reverseEndian(dana.serial(ct))
+		return ct.n
+		}
+	
+	int4 reverseInt4(int4 i4)
+		{
+		Int4 ct = new Int4(i4)
+		reverseEndian(dana.serial(ct))
+		return ct.n
+		}
+
+	bool ImageEncoder:saveImage(File fd)
+		{
+		//encode the image as a PNG
+		File mfd = new File:mem(null, File.WRITE)
+		ImageEncoder encoder = new ImageEncoder:png()
+		encoder.setPixels(map)
+		encoder.saveImage(mfd)
+
+		//write the file header
+		IconDir icd = new IconDir()
+		icd.type = reverseInt2(IconDir.TYPE_ICO)
+		icd.entries = reverseInt2(1)
+
+		byte stream[] = dana.serial(icd)
+
+		fd.write(stream)
+
+		//write the (single) directory entry
+		IconDirEntry entry = new IconDirEntry()
+		stream = dana.serial(entry)
+		if (map.size.width < 256)
+			entry.width = map.size.width
+			else
+			entry.width = 0
+		if (map.size.height < 256)
+			entry.width = map.size.height
+			else
+			entry.width = 0
+		entry.bitsPerPixel = reverseInt2(32)
+		entry.imageSizeBytes = reverseInt4(mfd.getSize())
+		entry.imageOffsetBytes = reverseInt4(fd.getPos() + stream.arrayLength)
+
+		fd.write(stream)
+
+		//write the PNG-encoded image
+		mfd.setPos(0)
+		fd.write(mfd.read(mfd.getSize()))
+
+		return true
+		}
+	
+	}

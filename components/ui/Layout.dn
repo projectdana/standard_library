@@ -1,0 +1,190 @@
+data Element {
+	GraphicsObject object
+	LayoutRule position[]
+}
+
+component provides Layout requires io.Output out, data.IntUtil iu, data.adt.List {
+	
+	int width
+	int height
+
+	List list
+	
+	Layout:Layout()
+		{
+		list = new List()
+		}
+	
+	void Layout:setSize(int w, int h)
+		{
+		width = w
+		height = h
+		}
+	
+	//util function for relative sizing (where margin is a fixed-size element to subtract from "val" before doing the percent):
+	int Layout:getPercentOf(int percent, int val, opt int margin)
+		{
+		val = val - margin
+
+		return (val * percent) / 100
+		}
+	
+	void Layout:add(GraphicsObject object, LayoutRule pos[])
+		{
+		list.add(new Element(object, pos))
+
+		for (int i = 0; i < pos.arrayLength; i++)
+			applyLayoutRule(object, pos[i])
+		}
+	
+	void Layout:rem(GraphicsObject object)
+		{
+		//remove all entries for this object
+		bool removed = true
+		while (removed)
+			{
+			removed = false
+
+			for (Element e = list.getFirst(); e != null; e = list.getNext())
+				{
+				if (e.object === object)
+					{
+					list.remove(e)
+					removed = true
+					break
+					}
+				}
+			}
+		
+		refresh()
+		}
+	
+	void applyLayoutRule(GraphicsObject object, LayoutRule rule)
+		{
+		for (int i = 0; i < rule.direction.arrayLength; i++)
+			{
+			if (rule.direction[i] == LayoutRule.ABOVE)
+				{
+				if (rule.relative != null)
+					object.setPosition(object.getPosition().x, rule.relative.getPosition().y - object.getPreferredSize().height - rule.distance)
+					else
+					object.setPosition(object.getPosition().x, height - object.getPreferredSize().height - rule.distance)
+				}
+				else if (rule.direction[i] == LayoutRule.BELOW)
+				{
+				if (rule.relative != null)
+					object.setPosition(object.getPosition().x, rule.relative.getPosition().y + rule.relative.getPreferredSize().height + rule.distance)
+					else
+					object.setPosition(object.getPosition().x, rule.distance)
+				}
+				else if (rule.direction[i] == LayoutRule.LEFT)
+				{
+				if (rule.relative != null)
+					object.setPosition(rule.relative.getPosition().x - object.getPreferredSize().width - rule.distance, object.getPosition().y)
+					else
+					object.setPosition(width - object.getPreferredSize().width - rule.distance, object.getPosition().y)
+				}
+				else if (rule.direction[i] == LayoutRule.RIGHT)
+				{
+				if (rule.relative != null)
+					object.setPosition(rule.relative.getPosition().x + rule.relative.getPreferredSize().width + rule.distance, object.getPosition().y)
+					else
+					object.setPosition(rule.distance, object.getPosition().y)
+				}
+				else if (rule.direction[i] == LayoutRule.ALIGN_CENTER_H)
+				{
+				if (rule.relative != null)
+					object.setPosition((rule.relative.getPosition().x + (rule.relative.getPreferredSize().width / 2) - (object.getPreferredSize().width / 2)), object.getPosition().y)
+					else
+					object.setPosition((width / 2) - (object.getPreferredSize().width / 2), object.getPosition().y)
+				}
+				else if (rule.direction[i] == LayoutRule.ALIGN_CENTER_V)
+				{
+				if (rule.relative != null)
+					object.setPosition(object.getPosition().x, (rule.relative.getPosition().y + (rule.relative.getPreferredSize().height / 2) - (object.getPreferredSize().height / 2)))
+					else
+					object.setPosition(object.getPosition().x, (height / 2) - (object.getPreferredSize().height / 2))
+				}
+				else if (rule.direction[i] == LayoutRule.ALIGN_LEFT)
+				{
+				if (rule.relative != null)
+					object.setPosition(rule.relative.getPosition().x, object.getPosition().y)
+				}
+				else if (rule.direction[i] == LayoutRule.ALIGN_RIGHT)
+				{
+				if (rule.relative != null)
+					object.setPosition((rule.relative.getPosition().x + rule.relative.getPreferredSize().width) - object.getPreferredSize().width, object.getPosition().y)
+				}
+				else if (rule.direction[i] == LayoutRule.ALIGN_TOP)
+				{
+				if (rule.relative != null)
+					object.setPosition(object.getPosition().x, rule.relative.getPosition().y)
+				}
+				else if (rule.direction[i] == LayoutRule.ALIGN_BOTTOM)
+				{
+				if (rule.relative != null)
+					object.setPosition(object.getPosition().x, (rule.relative.getPosition().y + rule.relative.getPreferredSize().height) - object.getPreferredSize().height)
+				}
+			}
+		}
+	
+	int Layout:getSpaceX(GraphicsObject a, GraphicsObject b)
+		{
+		int vA = a.getPosition().x
+		int vB = b.getPosition().x
+
+		int sizeA = a.getPreferredSize().width
+		int sizeB = b.getPreferredSize().width
+
+		if (vA < vB)
+			{
+			if ((vA + sizeA) < vB)
+				return vB - (vA + sizeA)
+				else
+				return 0
+			}
+			else
+			{
+			if ((vB + sizeB) < vA)
+				return vA - (vB + sizeB)
+				else
+				return 0
+			}
+		}
+	
+	int Layout:getSpaceY(GraphicsObject a, GraphicsObject b)
+		{
+		int vA = a.getPosition().y
+		int vB = b.getPosition().y
+
+		int sizeA = a.getPreferredSize().height
+		int sizeB = b.getPreferredSize().height
+
+		if (vA < vB)
+			{
+			if ((vA + sizeA) < vB)
+				return vB - (vA + sizeA)
+				else
+				return 0
+			}
+			else
+			{
+			if ((vB + sizeB) < vA)
+				return vA - (vB + sizeB)
+				else
+				return 0
+			}
+		}
+	
+	void Layout:refresh()
+		{
+		for (Element e = list.getFirst(); e != null; e = list.getNext())
+			{
+			for (int i = 0; i < e.position.arrayLength; i++)
+				{
+				applyLayoutRule(e.object, e.position[i])
+				}
+			}
+		}
+	
+	}

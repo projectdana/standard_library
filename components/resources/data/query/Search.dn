@@ -13,17 +13,6 @@ interface Search {
 			"list" : "The array to search.",
 			"field" : "The field to search against.",
 			"template" : "An instance of the same type as the data held in list, in which the field to match against is set to the value being searched for."
-			"@return" : "An array of cells matching the search term.",
-			"@deprecated" : true
-	}
-	*/
-	Data[] search(Data list[], TypeField field, Data template)
-	
-	/*
-	{ "@description" : "Search an array for cells matching a template, returning all matching cells.",
-			"list" : "The array to search.",
-			"field" : "The field to search against.",
-			"template" : "An instance of the same type as the data held in list, in which the field to match against is set to the value being searched for."
 			"@return" : "An array of cells matching the search term."
 	}
 	*/
@@ -34,10 +23,30 @@ interface Search {
 			"list" : "The array to search.",
 			"field" : "The field to search against.",
 			"template" : "An instance of the same type as the data held in list, in which the field to match against is set to the value being searched for."
-			"@return" : "An array of cells matching the search term."
+			"@return" : "The first cell matching the search term."
 	}
 	*/
 	Data findFirst(Data list[], TypeField field, Data template)
+
+	/*
+	{ "@description" : "Search an array for cells matching a template, returning the indices of all matching cells.",
+			"list" : "The array to search.",
+			"field" : "The field to search against.",
+			"template" : "An instance of the same type as the data held in list, in which the field to match against is set to the value being searched for."
+			"@return" : "An array of indices of cells matching the search term."
+	}
+	*/
+	int[] findIndex(Data list[], TypeField field, Data template)
+
+	/*
+	{ "@description" : "Search an array for a cell matching a template, returning the index of the first matching cell.",
+			"list" : "The array to search.",
+			"field" : "The field to search against.",
+			"template" : "An instance of the same type as the data held in list, in which the field to match against is set to the value being searched for."
+			"@return" : "The index of the first matching cell, or INT_MAX for no match."
+	}
+	*/
+	int findFirstIndex(Data list[], TypeField field, Data template)
 	
 	/*
 	{ "@description" : "Search an array for cells that have the same value for the given field.",

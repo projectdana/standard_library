@@ -58,6 +58,8 @@ interface UIPlaneLib {
 	void setCursor(int phandle, byte type, Cursor c)
 	
 	void commitBuffer(int phandle)
+
+	PixelMap getPixels(int phandle)
 	
 	void getResolution(int phandle, WH wh)
 	
@@ -506,6 +508,11 @@ component provides IOLayer, IOWindow(Destructor), Font(Destructor) requires nati
 				{
 				lib.setBackgroundColor(platformHandle, c.r, c.g, c.b, c.a)
 				}
+			}
+		
+		PixelMap IOWindow:getPixels()
+			{
+			return lib.getPixels(platformHandle)
 			}
 		
 		void Destructor:destroy()
