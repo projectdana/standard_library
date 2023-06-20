@@ -1,8 +1,6 @@
-/* {"description" : "A layout manager for graphical entities, supporting declarative layout rules relative to a containing rectangle or to other graphical entities."} */
-
 uses ui.GraphicsObject
 
-/* {"@description" : "This data type is used to specify layout rules for graphical entities."} */
+/* {"description" : "This data type is used to specify layout rules for graphical entities."} */
 data LayoutRule {
 	/* {"@description" : "A layout rule constant, indicating that the object being laid out should be above the relative object."} */
 	const byte ABOVE = 1
@@ -32,10 +30,13 @@ data LayoutRule {
 	GraphicsObject relative
 }
 
+/* {"description" : "A layout manager for graphical entities, supporting declarative layout rules relative to a containing rectangle or to other graphical entities."} */
 interface Layout {
 	
-	/* {"@description" : "Instantiate a new layout context."} */
-	void Layout()
+	/*
+	{"@description" : "Instantiate a new layout context."}
+	*/
+	Layout()
 	
 	/* {"@description" : "Set the size of the containing rectangle for this layout."} */
 	void setSize(int w, int h)

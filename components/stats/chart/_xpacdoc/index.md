@@ -7,7 +7,7 @@ We start by showing how to draw a simple chart using this library, and expand on
 Create a new file `App.dn` and open it in a text editor. We're going to use the same dependencies as a simple GUI application, plus a CSV parser and a chart (we'll start with a bar chart). We're also going to use a PNG image encoder to save the chart to a PNG file. We start with this code in our new source file:
 
 ```
-component provides App requires ui.IOLayer coreui, ui.Window, stats.chart.Category:bar, data.csv.CSVParser parser
+component provides App requires ui.IOLayer coreui, ui.Window, stats.chart.Category:bar, data.csv.CSVParser parser,
 							 io.File, data.StringUtil stringUtil, data.DecUtil du, media.image.ImageEncoder:png {
     }
 ```
@@ -27,12 +27,15 @@ Each row in our input data has two columns: a category, and a set of values for 
 We now need to implement our App interface, which we'll do like this:
 
 ```
+const int WINDOW_WIDTH = 700
+const int WINDOW_HEIGHT = 300
+
 data Row {
 	char category[]
 	char values[]
 	}
 
-component provides App requires ui.IOLayer coreui, ui.Window, stats.chart.Category:bar, data.csv.CSVParser parser
+component provides App requires ui.IOLayer coreui, ui.Window, stats.chart.Category:bar, data.csv.CSVParser parser,
 							 io.File, data.StringUtil stringUtil, data.DecUtil du, media.image.ImageEncoder:png {
 
 	Window window
