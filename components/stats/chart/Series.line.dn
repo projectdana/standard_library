@@ -119,13 +119,6 @@ component provides Series:line requires ChartCore, stats.StatCore stcore, io.Out
 		
 		}
 	
-	// -- SVG rendering --
-	
-	void Series:drawToCanvas(Canvas c)
-		{
-		paint(c)
-		}
-	
 	void prepAxisLimits()
 		{
 		dec highX
@@ -160,8 +153,6 @@ component provides Series:line requires ChartCore, stats.StatCore stcore, io.Out
 		setXMinMax(lowX, highX)
 		setYMinMax(lowY, highY)
 		}
-	
-	// -- screen rendering (temporary?) --
 	
 	void Series:paint(Canvas c)
 		{

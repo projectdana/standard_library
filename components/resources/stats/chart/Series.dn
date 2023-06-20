@@ -53,11 +53,4 @@ interface Series extends ChartCore {
 	*/
 	void clampErrorBars(dec low, dec high)
 	
-	/*
-	 {"@description" : "Render the graph to a specific canvas, such as an SVGCanvas.",
-	 	"c" : "The canvas to draw to."
-		}
-	*/
-	void drawToCanvas(Canvas c)
-	
 	}

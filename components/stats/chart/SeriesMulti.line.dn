@@ -47,6 +47,13 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 	
 	bool showStdDev
 	bool showLegend
+
+	byte legendPosition = SeriesMulti.L_INSIDE
+	byte legendModX = 0
+	byte legendModY = 10
+
+	int originWidth = 0
+	int originHeight = 0
 	
 	SeriesMulti:SeriesMulti()
 		{
@@ -55,9 +62,25 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 		axisFont = new Font("SourceSansPro.ttf", 12)
 		}
 	
-	void SeriesMulti:addSeries(char name[])
+	void SeriesMulti:setSize(int w, int h)
 		{
-		series = new Series[](series, new Series(name, name, null, new Color(100, 200, 200, 255)))
+		originWidth = w
+		originHeight = h
+		
+		if (legendPosition == SeriesMulti.L_OUTSIDE)
+			{
+			int q = getLongestSeriesName() + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE
+			w -= q
+			}
+
+		super(w, h)
+		}
+	
+	void SeriesMulti:addSeries(char name[], opt store Color color, byte marker)
+		{
+		if (color == null) color = new Color(100, 200, 200, 255)
+
+		series = new Series[](series, new Series(name, name, null, color, marker))
 		}
 	
 	void SeriesMulti:setSeriesName(char name[], char displayName[])
@@ -159,17 +182,21 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 		showLegend = true
 		}
 	
+	void SeriesMulti:setLegendPosition(byte type, opt int x, int y)
+		{
+		legendPosition = type
+		if (isset x) legendModX = x
+		if (isset y) legendModY = y
+
+		setSize(originWidth, originHeight)
+
+		postRepaint()
+		}
+	
 	void SeriesMulti:setAxisFont(Font f)
 		{
 		axisFont = f
 		super(f)
-		}
-	
-	// -- SVG rendering --
-	
-	void SeriesMulti:drawToCanvas(Canvas c)
-		{
-		return paint(c)
 		}
 	
 	void prepAxisLimits()
@@ -229,8 +256,13 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 		//calculate the longest series name, and offset the legend by this much from the right (plus the legend color square width)
 		int longestTxt = getLongestSeriesName()
 		
-		int yPos = 10
-		int xStart = getSize().width - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		int yPos = legendModY
+		int xStart
+
+		if (legendPosition == SeriesMulti.L_INSIDE || legendPosition == SeriesMulti.L_OUTSIDE)
+			xStart = (originWidth - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)) + legendModX
+			else if (legendPosition == SeriesMulti.L_ABSOLUTE)
+			xStart = legendModX
 		
 		int textHeight = axisFont.getFontMetrics().height
 		
@@ -244,9 +276,7 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 		
 		for (int i = series.arrayLength - 1; i != INT_MAX; i--)
 			{
-			drawMarker(c, series[i].markerStyle, series[i].color, new int[](xStart + (LEGEND_SQ_SIZE/2), yPos + (LEGEND_SQ_SIZE/2)))
-			
-			c.line(new Line2D(xStart, yPos + (LEGEND_SQ_SIZE/2), xStart + LEGEND_SQ_SIZE, yPos + (LEGEND_SQ_SIZE/2), series[i].color))
+			drawLegendMarker(c, series[i].markerStyle, series[i].color, new int[](xStart + (LEGEND_SQ_SIZE/2), yPos + (LEGEND_SQ_SIZE/2)))
 			
 			int yOffset = (yPos + (LEGEND_SQ_SIZE / 2)) - (textHeight / 2)
 			c.text(new Point2D(xStart + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE, yOffset, axisColor), axisFont, series[i].displayName)
@@ -255,7 +285,11 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 			}
 		}
 	
-	// -- screen rendering (temporary?) --
+	void drawLegendMarker(Canvas c, byte type, Color color, int centreXY[])
+		{
+		c.line(new Line2D(centreXY[0] - MARKER_SIZE/2, centreXY[1], centreXY[0] + MARKER_SIZE/2, centreXY[1], color))
+		drawMarker(c, type, color, centreXY)
+		}
 	
 	void drawMarker(Canvas c, byte type, Color color, int centreXY[])
 		{
@@ -282,16 +316,15 @@ component provides SeriesMulti:line requires ChartCore, stats.StatCore stcore, i
 	void SeriesMulti:paint(Canvas c)
 		{
 		Point pos = getPosition()
-		WH wh = getSize()
 		
 		prepAxisLimits()
 		
-		c.pushSurface(new Rect(pos.x, pos.y, wh.width, wh.height), 0, 0, 255)
+		c.pushSurface(new Rect(pos.x, pos.y, originWidth, originHeight), 0, 0, 255)
 		
 		preparePlotArea()
 		
 		//graph background
-		c.rect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		c.rect(new Rect2D(0, 0, originWidth, originHeight, bgColor))
 		
 		//grid lines, if any
 		drawGrid(c)

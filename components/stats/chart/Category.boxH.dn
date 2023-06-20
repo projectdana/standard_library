@@ -125,11 +125,6 @@ component provides Category:boxH requires ChartCore, stats.StatCore stcore, io.O
 		barPad = pixels
 		}
 	
-	void Category:drawToCanvas(Canvas c)
-		{
-		paint(c)
-		}
-	
 	int getMaxCatTextWidth()
 		{
 		int high = 0

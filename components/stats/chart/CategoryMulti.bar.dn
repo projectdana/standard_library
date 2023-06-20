@@ -56,6 +56,13 @@ component provides CategoryMulti:bar requires ChartCore, stats.StatCore stcore, 
 	
 	bool showStdDev
 	bool showLegend
+
+	byte legendPosition = CategoryMulti.L_INSIDE
+	byte legendModX = 0
+	byte legendModY = 10
+
+	int originWidth = 0
+	int originHeight = 0
 	
 	CategoryMulti:CategoryMulti()
 		{
@@ -66,9 +73,24 @@ component provides CategoryMulti:bar requires ChartCore, stats.StatCore stcore, 
 		setXMarkerInterval(1.0)
 		}
 	
-	void CategoryMulti:addSeries(char name[])
+	void CategoryMulti:setSize(int w, int h)
 		{
-		series = new Series[](series, new Series(null, name, name, new Color(100, 200, 200, 255)))
+		originWidth = w
+		originHeight = h
+		
+		if (legendPosition == CategoryMulti.L_OUTSIDE)
+			{
+			int q = getLongestSeriesName() + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE
+			w -= q
+			}
+
+		super(w, h)
+		}
+	
+	void CategoryMulti:addSeries(char name[], opt store Color color)
+		{
+		if (color == null) color = new Color(100, 200, 200, 255)
+		series = new Series[](series, new Series(null, name, name, color))
 		}
 	
 	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[], opt bool redraw)
@@ -153,6 +175,17 @@ component provides CategoryMulti:bar requires ChartCore, stats.StatCore stcore, 
 		showLegend = on
 		}
 	
+	void CategoryMulti:setLegendPosition(byte type, opt int x, int y)
+		{
+		legendPosition = type
+		if (isset x) legendModX = x
+		if (isset y) legendModY = y
+
+		setSize(originWidth, originHeight)
+
+		postRepaint()
+		}
+	
 	void CategoryMulti:setAxisFont(Font f)
 		{
 		axisFont = f
@@ -170,13 +203,6 @@ component provides CategoryMulti:bar requires ChartCore, stats.StatCore stcore, 
 	void CategoryMulti:setCatDisplayPadding(int pixels)
 		{
 		barPad = pixels
-		}
-	
-	// -- custom rendering --
-	
-	void CategoryMulti:drawToCanvas(Canvas c)
-		{
-		paint(c)
 		}
 	
 	bool prepAxisLimits()
@@ -200,9 +226,19 @@ component provides CategoryMulti:bar requires ChartCore, stats.StatCore stcore, 
 					//add it to the bar, by going on to the top or below the bottom, depending on whether it's positive or negative...
 					
 					dec mean = stcore.mean(s[0].values)
-					
-					if (mean > highY) highY = mean
-					if (mean < lowY) lowY = mean
+
+					if (showStdDev)
+						{
+						dec stdDev = stcore.stdDev(s[0].values)
+						
+						if (mean - stdDev < lowY) lowY = mean - stdDev
+						if (mean + stdDev > highY) highY = mean + stdDev
+						}
+						else
+						{
+						if (mean < lowY) lowY = mean
+						if (mean > highY) highY = mean
+						}
 					}
 				}
 			
@@ -238,8 +274,13 @@ component provides CategoryMulti:bar requires ChartCore, stats.StatCore stcore, 
 		//calculate the longest series name, and offset the legend by this much from the right (plus the legend color square width)
 		int longestTxt = getLongestSeriesName()
 		
-		int yPos = 10
-		int xStart = getSize().width - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		int yPos = legendModY
+		int xStart
+
+		if (legendPosition == CategoryMulti.L_INSIDE || legendPosition == CategoryMulti.L_OUTSIDE)
+			xStart = (originWidth - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)) + legendModX
+			else if (legendPosition == CategoryMulti.L_ABSOLUTE)
+			xStart = legendModX
 		
 		int textHeight = axisFont.getFontMetrics().height
 		
@@ -262,8 +303,6 @@ component provides CategoryMulti:bar requires ChartCore, stats.StatCore stcore, 
 			}
 		}
 	
-	// -- screen rendering (temporary?) --
-	
 	void CategoryMulti:paint(Canvas c)
 		{
 		if (!prepAxisLimits())
@@ -272,14 +311,13 @@ component provides CategoryMulti:bar requires ChartCore, stats.StatCore stcore, 
 			}
 		
 		Point pos = getPosition()
-		WH wh = getSize()
 		
-		c.pushSurface(new Rect(pos.x, pos.y, wh.width, wh.height), 0, 0, 255)
+		c.pushSurface(new Rect(pos.x, pos.y, originWidth, originHeight), 0, 0, 255)
 		
 		preparePlotArea()
 		
 		//background
-		c.rect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		c.rect(new Rect2D(0, 0, originWidth, originHeight, bgColor))
 		
 		//grid lines, if any
 		drawGrid(c)
@@ -310,7 +348,9 @@ component provides CategoryMulti:bar requires ChartCore, stats.StatCore stcore, 
 					//add it to the bar, by going on to the top or below the bottom, depending on whether it's positive or negative...
 					
 					dec mean = stcore.mean(s[0].values)
-					
+
+					dec thisY = mean
+
 					if (mean > 0.0)
 						{
 						int xyTop[] = getPlotPoint(thisX, mean)
@@ -324,6 +364,22 @@ component provides CategoryMulti:bar requires ChartCore, stats.StatCore stcore, 
 						int xyBot[] = getPlotPoint(thisX+1.0, mean)
 						
 						c.rect(new Rect2D((centreX - (barWidthPX / 2)) + barPad, xyTop[1], barWidthPX, xyBot[1] - xyTop[1], series[j].seriesColor))
+						}
+					
+					if (showStdDev)
+						{
+						dec stdDev = stcore.stdDev(s[0].values)
+						
+						if (stdDev != 0.0)
+							{
+							int xyHigh[] = getPlotPoint(thisX, thisY+stdDev)
+							int xyLow[] = getPlotPoint(thisX, thisY-stdDev)
+							
+							c.line(new Line2D(centreX, xyHigh[1], centreX, xyLow[1], stdDevColor))
+							
+							c.line(new Line2D(centreX-MARKER_SIZE/2, xyHigh[1], centreX+MARKER_SIZE/2, xyHigh[1], stdDevColor))
+							c.line(new Line2D(centreX-MARKER_SIZE/2, xyLow[1], centreX+MARKER_SIZE/2, xyLow[1], stdDevColor))
+							}
 						}
 					}
 				

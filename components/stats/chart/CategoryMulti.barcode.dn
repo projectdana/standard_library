@@ -60,6 +60,13 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 	
 	bool showStdDev
 	bool showLegend
+
+	byte legendPosition = CategoryMulti.L_INSIDE
+	byte legendModX = 0
+	byte legendModY = 10
+
+	int originWidth = 0
+	int originHeight = 0
 	
 	CategoryMulti:CategoryMulti()
 		{
@@ -70,10 +77,26 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 		setXMarkerInterval(1.0)
 		}
 	
-	void CategoryMulti:addSeries(char name[])
+	void CategoryMulti:setSize(int w, int h)
 		{
+		originWidth = w
+		originHeight = h
+		
+		if (legendPosition == CategoryMulti.L_OUTSIDE)
+			{
+			int q = getLongestSeriesName() + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE
+			w -= q
+			}
+
+		super(w, h)
+		}
+	
+	void CategoryMulti:addSeries(char name[], opt store Color color)
+		{
+		if (color == null) color = new Color(100, 200, 200, 255)
+
 		if (series.findFirst(Series.[name], new Series(name)) == null)
-			series = new Series[](series, new Series(name, name, new Color(100, 200, 200, 255)))
+			series = new Series[](series, new Series(name, name, color))
 		}
 	
 	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[], opt bool redraw)
@@ -142,6 +165,19 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 	void CategoryMulti:showLegend(bool on)
 		{
 		showLegend = on
+
+		postRepaint()
+		}
+	
+	void CategoryMulti:setLegendPosition(byte type, opt int x, int y)
+		{
+		legendPosition = type
+		if (isset x) legendModX = x
+		if (isset y) legendModY = y
+
+		setSize(originWidth, originHeight)
+
+		postRepaint()
 		}
 	
 	void CategoryMulti:setAxisFont(Font f)
@@ -161,13 +197,6 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 	void CategoryMulti:setCatDisplayPadding(int pixels)
 		{
 		barPad = pixels
-		}
-	
-	// -- custom rendering --
-	
-	void CategoryMulti:drawToCanvas(Canvas c)
-		{
-		paint(c)
 		}
 	
 	bool prepAxisLimits()
@@ -235,8 +264,13 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 		//calculate the longest series name, and offset the legend by this much from the right (plus the legend color square width)
 		int longestTxt = getLongestSeriesName()
 		
-		int yPos = 10
-		int xStart = getSize().width - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		int yPos = legendModY
+		int xStart
+
+		if (legendPosition == CategoryMulti.L_INSIDE || legendPosition == CategoryMulti.L_OUTSIDE)
+			xStart = (originWidth - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)) + legendModX
+			else if (legendPosition == CategoryMulti.L_ABSOLUTE)
+			xStart = legendModX
 		
 		int textHeight = axisFont.getFontMetrics().height
 		
@@ -259,8 +293,6 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 			}
 		}
 	
-	// -- screen rendering (temporary?) --
-	
 	void CategoryMulti:paint(Canvas c)
 		{
 		if (!prepAxisLimits())
@@ -269,14 +301,13 @@ component provides CategoryMulti:barcode requires ChartCore, stats.StatCore stco
 			}
 		
 		Point pos = getPosition()
-		WH wh = getSize()
 		
-		c.pushSurface(new Rect(pos.x, pos.y, wh.width, wh.height), 0, 0, 255)
+		c.pushSurface(new Rect(pos.x, pos.y, originWidth, originHeight), 0, 0, 255)
 		
 		preparePlotArea()
 		
 		//background
-		c.rect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		c.rect(new Rect2D(0, 0, originWidth, originHeight, bgColor))
 		
 		//grid lines, if any
 		drawGrid(c)

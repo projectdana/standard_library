@@ -54,11 +54,4 @@ interface Category extends ChartCore {
 	*/
 	void setCatDisplayPadding(int pixels)
 	
-	/*
-	 {"@description" : "Render the graph to a specific canvas, such as an SVGCanvas.",
-	 	"c" : "The canvas to draw to."
-		}
-	*/
-	void drawToCanvas(Canvas c)
-	
 	}

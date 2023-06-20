@@ -56,6 +56,13 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 	
 	bool showStdDev
 	bool showLegend
+
+	byte legendPosition = CategoryMulti.L_INSIDE
+	byte legendModX = 0
+	byte legendModY = 10
+
+	int originWidth = 0
+	int originHeight = 0
 	
 	CategoryMulti:CategoryMulti()
 		{
@@ -66,10 +73,26 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 		setYMarkerInterval(1.0)
 		}
 	
-	void CategoryMulti:addSeries(char name[])
+	void CategoryMulti:setSize(int w, int h)
 		{
+		originWidth = w
+		originHeight = h
+		
+		if (legendPosition == CategoryMulti.L_OUTSIDE)
+			{
+			int q = getLongestSeriesName() + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE
+			w -= q
+			}
+
+		super(w, h)
+		}
+	
+	void CategoryMulti:addSeries(char name[], opt store Color color)
+		{
+		if (color == null) color = new Color(100, 200, 200, 255)
+
 		if (series.find(Series.[name], new Series(null, name)) == null)
-			series = new Series[](series, new Series(null, name, name, new Color(100, 200, 200, 255)))
+			series = new Series[](series, new Series(null, name, name, color))
 		}
 	
 	void CategoryMulti:addSample(char seriesName[], char cat[], dec yvalues[], opt bool redraw)
@@ -160,6 +183,17 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 		showLegend = on
 		}
 	
+	void CategoryMulti:setLegendPosition(byte type, opt int x, int y)
+		{
+		legendPosition = type
+		if (isset x) legendModX = x
+		if (isset y) legendModY = y
+
+		setSize(originWidth, originHeight)
+
+		postRepaint()
+		}
+	
 	void CategoryMulti:setAxisFont(Font f)
 		{
 		axisFont = f
@@ -177,13 +211,6 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 	void CategoryMulti:setCatDisplayPadding(int pixels)
 		{
 		barPad = pixels
-		}
-	
-	// -- custom rendering --
-	
-	void CategoryMulti:drawToCanvas(Canvas c)
-		{
-		paint(c)
 		}
 	
 	bool prepAxisLimits()
@@ -256,8 +283,13 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 		//calculate the longest series name, and offset the legend by this much from the right (plus the legend color square width)
 		int longestTxt = getLongestSeriesName()
 		
-		int yPos = 10
-		int xStart = getSize().width - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		int yPos = legendModY
+		int xStart
+
+		if (legendPosition == CategoryMulti.L_INSIDE || legendPosition == CategoryMulti.L_OUTSIDE)
+			xStart = (originWidth - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)) + legendModX
+			else if (legendPosition == CategoryMulti.L_ABSOLUTE)
+			xStart = legendModX
 		
 		int textHeight = axisFont.getFontMetrics().height
 		
@@ -292,8 +324,6 @@ component provides CategoryMulti:stackedBarH requires ChartCore, stats.StatCore 
 		
 		return high
 		}
-	
-	// -- screen rendering (temporary?) --
 	
 	void CategoryMulti:paint(Canvas c)
 		{

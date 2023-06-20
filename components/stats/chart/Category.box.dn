@@ -125,15 +125,6 @@ component provides Category:box requires ChartCore, stats.StatCore stcore, io.Ou
 		barPad = pixels
 		}
 	
-	// -- SVG rendering --
-	
-	void Category:drawToCanvas(Canvas c)
-		{
-		paint(c)
-		}
-	
-	// -- screen rendering (temporary?) --
-	
 	void Category:paint(Canvas c)
 		{
 		Point pos = getPosition()

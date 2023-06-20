@@ -47,6 +47,13 @@ component provides SeriesMulti:scatter requires ChartCore, stats.StatCore stcore
 	
 	bool showStdDev
 	bool showLegend
+
+	byte legendPosition = SeriesMulti.L_INSIDE
+	byte legendModX = 0
+	byte legendModY = 10
+
+	int originWidth = 0
+	int originHeight = 0
 	
 	SeriesMulti:SeriesMulti()
 		{
@@ -55,9 +62,25 @@ component provides SeriesMulti:scatter requires ChartCore, stats.StatCore stcore
 		axisFont = new Font("SourceSansPro.ttf", 12)
 		}
 	
-	void SeriesMulti:addSeries(char name[])
+	void SeriesMulti:setSize(int w, int h)
 		{
-		series = new Series[](series, new Series(name, name, null, new Color(100, 100, 255, 255)))
+		originWidth = w
+		originHeight = h
+		
+		if (legendPosition == SeriesMulti.L_OUTSIDE)
+			{
+			int q = getLongestSeriesName() + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE
+			w -= q
+			}
+
+		super(w, h)
+		}
+	
+	void SeriesMulti:addSeries(char name[], opt store Color color, byte marker)
+		{
+		if (color == null) color = new Color(100, 200, 200, 255)
+
+		series = new Series[](series, new Series(name, name, null, color, marker))
 		}
 	
 	void SeriesMulti:setSeriesName(char name[], char displayName[])
@@ -159,17 +182,21 @@ component provides SeriesMulti:scatter requires ChartCore, stats.StatCore stcore
 		showLegend = on
 		}
 	
+	void SeriesMulti:setLegendPosition(byte type, opt int x, int y)
+		{
+		legendPosition = type
+		if (isset x) legendModX = x
+		if (isset y) legendModY = y
+
+		setSize(originWidth, originHeight)
+
+		postRepaint()
+		}
+	
 	void SeriesMulti:setAxisFont(Font f)
 		{
 		axisFont = f
 		super(f)
-		}
-	
-	// -- custom rendering --
-	
-	void SeriesMulti:drawToCanvas(Canvas c)
-		{
-		paint(c)
 		}
 	
 	void prepAxisLimits()
@@ -231,8 +258,13 @@ component provides SeriesMulti:scatter requires ChartCore, stats.StatCore stcore
 		//calculate the longest series name, and offset the legend by this much from the right (plus the legend color square width)
 		int longestTxt = getLongestSeriesName()
 		
-		int yPos = 10
-		int xStart = getSize().width - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)
+		int yPos = legendModY
+		int xStart
+
+		if (legendPosition == SeriesMulti.L_INSIDE || legendPosition == SeriesMulti.L_OUTSIDE)
+			xStart = (originWidth - (longestTxt + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE + LEGEND_SQ_SIZE)) + legendModX
+			else if (legendPosition == SeriesMulti.L_ABSOLUTE)
+			xStart = legendModX
 		
 		int textHeight = axisFont.getFontMetrics().height
 		
@@ -282,16 +314,15 @@ component provides SeriesMulti:scatter requires ChartCore, stats.StatCore stcore
 	void SeriesMulti:paint(Canvas c)
 		{
 		Point pos = getPosition()
-		WH wh = getSize()
 		
 		prepAxisLimits()
 		
-		c.pushSurface(new Rect(pos.x, pos.y, wh.width, wh.height), 0, 0, 255)
+		c.pushSurface(new Rect(pos.x, pos.y, originWidth, originHeight), 0, 0, 255)
 		
 		preparePlotArea()
 		
 		//graph background
-		c.rect(new Rect2D(0, 0, wh.width, wh.height, bgColor))
+		c.rect(new Rect2D(0, 0, originWidth, originHeight, bgColor))
 		
 		//grid lines, if any
 		drawGrid(c)

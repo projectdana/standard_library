@@ -16,7 +16,7 @@ interface SeriesMulti extends ChartCore {
 	 	"name" : "The unique name used for this series."
 		}
 	*/
-	void addSeries(char name[])
+	void addSeries(char name[], opt store Color c, byte marker)
 	
 	/*
 	 {"@description" : "Adds a new sample (or set of samples) to a series.",
@@ -77,12 +77,17 @@ interface SeriesMulti extends ChartCore {
 		}
 	*/
 	void showLegend(bool on)
-	
+
+	const byte L_ABSOLUTE = 1
+	const byte L_INSIDE = 2
+	const byte L_OUTSIDE = 3
 	/*
-	 {"@description" : "Render the graph to a specific canvas, such as an SVGCanvas.",
-	 	"c" : "The canvas to draw to."
+	 {"@description" : "Configure where the legend is rendered on the graph.",
+	 	"type" : "The positioning type, expressed as one of the L_ constants.",
+		"x" : "An optional position modifier in x screen coordinates.",
+		"y" : "An optional position modifier in y screen coordinates."
 		}
 	*/
-	void drawToCanvas(Canvas c)
+	void setLegendPosition(byte type, opt int x, int y)
 	
 	}

@@ -136,13 +136,6 @@ component provides Category:barH requires ChartCore, stats.StatCore stcore, io.O
 		barPad = pixels
 		}
 	
-	// -- custom rendering --
-	
-	void Category:drawToCanvas(Canvas c)
-		{
-		paint(c)
-		}
-	
 	void prepAxisLimits()
 		{
 		dec highX
@@ -189,8 +182,6 @@ component provides Category:barH requires ChartCore, stats.StatCore stcore, io.O
 		
 		return high
 		}
-	
-	// -- screen rendering (temporary?) --
 	
 	void Category:paint(Canvas c)
 		{
