@@ -19,6 +19,8 @@ data Interface {
 	char name[]
 	//path of the component to which this required interface is currently connected, if any
 	char currentWiring[]
+	//proxy info associated with this wiring, if any (sometimes necessary to differentiate two wiring targets that might otherwise look the same, if they use the same proxy component but with different proxy params)
+	char wiringProxyInfo[]
 	//list of interceptors active on this required interface (currently we only support one)
 	ActiveIntercept intercept
 	}
@@ -51,7 +53,7 @@ data Interceptor {
 	char reqIntf[]
 	}
 
-component provides Assembly requires io.Output out, data.StringUtil stringUtil, data.IntUtil iu, composition.OptionBuilder, Loader loader, NativeLoader nLoader, composition.RecursiveLoader rLoader, composition.Adapt adaptAPI, composition.Intercept interceptAPI, System system, os.SystemInfo systemInfo, data.query.Search search, io.FileSystem fileSystem {
+component provides Assembly requires io.Output out, data.StringUtil stringUtil, data.IntUtil iu, composition.OptionBuilder, Loader loader, NativeLoader nLoader, composition.RecursiveLoader rLoader, composition.Adapt adaptAPI, composition.Intercept interceptAPI, System system, os.SystemInfo systemInfo, data.query.Search search, io.FileSystem fileSystem, data.adt.List {
 
 	bool verbose
 
@@ -219,6 +221,63 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 		return new char[](comps.implode(","), "|", wirings.implode(","))
 		}
 	
+	bool isAnyOf(char c, char tokens[])
+		{
+		for (int i = 0; i < tokens.arrayLength; i ++)
+			{
+			if (c == tokens[i])
+				return true
+			}
+		
+		return false
+		}
+	
+	//this version of "explode" does not parse inside braces, allowing proxy param strings to be unrestricted in their character set
+	String[] explodeXB(char str[], char tokens[])
+		{
+		int depth = 0
+
+		List lst = new List()
+		String res[]
+		String th
+		
+		for (int i = 0; i < str.arrayLength; i++)
+			{
+			if (depth == 0 && isAnyOf(str[i], tokens))
+				{
+				if (th != null) lst.add(th)
+				th = null
+				}
+				else
+				{
+				if (th == null)
+					th = new String()
+				
+				th.string = new char[](th.string, str[i])
+
+				if (str[i] == "{")
+					depth ++
+					else if (str[i] == "}")
+					depth --
+				}
+			}
+		
+		if (th != null) lst.add(th)
+		
+		if (lst.getLength() != 0)
+			{
+			int i = 0
+			res = new String[lst.getLength()]
+			for (String s = lst.getFirst(); s != null; s = lst.getNext())
+				{
+				res[i] = s
+				i ++
+				}
+			}
+		
+		return res
+		}
+	
 	/*
 	{ "@description" : "Gets a list of all valid assemblies of the software system being managed, where each assembly is identified with a unique string." }
 	*/
@@ -251,12 +310,14 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 
 		if (comp[0] == "{")
 			{
-			String parts[] = comp.explode("{&}")
+			//we use lsplit here to minimise the character constraints on the proxy param string
+			String parts[] = dana.sub(comp, 1, comp.arrayLength-2).lsplit("&")
 
 			proxy = true
 			comp = parts[0].string
-			proxyTag = parts[1].string
-			proxyParams = parts[2].string
+			parts = parts[1].string.lsplit("&")
+			proxyTag = parts[0].string
+			proxyParams = parts[1].string
 			}
 
 		//find the component
@@ -304,12 +365,14 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 
 		if (comp[0] == "{")
 			{
-			String parts[] = comp.explode("{&}")
+			//we use lsplit here to minimise the character constraints on the proxy param string
+			String parts[] = dana.sub(comp, 1, comp.arrayLength-2).lsplit("&")
 
 			proxy = true
 			comp = parts[0].string
-			proxyTag = parts[1].string
-			proxyParams = parts[2].string
+			parts = parts[1].string.lsplit("&")
+			proxyTag = parts[0].string
+			proxyParams = parts[1].string
 			}
 		
 		Component c = new Component(comp)
@@ -464,7 +527,7 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 					}
 				}
 			}
-			else if (iq.currentWiring != toComponent.path)
+			else if (iq.currentWiring != toComponent.path || iq.wiringProxyInfo != "$(toComponent.proxyTag):$(toComponent.proxyParams)")
 			{
 			//it's already wired to something (and something different), so adapt it
 			
@@ -480,6 +543,7 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			}
 		
 		iq.currentWiring = toComponent.path
+		iq.wiringProxyInfo = "$(toComponent.proxyTag):$(toComponent.proxyParams)"
 		
 		return wiringsChanged
 		}
@@ -563,7 +627,7 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			
 			// - walk through all wirings of the new configuration and apply them (using forwardWire to satisfy forward dependencies first)
 			String els[] = stringUtil.rsplit(config, "|")
-			String comps[] = stringUtil.explode(els[0].string, ",")
+			String comps[] = explodeXB(els[0].string, ",")
 			String wirings[] = null
 			if (els.arrayLength == 2)
 				wirings = clone stringUtil.explode(els[1].string, ",")
@@ -665,7 +729,7 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			
 			// - walk through all wirings of the new configuration and apply them (using forwardWire to satisfy forward dependencies first)
 			String els[] = stringUtil.rsplit(newConfig, "|")
-			String comps[] = stringUtil.explode(els[0].string, ",")
+			String comps[] = explodeXB(els[0].string, ",")
 			String wirings[] = null
 			if (els.arrayLength == 2)
 				wirings = clone stringUtil.explode(els[1].string, ",")
@@ -871,7 +935,7 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 		//int wiringDelta = 0
 		int bestMatchIndex = 0
 
-		String compsA[] = matchWith.rsplit("|")[0].string.explode(",")
+		String compsA[] = explodeXB(matchWith.rsplit("|")[0].string, ",")
 
 		ConfigOption fromList[] = configs
 
@@ -879,7 +943,7 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			{
 			//count how many components don't match (how many wirings don't match??)
 			
-			String compsB[] = fromList[i].cflat.rsplit("|")[0].string.explode(",")
+			String compsB[] = explodeXB(fromList[i].cflat.rsplit("|")[0].string, ",")
 
 			int thisComDelta = 0
 

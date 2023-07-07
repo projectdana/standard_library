@@ -598,7 +598,7 @@ component provides OptionBuilder requires io.Output out, data.StringUtil stringU
 			{
 			optionsMax[i] = ic.interfaces[i].options.arrayLength - 1
 
-			if (ic.interfaces[i].options.findFirst(CompOption.[path], new CompOption(proxyComponent)) != null)
+			if (ic.interfaces[i].intf == forInterface && ic.interfaces[i].options.findFirst(CompOption.[path], new CompOption(proxyComponent)) != null)
 				{
 				optionsLock[i] = true
 				options[i] = optionsMax[i] //NOTE: potentially a bad assumption that this is the index of our newly-added thing?
