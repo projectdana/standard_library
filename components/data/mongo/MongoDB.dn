@@ -217,9 +217,9 @@ data Int8{
 	int8 i
 	}
 
-component provides MongoDB requires io.Output out, data.json.JSONParser parser, data.bson.BSON bson, net.TCPSocket, data.IntUtil iu, data.StringUtil su, util.RandomInt, data.ByteUtil bu, time.Calendar cal, time.DateUtil du{
+component provides MongoDB requires io.Output out, data.json.JSONParser parser, data.bson.BSON bson, net.TCPSocket, data.IntUtil iu, data.StringUtil su, util.Random, data.ByteUtil bu, time.Calendar cal, time.DateUtil du{
 
-  RandomInt ri = new RandomInt()
+  Random ri = new Random()
 
   TCPSocket client = new TCPSocket()
 
@@ -292,7 +292,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
     //iterate queries, we write to the socket one at a time as per the spec!
     for(int i = 0; i < documents.arrayLength; i++){
 
-      MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + documents[i].value.arrayLength + MongoInsert.STATIC_INT_SIZE + collection.arrayLength, ri.get(MONGO_MAX_RAND), 0, OP_INSERT)
+      MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + documents[i].value.arrayLength + MongoInsert.STATIC_INT_SIZE + collection.arrayLength, ri.getInt(MONGO_MAX_RAND), 0, OP_INSERT)
 
       MongoInsert ins = new MongoInsert(0, collection, documents[i])
 
@@ -321,7 +321,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
 
     BSONDocument bsonQuery = bson.serialise(jsonQuery)
 
-    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + bsonQuery.value.arrayLength + MongoQuery.STATIC_INT_SIZE + collection.arrayLength, ri.get(MONGO_MAX_RAND), 0, OP_QUERY)
+    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + bsonQuery.value.arrayLength + MongoQuery.STATIC_INT_SIZE + collection.arrayLength, ri.getInt(MONGO_MAX_RAND), 0, OP_QUERY)
 
     MongoQuery query = new MongoQuery(0, collection, 0, numberToReturn, bsonQuery)
 
@@ -364,7 +364,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
     BSONDocument bsonQuery = bson.serialise(jsonQuery)
     BSONDocument bsonModifier = bson.serialise(modifier)
 
-    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + bsonQuery.value.arrayLength + bsonModifier.value.arrayLength + MongoQueryRF.STATIC_INT_SIZE + collection.arrayLength, ri.get(MONGO_MAX_RAND), 0, OP_QUERY)
+    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + bsonQuery.value.arrayLength + bsonModifier.value.arrayLength + MongoQueryRF.STATIC_INT_SIZE + collection.arrayLength, ri.getInt(MONGO_MAX_RAND), 0, OP_QUERY)
 
     MongoQueryRF queryRF = new MongoQueryRF(0, collection, 0, numberToReturn, bsonQuery, bsonModifier)
 
@@ -405,7 +405,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
     BSONDocument selector = bson.serialise(jsonQuery)
     BSONDocument bsonUpdate = bson.serialise(updateObject)
 
-    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + selector.value.arrayLength + bsonUpdate.value.arrayLength + MongoUpdate.STATIC_INT_SIZE + collection.arrayLength, ri.get(MONGO_MAX_RAND), 0, OP_UPDATE)
+    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + selector.value.arrayLength + bsonUpdate.value.arrayLength + MongoUpdate.STATIC_INT_SIZE + collection.arrayLength, ri.getInt(MONGO_MAX_RAND), 0, OP_UPDATE)
 
     MongoUpdate update = new MongoUpdate(0, collection, 0, selector, bsonUpdate)
 
@@ -432,7 +432,7 @@ component provides MongoDB requires io.Output out, data.json.JSONParser parser, 
 
     BSONDocument selector = bson.serialise(jsonQuery)
 
-    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + selector.value.arrayLength + MongoDelete.STATIC_INT_SIZE + collection.arrayLength, ri.get(MONGO_MAX_RAND), 0, OP_DELETE)
+    MongoHeader mh = new MongoHeader(MONGO_HEADER_SIZE + selector.value.arrayLength + MongoDelete.STATIC_INT_SIZE + collection.arrayLength, ri.getInt(MONGO_MAX_RAND), 0, OP_DELETE)
 
     MongoDelete delete = new MongoDelete(0, collection, 0, selector)
 

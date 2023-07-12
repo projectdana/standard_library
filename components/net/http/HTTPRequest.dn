@@ -214,7 +214,7 @@ component provides HTTPRequest requires io.Output out, net.TCPSocket, net.TLS, n
 			request = new char[](request, headers[i].key, ":", headers[i].value, "\r\n")
 		}
 		if (method == "POST") {
-			request = new char[](request, "content-length", ":", intUtil.intToString(postData.arrayLength), "\r\n")
+			request = new char[](request, "content-length", ":", intUtil.makeString(postData.arrayLength), "\r\n")
 		}
 		if (!hostIncluded) { request = new char[](request, "host:$(parts.hostName)\r\n") }
 		request = new char[](request, "\r\n")

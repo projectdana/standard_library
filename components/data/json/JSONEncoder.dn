@@ -139,7 +139,7 @@ component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, util.T
 		char json[] = null
 		for (int i = 0; i < d.arrayLength; i++) {
 			if (i > 0) { json = new char[](json, ", ") }
-			json = new char[](json, du.decToString(d[i]))
+			json = new char[](json, du.makeString(d[i]))
 		}
 		return json
 	}
@@ -207,7 +207,7 @@ component provides JSONEncoder requires data.IntUtil iu, data.DecUtil du, util.T
 				else { json = new char[](json, "\"", t.fields[i].name, "\": null") }
 			} else if (fieldType == DECIMAL) {
 				dec helper = d:.tf
-				if (helper != null) { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": ", du.decToString(helper)) }
+				if (helper != null) { json = new char[](json, "\"", dataVarToJsonKey(t.fields[i].name, map), "\": ", du.makeString(helper)) }
 				else { json = new char[](json, "\"", t.fields[i].name, "\": 0.0") }
 			} else if (fieldType == INTEGER) {
 				int helper = d:.tf

@@ -305,7 +305,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 		
 		for (int i = 0; i < list.arrayLength; i++)
 			{
-			char num[] = du.decToString(list[i])
+			char num[] = du.makeString(list[i])
 			
 			if (dp != INT_MAX)
 				{
@@ -373,7 +373,7 @@ component provides ChartCore requires ui.Font, data.DecUtil du, data.IntUtil iu,
 		
 		for (int i = 0; i < yNumbers.arrayLength; i++)
 			{
-			int textWidth = axisFont.getTextWidth(du.decToString(yNumbers[i]))
+			int textWidth = axisFont.getTextWidth(du.makeString(yNumbers[i]))
 			
 			if (textWidth > result) result = textWidth
 			}

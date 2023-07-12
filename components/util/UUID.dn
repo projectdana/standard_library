@@ -1,6 +1,6 @@
-component provides UUID requires io.Output out, data.IntUtil iu, util.RandomInt, time.Calendar cal, time.DateUtil du{
+component provides UUID requires io.Output out, data.IntUtil iu, util.Random, time.Calendar cal, time.DateUtil du{
 
-  RandomInt ri = new RandomInt()
+  Random ri = new Random()
 
   int ASCII_VALID_RANGE0[] = new int[](48, 57)
   int ASCII_VALID_RANGE1[] = new int[](97, 102)
@@ -41,7 +41,7 @@ component provides UUID requires io.Output out, data.IntUtil iu, util.RandomInt,
         ri.setSeed(rand_seed)
 
         //check if we are between a range...
-        while(!between((randomNumber = ri.get(ASCII_VALID_RANGE1[1] + 1)),ASCII_VALID_RANGE1[0],ASCII_VALID_RANGE1[1]) && !between(randomNumber, ASCII_VALID_RANGE0[0], ASCII_VALID_RANGE0[1])){}
+        while(!between((randomNumber = ri.getInt(ASCII_VALID_RANGE1[1] + 1)),ASCII_VALID_RANGE1[0],ASCII_VALID_RANGE1[1]) && !between(randomNumber, ASCII_VALID_RANGE0[0], ASCII_VALID_RANGE0[1])){}
 
         //concatenate!
         uuid = new char[](uuid,randomNumber)

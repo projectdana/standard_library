@@ -4,7 +4,7 @@
 
 interface DecUtil{
 	/*
-	{ "@description" : "Convert a decimal fraction to a string.", "@deprecated" : true}
+	{ "@description" : "Convert a decimal fraction to a string.", "@deprecated" : true, "@deprecatedBy" : "makeString"}
 	*/
 	char[] decToString(dec i)
 	

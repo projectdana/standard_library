@@ -16,7 +16,7 @@ data ParseToken {
 	}
 
 /*
-{"description" : "This interface is used to tokenise a text document, using a given set of tokens, and supporting both line and block comments.", "@deprecated" : "true"}
+{"description" : "This interface is used to tokenise a text document, using a given set of tokens, and supporting both line and block comments.", "@deprecated" : "true", "@deprecatedBy" : "parsing.Tokeniser"}
 */
 
 interface Tokeniser {

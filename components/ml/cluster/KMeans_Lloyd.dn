@@ -5,7 +5,7 @@ This is an implementation of "Lloyd's algorithm" for k-means clustering, using "
  - http://home.deib.polimi.it/matteucc/Clustering/tutorial_html/kmeans.html
 */
 
-component provides Clustering requires util.RandomInt randomInt, time.Calendar calendar, util.Math math, io.Output out, data.IntUtil iu, data.DecUtil du {
+component provides Clustering requires util.Random random, time.Calendar calendar, util.Math math, io.Output out, data.IntUtil iu, data.DecUtil du {
 	
 	ClusterPoint values[]
 	int dimensions
@@ -134,13 +134,13 @@ component provides Clustering requires util.RandomInt randomInt, time.Calendar c
 	Cluster[] Clustering:cluster(int k)
 		{
 		//initialise clusters - here we use the "Forgy" method, which randomly samples from the initial data set
-		randomInt.setSeed(calendar.getTime().millisecond)
+		random.setSeed(calendar.getTime().millisecond)
 		
 		Cluster clusters[] = new Cluster[k]
 		for (int i = 0; i < k; i++)
 			{
 			clusters[i] = new Cluster()
-			clusters[i].mean = values[randomInt.get(values.arrayLength)].values
+			clusters[i].mean = values[random.getInt(values.arrayLength)].values
 			}
 		
 		//iteratively:

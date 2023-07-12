@@ -1,5 +1,5 @@
 /*
- {"description" : "Utility API to perform runtime adaptation on a required interface or on a specific object. Note that IDC references are typically gained via the use of Loader.", "@deprecated" : "true"}
+ {"description" : "Utility API to perform runtime adaptation on a required interface or on a specific object. Note that IDC references are typically gained via the use of Loader.", "@deprecated" : "true", "@deprecatedBy" : "composition.Adapt"}
 */
 
 interface Adapter {

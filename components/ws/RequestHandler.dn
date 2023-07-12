@@ -399,7 +399,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 				s.send("Connection: close\r\n")
 				else
 				s.send("Connection: keep-alive\r\n")
-			s.send("Content-length: $(intUtil.intToString(fd.getSize()))\r\n")
+			s.send("Content-length: $(intUtil.makeString(fd.getSize()))\r\n")
 			s.send("Content-Type: $(getMIMEType(ext, cfg.mimeTypes))\r\n")
 			s.send("Date: $(util.getDateString(cal.getTime()))\r\n")
 			s.send("Last-Modified: $(util.getDateString(fileSystem.getInfo(path).modified))\r\n")

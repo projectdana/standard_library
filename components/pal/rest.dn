@@ -6,12 +6,14 @@ uses pal.Perception
 
 const int HOST_POST = 8008
 
-component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du, pal.Assembly, time.Timer timer, composition.RecursiveLoader loader, data.StringUtil stringUtil, net.TCPServerSocket, net.TCPSocket, data.json.JSONParser parser, composition.Search search, data.StringBuilder, io.FileSystem fs {
+component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du, pal.Assembly, time.Timer timer, composition.RecursiveLoader loader, data.StringUtil stringUtil, net.TCPServerSocket, net.TCPSocket, data.json.JSONParser parser, composition.Search search, data.StringBuilder, io.FileSystem fs, System system {
 	
 	bool running = true
 	char currentConfig[]
 	String configs[]
 	char systemPath[]
+
+	TCPServerSocket server
 	
 	Assembly assembly
 	Perception perc
@@ -85,7 +87,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 	
 	char[] dateToString(DateTime dt)
 		{
-		char year[] = iu.intToString(dt.year)
+		char year[] = iu.makeString(dt.year)
 		while (year.arrayLength < 4) year = new char[]("0", year)
 		char month[] = iu.makeString(dt.month)
 		if (month.arrayLength < 2) month = new char[]("0", month)
@@ -115,7 +117,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				
 				if (pd.metrics[i].preferHigh) preferHigh = "true"
 				
-				content = new char[](content, "{\"name\" : \"$(pd.metrics[i].name)\", \"source\" : \"$(pd.metrics[i].sourceComponent)\", \"value\" : $(iu.intToString(pd.metrics[i].totalValue)), \"count\" : $(iu.makeString(pd.metrics[i].totalCount)), \"preferHigh\" : $preferHigh, \"startTime\" : \"$(dateToString(pd.metrics[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.metrics[i].timeLast))\"}")
+				content = new char[](content, "{\"name\" : \"$(pd.metrics[i].name)\", \"source\" : \"$(pd.metrics[i].sourceComponent)\", \"value\" : $(pd.metrics[i].totalValue), \"count\" : $(iu.makeString(pd.metrics[i].totalCount)), \"preferHigh\" : $preferHigh, \"startTime\" : \"$(dateToString(pd.metrics[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.metrics[i].timeLast))\"}")
 				if (i + 1 < pd.metrics.arrayLength) content = new char[](content, ",")
 				}
 			content = new char[](content, "], ")
@@ -123,7 +125,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			content = new char[](content, "\"events\" : [")
 			for (int i = 0; i < pd.events.arrayLength; i++)
 				{
-				content = new char[](content, "{\"name\" : \"$(pd.events[i].name)\", \"source\" : \"$(pd.events[i].sourceComponent)\", \"value\" : $(iu.intToString(pd.events[i].totalValue)), \"count\" : $(iu.makeString(pd.events[i].totalCount)), \"startTime\" : \"$(dateToString(pd.events[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.events[i].timeLast))\"}")
+				content = new char[](content, "{\"name\" : \"$(pd.events[i].name)\", \"source\" : \"$(pd.events[i].sourceComponent)\", \"value\" : $(pd.events[i].totalValue), \"count\" : $(iu.makeString(pd.events[i].totalCount)), \"startTime\" : \"$(dateToString(pd.events[i].timeFirst))\", \"endTime\" : \"$(dateToString(pd.events[i].timeLast))\"}")
 				if (i + 1 < pd.events.arrayLength) content = new char[](content, ",")
 				}
 			content = new char[](content, "], ")
@@ -462,7 +464,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 	
 	void serverThread(int port)
 		{
-		TCPServerSocket server = new TCPServerSocket()
+		server = new TCPServerSocket()
 		
 		if (server.bind(TCPServerSocket.ANY_ADDRESS, port))
 			{
@@ -480,6 +482,61 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			{
 			out.println("Failed to bind to server port")
 			}
+		}
+	
+	char[] searchPaths(char f[])
+		{
+		if (fs.exists(f)) return f
+
+		String sp[] = new String[](new String("$(system.getDanaHome())/components"), system.getSearchPaths())
+
+		for (int i = 0; i < sp.arrayLength; i++)
+			{
+			if (fs.exists("$(sp[i].string)/$f"))
+				return "$(sp[i].string)/$f"
+			}
+
+		return null
+		}
+	
+	//this function resolves any valid way of specifying an object file
+	char[] findObjectFile(char f[])
+		{
+		char result[] = null
+
+		//try all of our search paths
+		if ((result = searchPaths(f)) != null)
+			return result
+		
+		if ((result = searchPaths("$f.o")) != null)
+			return result
+
+		//convert dots to slashes, iteratively, starting from the left
+		// - for each iteration, try all of our search paths
+		// - then append .o, and try all of our search paths again
+		char rhs[] = f
+		char lhs[] = ""
+		String parts[] = rhs.lsplit(".")
+		while (parts != null)
+			{
+			rhs = parts[1].string
+			if (lhs.arrayLength == 0)
+				lhs = parts[0].string
+				else
+				lhs = "$lhs/$(parts[0].string)"
+			
+			char form[] = "$lhs/$rhs"
+			if ((result = searchPaths(form)) != null)
+				return result
+			
+			form = "$lhs/$rhs.o"
+			if ((result = searchPaths(form)) != null)
+				return result
+			
+			parts = rhs.lsplit(".")
+			}
+
+		return null
 		}
 	
 	int App:main(AppParam params[])
@@ -540,8 +597,10 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			}
 		
 		objectFile = objectFile.explode("\\").implode("/")
+
+		char resolvedFile[] = null
 		
-		if (!fs.exists(objectFile))
+		if ((resolvedFile = findObjectFile(objectFile)) == null)
 			{
 			out.println("object file $objectFile not found")
 			return 1
@@ -549,7 +608,7 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		
 		//we need to find the fully-qualified path to the object file we're launching, so we can pass it in to App.setSourcePath()
 		int splitPoint = 0
-		systemPath = fs.getFullPath(objectFile)
+		systemPath = fs.getFullPath(resolvedFile)
 		if ((splitPoint = systemPath.rfind("/")) != StringUtil.NOT_FOUND)
 			systemPath = systemPath.subString(0, splitPoint+1)
 			else
@@ -564,11 +623,11 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		out.println("[scanning system for components, please be patient...]")
 		
 		perc = new Perception() from perception
-		assembly = new Assembly(fs.getFullPath(objectFile), subParams, perception)
+		assembly = new Assembly(fs.getFullPath(resolvedFile), subParams, perception)
 		
 		configs = assembly.getConfigs()
 		
-		out.println("[located $(iu.intToString(configs.arrayLength)) possible configurations for target software system]")
+		out.println("[located $(configs.arrayLength) possible configurations for target software system]")
 		
 		assembly.setConfig(configs[0].string)
 		currentConfig = configs[0].string
@@ -577,6 +636,10 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		asynch::serverThread(serverPort)
 		
 		assembly.runApp(systemPath)
+
+		running = false
+
+		server.unbind()
 		
 		return 0
 		}

@@ -29,7 +29,7 @@ component provides util.Math requires native MathLib lib, io.Output out, data.De
 
 	dec Math:floor(dec val)
 		{
-		char k[] = clone decUtil.decToString(val)
+		char k[] = clone decUtil.makeString(val)
 		
 		if (val >= 0.0)
 			{
@@ -69,7 +69,7 @@ component provides util.Math requires native MathLib lib, io.Output out, data.De
 	
 	dec Math:ceil(dec val)
 		{
-		char k[] = clone decUtil.decToString(val)
+		char k[] = clone decUtil.makeString(val)
 		
 		if (val >= 0.0)
 			{

@@ -212,12 +212,12 @@ component provides CSVParser requires io.Output out, data.StringUtil stringUtil,
 				
 				if (type.fields[j].type.class == Type.INTEGER)
 					{
-					val = intUtil.intToString(nd:.j)
+					val = intUtil.makeString(nd:.j)
 					}
 					else if (type.fields[j].type.class == Type.DECIMAL)
 					{
 					dec k = nd:.j
-					val = decUtil.decToString(k)
+					val = decUtil.makeString(k)
 					}
 					else if (isStringArrayType(type.fields[j].type))
 					{

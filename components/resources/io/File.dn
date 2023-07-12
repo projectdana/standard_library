@@ -10,7 +10,7 @@ interface File{
 	const int READ = 0
 	
 	/*
-	 {"@description" : "Synonym for READ, for backwards compatibility.", "@deprecated" : true}
+	 {"@description" : "Synonym for READ, for backwards compatibility.", "@deprecated" : true, "@deprecatedBy" : "READ"}
 	*/
 	const int FILE_ACCESS_READ = 0
 	
@@ -30,7 +30,7 @@ interface File{
 	const int CREATE = 2
 	
 	/*
-	 {"@description" : "Synonym for CREATE, for backwards compatibility.", "@deprecated" : true}
+	 {"@description" : "Synonym for CREATE, for backwards compatibility.", "@deprecated" : true, "@deprecatedBy" : "CREATE"}
 	*/
 	const int FILE_CREATE = 2
 	

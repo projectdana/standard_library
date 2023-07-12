@@ -15,7 +15,7 @@ data IncludeList{
 	String list[]
 	}
 
-component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File, data.json.JSONParser parser, data.StringUtil stringUtil, data.Tokeniser, data.IntUtil iu, System system {
+component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File, data.json.JSONParser parser, data.StringUtil stringUtil, parsing.Tokeniser, data.IntUtil iu, System system {
 	
 	SourceFile primaryFiles[]
 	SourceFile supportFiles[]
@@ -1193,7 +1193,8 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 						if (root_sf !== sf) sf.supportFiles = new SourceFile[](sf.supportFiles, q)
 						root_sf.supportFiles = new SourceFile[](root_sf.supportFiles, q)
 						
-						ParseToken tokens[] = tokeniser.tokenise(content)
+						TokeniseResult result = tokeniser.tokenise(content)
+						ParseToken tokens[] = result.tokens
 						
 						parseTokens(root_sf, q, tokens, searchPaths)
 						}
@@ -1276,7 +1277,8 @@ component provides DocBuilder requires io.Output out, io.FileSystem fs, io.File,
 	
 	bool DocBuilder:parseFile(char content[], opt char filePath[], opt String searchPaths[])
 		{
-		ParseToken tokens[] = tokeniser.tokenise(content)
+		TokeniseResult result = tokeniser.tokenise(content)
+		ParseToken tokens[] = result.tokens
 		
 		/*
 		for (int i = 0; i < tokens.arrayLength; i++)
