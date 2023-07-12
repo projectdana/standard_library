@@ -1,0 +1,36 @@
+component provides ImageTransform requires io.Output out, data.IntUtil iu {
+	
+	PixelMap ImageTransform:crop(PixelMap p, int x, int y, int width, int height)
+		{
+		if (x + width > p.size.width)
+			throw new Exception("crop range out of bounds")
+		
+		if (y + height > p.size.height)
+			throw new Exception("crop range is out of bounds")
+		
+		PixelMap result = new PixelMap(new WH(width, height))
+
+		result.pixels = new byte[width * height * 4]
+
+		int resultIndex = 0
+		
+		for (int rowIndex = y; rowIndex < (height+y); rowIndex++)
+			{
+			int byteIndex = (rowIndex * p.size.width * 4) + (x * 4)
+
+			for (int colIndex = x; colIndex < (width+x); colIndex++)
+				{
+				result.pixels[resultIndex] = p.pixels[byteIndex]
+				result.pixels[resultIndex+1] = p.pixels[byteIndex+1]
+				result.pixels[resultIndex+2] = p.pixels[byteIndex+2]
+				result.pixels[resultIndex+3] = p.pixels[byteIndex+3]
+
+				byteIndex += 4
+				resultIndex += 4
+				}
+			}
+
+		return result
+		}
+	
+}

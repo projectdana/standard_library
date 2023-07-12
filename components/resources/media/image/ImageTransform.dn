@@ -1,0 +1,10 @@
+/* {"description" : "This API supports common transform functions for images." } */
+
+uses media.PixelMap
+
+interface ImageTransform {
+	
+	/* {"@description" : "Crop an image, by identifying a rectangle within that image. The identified rectangle is extracted as a new image and returned." } */
+	PixelMap crop(PixelMap p, int x, int y, int width, int height)
+
+	}
