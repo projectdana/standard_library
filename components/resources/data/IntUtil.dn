@@ -4,7 +4,7 @@
 
 interface IntUtil{
 	/*
-	 {"@description" : "Convert an integer to a string.", "@deprecated" : true, "@deprecatedBy" : "makeString"}
+	 {"@description" : "Convert an integer to a string.", "@deprecated" : true, "@deprecatedBy" : "makeString", "@deprecatedOn" : "2020/01/01"}
 	*/
 	char[] intToString(int i)
 	

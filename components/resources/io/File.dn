@@ -10,7 +10,7 @@ interface File{
 	const int READ = 0
 	
 	/*
-	 {"@description" : "Synonym for READ, for backwards compatibility.", "@deprecated" : true, "@deprecatedBy" : "READ"}
+	 {"@description" : "Synonym for READ, for backwards compatibility.", "@deprecated" : true, "@deprecatedBy" : "READ", "@deprecatedOn" : "2020/01/01"}
 	*/
 	const int FILE_ACCESS_READ = 0
 	
@@ -20,7 +20,7 @@ interface File{
 	const int WRITE = 1
 	
 	/*
-	 {"@description" : "Synonym for WRITE, for backwards compatibility.", "@deprecated" : true}
+	 {"@description" : "Synonym for WRITE, for backwards compatibility.", "@deprecated" : true, "@deprecatedBy" : "WRITE", "@deprecatedOn" : "2020/01/01"}
 	*/
 	const int FILE_ACCESS_WRITE = 1
 	
@@ -30,7 +30,7 @@ interface File{
 	const int CREATE = 2
 	
 	/*
-	 {"@description" : "Synonym for CREATE, for backwards compatibility.", "@deprecated" : true, "@deprecatedBy" : "CREATE"}
+	 {"@description" : "Synonym for CREATE, for backwards compatibility.", "@deprecated" : true, "@deprecatedBy" : "CREATE", "@deprecatedOn" : "2020/01/01"}
 	*/
 	const int FILE_CREATE = 2
 	

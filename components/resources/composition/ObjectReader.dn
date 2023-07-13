@@ -11,7 +11,7 @@ data InfoSection{
 	}
 
 /*
- {"description" : "Utility to inspect compiled Dana components. This is primarily used to examine 'info sections' in these components such as the list of interfaces that a component has.", "@deprecated" : "true", "@deprecatedBy" : "util.ObjectFile"}
+ {"description" : "Utility to inspect compiled Dana components. This is primarily used to examine 'info sections' in these components such as the list of interfaces that a component has.", "@deprecated" : "true", "@deprecatedBy" : "util.ObjectFile", "@deprecatedOn" : "2020/01/01"}
 */
 interface ObjectReader{
 	/*
