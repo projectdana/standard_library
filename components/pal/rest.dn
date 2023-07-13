@@ -4,7 +4,7 @@ This is a REST API for the PAL service. You can visit localhost:HOST_POST/meta/ 
 
 uses pal.Perception
 
-const int HOST_POST = 8008
+const int HOST_PORT = 8008
 
 component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du, pal.Assembly, time.Timer timer, composition.RecursiveLoader loader, data.StringUtil stringUtil, net.TCPServerSocket, net.TCPSocket, data.json.JSONParser parser, composition.Search search, data.StringBuilder, io.FileSystem fs, System system {
 	
@@ -12,6 +12,8 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 	char currentConfig[]
 	String configs[]
 	char systemPath[]
+
+	char HOST_ADDRESS[] = "127.0.0.1"
 
 	TCPServerSocket server
 	
@@ -464,23 +466,14 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 	
 	void serverThread(int port)
 		{
-		server = new TCPServerSocket()
+		out.println("[REST service started, visit http://localhost:$port/meta/ for API details]")
 		
-		if (server.bind(TCPServerSocket.ANY_ADDRESS, port))
+		while (running)
 			{
-			out.println("[REST service started, visit http://localhost:$port/meta/ for API details]")
+			TCPSocket s = new TCPSocket()
 			
-			while (running)
-				{
-				TCPSocket s = new TCPSocket()
-				
-				if (s.accept(server))
-					handleRequest(s)
-				}
-			}
-			else
-			{
-			out.println("Failed to bind to server port")
+			if (s.accept(server))
+				handleRequest(s)
 			}
 		}
 	
@@ -549,12 +542,16 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			out.println("")
 			out.println("options for pal.rest:")
 			out.println(" -p portNumber     Set the port number on which the REST service will listen")
+			out.println(" -a serverAddress  Set the server address to bind the REST service to")
+			out.println("                   Default address is 127.0.0.1 (local connections only)")
+			out.println("                   To support remote connections, use ANY, ANY_v4, or ANY_v6)")
 			return 0
 			}
 		
 		char objectFile[] = null
 		
-		int serverPort = HOST_POST
+		int serverPort = HOST_PORT
+		char serverAddress[] = HOST_ADDRESS
 		
 		AppParam subParams[] = null
 		
@@ -584,6 +581,25 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 						return 0
 						}
 					}
+					else if (params[i].string == "-a")
+					{
+					if (i + 1 < params.arrayLength)
+						{
+						serverAddress = params[i+1].string
+
+						if (serverAddress == "ANY")
+							serverAddress = TCPServerSocket.ANY_ADDRESS
+							else if (serverAddress == "ANY_v4")
+							serverAddress = TCPServerSocket.ANY_ADDRESS_v4
+							else if (serverAddress == "ANY_v6")
+							serverAddress = TCPServerSocket.ANY_ADDRESS_v6
+						}
+						else
+						{
+						out.println("expected IP address, or ANY, ANY_v4, ANY_v6 after -a")
+						return 0
+						}
+					}
 					else
 					{
 					objectFile = params[i].string
@@ -603,6 +619,14 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		if ((resolvedFile = findObjectFile(objectFile)) == null)
 			{
 			out.println("object file $objectFile not found")
+			return 1
+			}
+		
+		server = new TCPServerSocket()
+		
+		if (!server.bind(serverAddress, serverPort))
+			{
+			out.println("failed to bind to server address/port of $(serverAddress)/$(serverPort)")
 			return 1
 			}
 		
