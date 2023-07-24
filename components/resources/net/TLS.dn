@@ -12,31 +12,48 @@ data VerifyStatus {
 	char failedReason[]
 	}
 
-/* {"description" : "This API supports transport layer security (TLS), historically known as a 'secure socket layer'. There are two parts of making secure connections: authentication and encryption. This API creates an encrypted channel by using X509 certificates as public keys to initiate a session key exchange. It also performs part of authentication, by verifying that a certificate is trusted. The other core part of authentication is host name verification, which checks that the server you are talking to actually matches that which the certificate has been issued for; host name verification is left to the programmer to do separately as it can be protocol-specific."} */
+/* {"description" : "This API supports transport layer security (TLS), historically known as a 'secure socket layer' (SSL). There are two parts of making secure connections: authentication and encryption. This API creates an encrypted channel by using X509 certificates as public keys to initiate a session key exchange. It also performs part of authentication, by verifying that a certificate is trusted. The other core part of authentication is host name verification, which checks that the server you are talking to actually matches that which the certificate has been issued for; host name verification is left to the programmer to do separately as it can be protocol-specific."} */
 
 interface TLS extends net.Stream {
+
+	const byte FAIL = 0
+	const byte OK = 1
+	const byte WAIT_READ = 2
+	const byte WAIT_WRITE = 3
+
+	/* {"@description" : "In non-blocking mode, this event is fired when a send() fails due to the socket not being ready. The underlying TCP socket should be set for write-ability notification in e.g. a TCPMonitor, then when a writeable notification arrives, sendBuffer() should be called to send pending bytes."} */
+	event sendWait(Data d)
 	
 	/* {"@description" : "Instantiate a new secure session object, using the configuration in the given TLSContext object."} */
 	TLS(store TLSContext context)
 	
 	/* {"@description" : "This function is used by servers to accept new client connections.",
 		"socket" : "A TCPSocket instance which has already been connected to a remote host via the TCP accept() function"} */
-	bool accept(TCPSocket socket)
+	int accept(TCPSocket socket)
 	
 	/* {"@description" : "This function allows you to connect to a remote host using a TLS handshake, creating an encrypted channel. After connecting, you can then send/recv encrypted data over this channel. However, connecting in itself *does not* verify that the remote host has an authentic TLS (X509) certificate and is therefore trustworthy. In order to assure that the certificate is actually authentic, you must do this verification immediately after connect() by using verifyCertificate() and then, based on the result, decide on whether or not you wish to send any data. Note that you should *also* perform host name verification yourself before sending any data.",
 		"socket" : "A TCPSocket instance which has already been connected to a remote host"} */
-	bool connect(TCPSocket socket)
+	int connect(TCPSocket socket)
 	
 	/* {"@description" : "Get the certificate of the remote host, which can be queried or used in verifyCertificate(). The certificate is returned in base64-encoded PEM format."} */
 	char[] getPeerCertificate()
 	
-	/* {"@description" : "Get the certificate chain of the remote host, which can be queried or used in verifyCertificate(). The certificate chain is returned as an array base64-encoded PEM format certificates."} */
+	/* {"@description" : "Get the certificate chain of the remote host, which can be queried or used in verifyCertificate(). The certificate chain is returned as an array of base64-encoded PEM format certificates."} */
 	String[] getPeerCertChain()
 	
 	/* {"@description" : "This function allows you to verify a certificate, as returned by getPeerCertificate() or getPeerCertChain(). A TLSCertStore instance must be passed in which holds root certificates that you intend to trust. It is still your responsibility to perform host name verification separately."} */
 	VerifyStatus verifyCertificate(TLSCertStore storeData, char certificate[], String chain[])
+
+	/* {"@description" : "Switch the socket to non-blocking mode. In this mode, calls to recv() will always return 'immediately' but may read no data. The optional data instance is delivered via any sendWait() events."} */
+	bool setNonBlocking(opt store Data sendWaitData)
 	
+	/* {"@description" : "In non-blocking mode, get the current status of the TLS state machine, to take appropriate action. Returns one of FAIL, OK, WAIT_READ, or WAIT_WRITE."} */
+	int getStatus()
+
+	/* {"@description" : "In non-blocking mode only, send any pending bytes; this should be called after a write-ability notification has been received from a TCPMonitor."} */
+	int sendBuffer()
+
 	/* {"@description" : "Close the secure session."} */
-	void close()
+	int close()
 	
 	}

@@ -1,0 +1,33 @@
+uses TCPSocket
+
+data MonitorEvent {
+	TCPSocket socket
+	Data userData
+
+	bool recvReady
+	bool sendReady
+	bool close
+}
+
+/*
+{"description" : "Monitor activity over multiple non-blocking sockets."}
+*/
+
+interface TCPMonitor {
+	
+	/* {"@description" : "Create a new monitor instance."} */
+	TCPMonitor()
+	
+	/* {"@description" : "Add a socket to this monitor instance, optionally associating a data instance with it. The monitor will deliver recv and close events by default, indicating that the socket has data available for receive or that it has been closed."} */
+	bool addSocket(store TCPSocket s, opt store Data userData)
+
+	/* {"@description" : "Subscribe for a monitor notification, via wait(), when this socket is next ready for send use. A send-ready notification is only delivered once when the socket first becomes ready; for another notification the user must call this function again."} */
+	void armSendNotify(TCPSocket s)
+
+	/* {"@description" : "Remove a socket from this monitor instance."} */
+	void remSocket(TCPSocket s)
+	
+	/* {"@description" : "Wait for activity on any of the sockets in this monitor instance."} */
+	MonitorEvent[] wait(opt int ms)
+	
+	}

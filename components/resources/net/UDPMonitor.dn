@@ -1,0 +1,28 @@
+uses UDPServer
+
+data MonitorEvent {
+	UDPServer socket
+	Data userData
+
+	bool recvReady
+}
+
+/*
+{"description" : "Monitor activity over multiple non-blocking sockets."}
+*/
+
+interface UDPMonitor {
+	
+	/* {"@description" : "Create a new monitor instance."} */
+	UDPMonitor()
+	
+	/* {"@description" : "Add a socket to this monitor instance, optionally associating a data instance with it. The monitor will deliver recv and close events by default, indicating that the socket has data available for receive or that it has been closed."} */
+	bool addSocket(store UDPServer s, opt store Data userData)
+
+	/* {"@description" : "Remove a socket from this monitor instance."} */
+	void remSocket(UDPServer s)
+	
+	/* {"@description" : "Wait for activity on any of the sockets in this monitor instance."} */
+	MonitorEvent[] wait(opt int ms)
+	
+	}

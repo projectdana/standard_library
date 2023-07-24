@@ -10,28 +10,31 @@ data NetworkEndpoint{
 */
 
 interface TCPSocket extends net.Stream {
-	/*
-	{"@description" : "Connect to the given TCP server."}
-	*/
+
+	/* {"@description" : "In non-blocking mode, this event is fired when a send() fails due to the socket not being ready. The socket should be set for write-ability notification in e.g. a TCPMonitor, then when a writeable notification arrives, sendBuffer() should be called to send pending bytes."} */
+	event sendWait(Data d)
+
+	/* {"@description" : "Connect to the given TCP server."} */
 	bool connect(char address[], int port)
 	
-	/*
-	{"@description" : "Establish a TCP connection by accepting a new client via a TCP server socket."}
-	*/
+	/* {"@description" : "Establish a TCP connection by accepting a new client via a TCP server socket."} */
 	bool accept(TCPServerSocket server)
 	
-	/*
-	{"@description" : "Disconnect (terminate) this TCP connection."}
-	*/
+	/* {"@description" : "Disconnect (terminate) this TCP connection."} */
 	void disconnect()
 	
-	/*
-	{"@description" : "Get the endpoint details of the remote end of this TCP connection."}
-	*/
+	/* {"@description" : "Get the endpoint details of the remote end of this TCP connection."} */
 	NetworkEndpoint getRemoteEndpoint()
 	
-	/*
-	{"@description" : "Get the endpoint details of the local end of this TCP connection."}
-	*/
+	/* {"@description" : "Get the endpoint details of the local end of this TCP connection."} */
 	NetworkEndpoint getLocalEndpoint()
+
+	/* {"@description" : "Switch the socket to non-blocking mode. In this mode, calls to recv() will always return 'immediately' but may read no data. Non-blocking TCP sockets are normally used with net.TCPMonitor. The optional data instance is delivered via any sendWait() events."} */
+	bool setNonBlocking(opt store Data sendWaitData)
+
+	/* {"@description" : "In non-blocking mode only, send any pending bytes; this should be called after a write-ability notification has been received from a TCPMonitor."} */
+	int sendBuffer()
+
+	/* {"@description" : "Test whether or not this socket is connected (this is useful only in non-blocking mode, to determine whether a null return from recv() is temporary or terminal)."} */
+	bool connected()
 	}

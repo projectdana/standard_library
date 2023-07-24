@@ -1,0 +1,17 @@
+interface X509Lib {
+	X509Certificate parse(char doc[])
+	char[] write(X509Certificate cert)
+}
+
+component provides X509Parser requires native X509Lib lib {
+	X509Certificate X509Parser:parse(char doc[])
+		{
+		return lib.parse(doc)
+		}
+	/*
+	char[] X509Parser:write(X509Certificate cert)
+		{
+		return lib.write(cert)
+		}
+	*/
+}

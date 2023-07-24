@@ -1,0 +1,11 @@
+data X509Certificate {
+	char serialNumber[]
+	char issuer[]
+	char subject[]
+	char publicKeyAlgorithm[]
+	char publicKey[]
+	char validAfter[]
+	char validUntil[]
+	char signatureAlgorithm[]
+	char signature[]
+}

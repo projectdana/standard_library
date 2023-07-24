@@ -1,0 +1,5 @@
+uses X509Certificate
+
+interface X509Parser {
+	X509Certificate parse(char doc[])
+}

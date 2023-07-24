@@ -14,7 +14,7 @@ data InterfaceSpec {
 	}
 
 /*
- {"description" : "This type represents a loaded component."}
+ {"description" : "This type represents a loaded component. Note that IDC cannot generally be used as a 'requires' interface because it does not have a standard implementation; only the Loader interface is capable of generating IDC instances."}
 */
 interface IDC {
 	

@@ -161,14 +161,14 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		return true
 		}
 	
-	bool loadSSLContext(char certificate[], byte privateKey[])
+	bool loadSSLContext(char certificatePath[], char privateKeyPath[])
 		{
-		File fd = new File(sslCertificateFile, File.READ)
-		certificate = fd.read(fd.getSize())
+		File fd = new File(certificatePath, File.READ)
+		byte certificate[] = fd.read(fd.getSize())
 		fd.close()
 		
-		fd = new File(sslPrivateKeyFile, File.READ)
-		privateKey = fd.read(fd.getSize())
+		fd = new File(privateKeyPath, File.READ)
+		byte privateKey[] = fd.read(fd.getSize())
 		fd.close()
 		
 		tlsContext = new TLSContext(TLSContext.SERVER)
