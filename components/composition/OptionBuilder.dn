@@ -27,7 +27,8 @@ data ComponentInfo {
 
 data InfoCache {
 	String searchPaths[]
-	String excludeList[]
+	String excludeListIntf[]
+	String excludeListComp[]
 	InterfaceOptions interfaces[]
 	ComponentInfo components[]
 }
@@ -36,13 +37,14 @@ component provides OptionBuilder requires io.Output out, data.StringUtil stringU
 
 	InfoCache icache
 
-	OptionBuilder:OptionBuilder(char path[], opt String searchPaths[], String excludeList[])
+	OptionBuilder:OptionBuilder(char path[], opt String searchPaths[], String interfaceExcludeList[], String componentExcludeList[])
 		{
 		icache = new InfoCache()
 		icache.searchPaths = searchPaths
-		icache.excludeList = excludeList
+		icache.excludeListIntf = interfaceExcludeList
+		icache.excludeListComp = componentExcludeList
 
-		scanComponentsR(path, icache, searchPaths, excludeList)
+		scanComponentsR(path, icache, searchPaths, interfaceExcludeList, componentExcludeList)
 
 		/*
 		for (int i = 0; i < icache.interfaces.arrayLength; i++)
@@ -78,7 +80,7 @@ component provides OptionBuilder requires io.Output out, data.StringUtil stringU
 		return nci
 		}
 	
-	void scanComponentsR(char start[], InfoCache ic, String searchPaths[], opt String excludeList[])
+	void scanComponentsR(char start[], InfoCache ic, String searchPaths[], opt String excludeList[], String excludeListComp[])
 		{
 		//out.println("scanning '$start'")
 
@@ -116,7 +118,8 @@ component provides OptionBuilder requires io.Output out, data.StringUtil stringU
 
 				for (int j = 0; j < options.arrayLength; j++)
 					{
-					scanComponentsR(options[j].string, ic, searchPaths, excludeList)
+					if (excludeListComp.findFirst(String.[string], options[j]) == null)
+						scanComponentsR(options[j].string, ic, searchPaths, excludeList, excludeListComp)
 					}
 				}
 			}
@@ -313,7 +316,7 @@ component provides OptionBuilder requires io.Output out, data.StringUtil stringU
 
 		InfoCache ic = icache
 
-		scanComponentsR(path, ic, ic.searchPaths, ic.excludeList)
+		scanComponentsR(path, ic, ic.searchPaths, ic.excludeListIntf, ic.excludeListComp)
 
 		int options[] = new int[ic.interfaces.arrayLength]
 		int optionsMax[] = new int[ic.interfaces.arrayLength]

@@ -86,9 +86,9 @@ component provides StringUtil requires io.Output out, data.adt.List {
 		return true
 		}
 	
-	int StringUtil:find(char string[], char term[])
+	int StringUtil:find(char string[], char term[], opt int startIndex)
 		{
-		for (int i = 0; i < string.arrayLength && string.arrayLength - i >= term.arrayLength; i ++)
+		for (int i = startIndex; i < string.arrayLength && string.arrayLength - i >= term.arrayLength; i ++)
 			{
 			if (substr_cmp(string, i, term.arrayLength, term))
 				return i
@@ -97,12 +97,12 @@ component provides StringUtil requires io.Output out, data.adt.List {
 		return StringUtil.NOT_FOUND
 		}
 	
-	int StringUtil:ifind(char string[], char term[])
+	int StringUtil:ifind(char string[], char term[], opt int startIndex)
 		{
 		term = lowercase(term)
 		string = lowercase(string)
 		
-		for (int i = 0; i < string.arrayLength && string.arrayLength - i >= term.arrayLength; i ++)
+		for (int i = startIndex; i < string.arrayLength && string.arrayLength - i >= term.arrayLength; i ++)
 			{
 			if (substr_cmp(string, i, term.arrayLength, term))
 				return i
@@ -111,11 +111,12 @@ component provides StringUtil requires io.Output out, data.adt.List {
 		return StringUtil.NOT_FOUND
 		}
 	
-	int StringUtil:rfind(char string[], char term[])
+	int StringUtil:rfind(char string[], char term[], opt int startIndex)
 		{
 		if (string.arrayLength >= term.arrayLength)
 			{
-			for (int i = string.arrayLength - term.arrayLength; i != INT_MAX; i --)
+			if (!(isset startIndex)) startIndex = string.arrayLength - term.arrayLength
+			for (int i = startIndex; i != INT_MAX; i --)
 				{
 				if (substr_cmp(string, i, term.arrayLength, term))
 					return i
@@ -125,14 +126,16 @@ component provides StringUtil requires io.Output out, data.adt.List {
 		return StringUtil.NOT_FOUND
 		}
 	
-	int StringUtil:irfind(char string[], char term[])
+	int StringUtil:irfind(char string[], char term[], opt int startIndex)
 		{
 		if (string.arrayLength >= term.arrayLength)
 			{
 			term = lowercase(term)
 			string = lowercase(string)
+
+			if (!(isset startIndex)) startIndex = string.arrayLength - term.arrayLength
 			
-			for (int i = string.arrayLength - term.arrayLength; i != INT_MAX; i --)
+			for (int i = startIndex; i != INT_MAX; i --)
 				{
 				if (substr_cmp(string, i, term.arrayLength, term))
 					return i

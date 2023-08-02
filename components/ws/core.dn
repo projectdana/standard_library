@@ -49,6 +49,8 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 	String staticDirectories[] = new String[](new String("/swc/"))
 	
 	ConfigData config = new ConfigData(landingPages = landingPages)
+
+	bool helpMode
 	
 	void populateStaticServe()
 		{
@@ -156,6 +158,10 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 				
 				sslPrivateKeyFile = params[i+1].string
 				}
+				else if (params[i].string == "-help")
+				{
+				helpMode = true
+				}
 			}
 		
 		return true
@@ -192,10 +198,8 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 			
 			if (client.accept(server))
 				{
-				TLS ssl = new TLS(tlsContext)
-				
 				//(note, the ssl accept is done within the request handler, because it can block)
-				rh.processStream(client, ssl, config)
+				rh.processStream(client, tlsContext, config)
 				}
 			}
 		}
@@ -211,6 +215,20 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		sslPort = LISTEN_PORT_SSL
 		
 		if (!parseParams(params)) return 1
+
+		if (helpMode)
+			{
+			out.println("usage: ws.core [options]")
+			out.println(" This program assumes a file ws/Web.o is present in launch directory, which")
+			out.println(" must implement the ws.Web interface.")
+			out.println("")
+			out.println(" Options for ws.core:")
+			out.println(" -p    portNumber     Set the port number on which the web service will listen")
+			out.println(" -pssl portNumber     Set the port on which to listen for TLS connections")
+			out.println(" -cert c              Set the path to the TLS X509 certificate file")
+			out.println(" -key  k              Set the path to the TLS private key file")
+			return 0
+			}
 		
 		//parse list of static-serve directories, if any
 		populateStaticServe()

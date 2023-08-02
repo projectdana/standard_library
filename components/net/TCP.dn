@@ -27,7 +27,8 @@ interface TCPLib {
 	void getLocalAddress(int hnd, NetworkEndpoint ha)
 	void getRemoteAddress(int hnd, NetworkEndpoint ha)
 
-	int createSelect()
+	int createSelect(int eventArrayLength)
+	bool setEventArrayLength(int selectHandle, int l)
 	bool addSocket(int selectHandle, int socketHandle, Data se)
 	void armSendNotify(int selectHandle, int socketHandle, Data se)
 	void remSocket(int selectHandle, int socketHandle)
@@ -86,20 +87,21 @@ data BufferedData {
 	BufferedData next
 }
 
+const int MONITOR_EVENT_ARRAY_LENGTH = 16
+
 component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonitor(Destructor), net.TLSCertStore(Destructor), net.TLSContext(Destructor), net.TLS(Destructor) requires native TCPLib lib, native SSLLib slib, io.Output out, data.IntUtil iu {
 
 	implementation TCPMonitor {
 
 		int handle
 
-		MonitorEvent events[] = new MonitorEvent[16]
+		MonitorEvent events[] = new MonitorEvent[MONITOR_EVENT_ARRAY_LENGTH]
 
 		MonitorList socketList
 
 		TCPMonitor:TCPMonitor()
 			{
-			handle = lib.createSelect()
-
+			handle = lib.createSelect(MONITOR_EVENT_ARRAY_LENGTH)
 			if (handle == 0) throw new Exception("failed to create TCP selector")
 			}
 		
@@ -194,11 +196,12 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 		
 		BufferedData buffer
 		BufferedData bufferEnd
+		int bufferTotal
 
 		bool addToSendBuffer(byte content[])
 			{
 			BufferedData nbuf = new BufferedData(content)
-			if (bufferEnd != null)
+			if (bufferEnd == null)
 				{
 				buffer = nbuf
 				}
@@ -207,6 +210,10 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 				bufferEnd.next = nbuf
 				}
 			bufferEnd = nbuf
+
+			bufferTotal += content.arrayLength
+
+			//out.println(">> buffered $(content.arrayLength) bytes")
 			
 			return true
 			}
@@ -224,6 +231,8 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 						if (buffer == null)
 							{
 							n = lib.send_nb(platformSocket, content, status)
+
+							//out.println(">> sent $n bytes of $(content.arrayLength)")
 
 							if (n < content.arrayLength)
 								{
@@ -261,23 +270,30 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 					{
 					int n = lib.send_nb(platformSocket, w.value, status)
 
+					//out.println(">> sent[b] $n bytes of $(w.value.arrayLength)")
+
+					bufferTotal -= n
+
 					total += n
 
 					if (n < w.value.arrayLength)
 						{
 						w.value = dana.sub(w.value, n, w.value.arrayLength-1)
+						buffer = w
 						emitevent sendWait(sendWaitData)
 						break
 						}
 						else
 						{
-						buffer = buffer.next
+						w = w.next
 						}
 					}
 				
 				if (w == null)
 					{
+					buffer = null
 					bufferEnd = null
+					//out.println("[buffer fully sent]")
 					}
 				
 				return total
@@ -378,6 +394,7 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 					{
 					lib.disconnect(platformSocket)
 					connected = false
+					remoteConnected = false
 					platformSocket = 0
 					}
 				}
@@ -430,6 +447,11 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 			lib.setBlocking(platformSocket, false)
 
 			return true
+			}
+		
+		int TCPSocket:getBufferUnsent()
+			{
+			return bufferTotal
 			}
 		
 		bool TCPSocket:connected()
@@ -551,7 +573,7 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 		bool nonBlocking
 		Mutex connectLock = new Mutex()
 		TLSContext context
-		//TCPSocket socket
+		TCPSocket socket
 		TLSStatus status = new TLSStatus()
 
 		Data sendWaitData
@@ -559,13 +581,14 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 		Mutex bufferLock = new Mutex()
 		BufferedData buffer
 		BufferedData bufferEnd
+		int bufferTotal
 
 		bool addToSendBuffer(byte content[])
 			{
 			mutex(bufferLock)
 				{
 				BufferedData nbuf = new BufferedData(content)
-				if (bufferEnd != null)
+				if (bufferEnd == null)
 					{
 					buffer = nbuf
 					}
@@ -574,6 +597,8 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 					bufferEnd.next = nbuf
 					}
 				bufferEnd = nbuf
+
+				bufferTotal += content.arrayLength
 				
 				return true
 				}
@@ -585,11 +610,12 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 			platformHandle = slib.makeSSL(cxt.platformHandle)
 			}
 		
-		int TLS:accept(TCPSocket s)
+		int TLS:accept(store TCPSocket s)
 			{
 			if (s.nonBlocking) nonBlocking = true
 
-			//socket = s
+			socket = s
+
 			if (!nonBlocking)
 				{
 				return slib.accept(platformHandle, s.platformSocket)
@@ -600,11 +626,12 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 				}
 			}
 		
-		int TLS:connect(TCPSocket s)
+		int TLS:connect(store TCPSocket s)
 			{
 			if (s.nonBlocking) nonBlocking = true
 
-			//socket = s
+			socket = s
+			
 			if (!nonBlocking)
 				{
 				return slib.connect(platformHandle, s.platformSocket)
@@ -671,22 +698,26 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 					{
 					int n = slib.write_nb(platformHandle, w.value, status)
 
+					bufferTotal -= n
+
 					total += n
 
 					if (n < w.value.arrayLength)
 						{
 						w.value = dana.sub(w.value, n, w.value.arrayLength-1)
+						buffer = w
 						emitevent sendWait(sendWaitData)
 						break
 						}
 						else
 						{
-						buffer = buffer.next
+						w = w.next
 						}
 					}
 				
 				if (w == null)
 					{
+					buffer = null
 					bufferEnd = null
 					}
 				
@@ -711,15 +742,27 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 			return true
 			}
 		
+		int TLS:getBufferUnsent()
+			{
+			return bufferTotal
+			}
+		
 		int TLS:getStatus()
 			{
 			return status.state
+			}
+		
+		TCPSocket TLS:getSocket()
+			{
+			return socket
 			}
 		
 		int TLS:close()
 			{
 			if (platformHandle != 0 && !closed)
 				{
+				socket = null
+
 				if (!nonBlocking)
 					{
 					slib.closeSSL(platformHandle)

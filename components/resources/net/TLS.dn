@@ -29,11 +29,14 @@ interface TLS extends net.Stream {
 	
 	/* {"@description" : "This function is used by servers to accept new client connections.",
 		"socket" : "A TCPSocket instance which has already been connected to a remote host via the TCP accept() function"} */
-	int accept(TCPSocket socket)
+	int accept(store TCPSocket socket)
 	
 	/* {"@description" : "This function allows you to connect to a remote host using a TLS handshake, creating an encrypted channel. After connecting, you can then send/recv encrypted data over this channel. However, connecting in itself *does not* verify that the remote host has an authentic TLS (X509) certificate and is therefore trustworthy. In order to assure that the certificate is actually authentic, you must do this verification immediately after connect() by using verifyCertificate() and then, based on the result, decide on whether or not you wish to send any data. Note that you should *also* perform host name verification yourself before sending any data.",
 		"socket" : "A TCPSocket instance which has already been connected to a remote host"} */
-	int connect(TCPSocket socket)
+	int connect(store TCPSocket socket)
+
+	/* {"@description" : "Get the TCP socket associated with this TLS connection."} */
+	TCPSocket getSocket()
 	
 	/* {"@description" : "Get the certificate of the remote host, which can be queried or used in verifyCertificate(). The certificate is returned in base64-encoded PEM format."} */
 	char[] getPeerCertificate()
@@ -52,6 +55,9 @@ interface TLS extends net.Stream {
 
 	/* {"@description" : "In non-blocking mode only, send any pending bytes; this should be called after a write-ability notification has been received from a TCPMonitor."} */
 	int sendBuffer()
+
+	/* {"@description" : "In non-blocking mode only, check how many bytes are in the send buffer pending write-ability."} */
+	int getBufferUnsent()
 
 	/* {"@description" : "Close the secure session."} */
 	int close()

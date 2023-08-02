@@ -31,29 +31,34 @@ em {
 }
 
 h1 {
-	font-size: 1.5em;
-	margin-top: 0.7em;
+	font-size: 2.0em;
+	margin-top: 0.9em;
+	font-weight: bold;
 }
 
 h2 {
 	font-size: 1.4em;
-	margin-top: 0.6em;
+	margin-top: 0.9em;
+	font-weight: bold;
+	padding-bottom: 0.6em;
+	border-bottom: 0.5px solid silver
 }
 
 h3 {
-	font-size: 1.2em;
-	margin-top: 0.5em;
+	font-size: 1.3em;
+	margin-top: 0.7em;
+	font-weight: bold;
 }
 
 h4 {
-	font-size: 1.1em;
+	font-size: 1.2em;
 	margin-top: 0.4em;
 }
 
 code {
 	font-family:monospace;
 	*font-size:108%;
-	line-height:120%;
+	line-height:130%;
 	font-weight: 130%;
 	background-color: #EEE;
 }
@@ -64,6 +69,9 @@ pre {
 	background-color: #EEE;
 	overflow-x: auto;
 	overflow-y: hidden;
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	padding-left: 0.5em;
 }
 
 p{
@@ -79,18 +87,32 @@ li{
 
 body{
 	margin: 5px;
+	font-size: 1.0em;
+}
+
+.docMainColumn {
+  float: left;
+  width: 75%;
+}
+
+.docNavColumn {
+  float: left;
+  width: 20%;
+  padding-left: 20px;
 }
 
 A:link{
 text-decoration: none;
 font-weight: bold;
 color: #88D;
+font-size: 0.95em;
 }
 
 A:visited{
 text-decoration: none;
 font-weight: bold;
 color: #88D;
+font-size: 0.95em;
 }
 
 .index_pkg_dis{
@@ -360,33 +382,33 @@ a.doc_type_link_opt:hover {
 .doc_description{
 	margin-top: 20px;
 	margin-bottom: 20px;
-	font-size: 1.15em;
+	font-size: 1.0em;
 }
 
 .typelist a:link {
 	text-decoration: none;
 	font-weight: normal;
 	color: blue;
-	font-size: 1.15em;
+	font-size: 1.0em;
 }
 
 .typelist a:visited {
 	text-decoration: none;
 	font-weight: normal;
 	color: blue;
-	font-size: 1.15em;
+	font-size: 1.0em;
 }
 
 a.pkg_link:visited {
 	text-decoration: none;
 	color: teal;
-	font-size: 1.15em;
+	font-size: 1.0em;
 }
 
 a.pkg_link:link {
 	text-decoration: none;
 	color: teal;
-	font-size: 1.15em;
+	font-size: 1.0em;
 }
 
 .nav_header{

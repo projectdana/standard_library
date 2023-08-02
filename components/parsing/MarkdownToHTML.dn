@@ -205,25 +205,36 @@ component provides MarkdownToHTML requires data.IntUtil iu, data.StringBuilder, 
 		return aci
 		}
 	
-	char[] MarkdownToHTML:process(MDElement doc, opt MDCodeStyle codeStyling[], bool generateTOC)
+	void makeTOCHTML(MDElement doc, StringBuilder sbld, char tocStyling[])
+		{
+		StringBuilder tocBuild = new StringBuilder()
+		makeTOC(doc, tocBuild, 0)
+		char toc[] = tocBuild.get()
+		if (toc.arrayLength > 0)
+			{
+			sbld.add("<div class = \"$tocStyling\">")
+			sbld.add(toc)
+			sbld.add("</div>")
+			}
+		}
+
+	char[] MarkdownToHTML:process(MDElement doc, opt char mainDivClass[], MDCodeStyle codeStyling[], bool generateTOC, bool tocFirst, char tocDivClass[])
 		{
 		StringBuilder sbld = new StringBuilder()
 
-		if (generateTOC)
+		if (generateTOC && tocFirst)
 			{
-			StringBuilder tocBuild = new StringBuilder()
-			makeTOC(doc, tocBuild, 0)
-
-			char toc[] = tocBuild.get()
-			if (toc.arrayLength > 0)
-				{
-				sbld.add("<div style = \"float:right; margin-left: 10px; margin-bottom: 10px; border-left: medium solid silver; border-bottom: medium solid silver; padding-left: 10px; padding-bottom: 10px\">")
-				sbld.add(toc)
-				sbld.add("</div>")
-				}
+			makeTOCHTML(doc, sbld, tocDivClass)
 			}
 
+		if (mainDivClass != null) sbld.add("<div class = \"$mainDivClass\">")
 		docToHTML(doc, codeStyling, sbld, 0)
+		if (mainDivClass != null)  sbld.add("</div>")
+		
+		if (generateTOC && !tocFirst)
+			{
+			makeTOCHTML(doc, sbld, tocDivClass)
+			}
 		
 		return sbld.get()
 		}

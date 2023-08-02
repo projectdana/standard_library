@@ -902,7 +902,7 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 
 				MDElement mdDoc = mdParser.parse(doc)
 
-				char html[] = mdHTML.process(mdDoc, codeStyling, true)
+				char html[] = mdHTML.process(mdDoc, "docMainColumn", codeStyling, true, false, "docNavColumn")
 
 				char plainName[] = files[i].name.rsplit(".")[0].string
 				fd = new File("$(destDir)/$(plainName).html", File.CREATE)

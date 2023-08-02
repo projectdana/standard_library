@@ -56,7 +56,7 @@ data WorkerThread {
 }
 
 component provides RequestHandler(Destructor) requires io.Output out, io.FileSystem fileSystem, io.File, ws.DocStream, data.StringUtil stringUtil,
- data.IntUtil intUtil, ws.Web rh, time.Timer timer, net.http.Util util, time.Calendar cal {
+ data.IntUtil intUtil, ws.Web rh, time.Timer timer, net.http.Util util, time.Calendar cal, net.TLS {
 	
 	char web_root[] = "./"
 	
@@ -641,13 +641,19 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 		return threadPool[smallestIndex]
 		}
 	
-	void RequestHandler:processStream(TCPSocket s, TLS tls, ConfigData cfg)
+	void RequestHandler:processStream(TCPSocket s, TLSContext tlsCtx, ConfigData cfg)
 		{
+		TLS tls
+
 		WorkerThread worker = getWorker()
 		
 		Stream stream = s
-		
-		if (tls != null) stream = tls
+
+		if (tlsCtx != null)
+			{
+			tls = new TLS(tlsCtx)
+			stream = tls
+			}
 		
 		WorkItem nwi = new WorkItem(s, tls, stream, cfg.landingPages, cfg)
 		

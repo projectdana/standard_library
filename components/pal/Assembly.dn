@@ -77,14 +77,19 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 
 	OptionBuilder builder
 
+	String searchPaths[]
+
 	//the list of registered interceptors
 	Interceptor interceptors[]
 
-	Assembly:Assembly(char main[], store AppParam params[], store IDC perceptionModule, opt store String excludeList[])
-		{
-		String searchPaths[] = getStandardSearchPaths(main)
+	//disabled exceptions
+	String exceptionsDisabled[]
 
-		builder = new OptionBuilder(main, searchPaths, new String[](new String("pal.Perception"), excludeList))
+	Assembly:Assembly(char main[], store AppParam params[], store IDC perceptionModule, opt store String interfaceExcludeList[], store String componentExcludeList[])
+		{
+		searchPaths = getStandardSearchPaths(main)
+
+		builder = new OptionBuilder(main, searchPaths, new String[](new String("pal.Perception"), interfaceExcludeList), componentExcludeList)
 
 		Composition options[] = builder.getCompositions()
 
@@ -356,6 +361,31 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 		return iact.req
 		}
 	
+	bool nativeExceptionsDisabled(char path[])
+		{
+		PlatformInfo pi = system.getPlatform()
+		for (int j = 0; j < exceptionsDisabled.arrayLength; j++)
+			{
+			if (exceptionsDisabled[j].string.find("resources-ext") != StringUtil.NOT_FOUND)
+				{
+				for (int i = 0; i < searchPaths.arrayLength; i++)
+					{
+					char testPath[] = "$(searchPaths[i].string)resources-ext/$path"
+
+					if (testPath == exceptionsDisabled[j].string)
+						return true
+					
+					testPath = "$(searchPaths[i].string)resources-ext/$path[$(pi.osCode).$(pi.chipCode)].dnl"
+
+					if (testPath == exceptionsDisabled[j].string)
+						return true
+					}
+				}
+			}
+		
+		return false
+		}
+
 	Component loadComponent(Composition forc, char comp[], ProxyLoaderInfo ploaders[])
 		{
 		//check if it's a proxy
@@ -407,6 +437,12 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			//not a proxy - load it using our standard load approach
 			c.com = loader.load(comp)
 
+			if (exceptionsDisabled.findFirst(String.[string], new String(comp)) != null)
+				{
+				//out.println("disable exceptions on $(comp)")
+				c.com.enableExceptions(false)
+				}
+
 			if (c.com == null)
 				{
 				throw new Exception("failed to load component '$comp'")
@@ -428,6 +464,11 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 				if (ris[i].isNative)
 					{
 					IDC ncom = nLoader.load(ris[i].intf)
+					if (nativeExceptionsDisabled(ris[i].intf))
+						{
+						//out.println("disable exceptions on $(ris[i].intf)")
+						ncom.enableExceptions(false)
+						}
 					c.com.wire(ris[i].intf, ncom, ris[i].intf)
 					c.completeWirings ++
 					}
@@ -1240,6 +1281,11 @@ component provides Assembly requires io.Output out, data.StringUtil stringUtil, 
 			}
 		
 		return result
+		}
+	
+	void Assembly:disableExceptions(String paths[])
+		{
+		exceptionsDisabled = paths
 		}
 
 	}

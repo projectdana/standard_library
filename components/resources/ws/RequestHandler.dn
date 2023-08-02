@@ -1,5 +1,5 @@
 uses net.TCPSocket
-uses net.TLS
+uses net.TLSContext
 uses data.String
 
 data KeyVal {
@@ -18,6 +18,6 @@ interface RequestHandler {
 	
 	RequestHandler()
 	
-	void processStream(store TCPSocket client, store TLS tls, store ConfigData cfg)
+	void processStream(store TCPSocket client, store TLSContext tlsCtx, store ConfigData cfg)
 	
 	}

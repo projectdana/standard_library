@@ -7,9 +7,7 @@ uses data.String
 
 interface StringUtil{
 	
-	/*
-	 {"@description" : "This is returned by search functions when the search term is not found in the string."}
-	*/
+	/* {"@description" : "This is returned by search functions when the search term is not found in the string."} */
 	const int NOT_FOUND = INT_MAX
 	
 	/*
@@ -20,59 +18,47 @@ interface StringUtil{
 	*/
 	char[] subString(char string[], int start, int length)
 	
-	/*
-	 {"@description" : "Return the given string with all white space removed from the start."}
-	*/
+	/* {"@description" : "Return the given string with all white space removed from the start."} */
 	char[] ltrim(char string[])
 	
-	/*
-	 {"@description" : "Return the given string with all white space removed from the end."}
-	*/
+	/* {"@description" : "Return the given string with all white space removed from the end."} */
 	char[] rtrim(char string[])
 	
-	/*
-	 {"@description" : "Return the given string with all white space removed from the start and end."}
-	*/
+	/* {"@description" : "Return the given string with all white space removed from the start and end."} */
 	char[] trim(char string[])
 	
-	/*
-	 {"@description" : "Return the given string with all alphabetical characters converted to upper case."}
-	*/
+	/* {"@description" : "Return the given string with all alphabetical characters converted to upper case."} */
 	char[] uppercase(char string[])
 	
-	/*
-	 {"@description" : "Return the given string with all alphabetical characters converted to lower case."}
-	*/
+	/* {"@description" : "Return the given string with all alphabetical characters converted to lower case."} */
 	char[] lowercase(char string[])
 	
-	/*
-	 {"@description" : "Compare two strings, ignoring their case."}
-	*/
+	/* {"@description" : "Compare two strings, ignoring their case."} */
 	bool iequal(char a[], char b[])
 	
 	/*
 	 {"@description" : "Find searchTerm within the string 'in'."
 			"@return" : "The index of the string being searched for, or NOT_FOUND if the string does not exist."}
 	*/
-	int find(char in[], char searchTerm[])
+	int find(char in[], char searchTerm[], opt int startIndex)
 	
 	/*
 	 {"@description" : "Find searchTerm within the string 'in', ignoring case differences."
 			"@return" : "The index of the string being searched for, or NOT_FOUND if the string does not exist."}
 	*/
-	int ifind(char in[], char searchTerm[])
+	int ifind(char in[], char searchTerm[], opt int startIndex)
 	
 	/*
 	 {"@description" : "Find searchTerm within the string 'in', starting from the end of the other string."
 			"@return" : "The index of the string being searched for, or NOT_FOUND if the string does not exist."}
 	*/
-	int rfind(char in[], char searchTerm[])
+	int rfind(char in[], char searchTerm[], opt int startIndex)
 	
 	/*
 	 {"@description" : "Find searchTerm within the string 'in', starting from the end of the other string, ignoring case differences."
 			"@return" : "The index of the string being searched for, or NOT_FOUND if the string does not exist."}
 	*/
-	int irfind(char in[], char searchTerm[])
+	int irfind(char in[], char searchTerm[], opt int startIndex)
 	
 	/*
 	 {"@description" : "Tokenise a string using the given list of tokens."

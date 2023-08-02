@@ -541,10 +541,12 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 			out.println("Any parameters after main_component.o are passed to the sub-program")
 			out.println("")
 			out.println("options for pal.rest:")
-			out.println(" -p portNumber     Set the port number on which the REST service will listen")
-			out.println(" -a serverAddress  Set the server address to bind the REST service to")
-			out.println("                   Default address is 127.0.0.1 (local connections only)")
-			out.println("                   To support remote connections, use ANY, ANY_v4, or ANY_v6)")
+			out.println(" -exc \"a;b;c\"        Exclude given components from initial compostion search")
+			out.println(" -xd  \"a;b;c\"        Disable exception printing for specific components")
+			out.println(" -p   portNumber     Set the port number on which the REST service will listen")
+			out.println(" -a   serverAddress  Set the server address to bind the REST service to")
+			out.println("                     Default address is 127.0.0.1 (local connections only)")
+			out.println("                     To support remote connections, use ANY, ANY_v4, or ANY_v6)")
 			return 0
 			}
 		
@@ -552,6 +554,10 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		
 		int serverPort = HOST_PORT
 		char serverAddress[] = HOST_ADDRESS
+
+		String cExclude[] = null
+
+		String exceptionsDisable[] = null
 		
 		AppParam subParams[] = null
 		
@@ -593,10 +599,38 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 							serverAddress = TCPServerSocket.ANY_ADDRESS_v4
 							else if (serverAddress == "ANY_v6")
 							serverAddress = TCPServerSocket.ANY_ADDRESS_v6
+						
+						i ++
 						}
 						else
 						{
 						out.println("expected IP address, or ANY, ANY_v4, ANY_v6 after -a")
+						return 0
+						}
+					}
+					else if (params[i].string == "-exc")
+					{
+					if (i + 1 < params.arrayLength)
+						{
+						cExclude = params[i+1].string.explode(";")
+						i ++
+						}
+						else
+						{
+						out.println("expected one or more components to exclude after -exc")
+						return 0
+						}
+					}
+					else if (params[i].string == "-xd")
+					{
+					if (i + 1 < params.arrayLength)
+						{
+						exceptionsDisable = new String[](exceptionsDisable, params[i+1].string.explode(";"))
+						i ++
+						}
+						else
+						{
+						out.println("expected one or more components to exclude after -xd")
 						return 0
 						}
 					}
@@ -610,6 +644,12 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 				//collect as a sub-parameter to pass to the sub-program we're launching
 				subParams = new AppParam[](subParams, new AppParam(params[i].string))
 				}
+			}
+		
+		if (objectFile == null)
+			{
+			out.println("object file not specified")
+			return 1
 			}
 		
 		objectFile = objectFile.explode("\\").implode("/")
@@ -647,7 +687,8 @@ component provides App requires io.Output out, data.IntUtil iu, data.DecUtil du,
 		out.println("[scanning system for components, please be patient...]")
 		
 		perc = new Perception() from perception
-		assembly = new Assembly(fs.getFullPath(resolvedFile), subParams, perception)
+		assembly = new Assembly(fs.getFullPath(resolvedFile), subParams, perception, componentExcludeList = cExclude)
+		assembly.disableExceptions(exceptionsDisable)
 		
 		configs = assembly.getConfigs()
 		

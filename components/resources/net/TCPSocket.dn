@@ -35,6 +35,9 @@ interface TCPSocket extends net.Stream {
 	/* {"@description" : "In non-blocking mode only, send any pending bytes; this should be called after a write-ability notification has been received from a TCPMonitor."} */
 	int sendBuffer()
 
+	/* {"@description" : "In non-blocking mode only, check how many bytes are in the send buffer pending write-ability."} */
+	int getBufferUnsent()
+
 	/* {"@description" : "Test whether or not this socket is connected (this is useful only in non-blocking mode, to determine whether a null return from recv() is temporary or terminal)."} */
 	bool connected()
 	}

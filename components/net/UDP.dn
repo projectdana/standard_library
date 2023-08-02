@@ -5,7 +5,8 @@ interface UDPLib{
 	void setBlocking(int hnd, bool blocking)
 	void unbind(int hnd)
 
-	int createSelect()
+	int createSelect(int eventArrayLength)
+	bool setEventArrayLength(int selectHandle, int l)
 	bool addSocket(int selectHandle, int socketHandle, Data se)
 	void remSocket(int selectHandle, int socketHandle)
 	int wait(int selectHandle, Data events[])
@@ -23,6 +24,8 @@ data MonitorList {
 	MonitorData mdata
 	MonitorList next
 }
+
+const int MONITOR_EVENT_ARRAY_LENGTH = 16
 
 component provides net.UDPServer, net.UDPClient, net.UDPMonitor(Destructor) requires native UDPLib lib
 	{
@@ -79,13 +82,13 @@ component provides net.UDPServer, net.UDPClient, net.UDPMonitor(Destructor) requ
 
 		int handle
 
-		MonitorEvent events[] = new MonitorEvent[16]
+		MonitorEvent events[] = new MonitorEvent[MONITOR_EVENT_ARRAY_LENGTH]
 
 		MonitorList socketList
 		
 		UDPMonitor:UDPMonitor()
 			{
-			handle = lib.createSelect()
+			handle = lib.createSelect(MONITOR_EVENT_ARRAY_LENGTH)
 			if (handle == 0) throw new Exception("failed to create UDP selector")
 			}
 		

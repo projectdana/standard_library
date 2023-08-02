@@ -25,7 +25,7 @@ data CompositionUpdate {
 
 interface OptionBuilder {
 	
-	OptionBuilder(char path[], opt store String searchPaths[], store String excludeList[])
+	OptionBuilder(char path[], opt store String searchPaths[], store String interfaceExcludeList[], store String componentExcludeList[])
 	
 	//NOTE: we currently assume that autobindings are NOT included in compositions; we could include them with a special InterfaceAction comp of "_runtime"
 	Composition[] getCompositions()

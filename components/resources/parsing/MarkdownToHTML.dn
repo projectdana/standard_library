@@ -35,5 +35,5 @@ interface MarkdownToHTML {
 	/*
 	 {"@description" : "Process a parsed markdown document, converting it to HTML. A set of source code styling options can optionally be provided, for different languages, to indicate the CSS classes to use for rendering source code from a given language. Where the source code language is not specified in the markdown document, the first styling option on this list will be used by default."}
 	*/
-	char[] process(MDElement doc, opt MDCodeStyle codeStyling[], bool generateTOC)
+	char[] process(MDElement doc, opt char mainDivClass[], MDCodeStyle codeStyling[], bool generateTOC, bool tocFirst, char tocDivClass[])
 	}

@@ -1,5 +1,8 @@
 uses X509Certificate
 
+/* { "description" : "This is a utility interface to parse an X509 certificate, often known as an 'SSL certificate'." } */
+
 interface X509Parser {
+	/* { "@description" : "Parse a certificate, provided as the bytes of that certificate, into an X509Certificate data instance." } */
 	X509Certificate parse(char doc[])
 }

@@ -1,11 +1,24 @@
+uses time.DateTime
+
+/* { "description" : "This is a data type to represent basic information about X509 certificates, often known as 'SSL certificates'." } */
+
 data X509Certificate {
+	/* { "@description" : "The certificate's unique serial number." } */
 	char serialNumber[]
+	/* { "@description" : "The certificate's issuer details (which may be a comma-separated list of sub-fields, in the format A=x, B=y)." } */
 	char issuer[]
+	/* { "@description" : "The certificate's subject details (which may be a comma-separated list of sub-fields, in the format A=x, B=y)." } */
 	char subject[]
+	/* { "@description" : "The encryption algorithm for which the public key is intended to be used." } */
 	char publicKeyAlgorithm[]
+	/* { "@description" : "The public key, for encryption of data to be transported to the certificate owner." } */
 	char publicKey[]
-	char validAfter[]
-	char validUntil[]
+	/* { "@description" : "The date and time after which this certificate first became valid. This value should be in GMT." } */
+	DateTime validAfter
+	/* { "@description" : "The date and time at which this certificate becomes invalid and should no longer be trusted. This value should be in GMT." } */
+	DateTime validUntil
+	/* { "@description" : "The algorithm used to digitally sign the certificate." } */
 	char signatureAlgorithm[]
+	/* { "@description" : "The certificate's digital signature." } */
 	char signature[]
 }
