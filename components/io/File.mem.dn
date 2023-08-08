@@ -46,7 +46,7 @@ component provides io.File:mem requires data.IntUtil iu, io.Output out {
 		{
 		mutex(rwLock)
 			{
-			if (mode != File.WRITE)
+			if (mode != File.WRITE && mode != File.CREATE)
 				{
 				throw new Exception("File is not open for write")
 				}

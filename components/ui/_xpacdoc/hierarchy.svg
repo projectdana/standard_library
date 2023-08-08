@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="55mm"
+   height="66mm"
+   viewBox="0 0 55 66"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09, custom)"
+   sodipodi:docname="hierarchy.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="0.66239819"
+     inkscape:cx="201.54041"
+     inkscape:cy="77.747797"
+     inkscape:window-width="1850"
+     inkscape:window-height="1016"
+     inkscape:window-x="70"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="RoundedArrow"
+       markerWidth="6.1347523"
+       markerHeight="5.9304953"
+       viewBox="0 0 6.1347524 5.9304951"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path1367" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:none;fill-opacity:0.55;stroke:#000000;stroke-width:0.264583;stroke-opacity:1"
+       id="rect234"
+       width="42.100346"
+       height="9.5285234"
+       x="4.8352289"
+       y="51.62331" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.93889px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="6.1294641"
+       y="57.778255"
+       id="text1726"><tspan
+         sodipodi:role="line"
+         id="tspan1724"
+         style="font-size:4.93889px;stroke-width:0.264583"
+         x="6.1294641"
+         y="57.778255">KeyEventObject</tspan></text>
+    <rect
+       style="fill:none;fill-opacity:0.55;stroke:#000000;stroke-width:0.264583;stroke-opacity:1"
+       id="rect1886"
+       width="42.100346"
+       height="9.5285234"
+       x="4.8352289"
+       y="35.748306" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.93889px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="6.1294641"
+       y="41.903252"
+       id="text1890"><tspan
+         sodipodi:role="line"
+         id="tspan1888"
+         style="font-size:4.93889px;stroke-width:0.264583"
+         x="6.1294641"
+         y="41.903252">XYMouseObject</tspan></text>
+    <rect
+       style="fill:none;fill-opacity:0.55;stroke:#000000;stroke-width:0.264583;stroke-opacity:1"
+       id="rect2618"
+       width="42.100346"
+       height="9.5285234"
+       x="4.8352289"
+       y="19.873287" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.93889px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="6.1294641"
+       y="26.028234"
+       id="text2622"><tspan
+         sodipodi:role="line"
+         id="tspan2620"
+         style="font-size:4.93889px;stroke-width:0.264583"
+         x="6.1294641"
+         y="26.028234">ClickableObject</tspan></text>
+    <rect
+       style="fill:none;fill-opacity:0.55;stroke:#000000;stroke-width:0.264583;stroke-opacity:1"
+       id="rect3350"
+       width="42.100346"
+       height="9.5285234"
+       x="4.8352289"
+       y="3.9982834" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:4.93889px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="6.1294641"
+       y="10.153228"
+       id="text3354"><tspan
+         sodipodi:role="line"
+         id="tspan3352"
+         style="font-size:4.93889px;stroke-width:0.264583"
+         x="6.1294641"
+         y="10.153228">GraphicsObject</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.465;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow)"
+       d="M 24.887416,19.896588 V 15.755163"
+       id="path4136"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.465;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow)"
+       d="M 24.887416,35.771589 V 31.630164"
+       id="path4501"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.465;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#RoundedArrow)"
+       d="M 24.887416,51.64659 V 47.505165"
+       id="path4505"
+       sodipodi:nodetypes="cc" />
+  </g>
+</svg>

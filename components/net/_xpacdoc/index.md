@@ -89,8 +89,16 @@ A TCP server that uses non-blocking servers, and is otherwise identical in funct
 
 ```
 component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonitor, io.Output out, data.IntUtil iu, time.Timer timer {
-		
-	void dataThread(TCPMonitor monitor)
+	
+	TCPMonitor monitor
+
+	eventsink NetEvents(EventData ed)
+		{
+		TCPSocket source = ed.source
+		monitor.armSendNotify(source)
+		}
+	
+	void dataThread()
 		{
 		while (true)
 			{
@@ -104,6 +112,7 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 				{
 				for (int i = 0; i < events.arrayLength; i++)
 					{
+					out.println("$(events.arrayLength) socket ready")
 					if (events[i].recvReady)
 						{
 						char msg[] = null
@@ -121,6 +130,7 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 								{
 								if (!events[i].socket.connected())
 									{
+									out.println("[disconnect]")
 									monitor.remSocket(events[i].socket)
 									events[i].socket.disconnect()
 									}
@@ -133,11 +143,13 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 						
 					if (events[i].sendReady)
 						{
-						//do e.g. sendBuffer()
+						//do something
+						events[i].socket.sendBuffer()
 						}
 						
 					if (events[i].close)
 						{
+						out.println("[close]")
 						monitor.remSocket(events[i].socket)
 						events[i].socket.disconnect()
 						}
@@ -153,9 +165,9 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 		if (!server.bind(TCPServerSocket.ANY_ADDRESS, 3000))
 			throw new Exception("failed to bind server socket")
 			
-		TCPMonitor monitor = new TCPMonitor()
+		monitor = new TCPMonitor()
 
-		asynch::dataThread(monitor)
+		asynch::dataThread()
 
 		while (true)
 			{
@@ -446,6 +458,8 @@ data TLSInfo
 
 component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonitor, net.TLS, net.TLSContext, io.File, io.Output out, data.IntUtil iu, time.Timer timer {
 	
+	TCPMonitor monitor
+
 	TLSContext tlsContext
 
 	bool loadSSLContext(char certificatePath[], byte keyPath[])
@@ -466,7 +480,14 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 		return true
 		}
 	
-	void dataThread(TCPMonitor monitor)
+	eventsink TLSNetEvents(EventData ed)
+		{
+		TLS source = ed.source
+		TCPSocket socket = source.getSocket()
+		monitor.armSendNotify(socket)
+		}
+	
+	void dataThread()
 		{
 		while (true)
 			{
@@ -599,7 +620,7 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 							}
 							else if (ti.state == TLSInfo.S_CONNECTED)
 							{
-							
+							ti.ssl.sendBuffer()
 							}
 						}
 					
@@ -626,8 +647,8 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 		if (!server.bind(TCPServerSocket.ANY_ADDRESS, 3000))
 			throw new Exception("failed to bind server socket")
 		
-		TCPMonitor monitor = new TCPMonitor()
-		asynch::dataThread(monitor)
+		monitor = new TCPMonitor()
+		asynch::dataThread()
 		
 		while (true)
 			{
@@ -640,6 +661,7 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 				TLSInfo ti = new TLSInfo(TLSInfo.S_PRE_ACCEPT, ssl)
 
 				client.setNonBlocking(ti)
+				sinkevent TLSNetEvents(ssl)
 				monitor.addSocket(client, ti)
 				}
 			}
