@@ -9,7 +9,7 @@ data Dependency{
 	char sourcePath[]
 	}
 
-component provides App requires io.Output out, io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, composition.ObjectReader, data.json.JSONParser parser, data.StringUtil stringUtil, os.SystemInfo systemInfo, System system {
+component provides App requires io.Output out, io.FileSystem fileSystem, io.File, Loader loader, NativeLoader nLoader, util.ObjectFile, data.json.JSONParser parser, data.StringUtil stringUtil, os.SystemInfo systemInfo, System system {
 	
 	//this function takes a "base" path from which to check for a manifest (may be an empty string) and a "pkg" path which is expected to be in a dotted form, i.e. net.TCPSocket
 	char[] checkManifest(char base[], char pkg[])
@@ -162,8 +162,8 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 		// - enumerate all of com's required interfaces; search for a component for each one
 		// - then follow this procedure recursively (avoiding loading the same component twice)
 		
-		ObjectReader reader = new ObjectReader(path)
-		InfoSection section = reader.getInfoSection("DNIL")
+		ObjectFile reader = new ObjectFile(path)
+		InfoSection section = reader.getInfoSection("DNIL", null)
 		
 		JSONElement document = parser.parseDocument(section.content)
 		
@@ -234,6 +234,8 @@ component provides App requires io.Output out, io.FileSystem fileSystem, io.File
 				svc.stop()
 				svc = null
 				}
+			
+			dependencies[i].com = null
 			}
 		}
 	

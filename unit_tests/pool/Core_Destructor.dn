@@ -1,4 +1,4 @@
-component provides UnitTest requires ObjectC {
+component provides UnitTest requires io.Output out, data.IntUtil iu, ObjectC {
 	
 	int test()
 		{

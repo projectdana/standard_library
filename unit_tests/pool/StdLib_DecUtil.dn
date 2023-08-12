@@ -255,7 +255,7 @@ component provides UnitTest requires io.Output out, data.DecUtil decUtil {
 		
 		if (r != 6.26) throw new Exception("Failure in test 1")
 		
-		char uc[] = decUtil.decToString(i)
+		char uc[] = decUtil.makeString(i)
 		
 		if (uc != "31.3") throw new Exception("Failure in test 2")
 		
@@ -270,7 +270,7 @@ component provides UnitTest requires io.Output out, data.DecUtil decUtil {
 		
 		dec d = 0.005
 		
-		if (decUtil.decToString(d) != "0.005") throw new Exception("Failure in test 4")
+		if (decUtil.makeString(d) != "0.005") throw new Exception("Failure in test 4")
 		
 		//basic arithmetic with equal size operands
 		dec a = 1.0

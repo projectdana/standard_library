@@ -20,7 +20,7 @@ component provides UnitTest requires io.Output out, data.IntUtil iu, ml.rl.RL uc
 	
 	bool UnitTest:runTest()
 		{
-		File fd = new File("ext-files/rl_test_data.txt", File.FILE_ACCESS_READ)
+		File fd = new File("ext-files/rl_test_data.txt", File.READ)
 		Row rows[] = encoder.jsonToArray(fd.read(fd.getSize()), typeof(Row[]), null)
 		
 		store String actions[]

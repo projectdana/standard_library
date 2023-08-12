@@ -1,8 +1,8 @@
-component provides UnitTest requires io.Output out, composition.ObjectWriter {
+component provides UnitTest requires io.Output out, util.ObjectFile {
 	
 	bool UnitTest:runTest()
 		{
-		ObjectWriter ow = new ObjectWriter("PoolTest.o")
+		ObjectFile ow = new ObjectFile("PoolTest.o")
 		
 		InfoSection is = ow.getInfoSection("DNIL", "json")
 		

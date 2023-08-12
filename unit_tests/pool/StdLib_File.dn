@@ -4,22 +4,22 @@ component provides UnitTest requires io.File, io.FileSystem fileSystem {
 		{
 		char buf[]
 		
-		File fd = new File("test.txt", File.FILE_ACCESS_WRITE)
+		File fd = new File("test.txt", File.WRITE)
 		fd.write("hello\n")
 		fd.close()
 		
-		fd = new File("test.txt", File.FILE_ACCESS_READ)
+		fd = new File("test.txt", File.READ)
 		buf = fd.read(128)
 		fd.close()
 		
 		if (buf != "hello\n") throw new Exception("Failure in test 1")
 		
-		fd = new File("test.txt", File.FILE_ACCESS_WRITE)
+		fd = new File("test.txt", File.WRITE)
 		fd.setPos(fd.getSize())
 		fd.write("hello\n")
 		fd.close()
 		
-		fd = new File("test.txt", File.FILE_ACCESS_READ)
+		fd = new File("test.txt", File.READ)
 		buf = fd.read(128)
 		fd.close()
 		

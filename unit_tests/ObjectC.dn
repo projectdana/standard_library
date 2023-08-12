@@ -1,5 +1,5 @@
 
-component provides ObjectC(Destructor) {
+component provides ObjectC(Destructor) requires io.Output out {
 	
 	static int counter = 0
 	

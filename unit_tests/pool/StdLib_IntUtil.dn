@@ -4,7 +4,7 @@ component provides UnitTest requires io.Output out, data.IntUtil intUtil {
 		{
 		int i = 31
 		
-		char uc[] = intUtil.intToString(i)
+		char uc[] = intUtil.makeString(i)
 		
 		if (uc != "31") throw new Exception("Failure in test 1")
 		

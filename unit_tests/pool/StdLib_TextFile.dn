@@ -4,7 +4,7 @@ component provides UnitTest requires io.TextFile {
 		{
 		char buf[]
 		
-		File fd = new TextFile("potato.txt", File.FILE_ACCESS_READ)
+		File fd = new TextFile("potato.txt", File.READ)
 		
 		if (fd != null)
 			throw new Exception("Failure in test 1")
