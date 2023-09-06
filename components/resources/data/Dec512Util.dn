@@ -1,0 +1,20 @@
+/*
+{ "description" : "Convert between decimal fractions and strings."}
+*/
+
+interface Dec512Util{
+	/*
+	{ "@description" : "Convert a decimal fraction to a string.", "@deprecated" : true, "@deprecatedBy" : "makeString"}
+	*/
+	char[] decToString(dec512 i)
+	
+	/*
+	{ "@description" : "Convert a string to a decimal fraction."}
+	*/
+	dec512 decFromString(char s[])
+	
+	/*
+	{ "@description" : "Convert a decimal fraction to a string."}
+	*/
+	char[] makeString(dec512 i, opt int decimalPlaces)
+	}
