@@ -12,7 +12,7 @@ interface TCPServerSocket{
 	/* {"@description" : "Bind to any and all IPv6 addresses of the host."} */
 	const char ANY_ADDRESS_v6[] = "ANY_v6"
 	
-	/* {"@description" : "Bind a TCP 'server' or 'master' socket to a given IP address and port number."} */
+	/* {"@description" : "Bind a TCP 'server' or 'master' socket to a given IP address and port number. The optional parameter reuseAddress defaults to false, but if set to true the system will immediately re-use the given address and port number after a recent unbind (rather than being forced to wait e.g. for a TIME_WAIT period)."} */
 	bool bind(char address[], int port, opt bool reuseAddress)
 	
 	/* {"@description" : "Unbind this socket (allowing other sockets to bind to this address/port)."} */

@@ -86,15 +86,12 @@ component provides composition.RecursiveLoader requires composition.Search searc
 		
 		for (int i = 0; i < ri.arrayLength; i++)
 			{
-			if (!ri[i].isNative && !isAutoBinding(ri[i].package) && !isIgnore(ignore, ri[i].package))
+			char pkg[] = ri[i].package
+			if (ri[i].semantic.arrayLength != 0) pkg = "$pkg:$(ri[i].semantic)"
+			
+			if (!ri[i].isNative && !isAutoBinding(ri[i].package) && !isIgnore(ignore, pkg))
 				{
-				char pkg[] = ri[i].package
-				char alias[] = ri[i].alias
-				if (ri[i].semantic.arrayLength != 0)
-					{
-					pkg = "$pkg:$(ri[i].semantic)"
-					}
-				resolveDependency(lc, comIndex, pkg, alias)
+				resolveDependency(lc, comIndex, pkg, ri[i].alias)
 				}
 				else if (ri[i].isNative && !com.isConnected(ri[i].alias))
 				{

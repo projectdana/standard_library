@@ -6,9 +6,9 @@ uses media.PixelMap
 uses ui.Color
 uses FontMetrics
 
-interface Font{
+interface FlowFont {
 	/* { "@description" : "Creates a new font instance, from a given font file, using a given font size." } */
-	Font(char path[], int size)
+	FlowFont(char path[], int size)
 	
 	/* { "@description" : "Get the font size." } */
 	int getSize()
@@ -30,4 +30,7 @@ interface Font{
 	
 	/* { "@description" : "Get a piece of text, rendered with this font on a single line, as a bitmap." } */
 	PixelMap getPixels(char text[], Color textColor)
+
+	/* { "@description" : "Free this font's system resources. This function must be called from the main thread of the application. System font resources are NOT automatically cleaned up by a destructor, so this function MUST be called manually to properly free resources." } */
+	void destroy()
 	}

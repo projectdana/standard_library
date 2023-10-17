@@ -1,6 +1,8 @@
 {
 "defaultLinks":	[
-				{"interface": "Font", "component": "IOLayer"}
-				{"interface": "IOWindow", "component": "IOLayer"}
+				{"interface": "Font", "component": "IOLayer"},
+				{"interface": "IOWindow", "component": "IOLayer"},
+				{"interface": "FlowCanvas", "component": "FlowRender"},
+				{"interface": "FlowFont", "component": "FlowRender"}
 				]
 }

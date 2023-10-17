@@ -1,0 +1,101 @@
+uses Rect2D
+uses Ellipse2D
+uses Line2D
+uses Curve2D
+uses Arc2D
+uses Polygon2D
+uses Color
+uses Point2D
+uses media.PixelMap
+uses Font
+uses Rect
+uses Point
+
+/* {"description" : "FlowCanvas is a direct rendering API for 2D graphics, generally used by applications such as video games. All of the functions in this API must only be called from the main thread of your program."} */
+
+interface FlowCanvas {
+	
+	/* {"@description" : "Initialise a new direct rendering canvas, specifying the target renderer."} */
+	FlowCanvas(store FlowRender renderer)
+
+	/* { "@description" : "Draw a single-pixel point at the given location and with the given color." } */
+	void point(Point2D point)
+
+	/* { "@description" : "Draw a line between two points, the given description of size, position, and color." } */
+	void line(Line2D line, opt int lineWidth)
+
+	/* { "@description" : "Draw a line between two points, the given description of size, position, and color." } */
+	void curve(Curve2D line, int isteps, opt int lineWidth)
+	
+	/* { "@description" : "Draw a filled rectangle using the given description of size, position, and color." } */
+	void rect(Rect2D rect)
+	
+	/* { "@description" : "Draw an outline rectangle using the given description of size, position, and color." } */
+	void rectOutline(Rect2D rect, opt int lineWidth)
+
+	/* { "@description" : "Draw a filled rectangle with rounded corners using the given description of size, position, and color." } */
+	void roundedRect(Rect2D rect, int xRadius, int yRadius)
+	
+	/* { "@description" : "Draw an outline rectangle with rounded corners using the given description of size, position, and color." } */
+	void roundedRectOutline(Rect2D rect, int xRadius, int yRadius, opt int lineWidth)
+
+	/* { "@description" : "Draw a filled ellipse using the given description of position, radius, and color." } */
+	void ellipse(Ellipse2D ellipse)
+	
+	/* { "@description" : "Draw an outline ellipse using the given description of position, radius, and color." } */
+	void ellipseOutline(Ellipse2D ellipse, opt int lineWidth)
+
+	/* { "@description" : "Draw a filled arc using the given description of position, radius, and color." } */
+	void arc(Arc2D ellipse)
+
+	/* { "@description" : "Draw an outline arc using the given description of position, radius, and color." } */
+	void arcOutline(Arc2D ellipse, opt int lineWidth)
+
+	/* { "@description" : "Draw a filled pie using the given description of position, radius, and color." } */
+	void pie(Arc2D ellipse)
+
+	/* { "@description" : "Draw a filled polygon." } */
+	void polygon(Polygon2D p)
+	
+	/* { "@description" : "Draw an outline polygon." } */
+	void polygonOutline(Polygon2D p)
+
+	/* { "@description" : "Draw a filled polygon bounded by curves." } */
+	void polygonBezier(Polygon2D p, int isteps)
+	
+	/*
+	{ "@description" : "Draw a rectangle of pixels, at the given position, with the given rotation in degrees.",
+			"map" : "The pixels to draw.",
+			"x" : "The X position at which to draw the top-left of the pixel map.",
+			"y" : "The Y position at which to draw the top-left of the pixel map.",
+			"scaledWidth" : "The width in pixels at which to scale the image.",
+			"scaledHeight" : "The height in pixels at which to scale the image.",
+			"rotation" : "The rotation to apply to the pixel map, in degrees.",
+			"clipFrame" : "The clipping boundary."
+	}
+	*/
+	void pixels(PixelMap map, int x, int y, opt int scaledWidth, int scaledHeight, int rotation, Rect clipFrame)
+	
+	/*
+	{ "@description" : "Draw a piece of text, at the given position, with the given font.",
+			"position" : "The x/y coordinate at which to draw the top left of the text.",
+			"f" : "The font with which to draw the text.",
+			"text" : "The text to draw.",
+			"rotation" : "The rotation to apply to the text, in degrees."
+	}
+	*/
+	void text(Point2D position, FlowFont f, char text[], opt int rotation)
+
+	/*
+	{ "@description" : "Push a new surface to the surface stack, using the given rect instance to indicate the x/y position and width/height. Any new draw operations will take place inside this surface, with the zero x/y coordinates of draw commands being relative to the top left corner of the surface, and will be clipped at the surface's width/height.",
+			"rect" : "The x/y coordinate and width/height of the surface.",
+			"xscr" : "The amount, in pixels, by which the surface is 'scrolled' on the X-axis.",
+			"yscr" : "The amount, in pixels, by which the surface is 'scrolled' on the Y-axis.",
+			"alpha" : "The alpha blend to apply to elements drawn on the surface."
+	}
+	*/
+	void pushSurface(Rect rect, int xscr, int yscr, byte alpha)
+	
+	/* { "@description" : "Pop the top-most surface from the surface stack." } */
+	void popSurface()
+	}

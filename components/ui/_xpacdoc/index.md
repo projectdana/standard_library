@@ -964,3 +964,79 @@ void keyUp(int keyID)
 ```
 
 This interface is typically extended by widgets which need to track keyboard input notifications.
+
+### FlowRender game-like applications
+
+As well as a framework designed for desktop applications, the UI package also includes a framework designed for videogame-like applications. These applications use a rendering loop, potentially running at a specific framerate, issue draw commands directly from that rendering loop, and collect input events from that loop.
+
+Here we show a simple example of a rendering loop with an event processing function, running at a rate of 60 frames per second:
+
+<img src = "ball.png"/>
+
+To create this example, make a new file `Main.dn` and open it in a text editor. We're going to use the `FlowRender` interface of UI package, and the `FlowCanvas` interface to do some simple 2D drawing using screen coordinates. Enter the following code:
+
+```
+component provides App requires ui.FlowRender, ui.FlowCanvas, ui.FlowFont, time.Timer timer, io.Output out {
+
+	bool processEvents(FlowEvent events[])
+		{
+		bool quit = false
+		for (int i = 0; i < events.arrayLength; i++)
+			{
+			if (events[i].type == FlowEvent.T_QUIT)
+				{
+				quit = true
+				}
+			}
+		
+		return quit
+		}
+	
+	int App:main(AppParam params[])
+		{
+		FlowRender window = new FlowRender(60)
+		window.setSize(400, 200)
+		FlowCanvas canvas = new FlowCanvas(window)
+
+		window.setTitle("Direct Render Loop")
+		window.setVisible(true)
+
+		Ellipse2D ball = new Ellipse2D(10, 100, 80, 80, new Color(100, 100, 200, 255))
+
+		bool quit = false
+
+		int x = 100
+		bool right = true
+		
+		while (!quit)
+			{
+			FlowEvent events[] = window.getEvents()
+
+			window.renderBegin()
+
+			ball.x = x
+			canvas.ellipse(ball)
+			
+			window.renderEnd()
+
+			quit = processEvents(events)
+
+			window.wait()
+
+			if (right)
+				{
+				x += 2
+				if (x > 300) right = false
+				}
+				else
+				{
+				x -= 2
+				if (x == 80) right = true
+				}
+			}
+		
+		return 0
+		}
+
+}
+```

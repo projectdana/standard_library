@@ -1,0 +1,522 @@
+data WindowEventData {
+	int button_id
+	int x
+	int y
+	int exd1
+	int exd2
+}
+
+data DropEventData {
+	int x
+	int y
+	char path[]
+}
+
+interface UIPlaneLib {
+	
+	event ready()
+	
+	event mouseUp(WindowEventData wed)
+	event mouseDown(WindowEventData wed)
+	event mouseMove(WindowEventData wed)
+	event mouseWheel(WindowEventData wed)
+	event keyDown(WindowEventData wed)
+	event keyUp(WindowEventData wed)
+	event resize(WindowEventData wed)
+	event drop(DropEventData ded)
+	event close()
+	
+	event post_shutdown()
+	
+	int makeWindow()
+
+	void addPoint(int phandle, int x, int y, byte r, byte g, byte b, byte a)
+	void addLine(int phandle, int sx, int sy, int ex, int ey, int thickness, byte r, byte g, byte b, byte a, bool antiAlias)
+	void addCurve(int phandle, Point points[], int isteps, int thickness, byte r, byte g, byte b, byte a, bool antiAlias)
+	void addRect(int phandle, int x, int y, int w, int h, byte r, byte g, byte b, byte a)
+	void addEllipse(int phandle, int x, int y, int w, int h, byte r, byte g, byte b, byte a)
+	void addEllipseOutline(int phandle, int x, int y, int w, int h, int thickness, byte r, byte g, byte b, byte a)
+	void addArc(int phandle, int x, int y, int w, int h, int start, int end, int lineWidth, byte r, byte g, byte b, byte a, bool antiAlias)
+	void addPie(int phandle, int x, int y, int w, int h, int start, int end, bool chord, byte r, byte g, byte b, byte a)
+	void addPolygon(int phandle, Point points[], byte r, byte g, byte b, byte a)
+	void addPolygonOutline(int phandle, Point points[], int thickness, byte r, byte g, byte b, byte a)
+	void addPolygonBezier(int phandle, Point points[], int isteps, byte r, byte g, byte b, byte a)
+	void addPolygonBezierOutline(int phandle, Point points[], int isteps, int thickness, byte r, byte g, byte b, byte a)
+	void addBitmap(int phandle, PixelMap pixels, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
+	void addTextWith(int phandle, int fontHandle, int x, int y, int rotation, char text[], byte r, byte g, byte b, byte a)
+	
+	void pushSurface(int phandle, int x, int y, int w, int h, int sx, int sy, byte a)
+	void popSurface(int phandle)
+	
+	void setSize(int phandle, int x, int y)
+	void setPosition(int phandle, int x, int y)
+	void setVisible(int phandle, bool b)
+	void setResizable(int phandle, bool b)
+	void setFullScreen(int phandle, bool b)
+	void setTitle(int phandle, char t[])
+	void setIcon(int phandle, PixelMap p)
+	void setCursor(int phandle, byte type, Cursor c)
+	
+	void commitBuffer(int phandle)
+
+	PixelMap getPixels(int phandle)
+	
+	void getResolution(int phandle, WH wh)
+	
+	void setBackgroundColor(int phandle, byte r, byte g, byte b, byte a)
+	
+	void maximiseWindow(int phandle)
+	void minimiseWindow(int phandle)
+	
+	void getMaximisedScreenRect(int phandle, Rect r)
+	
+	void closeWindow(int phandle)
+	
+	bool initMediaLayer()
+	void runSystemLoop()
+	void shutdown()
+	
+	// -- fonts --
+	int loadFont(char path[], int size)
+	int getTextWidth(int phandle, char text[])
+	void getFontMetrics(int phandle, FontMetrics metrics)
+	char[] getFontName(int phandle)
+	bool isFontFixedWidth(int phandle)
+	void getTextBitmapWith(int phandle, char text[], PixelMap pixels, byte r, byte g, byte b, byte a)
+	void unloadFont(int fd)
+
+	// -- the below API is for direct rendering abstractions; eventually these are likely to be merged
+	bool flow_initMediaLayer()
+	int flow_makeWindow(int framerate, bool 3d)
+	void flow_setVisible(int phandle, bool b)
+	void flow_setFullScreen(int phandle, bool v)
+	void flow_setResizable(int phandle, bool v)
+	void flow_setPosition(int phandle, int x, int y)
+	void flow_setSize(int phandle, int w, int h)
+	void flow_setTitle(int phandle, char t[])
+	void flow_setIcon(int phandle, PixelMap p)
+	void flow_setCursor(int phandle, byte type, Cursor c)
+	void flow_closeWindow(int phandle)
+
+	FlowEvent[] flow_getEvents(int phandle)
+
+	void flow_renderBegin(int phandle)
+	void flow_renderEnd(int phandle)
+
+	void flow_wait(int phandle)
+
+	PixelMap flow_getPixels(int phandle)
+
+	// -- 2D draw commands
+	void flow_point(int phandle, int x, int y, byte r, byte g, byte b, byte a)
+	void flow_line(int phandle, int sx, int sy, int ex, int ey, int thickness, byte r, byte g, byte b, byte a, bool antiAlias)
+	void flow_curve(int phandle, Point points[], int isteps, int thickness, byte r, byte g, byte b, byte a, bool antiAlias)
+	void flow_rect(int phandle, int x, int y, int w, int h, byte r, byte g, byte b, byte a)
+	void flow_ellipse(int phandle, int x, int y, int w, int h, byte r, byte g, byte b, byte a)
+	void flow_ellipseOutline(int phandle, int x, int y, int w, int h, int thickness, byte r, byte g, byte b, byte a)
+	void flow_arc(int phandle, int x, int y, int w, int h, int start, int end, int lineWidth, byte r, byte g, byte b, byte a, bool antiAlias)
+	void flow_pie(int phandle, int x, int y, int w, int h, int start, int end, bool chord, byte r, byte g, byte b, byte a)
+	void flow_polygon(int phandle, Point points[], byte r, byte g, byte b, byte a)
+	void flow_polygonOutline(int phandle, Point points[], int thickness, byte r, byte g, byte b, byte a)
+	void flow_polygonBezier(int phandle, Point points[], int isteps, byte r, byte g, byte b, byte a)
+	void flow_polygonBezierOutline(int phandle, Point points[], int isteps, int thickness, byte r, byte g, byte b, byte a)
+	void flow_bitmap(int phandle, PixelMap pixels, Rect subRect, int x, int y, int scaledWidth, int scaledHeight, int rotation)
+	void flow_textWith(int phandle, int fontHandle, int x, int y, int rotation, char text[], byte r, byte g, byte b, byte a)
+
+	void flow_pushSurface(int phandle, int x, int y, int w, int h, int sx, int sy, byte a)
+	void flow_popSurface(int phandle)
+
+	// -- fonts --
+	int flow_loadFont(char path[], int size)
+	int flow_getTextWidth(int phandle, char text[])
+	void flow_getFontMetrics(int phandle, FontMetrics metrics)
+	char[] flow_getFontName(int phandle)
+	bool flow_isFontFixedWidth(int phandle)
+	void flow_getTextBitmapWith(int phandle, char text[], PixelMap pixels, byte r, byte g, byte b, byte a)
+	void flow_unloadFont(int fd)
+
+	// -- 3D render --
+	//void flow_vertices(int phandle, Vertex vertices[], byte r, byte g, byte b, byte a)
+	}
+
+component provides FlowRender(Destructor), FlowCanvas, FlowFont(Destructor) requires native UIPlaneLib lib, io.Output out, data.IntUtil iu
+	{
+	implementation FlowRender {
+		
+		int platformHandle
+		
+		FlowRender:FlowRender(opt int framerate)
+			{
+			if (!lib.flow_initMediaLayer()) throw new Exception("rendering system creation failed")
+
+			platformHandle = lib.flow_makeWindow(framerate, false)
+
+			if (platformHandle == 0) throw new Exception("window creation failed")
+			}
+		
+		FlowEvent[] FlowRender:getEvents()
+			{
+			return lib.flow_getEvents(platformHandle)
+			}
+		
+		PixelMap FlowRender:getPixels()
+			{
+			return lib.flow_getPixels(platformHandle)
+			}
+		
+		void FlowRender:setVisible(bool b)
+			{
+			lib.flow_setVisible(platformHandle, b)
+			}
+		
+		void FlowRender:setPosition(int x, int y)
+			{
+			lib.flow_setPosition(platformHandle, x, y)
+			}
+		
+		void FlowRender:setSize(int w, int h)
+			{
+			lib.flow_setSize(platformHandle, w, h)
+			}
+		
+		void FlowRender:setResizable(bool v)
+			{
+			lib.flow_setResizable(platformHandle, v)
+			}
+		
+		void FlowRender:setFullScreen(bool v)
+			{
+			lib.flow_setFullScreen(platformHandle, v)
+			}
+		
+		WH FlowRender:getResolution()
+			{
+			WH wh = new WH()
+			lib.getResolution(platformHandle, wh)
+			
+			return wh
+			}
+		
+		void FlowRender:setTitle(char title[])
+			{
+			lib.flow_setTitle(platformHandle, title)
+			}
+		
+		void FlowRender:setIcon(PixelMap p)
+			{
+			lib.flow_setIcon(platformHandle, p)
+			}
+		
+		void FlowRender:setCursor(byte cursorType, opt Cursor c)
+			{
+			lib.flow_setCursor(platformHandle, cursorType, c)
+			}
+		
+		void FlowRender:close()
+			{
+			if (platformHandle != 0)
+				{
+				lib.flow_closeWindow(platformHandle)
+				platformHandle = 0
+				}
+			}
+		
+		void FlowRender:renderBegin()
+			{
+			lib.flow_renderBegin(platformHandle)
+			}
+		
+		void FlowRender:renderEnd()
+			{
+			lib.flow_renderEnd(platformHandle)
+			}
+		
+		void FlowRender:wait()
+			{
+			lib.flow_wait(platformHandle)
+			}
+		
+		void Destructor:destroy()
+			{
+			//if we're being destroyed, we need to free the window handle in the UI framework, otherwise it will have a bad reference
+			close()
+			}
+		}
+	
+	implementation FlowCanvas {
+
+		FlowRender renderer
+
+		FlowCanvas:FlowCanvas(store FlowRender r)
+			{
+			renderer = r
+			}
+		
+		void FlowCanvas:line(Line2D l, opt int thickness)
+			{
+			if (!(isset thickness)) thickness = 1
+
+			lib.flow_line(renderer.platformHandle, l.sx, l.sy, l.ex, l.ey, thickness, l.color.r, l.color.g, l.color.b, l.color.a, false)
+			}
+		
+		void FlowCanvas:curve(Curve2D l, int isteps, opt int thickness)
+			{
+			if (!(isset thickness)) thickness = 1
+
+			lib.flow_curve(renderer.platformHandle, l.points, isteps, thickness, l.color.r, l.color.g, l.color.b, l.color.a, false)
+			}
+		
+		void FlowCanvas:point(Point2D p)
+			{
+			lib.flow_point(renderer.platformHandle, p.x, p.y, p.color.r, p.color.g, p.color.b, p.color.a)
+			}
+
+		void FlowCanvas:rect(Rect2D r)
+			{
+			lib.flow_rect(renderer.platformHandle, r.x, r.y, r.width, r.height, r.color.r, r.color.g, r.color.b, r.color.a)
+			}
+		
+		void FlowCanvas:rectOutline(Rect2D r, opt int thickness)
+			{
+			if (!(isset thickness)) thickness = 1
+
+			int offset = thickness / 2
+
+			line(new Line2D(r.x - offset, r.y, (r.x + r.width) + offset - 1, r.y, r.color), thickness)
+			line(new Line2D(r.x, r.y, r.x, (r.y + r.height) + offset - 1, r.color), thickness)
+			line(new Line2D((r.x + r.width) - 1, r.y, (r.x + r.width) - 1, (r.y + r.height) + offset - 1, r.color), thickness)
+			line(new Line2D(r.x, (r.y + r.height) - 1, (r.x + r.width) - 1, (r.y + r.height) - 1, r.color), thickness)
+			}
+		
+		void FlowCanvas:roundedRect(Rect2D r, int xRadius, int yRadius)
+			{
+			//top-left corner
+			pie(new Arc2D((r.x + xRadius), r.y + yRadius, xRadius, yRadius, 270, 360, r.color))
+			//top-right corner
+			pie(new Arc2D((r.x + r.width - xRadius), r.y + yRadius, xRadius, yRadius, 0, 90, r.color))
+			//bottom-right corner
+			pie(new Arc2D((r.x + r.width - xRadius), (r.y + r.height - yRadius), xRadius, yRadius, 90, 180, r.color))
+			//bottom-left corner
+			pie(new Arc2D((r.x + xRadius), (r.y + r.height - yRadius), xRadius, yRadius, 180, 270, r.color))
+
+			//middle
+			rect(new Rect2D(r.x + xRadius, r.y, r.width - xRadius - xRadius, r.height, r.color))
+
+			//left rect
+			rect(new Rect2D(r.x, r.y + yRadius, xRadius, r.height - yRadius - yRadius, r.color))
+
+			//right rect
+			rect(new Rect2D(r.x + r.width - xRadius, r.y + yRadius, xRadius, r.height - yRadius - yRadius, r.color))
+			}
+		
+		void FlowCanvas:roundedRectOutline(Rect2D r, int xRadius, int yRadius, opt int thickness)
+			{
+			if (!(isset thickness)) thickness = 1
+
+			int offset = thickness / 2
+			int md = thickness % 2
+
+			if (thickness <= 1)
+				{
+				line(new Line2D((r.x + xRadius), r.y, (r.x + r.width - xRadius), r.y, r.color), thickness)
+				line(new Line2D(r.x, r.y + yRadius, r.x, (r.y + r.height - yRadius), r.color), thickness)
+				line(new Line2D((r.x + r.width) - 1, r.y + yRadius, (r.x + r.width) - 1, (r.y + r.height - yRadius), r.color), thickness)
+				line(new Line2D((r.x + xRadius), (r.y + r.height) - 2, (r.x + r.width - xRadius), (r.y + r.height) - 2, r.color), thickness)
+				}
+				else
+				{
+				//using "curves" for lines here seems to give us the best anti-alias matched position effect, relative to our corner arcs
+
+				//top
+				curve(new Curve2D(new Point[](new Point(r.x+xRadius, r.y), new Point(r.x+(r.width/2), r.y), new Point(r.x+r.width-xRadius, r.y)), r.color), 2, thickness)
+
+				//left
+				curve(new Curve2D(new Point[](new Point(r.x, r.y+yRadius), new Point(r.x, r.y+(r.height/2)), new Point(r.x, r.y + r.height - yRadius)), r.color), 2, thickness)
+
+				//right
+				curve(new Curve2D(new Point[](new Point(r.x+r.width-1, r.y+yRadius), new Point(r.x+r.width-1, r.y+(r.height/2)), new Point(r.x+r.width-1, r.y + r.height - yRadius)), r.color), 2, thickness)
+
+				//bottom
+				curve(new Curve2D(new Point[](new Point(r.x+xRadius, r.y+r.height-offset), new Point(r.x+(r.width/2), r.y+r.height-offset), new Point(r.x+r.width-xRadius, r.y+r.height-offset)), r.color), 2, thickness)
+				}
+
+			if (thickness <= 1)
+				{
+				Arc2D arc = null
+
+				//top-left corner
+				arc = new Arc2D((r.x + xRadius), r.y + yRadius, xRadius, yRadius, 270, 360, r.color)
+				lib.flow_arc(renderer.platformHandle, arc.x, arc.y, arc.xRadius, arc.yRadius, arc.start, arc.end, thickness, r.color.r, r.color.g, r.color.b, r.color.a, false)
+				//top-right corner
+				arc = new Arc2D((r.x + r.width - xRadius)-1, r.y + yRadius, xRadius, yRadius, 0, 90, r.color)
+				lib.flow_arc(renderer.platformHandle, arc.x, arc.y, arc.xRadius, arc.yRadius, arc.start, arc.end, thickness, r.color.r, r.color.g, r.color.b, r.color.a, false)
+				//bottom-right corner
+				arc = new Arc2D((r.x + r.width - xRadius)-1, (r.y + r.height - yRadius) - 2, xRadius, yRadius, 90, 180, r.color)
+				lib.flow_arc(renderer.platformHandle, arc.x, arc.y, arc.xRadius, arc.yRadius, arc.start, arc.end, thickness, r.color.r, r.color.g, r.color.b, r.color.a, false)
+				//bottom-left corner
+				arc = new Arc2D((r.x + xRadius), (r.y + r.height - yRadius) - 2, xRadius, yRadius, 180, 270, r.color)
+				lib.flow_arc(renderer.platformHandle, arc.x, arc.y, arc.xRadius, arc.yRadius, arc.start, arc.end, thickness, r.color.r, r.color.g, r.color.b, r.color.a, false)
+				}
+				else
+				{
+				//top-left corner
+				arcOutline(new Arc2D((r.x + xRadius), r.y + yRadius, xRadius, yRadius, 270, 360, r.color), thickness)
+				//top-right corner
+				arcOutline(new Arc2D((r.x + r.width - xRadius)-1, r.y + yRadius, xRadius, yRadius, 0, 90, r.color), thickness)
+				//bottom-right corner
+				arcOutline(new Arc2D((r.x + r.width - xRadius)-1, (r.y + r.height - yRadius) - 2, xRadius, yRadius, 90, 180, r.color), thickness)
+				//bottom-left corner
+				arcOutline(new Arc2D((r.x + xRadius), (r.y + r.height - yRadius) - 2, xRadius, yRadius, 180, 270, r.color), thickness)
+				}
+			}
+		
+		void FlowCanvas:ellipse(Ellipse2D r)
+			{
+			lib.flow_ellipse(renderer.platformHandle, r.x, r.y, r.xRadius, r.yRadius, r.color.r, r.color.g, r.color.b, r.color.a)
+			}
+		
+		void FlowCanvas:ellipseOutline(Ellipse2D r, opt int thickness)
+			{
+			if (!(isset thickness)) thickness = 1
+
+			lib.flow_ellipseOutline(renderer.platformHandle, r.x, r.y, r.xRadius, r.yRadius, thickness, r.color.r, r.color.g, r.color.b, r.color.a)
+			}
+		
+		void FlowCanvas:arc(Arc2D r)
+			{
+			lib.flow_pie(renderer.platformHandle, r.x, r.y, r.xRadius, r.yRadius, r.start, r.end, true, r.color.r, r.color.g, r.color.b, r.color.a)
+			}
+		
+		void FlowCanvas:arcOutline(Arc2D r, opt int lineWidth)
+			{
+			if (!(isset lineWidth)) lineWidth = 1
+
+			lib.flow_arc(renderer.platformHandle, r.x, r.y, r.xRadius, r.yRadius, r.start, r.end, lineWidth, r.color.r, r.color.g, r.color.b, r.color.a, true)
+			}
+		
+		void FlowCanvas:pie(Arc2D r)
+			{
+			lib.flow_pie(renderer.platformHandle, r.x, r.y, r.xRadius, r.yRadius, r.start, r.end, false, r.color.r, r.color.g, r.color.b, r.color.a)
+			}
+		
+		void FlowCanvas:polygon(Polygon2D r)
+			{
+			lib.flow_polygon(renderer.platformHandle, r.points, r.color.r, r.color.g, r.color.b, r.color.a)
+			}
+		
+		void FlowCanvas:polygonOutline(Polygon2D r)
+			{
+			int thickness = 1
+
+			lib.flow_polygonOutline(renderer.platformHandle, r.points, thickness, r.color.r, r.color.g, r.color.b, r.color.a)
+			}
+		
+		void FlowCanvas:polygonBezier(Polygon2D r, int isteps)
+			{
+			lib.flow_polygonBezier(renderer.platformHandle, r.points, isteps, r.color.r, r.color.g, r.color.b, r.color.a)
+			}
+		
+		void FlowCanvas:pixels(PixelMap map, int x, int y, opt int scaledWidth, int scaledHeight, int rotation, Rect subRect)
+			{
+			if (!(isset scaledWidth)) scaledWidth = map.size.width
+			if (!(isset scaledHeight)) scaledHeight = map.size.height
+
+			lib.flow_bitmap(renderer.platformHandle, map, subRect, x, y, scaledWidth, scaledHeight, rotation)
+			}
+		
+		void FlowCanvas:text(Point2D origin, FlowFont f, char text[], opt int rotation)
+			{
+			//check if f is implemented by this component and if so we use its internal font handle; otherwise we fall back on Font.getBitmap() (which is slow)
+			if (implements f)
+				{
+				lib.flow_textWith(renderer.platformHandle, f.platformHandle, origin.x, origin.y, rotation, text, origin.color.r, origin.color.g, origin.color.b, origin.color.a)
+				}
+				else
+				{
+				PixelMap px = f.getPixels(text, origin.color)
+				lib.flow_bitmap(renderer.platformHandle, px, null, origin.x, origin.y, px.size.width, px.size.height, rotation)
+				}
+			}
+		
+		void FlowCanvas:pushSurface(Rect rect, int xscr, int yscr, byte alpha)
+			{
+			lib.flow_pushSurface(renderer.platformHandle, rect.x, rect.y, rect.width, rect.height, xscr, yscr, alpha)
+			}
+		
+		void FlowCanvas:popSurface()
+			{
+			lib.flow_popSurface(renderer.platformHandle)
+			}
+		
+		}
+	
+	implementation FlowFont{
+		int platformHandle
+		int fontSize
+		char source[]
+		bool freed
+		
+		FlowFont:FlowFont(char path[], int size)
+			{
+			fontSize = size
+			source = path
+			platformHandle = lib.flow_loadFont(path, size)
+			
+			if (platformHandle == 0) throw new Exception("Failed to load font $path")
+			}
+		
+		int FlowFont:getSize()
+			{
+			return fontSize
+			}
+		
+		char[] FlowFont:getSource()
+			{
+			return source
+			}
+		
+		FontMetrics FlowFont:getFontMetrics()
+			{
+			FontMetrics result = new FontMetrics()
+			lib.flow_getFontMetrics(platformHandle, result)
+			return result
+			}
+		
+		char[] FlowFont:getFontName()
+			{
+			return lib.flow_getFontName(platformHandle)
+			}
+		
+		bool FlowFont:isFixedCharacterWidth()
+			{
+			return lib.flow_isFontFixedWidth(platformHandle)
+			}
+		
+		int FlowFont:getTextWidth(char text[])
+			{
+			return lib.flow_getTextWidth(platformHandle, text)
+			}
+		
+		PixelMap FlowFont:getPixels(char string[], Color textColor)
+			{
+			PixelMap result = new PixelMap(new WH())
+			lib.flow_getTextBitmapWith(platformHandle, string, result, textColor.r, textColor.g, textColor.b, textColor.a)
+			return result
+			}
+		
+		void FlowFont:destroy()
+			{
+			lib.flow_unloadFont(platformHandle)
+			freed = true
+			}
+		
+		void Destructor:destroy()
+			{
+			if (platformHandle != 0 && !freed)
+				{
+				out.println("Warning: font '$source' has not been properly cleaned up using FlowFont:destroy()")
+				}
+			}
+		}
+	
+	}

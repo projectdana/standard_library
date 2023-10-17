@@ -1,0 +1,11 @@
+/* { "description" : "Description of a font's details." } */
+data FontMetrics {
+	/* { "@description" : "The total height of the font in pixels (this is the maximum height of the tallest glyph in the entire typeface)." } */
+	int height
+	/* { "@description" : "Of the height, how much is 'ascent' above the 'baseline' (which is an imaginary 1 pixel line)." } */
+	int ascent
+	/* { "@description" : "Of the height, how much is 'descent' below the 'baseline' (which is an imaginary 1 pixel line)." } */
+	int descent
+	/* { "@description" : "The recommended number of pixels between lines (this is an optional typeface attribute which might be 0)." } */
+	int lineskip
+	}
