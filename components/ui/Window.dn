@@ -883,7 +883,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 		{
 		//capture key state, for hot keys
 		int kCode
-		if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.UNKNOWN)
+		if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.OTHER)
 			{
 			if (kCode == KeyCode.SHIFT_LEFT || kCode == KeyCode.SHIFT_RIGHT)
 				{
@@ -923,7 +923,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 		{
 		//capture key state, for hot keys
 		int kCode
-		if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.UNKNOWN)
+		if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.OTHER)
 			{
 			if (kCode == KeyCode.SHIFT_LEFT || kCode == KeyCode.SHIFT_RIGHT)
 				{

@@ -1,8 +1,6 @@
 uses time.DateTime
 
-/*
-{ "description" : "Perform equality checks and conversions between two different DateTime instances."}
-*/
+/* { "description" : "Perform equality checks and conversions between two different DateTime instances."} */
 
 interface DateUtil {
 	const int16 MAX_MSEC 		= 1000
@@ -11,28 +9,21 @@ interface DateUtil {
 	const byte	MAX_HOUR 		= 24
 	const byte	MAX_MONTH 		= 12
 
-	/*
-	{ "@description" : "Returns true if first comes before second."}
-	*/
+	/* { "@description" : "Returns true if first comes before second."} */
 	bool before(DateTime first, DateTime second)
 	
-	/*
-	{ "@description" : "Returns true if first comes after second."}
-	*/
+	/* { "@description" : "Returns true if first comes after second."} */
 	bool after(DateTime first, DateTime second)
 
-	/*
-	{ "@description" : "Returns true if first and second are exactly the same time."}
-	*/
+	/* { "@description" : "Returns true if first and second are exactly the same time."} */
 	bool equal(DateTime first, DateTime second)
 
-	/*
-	{ "@description" : "Returns a DateTime instances that represents the difference between first and second."}
-	*/
+	/* { "@description" : "Returns a DateTime instances that represents the difference between first and second."} */
 	DateTime diff(DateTime first, DateTime second)
 
-	/*
-	{ "@description" : "Converts a DateTime instance into milliseconds (commonly used after diff). The result of this function will be inaccurate if the given date/time is too large to fit into an integer."}
-	*/
+	/* { "@description" : "Converts a DateTime instance into milliseconds (commonly used after diff). The result of this function will be inaccurate if the given date/time is too large to fit into an integer."} */
 	int toMilliseconds(DateTime date)
+
+	/* { "@description" : "Converts a DateTime instance to a string, following an optional format. Format is specified as any string which contains some or all of the strings YYYY, MM, DD, HH, MN, SS, MIL. For example, the format string YYYY/MM/DD HH:MN:SS.MIL gives all time information with the given separators in between each element."} */
+	char[] makeString(DateTime d, opt char format[])
 }

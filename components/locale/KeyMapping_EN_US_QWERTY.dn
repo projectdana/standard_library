@@ -26,14 +26,14 @@ component provides KeyMapping {
 			else if (n == 31)
 			{
 			if (shift)
-				return "\""
+				return "@"
 				else
 				return "2"
 			}
 			else if (n == 32)
 			{
 			if (shift)
-				return "£"
+				return "#"
 				else
 				return "3"
 			}
@@ -41,8 +41,6 @@ component provides KeyMapping {
 			{
 			if (shift)
 				return "\$"
-				else if (altgr)
-				return "€"
 				else
 				return "4"
 			}
@@ -130,21 +128,21 @@ component provides KeyMapping {
 			else if (n == 52)
 			{
 			if (shift)
-				return "@"
+				return "\""
 				else
 				return "'"
 			}
 			else if (n == 49)
 			{
 			if (shift)
-				return "~"
+				return "|"
 				else
-				return "#"
+				return "\\"
 			}
 			else if (n == 53)
 			{
 			if (shift)
-				return "¬"
+				return "~"
 				else
 				return "`"
 			}

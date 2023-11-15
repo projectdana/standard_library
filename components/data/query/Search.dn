@@ -6,7 +6,7 @@ component provides Search requires io.Output out {
 		
 		for (int i = 0; i < list.arrayLength; i++)
 			{
-			if (list[i]:.field == template:.field)
+			if (list[i] != null && list[i]:.field == template:.field)
 				{
 				result = new Data[](result, list[i]) from typeof(template)
 				}
@@ -19,7 +19,7 @@ component provides Search requires io.Output out {
 		{
 		for (int i = 0; i < list.arrayLength; i++)
 			{
-			if (list[i]:.field == template:.field)
+			if (list[i] != null && list[i]:.field == template:.field)
 				{
 				return list[i]
 				}
@@ -34,7 +34,7 @@ component provides Search requires io.Output out {
 		
 		for (int i = 0; i < list.arrayLength; i++)
 			{
-			if (list[i]:.field == template:.field)
+			if (list[i] != null && list[i]:.field == template:.field)
 				{
 				result = new int[](result, i)
 				}
@@ -47,7 +47,7 @@ component provides Search requires io.Output out {
 		{
 		for (int i = 0; i < list.arrayLength; i++)
 			{
-			if (list[i]:.field == template:.field)
+			if (list[i] != null && list[i]:.field == template:.field)
 				{
 				return i
 				}

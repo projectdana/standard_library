@@ -265,7 +265,9 @@ component provides OptionBuilder requires io.Output out, data.StringUtil stringU
 		return result
 		}
 	
-	Composition[] generateCompositions(InfoCache ic, int options[], int optionsMax[], opt bool optionsLock[])
+	//this function generates all compositions from the given option set, allowing some options to be non-moving, and allowing filter of the result by only those compositions which include a specific component (the latter two options are useful in adding new components)
+	// - the filter is needed because this object itself does not store the full list of all compositions ever found; when adding a new component it could therefore return duplicates of compositions that do NOT involve that component, since they would pass the isCompositionNew() test which only considers compositions built in the local scope of this function
+	Composition[] generateCompositions(InfoCache ic, int options[], int optionsMax[], opt bool optionsLock[], opt char mustIncludeComp[])
 		{
 		Composition result[]
 
@@ -275,15 +277,18 @@ component provides OptionBuilder requires io.Output out, data.StringUtil stringU
 			//derive the current permutation
 			Composition newc = makeComposition(ic, options)
 
-			if (isCompositionNew(newc, result))
+			if (mustIncludeComp == null || newc.options.findFirst(InterfaceActual.[comp], new InterfaceActual(comp = mustIncludeComp)) != null)
 				{
-				//out.println("adding composition option $(intArrayToString(options))")
-				//out.println(" - $(getFlatComposition(newc))")
-				result = new Composition[](result, newc)
-				}
-				else
-				{
-				//out.println("skipping repeated option $(intArrayToString(options))")
+				if (isCompositionNew(newc, result))
+					{
+					//out.println("adding composition option $(intArrayToString(options))")
+					//out.println(" - $(getFlatComposition(newc))")
+					result = new Composition[](result, newc)
+					}
+					else
+					{
+					//out.println("skipping repeated option $(intArrayToString(options))")
+					}
 				}
 
 			//get the next one (if any)
@@ -333,7 +338,7 @@ component provides OptionBuilder requires io.Output out, data.StringUtil stringU
 				}
 			}
 		
-		return generateCompositions(ic, options, optionsMax, optionsLock)
+		return generateCompositions(ic, options, optionsMax, optionsLock, path)
 		}
 	
 	Data[] removeArrayCell(Data array[], Data cell)

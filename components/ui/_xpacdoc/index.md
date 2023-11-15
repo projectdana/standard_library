@@ -1040,3 +1040,5 @@ component provides App requires ui.FlowRender, ui.FlowCanvas, ui.FlowFont, time.
 
 }
 ```
+
+The FlowCanvas API has the same set of API calls available as the Desktop app canvas drawing API, but allows the programmer direct control of these drawing commands rather than having them wrapped e.g. in GUI widgets.

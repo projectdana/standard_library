@@ -125,6 +125,8 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 	char END_SEQ[] = "\r\n\r\n"
 	char END_R[] = "\r"
 	char END_N[] = "\n"
+
+	bool debugConnections
 	
 	bool shutdown
 
@@ -146,7 +148,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 		// - also detect keep-alive right here, and tag it as a boolean on the Command instance
 		// - we also perform lowercase operations manually as we go
 		// - and we extract the file extension for mime type conversion later
-		
+
 		Command cmd = new Command()
 		Header headers[]
 		
@@ -464,98 +466,97 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 		String staticServe[] = work.cfg.staticServe
 		
 		bool keepAlive = true
-		
-		
-			//parse headers, extract command
-			//call function associated with command, return result (as HTTP response)
-			Command cmd = work.nextCommand
 
-			out.println("[NWID $(work.fromNetItem.workID)] process req $(cmd.resource)")
-			
-			if (cmd == null)
+		//parse headers, extract command
+		//call function associated with command, return result (as HTTP response)
+		Command cmd = work.nextCommand
+
+		if (debugConnections) out.println("[NWID $(work.fromNetItem.workID)] process req $(cmd.resource)")
+		
+		if (cmd == null)
+			{
+			//malformed / interrupted / idle-timeout request (this is normal behaviour)
+			return
+			}
+		
+		keepAlive = cmd.persistent
+		
+		char subDomainPath[] = getResourcePrepend(cmd.hostname, work.cfg.subdomains)
+		char handler[]
+		bool success = false
+		
+		if (cmd.type == Command.GET)
+			{
+			if (staticFile(cmd.resource, staticServe))
 				{
-				//malformed / interrupted / idle-timeout request (this is normal behaviour)
-				return
+				success = serveFile(cmd.resource, cmd.ext, stream, work.cfg, keepAlive, true)
 				}
-			
-			keepAlive = cmd.persistent
-			
-			char subDomainPath[] = getResourcePrepend(cmd.hostname, work.cfg.subdomains)
-			char handler[]
-			bool success = false
-			
-			if (cmd.type == Command.GET)
-				{
-				if (staticFile(cmd.resource, staticServe))
-					{
-					success = serveFile(cmd.resource, cmd.ext, stream, work.cfg, keepAlive, true)
-					}
-					else 
-					{
-					if (subDomainPath != null) cmd.resource = "/$subDomainPath$(cmd.resource)"
-					
-					DocStream ds = new DocStream(stream, cmd.headers)
-					success = serveFunction_GET(ds, handler, cmd.resource)
-					}
-				}
-				else if (cmd.type == Command.HEAD)
-				{
-				if (staticFile(cmd.resource, staticServe))
-					{
-					success = serveFile(cmd.resource, cmd.ext, stream, work.cfg, keepAlive, false)
-					}
-					else 
-					{
-					//TODO. -- what's the best option here? a Web.head() method? or just some auto-response?
-					}
-				}
-				else if (cmd.type == Command.POST)
+				else 
 				{
 				if (subDomainPath != null) cmd.resource = "/$subDomainPath$(cmd.resource)"
 				
 				DocStream ds = new DocStream(stream, cmd.headers)
-				
-				//read the payload first
-				char ctype[] = getHeaderValue(cmd, "content-type")
-				byte payload[] = work.payload
-				success = serveFunction_POST(ds, handler, cmd.resource, ctype, payload)
+				success = serveFunction_GET(ds, handler, cmd.resource)
+				}
+			}
+			else if (cmd.type == Command.HEAD)
+			{
+			if (staticFile(cmd.resource, staticServe))
+				{
+				success = serveFile(cmd.resource, cmd.ext, stream, work.cfg, keepAlive, false)
+				}
+				else 
+				{
+				//TODO. -- what's the best option here? a Web.head() method? or just some auto-response?
+				}
+			}
+			else if (cmd.type == Command.POST)
+			{
+			if (subDomainPath != null) cmd.resource = "/$subDomainPath$(cmd.resource)"
+			
+			DocStream ds = new DocStream(stream, cmd.headers)
+			
+			//read the payload first
+			char ctype[] = getHeaderValue(cmd, "content-type")
+			byte payload[] = work.payload
+			success = serveFunction_POST(ds, handler, cmd.resource, ctype, payload)
+			}
+			else
+			{
+			stream.send("HTTP/1.1 501 Not Implemented\r\n")
+			stream.send("\r\n")
+			success = true
+			}
+		
+		if (!success)
+			{
+			if (fileSystem.exists("404.html"))
+				{
+				serveFile("404.html", "html", stream, work.cfg, keepAlive, cmd.type != Command.HEAD, "HTTP/1.1 404 Resource Not Found")
 				}
 				else
 				{
-				stream.send("HTTP/1.1 501 Not Implemented\r\n")
-				stream.send("\r\n")
-				success = true
-				}
-			
-			if (!success)
-				{
-				if (fileSystem.exists("404.html"))
-					{
-					serveFile("404.html", "html", stream, work.cfg, keepAlive, cmd.type != Command.HEAD, "HTTP/1.1 404 Resource Not Found")
-					}
+				stream.send("HTTP/1.1 404 Resource Not Found\r\n")
+				stream.send("Server: Dana Web Engine\r\n")
+				if (keepAlive)
+					stream.send("Connection: keep-alive\r\n")
 					else
-					{
-					stream.send("HTTP/1.1 404 Resource Not Found\r\n")
-					stream.send("Server: Dana Web Engine\r\n")
-					if (keepAlive)
-						stream.send("Connection: keep-alive\r\n")
-						else
-						stream.send("Connection: close\r\n")
-					stream.send("Content-length: $(MSG_404.arrayLength)\r\n")
-					stream.send("Content-type: text/plain \r\n")
-					stream.send("Date: $(util.getDateString(cal.getTime()))\r\n")
-					stream.send("\r\n")
-					stream.send(MSG_404)
-					}
+					stream.send("Connection: close\r\n")
+				stream.send("Content-length: $(MSG_404.arrayLength)\r\n")
+				stream.send("Content-type: text/plain \r\n")
+				stream.send("Date: $(util.getDateString(cal.getTime()))\r\n")
+				stream.send("\r\n")
+				stream.send(MSG_404)
 				}
-			
-			out.println("[NWID $(work.fromNetItem.workID)] process req $(cmd.resource) OK")
+			}
+		
+		if (debugConnections) out.println("[NWID $(work.fromNetItem.workID)] process req $(cmd.resource) OK")
 
-			mutex(work.fromNetItem)
-				{
-				work.fromNetItem.lastActiveTime = cal.getMS()
-				work.fromNetItem.reqWorkCount --
-				}
+		mutex(work.fromNetItem)
+			{
+			work.fromNetItem.lastActiveTime = cal.getMS()
+			work.fromNetItem.reqWorkCount --
+			}
 		
 		//if (tlsSocket != null) tlsSocket.close()
 		//s.disconnect()
@@ -605,7 +606,12 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 					}
 				
 				processRequest(w)
-				
+
+				if (w.nextCommand != null && !w.nextCommand.persistent)
+					{
+					w.fromNetItem.client.disconnect()
+					}
+
 				mutex(state)
 					{
 					state.workCount --
@@ -902,7 +908,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 				//here we check if a net item has no actual work pending (meaning it's received a request and is busy sending the response, so we don't expect any further inbound socket activity until the response has been fully sent)
 				if (state.work.reqWorkCount == 0 && ((now - state.work.lastActiveTime) > MAX_INACTIVE))
 					{
-					out.println(" -- [NWID $(state.work.workID)] connection-evict")
+					if (debugConnections) out.println(" -- [NWID $(state.work.workID)] connection-evict")
 					closeItem(state, state.work)
 					}
 					else
@@ -946,12 +952,12 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 						}
 						else
 						{
-						out.println("[NWID $(item.workID)] client socket receive-ready")
+						if (debugConnections) out.println("[NWID $(item.workID)] client socket receive-ready")
 						int status = receiveBytes(events[i].userData)
 
 						if (status == RECV_CONNECTION_CLOSE)
 							{
-							out.println(" -- [NWID $(item.workID)] recv requests connection-close")
+							if (debugConnections) out.println(" -- [NWID $(item.workID)] recv requests connection-close")
 							closeItem(state, events[i].userData)
 							closed = true
 							}
@@ -971,14 +977,14 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 						}
 						else
 						{
-						out.println(" -- [NWID $(item.workID)] client socket send-ready")
+						if (debugConnections) out.println(" -- [NWID $(item.workID)] client socket send-ready")
 						events[i].socket.sendBuffer()
 						}
 					}
 				
 				if (events[i].close && !closed)
 					{
-					out.println(" -- [NWID $(item.workID)] connection-close event")
+					if (debugConnections) out.println(" -- [NWID $(item.workID)] connection-close event")
 					closeItem(state, events[i].userData)
 					}
 				}
@@ -1071,7 +1077,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 					thread.monitor.armSendNotify(s)
 				}
 
-			out.println("client socket added as [NWID $(nwi.workID)]")
+			if (debugConnections) out.println("client socket added as [NWID $(nwi.workID)]")
 			}
 		}
 	

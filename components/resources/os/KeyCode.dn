@@ -4,7 +4,7 @@
 
 data KeyCode {
 	
-	const byte UNKNOWN = 0
+	const byte OTHER = 0
 	
 	const byte A = 1
 	const byte B = 2
@@ -33,79 +33,48 @@ data KeyCode {
 	const byte Y = 25
 	const byte Z = 26
 	
-	const byte NUM_0 = 27
-	const byte NUM_1 = 28
-	const byte NUM_2 = 29
-	const byte NUM_3 = 30
-	const byte NUM_4 = 31
-	const byte NUM_5 = 32
-	const byte NUM_6 = 33
-	const byte NUM_7 = 34
-	const byte NUM_8 = 35
-	const byte NUM_9 = 36
+	const byte SPACE = 27
+	const byte RETURN = 28
+	const byte BACKSPACE = 29
+	const byte DELETE = 30
+	const byte INSERT = 31
+	const byte HOME = 32
+	const byte END = 33
+	const byte ESCAPE = 34
 	
-	const byte NUMPAD_0 = 37
-	const byte NUMPAD_1 = 38
-	const byte NUMPAD_2 = 39
-	const byte NUMPAD_3 = 40
-	const byte NUMPAD_4 = 41
-	const byte NUMPAD_5 = 42
-	const byte NUMPAD_6 = 43
-	const byte NUMPAD_7 = 44
-	const byte NUMPAD_8 = 45
-	const byte NUMPAD_9 = 46
+	const byte SHIFT_LEFT = 35
+	const byte SHIFT_RIGHT = 36
+	const byte CTRL_LEFT = 37
+	const byte CTRL_RIGHT = 38
+	const byte ALT_LEFT = 39
+	const byte ALT_RIGHT = 40
 	
-	const byte NUMPAD_DIV = 47
-	const byte NUMPAD_MUL = 48
-	const byte NUMPAD_SUB = 49
-	const byte NUMPAD_ADD = 50
+	const byte TAB = 41
 	
-	const byte NUMPAD_DOT = 51
+	const byte PAGE_UP = 42
+	const byte PAGE_DOWN = 43
 	
-	const byte NUMPAD_RETURN = 52
+	const byte ARROW_UP = 44
+	const byte ARROW_DOWN = 45
+	const byte ARROW_LEFT = 46
+	const byte ARROW_RIGHT = 47
 	
-	const byte SPACE = 53
-	const byte RETURN = 54
-	const byte BACKSPACE = 55
-	const byte DELETE = 56
-	const byte INSERT = 57
-	const byte HOME = 58
-	const byte END = 59
-	const byte ESCAPE = 60
+	const byte CAPLOCK = 48
+	const byte NUMLOCK = 49
 	
-	const byte SHIFT_LEFT = 61
-	const byte SHIFT_RIGHT = 62
-	const byte CTRL_LEFT = 63
-	const byte CTRL_RIGHT = 64
-	const byte ALT_LEFT = 65
-	const byte ALT_RIGHT = 66
+	const byte CMD = 50
 	
-	const byte TAB = 67
-	
-	const byte PAGE_UP = 68
-	const byte PAGE_DOWN = 69
-	
-	const byte ARROW_UP = 70
-	const byte ARROW_DOWN = 71
-	const byte ARROW_LEFT = 72
-	const byte ARROW_RIGHT = 73
-	
-	const byte CAPLOCK = 74
-	const byte NUMLOCK = 75
-	
-	const byte CMD = 76
-	
-	const byte F1 = 77
-	const byte F2 = 78
-	const byte F3 = 79
-	const byte F4 = 80
-	const byte F5 = 81
-	const byte F6 = 82
-	const byte F7 = 83
-	const byte F8 = 84
-	const byte F9 = 85
-	const byte F10 = 86
-	const byte F11 = 87
-	const byte F12 = 88
+	const byte F1 = 51
+	const byte F2 = 52
+	const byte F3 = 53
+	const byte F4 = 54
+	const byte F5 = 55
+	const byte F6 = 56
+	const byte F7 = 57
+	const byte F8 = 58
+	const byte F9 = 59
+	const byte F10 = 60
+	const byte F11 = 61
+	const byte F12 = 62
 	
 	}

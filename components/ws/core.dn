@@ -8,8 +8,6 @@ URLs for your website are mapped as follows:
 
 */
 
-// example: dana ws.core -p 80 -cert ssl/www_projectdana_com.crt -key ssl/private_key.txt
-
 const char SWC_PATH[] = "/swc/"
 const int LISTEN_PORT = 8080
 const int LISTEN_PORT_SSL = 443
@@ -50,6 +48,7 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 	
 	ConfigData config = new ConfigData(landingPages = landingPages)
 
+	bool reuseAddr
 	bool helpMode
 	
 	void populateStaticServe()
@@ -162,6 +161,10 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 				{
 				helpMode = true
 				}
+				else if (params[i].string == "-reuse")
+				{
+				reuseAddr = true
+				}
 			}
 		
 		return true
@@ -189,7 +192,7 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		{
 		TCPServerSocket server = new TCPServerSocket()
 		
-		if (!server.bind(TCPServerSocket.ANY_ADDRESS, sslPort))
+		if (!server.bind(TCPServerSocket.ANY_ADDRESS, sslPort, reuseAddr))
 			return
 		
 		while (true)
@@ -249,7 +252,7 @@ component provides App requires io.Output out, net.TCPServerSocket, net.TCPSocke
 		//start server
 		TCPServerSocket s = new TCPServerSocket()
 		
-		if (!s.bind(TCPServerSocket.ANY_ADDRESS, listenPort))
+		if (!s.bind(TCPServerSocket.ANY_ADDRESS, listenPort, reuseAddr))
 			{
 			throw new Exception("Failed to bind master socket")
 			}

@@ -35,7 +35,7 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 	GraphicsObject clickDown
 
 	bool backgroundSet
-	Color backgroundColor = new Color(190, 190, 200, 255)
+	Color backgroundColor = new Color(220, 220, 230, 255)
 	
 	HotKey focusHotKeys[]
 	KeyEventObject keyboardFocus

@@ -1,10 +1,12 @@
-// DateComparator.dn
+// DateUtil.dn
 // Roberto Rodrigues Filho
 // September, 2015
 
-component provides time.DateUtil requires io.Output out, data.IntUtil iu {
+component provides time.DateUtil requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil {
 	byte	MAX_DAY_LEAP[] 	= new byte[](31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
 	byte	MAX_DAY[]	= new byte[](31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
+	char formatDefault[] = "YYYY/MM/DD HH:MN:SS.MIL"
 
 	bool DateUtil:before(DateTime first, DateTime second) {
 		if (equal(first, second)) {
@@ -241,4 +243,84 @@ component provides time.DateUtil requires io.Output out, data.IntUtil iu {
 
 		return result
 	}
+
+	char[] makeFixedWidthIntString(int v, int len)
+		{
+		char result[] = v.makeString()
+		while (result.arrayLength < len) result = "0$result"
+		return result
+		}
+
+	char[] DateUtil:makeString(DateTime d, opt char format[])
+		{
+		char result[]
+
+		if (format != null)
+			result = clone format
+			else
+			result = clone formatDefault
+
+		int pos = 0
+
+		if ((pos = result.find("YYYY")) != StringUtil.NOT_FOUND)
+			{
+			char str[] = d.year.makeString()
+
+			result[pos] = str[0]
+			result[pos+1] = str[1]
+			result[pos+2] = str[2]
+			result[pos+3] = str[3]
+			}
+		
+		if ((pos = result.find("MM")) != StringUtil.NOT_FOUND)
+			{
+			char str[] = makeFixedWidthIntString(d.month, 2)
+
+			result[pos] = str[0]
+			result[pos+1] = str[1]
+			}
+		
+		if ((pos = result.find("DD")) != StringUtil.NOT_FOUND)
+			{
+			char str[] = makeFixedWidthIntString(d.day, 2)
+
+			result[pos] = str[0]
+			result[pos+1] = str[1]
+			}
+		
+		if ((pos = result.find("HH")) != StringUtil.NOT_FOUND)
+			{
+			char str[] = makeFixedWidthIntString(d.hour, 2)
+
+			result[pos] = str[0]
+			result[pos+1] = str[1]
+			}
+		
+		if ((pos = result.find("MN")) != StringUtil.NOT_FOUND)
+			{
+			char str[] = makeFixedWidthIntString(d.minute, 2)
+
+			result[pos] = str[0]
+			result[pos+1] = str[1]
+			}
+		
+		if ((pos = result.find("SS")) != StringUtil.NOT_FOUND)
+			{
+			char str[] = makeFixedWidthIntString(d.second, 2)
+
+			result[pos] = str[0]
+			result[pos+1] = str[1]
+			}
+		
+		if ((pos = result.find("MIL")) != StringUtil.NOT_FOUND)
+			{
+			char str[] = makeFixedWidthIntString(d.millisecond, 3)
+
+			result[pos] = str[0]
+			result[pos+1] = str[1]
+			result[pos+2] = str[2]
+			}
+
+		return result
+		}
 }

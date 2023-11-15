@@ -252,7 +252,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			
 			postRepaint()
 			}
-			else if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.UNKNOWN)
+			else if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.OTHER)
 			{
 			if (kCode == KeyCode.SHIFT_LEFT || kCode == KeyCode.SHIFT_RIGHT)
 				{
@@ -267,9 +267,15 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 				return
 				}
 			
-			if (kCode == KeyCode.ALT_LEFT || kCode == KeyCode.ALT_RIGHT)
+			if (kCode == KeyCode.ALT_LEFT)
 				{
 				keyState |= KeyState.KEY_ALT
+				return
+				}
+			
+			if (kCode == KeyCode.ALT_RIGHT)
+				{
+				keyState |= KeyState.KEY_ALTGR
 				return
 				}
 			
@@ -401,7 +407,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		{
 		byte kCode
 		
-		if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.UNKNOWN)
+		if ((kCode = keyMapping.getKeyCode(keyCode)) != KeyCode.OTHER)
 			{
 			if (kCode == KeyCode.SHIFT_LEFT || kCode == KeyCode.SHIFT_RIGHT)
 				{
@@ -419,6 +425,12 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			if (kCode == KeyCode.ALT_LEFT)
 				{
 				keyState &= ~KeyState.KEY_ALT
+				}
+			
+			if (kCode == KeyCode.ALT_RIGHT)
+				{
+				keyState &= ~KeyState.KEY_ALTGR
+				return
 				}
 			
 			if (kCode == KeyCode.CMD)

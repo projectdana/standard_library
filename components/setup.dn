@@ -1,0 +1,368 @@
+/*
+This is the Dana setup application, used to configure basic details of a Dana system.
+*/
+
+const int INITIAL_WIDTH = 280
+const int INITIAL_HEIGHT = 100
+
+const int KB_CONFIG_WIDTH = 640
+const int KB_CONFIG_HEIGHT = 400
+
+data ManifestLink {
+	char intf[]
+	char comp[]
+}
+
+data Manifest {
+	ManifestLink defaultLinks[]
+}
+
+component provides App requires ui.IOLayer coreui, ui.Window, ui.Button, ui.Label, ui.Layout, ui.Panel, ui.List, ui.ScrollPane, ui.TextField,
+				 io.Output out, data.StringUtil stringUtil, data.json.JSONEncoder jcoder, System system, io.File, io.FileSystem fileSystem, data.query.Search search {
+
+	Window window
+
+	//core panel elements
+	Panel corePanel
+	Button buttonConfigKeyboard
+	Label buttonConfigCurrent
+	Layout coreLayout
+
+	//keyboard config elements
+	Panel keyboardPanel
+	List kbLanguageList
+	ScrollPane kbLanguageScroll
+	List kbCountryList
+	ScrollPane kbCountryScroll
+	List kbTypeList
+	ScrollPane kbTypeScroll
+	Label kbNotListedInfoA
+	Label kbNotListedInfoB
+	Label kbNotListedInfoC
+	Label kbLanguageLabel
+	Label kbCountryLabel
+	Label kbTypeLabel
+	Button kbSetButton
+	Button kbCancelButton
+
+	void populateKeyboardLanguageChoices()
+		{
+		kbLanguageList.clear()
+
+		String choices[]
+
+		FileEntry files[] = fileSystem.getDirectoryContents("$(system.getDanaHome())/components/locale")
+
+		choices = new String[files.arrayLength]
+		int languageIndex = 0
+
+		for (int i = 0; i < files.arrayLength; i++)
+			{
+			if (files[i].name.startsWith("KeyMapping_") && files[i].name.endsWith(".o"))
+				{
+				String parts[] = files[i].name.explode("_.")
+
+				if (choices.findFirst(String.[string], new String(parts[1].string)) == null)
+					{
+					kbLanguageList.addItem(parts[1].string)
+					choices[languageIndex] = new String(parts[1].string)
+					}
+				}
+			}
+		}
+	
+	void populateKeyboardCountryChoices(char lang[])
+		{
+		kbCountryList.clear()
+
+		String choices[]
+
+		FileEntry files[] = fileSystem.getDirectoryContents("$(system.getDanaHome())/components/locale")
+
+		choices = new String[files.arrayLength]
+		int languageIndex = 0
+
+		for (int i = 0; i < files.arrayLength; i++)
+			{
+			if (files[i].name.startsWith("KeyMapping_") && files[i].name.endsWith(".o"))
+				{
+				String parts[] = files[i].name.explode("_.")
+
+				if (parts[1].string == lang && choices.findFirst(String.[string], new String(parts[2].string)) == null)
+					{
+					kbCountryList.addItem(parts[2].string)
+					choices[languageIndex] = new String(parts[2].string)
+					}
+				}
+			}
+		}
+	
+	void populateKeyboardTypeChoices(char lang[], char country[])
+		{
+		kbTypeList.clear()
+
+		String choices[]
+
+		FileEntry files[] = fileSystem.getDirectoryContents("$(system.getDanaHome())/components/locale")
+
+		choices = new String[files.arrayLength]
+		int languageIndex = 0
+
+		for (int i = 0; i < files.arrayLength; i++)
+			{
+			if (files[i].name.startsWith("KeyMapping_") && files[i].name.endsWith(".o"))
+				{
+				String parts[] = files[i].name.explode("_.")
+
+				if (parts[1].string == lang && parts[2].string == country && choices.findFirst(String.[string], new String(parts[3].string)) == null)
+					{
+					kbTypeList.addItem(parts[3].string)
+					choices[languageIndex] = new String(parts[3].string)
+					}
+				}
+			}
+		}
+	
+	char[] keyboardChoiceToFileName(char lang[], char country[], char type[])
+		{
+		return "KeyMapping_$(lang)_$(country)_$(type)"
+		}
+	
+	void saveKeyboardChoice(char lang[], char country[], char type[])
+		{
+		File fd = new File("$(system.getDanaHome())/components/locale/.manifest", File.READ)
+		char json[] = fd.read(fd.getSize())
+		fd.close()
+
+		Manifest manifest = rclone jcoder.jsonToData(json, typeof(Manifest), new Map[](new Map("interface", "intf"), new Map("component", "comp")))
+
+		for (int i = 0; i < manifest.defaultLinks.arrayLength; i++)
+			{
+			if (manifest.defaultLinks[i].intf == "KeyMapping")
+				{
+				char rawStr[] = manifest.defaultLinks[i].comp
+
+				manifest.defaultLinks[i].comp = keyboardChoiceToFileName(lang, country, type)
+
+				json = jcoder.jsonFromData(manifest, new Map[](new Map("interface", "intf"), new Map("component", "comp")))
+
+				fd = new File("$(system.getDanaHome())/components/locale/.manifest", File.CREATE)
+				fd.write(json)
+				fd.close()
+
+				return
+				}
+			}
+		}
+
+	eventsink AppEvents(EventData ed)
+		{
+		if (ed.type == Button.[click] && ed.source === buttonConfigKeyboard)
+			{
+			window.setSize(KB_CONFIG_WIDTH, KB_CONFIG_HEIGHT)
+
+			populateKeyboardLanguageChoices()
+
+			window.remObject(corePanel)
+			window.addObject(keyboardPanel)
+			}
+			else if (ed.type == Button.[click] && ed.source === kbCancelButton)
+			{
+			window.setSize(INITIAL_WIDTH, INITIAL_HEIGHT)
+
+			window.remObject(keyboardPanel)
+			window.addObject(corePanel)
+			}
+			else if (ed.type == Button.[click] && ed.source === kbSetButton)
+			{
+			if (kbLanguageList.getSelectedItem() != null && kbCountryList.getSelectedItem() != null && kbTypeList.getSelectedItem() != null)
+				{
+				window.setSize(INITIAL_WIDTH, INITIAL_HEIGHT)
+				
+				saveKeyboardChoice(kbLanguageList.getSelectedItem(), kbCountryList.getSelectedItem(), kbTypeList.getSelectedItem())
+				buttonConfigCurrent.setText("Currently: $(getKeyboardConfigStr())")
+				coreLayout.refresh()
+
+				window.remObject(keyboardPanel)
+				window.addObject(corePanel)
+				}
+			}
+			else if (ed.type == List.[selectItem] && ed.source === kbLanguageList)
+			{
+			populateKeyboardCountryChoices(kbLanguageList.getSelectedItem())
+			}
+			else if (ed.type == List.[selectItem] && ed.source === kbCountryList)
+			{
+			populateKeyboardTypeChoices(kbLanguageList.getSelectedItem(), kbCountryList.getSelectedItem())
+			}
+		}
+
+	eventsink SysEvents(EventData ed)
+		{
+		if (ed.source === coreui && ed.type == IOLayer.[ready])
+			{
+			startApp()
+			}
+			else if (ed.source === window && ed.type == Window.[close])
+			{
+			window.close()
+			coreui.shutdown()
+			}
+		}
+	
+	char[] fileNameToKeyboardStr(char fn[])
+		{
+		char language[]
+		char country[]
+		char type[]
+
+		String parts[] = fn.explode("_")
+
+		language = parts[1].string
+		country = parts[2].string
+		type = parts[3].string
+
+		if (type != null)
+			return "$language ($country) $type"
+			else
+			return "$language ($country) (default)"
+		}
+
+	char[] getKeyboardConfigStr()
+		{
+		File fd = new File("$(system.getDanaHome())/components/locale/.manifest", File.READ)
+		char json[] = fd.read(fd.getSize())
+		fd.close()
+
+		Manifest manifest = jcoder.jsonToData(json, typeof(Manifest), new Map[](new Map("interface", "intf"), new Map("component", "comp")))
+
+		for (int i = 0; i < manifest.defaultLinks.arrayLength; i++)
+			{
+			if (manifest.defaultLinks[i].intf == "KeyMapping")
+				{
+				char rawStr[] = manifest.defaultLinks[i].comp
+
+				return fileNameToKeyboardStr(rawStr)
+				}
+			}
+
+		return "<unknown>"
+		}
+
+	void startApp()
+		{
+		window = new Window("Dana Setup")
+		window.setSize(INITIAL_WIDTH, INITIAL_HEIGHT)
+		window.setVisible(true)
+
+		// - core interface
+		corePanel = new Panel()
+		corePanel.setSize(INITIAL_WIDTH, INITIAL_HEIGHT)
+
+		Layout layout = new Layout()
+		layout.setSize(INITIAL_WIDTH, INITIAL_HEIGHT)
+		
+		buttonConfigKeyboard = new Button("Configure Keyboard")
+		layout.add(buttonConfigKeyboard, new LayoutRule[](new LayoutRule(LayoutRule.BELOW, 30), new LayoutRule(LayoutRule.ALIGN_CENTER_H)))
+		corePanel.addObject(buttonConfigKeyboard)
+
+		buttonConfigCurrent = new Label("Currently: $(getKeyboardConfigStr())")
+		layout.add(buttonConfigCurrent, new LayoutRule[](new LayoutRule(LayoutRule.BELOW, 4, buttonConfigKeyboard), new LayoutRule(LayoutRule.ALIGN_CENTER_H)))
+		corePanel.addObject(buttonConfigCurrent)
+
+		window.addObject(corePanel)
+		coreLayout = layout
+
+		// - keyboard config interface
+
+		int listMargin = 10
+		int columns = 3
+		int listWidth = ((KB_CONFIG_WIDTH - listMargin) / columns) - listMargin
+		int listHeight = KB_CONFIG_HEIGHT - 170
+
+		keyboardPanel = new Panel()
+		keyboardPanel.setSize(KB_CONFIG_WIDTH, KB_CONFIG_HEIGHT)
+
+		layout = new Layout()
+		layout.setSize(KB_CONFIG_WIDTH, KB_CONFIG_HEIGHT)
+
+		kbNotListedInfoA = new Label("Keyboard settings are used by GUI-based Dana applications for elements such as text fields.")
+		kbNotListedInfoB = new Label("Keyboard not listed? You can create your own in (DANA_HOME)/components/locale/ by copying an")
+		kbNotListedInfoC = new Label("existing KeyMapping_x.dn file, editing it to match your keyboard layout, and compiling it.")
+		layout.add(kbNotListedInfoA, new LayoutRule[](new LayoutRule(LayoutRule.BELOW, 12), new LayoutRule(LayoutRule.ALIGN_CENTER_H)))
+		keyboardPanel.addObject(kbNotListedInfoA)
+		layout.add(kbNotListedInfoB, new LayoutRule[](new LayoutRule(LayoutRule.BELOW, 1, kbNotListedInfoA), new LayoutRule(LayoutRule.ALIGN_CENTER_H)))
+		keyboardPanel.addObject(kbNotListedInfoB)
+		layout.add(kbNotListedInfoC, new LayoutRule[](new LayoutRule(LayoutRule.BELOW, 1, kbNotListedInfoB), new LayoutRule(LayoutRule.ALIGN_CENTER_H)))
+		keyboardPanel.addObject(kbNotListedInfoC)
+
+		kbLanguageLabel = new Label("Language")
+		layout.add(kbLanguageLabel, new LayoutRule[](new LayoutRule(LayoutRule.BELOW, 18, kbNotListedInfoC), new LayoutRule(LayoutRule.RIGHT, listMargin)))
+		keyboardPanel.addObject(kbLanguageLabel)
+
+		kbLanguageList = new List()
+		kbLanguageList.setWidth(listWidth)
+		kbLanguageScroll = new ScrollPane(kbLanguageList)
+		kbLanguageScroll.setSize(listWidth, listHeight)
+		kbLanguageScroll.showScroll(true, false)
+		layout.add(kbLanguageScroll, new LayoutRule[](new LayoutRule(LayoutRule.BELOW, 4, kbLanguageLabel), new LayoutRule(LayoutRule.RIGHT, listMargin)))
+		keyboardPanel.addObject(kbLanguageScroll)
+
+		kbCountryList = new List()
+		kbCountryList.setWidth(listWidth)
+		kbCountryScroll = new ScrollPane(kbCountryList)
+		kbCountryScroll.setSize(listWidth, listHeight)
+		kbCountryScroll.showScroll(true, false)
+		layout.add(kbCountryScroll, new LayoutRule[](new LayoutRule(new byte[](LayoutRule.RIGHT, LayoutRule.ALIGN_TOP), listMargin, kbLanguageScroll)))
+		keyboardPanel.addObject(kbCountryScroll)
+
+		kbTypeList = new List()
+		kbTypeList.setWidth(listWidth)
+		kbTypeScroll = new ScrollPane(kbTypeList)
+		kbTypeScroll.setSize(listWidth, listHeight)
+		kbTypeScroll.showScroll(true, false)
+		layout.add(kbTypeScroll, new LayoutRule[](new LayoutRule(new byte[](LayoutRule.RIGHT, LayoutRule.ALIGN_TOP), listMargin, kbCountryScroll)))
+		keyboardPanel.addObject(kbTypeScroll)
+
+		kbCountryLabel = new Label("Country")
+		layout.add(kbCountryLabel, new LayoutRule[](new LayoutRule(new byte[](LayoutRule.ABOVE, LayoutRule.ALIGN_LEFT), 4, kbCountryScroll)))
+		keyboardPanel.addObject(kbCountryLabel)
+
+		kbTypeLabel = new Label("Keyboard Type")
+		layout.add(kbTypeLabel, new LayoutRule[](new LayoutRule(new byte[](LayoutRule.ABOVE, LayoutRule.ALIGN_LEFT), 4, kbTypeScroll)))
+		keyboardPanel.addObject(kbTypeLabel)
+
+		kbCancelButton = new Button("Cancel")
+		layout.add(kbCancelButton, new LayoutRule[](new LayoutRule(new byte[](LayoutRule.BELOW, LayoutRule.ALIGN_LEFT), 30, kbLanguageScroll)))
+		keyboardPanel.addObject(kbCancelButton)
+
+		kbSetButton = new Button("Save Changes")
+		layout.add(kbSetButton, new LayoutRule[](new LayoutRule(new byte[](LayoutRule.BELOW, LayoutRule.ALIGN_RIGHT), 30, kbTypeScroll)))
+		keyboardPanel.addObject(kbSetButton)
+
+		// - event listeners
+		
+		sinkevent AppEvents(buttonConfigKeyboard)
+		sinkevent AppEvents(kbCancelButton)
+		sinkevent AppEvents(kbSetButton)
+		sinkevent AppEvents(kbLanguageList)
+		sinkevent AppEvents(kbCountryList)
+		
+		sinkevent SysEvents(window)
+		}
+
+	int App:main(AppParam params[])
+		{
+		//initialise the system-level UI framework
+		coreui.init()
+		
+		//listen for startup events from the system
+		sinkevent SysEvents(coreui)
+		
+		//run UI system loop, which blocks until last window closed
+		coreui.run()
+		
+		return 0
+		}
+
+}

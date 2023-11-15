@@ -130,6 +130,9 @@ component provides pal.control.RestAPI requires net.TCPSocket, data.json.JSONPar
 	char[] RestAPI:getConfig()
 		{
 		char response[] = get("/meta/get_config")
+
+		JSONElement doc = parser.parseDocument(response)
+		response = parser.getValue(doc, "config").value
 		
 		return response
 		}
