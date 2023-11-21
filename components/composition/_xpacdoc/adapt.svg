@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="53mm"
+   height="34mm"
+   viewBox="0 0 53 34"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.1 (6036e22fae, 2023-11-19, custom)"
+   sodipodi:docname="adapt.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="2.9077441"
+     inkscape:cx="139.62714"
+     inkscape:cy="108.3314"
+     inkscape:window-width="1850"
+     inkscape:window-height="1016"
+     inkscape:window-x="70"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="fill:none;stroke:#c90033;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="m 18.219382,15.862766 h 3.29331"
+       id="path7" />
+    <g
+       id="g6"
+       transform="translate(-2.1166667,16.933334)">
+      <path
+         style="fill:none;stroke:#0000d6;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+         d="m 37.131874,8.4544322 h -3.29331"
+         id="path5" />
+      <path
+         style="fill:none;stroke:#0000d6;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+         d="M 33.897718,6.8077775 V 10.101087"
+         id="path6" />
+    </g>
+    <g
+       id="g4"
+       transform="translate(-2.1166667,0.52916667)">
+      <path
+         style="fill:none;stroke:#0000d6;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+         d="m 37.131874,8.4544322 h -3.29331"
+         id="path4" />
+      <path
+         style="fill:none;stroke:#0000d6;stroke-width:0.665;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+         d="M 33.897718,6.8077775 V 10.101087"
+         id="path3" />
+    </g>
+    <rect
+       style="fill:#b8c3eb;fill-opacity:1;stroke:#0000d6;stroke-width:0.265;stroke-dasharray:none;stroke-opacity:1"
+       id="rect1"
+       width="13.556372"
+       height="8.6885891"
+       x="6.6372333"
+       y="11.489205"
+       ry="1.8400103" />
+    <rect
+       style="fill:#b8c3eb;fill-opacity:1;stroke:#0000d6;stroke-width:0.265;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2"
+       width="13.556372"
+       height="8.6885891"
+       x="33.095562"
+       y="5.1392069"
+       ry="1.8400103" />
+    <rect
+       style="fill:#b8c3eb;fill-opacity:1;stroke:#0000d6;stroke-width:0.265;stroke-dasharray:none;stroke-opacity:1"
+       id="rect3"
+       width="13.556372"
+       height="8.6885891"
+       x="33.095562"
+       y="21.014208"
+       ry="1.8400103" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:2.11667px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="26.330994"
+       y="5.0876117"
+       id="text6"><tspan
+         sodipodi:role="line"
+         id="tspan6"
+         style="font-style:italic;font-size:2.11667px;fill:#0000d6;stroke-width:0.264583"
+         x="26.330994"
+         y="5.0876117">Button</tspan></text>
+    <path
+       sodipodi:type="star"
+       style="fill:#c90033;fill-opacity:1;stroke:none;stroke-width:0.264999;stroke-dasharray:none;stroke-opacity:1"
+       id="path9"
+       inkscape:flatsided="false"
+       sodipodi:sides="3"
+       sodipodi:cx="23.929335"
+       sodipodi:cy="14.046875"
+       sodipodi:r1="1.4721889"
+       sodipodi:r2="0.73609442"
+       sodipodi:arg1="0.90091985"
+       sodipodi:arg2="1.9481174"
+       inkscape:rounded="0"
+       inkscape:randomized="0"
+       d="m 24.843401,15.200922 -1.185267,-0.469733 -1.185266,-0.469733 0.999434,-0.791604 0.999433,-0.791605 0.185833,1.261337 z"
+       inkscape:transform-center-x="-0.35411459"
+       inkscape:transform-center-y="-0.17344903"
+       transform="matrix(0.4302531,-0.67796434,0.55323331,0.52725722,3.5186919,24.667239)" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:2.11667px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="20.510166"
+       y="18.845949"
+       id="text9"><tspan
+         sodipodi:role="line"
+         id="tspan9"
+         style="font-style:italic;font-size:2.11667px;fill:#c90033;stroke-width:0.264583"
+         x="20.510166"
+         y="18.845949">Button</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:2.11667px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="35.362663"
+       y="16.00227"
+       id="text10"><tspan
+         sodipodi:role="line"
+         id="tspan10"
+         style="font-style:italic;font-size:2.11667px;fill:#1a1a1a;stroke-width:0.264583"
+         x="35.362663"
+         y="16.00227">ButtonA</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:2.11667px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="35.362663"
+       y="31.877272"
+       id="text11"><tspan
+         sodipodi:role="line"
+         id="tspan11"
+         style="font-style:italic;font-size:2.11667px;fill:#1a1a1a;stroke-width:0.264583"
+         x="35.362663"
+         y="31.877272">ButtonB</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:2.11667px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="11.550165"
+       y="22.352274"
+       id="text12"><tspan
+         sodipodi:role="line"
+         id="tspan12"
+         style="font-style:italic;font-size:2.11667px;fill:#1a1a1a;stroke-width:0.264583"
+         x="11.550165"
+         y="22.352274">App</tspan></text>
+    <circle
+       style="fill:none;fill-opacity:1;stroke:#3700d9;stroke-width:0.264999;stroke-dasharray:0.529998, 0.264999;stroke-dashoffset:0;stroke-opacity:1"
+       id="path12"
+       cx="37.055656"
+       cy="7.3457494"
+       r="1.6776866" />
+    <circle
+       style="fill:none;fill-opacity:1;stroke:#3700d9;stroke-width:0.264999;stroke-dasharray:0.529998, 0.264999;stroke-dashoffset:0;stroke-opacity:1"
+       id="circle12"
+       cx="42.347324"
+       cy="7.3457494"
+       r="1.6776866" />
+    <circle
+       style="fill:none;fill-opacity:1;stroke:#3700d9;stroke-width:0.264999;stroke-dasharray:0.529998, 0.264999;stroke-dashoffset:0;stroke-opacity:1"
+       id="circle13"
+       cx="37.055656"
+       cy="11.57908"
+       r="1.6776866" />
+    <circle
+       style="fill:none;fill-opacity:1;stroke:#3700d9;stroke-width:0.264999;stroke-dasharray:0.529998, 0.264999;stroke-dashoffset:0;stroke-opacity:1"
+       id="circle14"
+       cx="42.347324"
+       cy="11.57908"
+       r="1.6776866" />
+    <path
+       style="fill:none;stroke:#f38d00;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 23.35327,15.729344 7.36098,-6.40131"
+       id="path14" />
+    <circle
+       style="fill:none;fill-opacity:1;stroke:#3700d9;stroke-width:0.264999;stroke-dasharray:0.529998, 0.264999;stroke-dashoffset:0;stroke-opacity:1"
+       id="circle15"
+       cx="13.243158"
+       cy="15.812412"
+       r="1.6776866" />
+  </g>
+</svg>

@@ -23,17 +23,33 @@ data CompositionUpdate {
 	Composition addOptions[]
 }
 
+/*
+ {"description" : "Utility API to perform whole-composition search for viable entire compositions of components, from a given starting-point component."}
+*/
+
 interface OptionBuilder {
 	
+	/* { "@description" : "Instantiate a new OptionBuilder, triggering a search for complete compositional options from the given starting component.",	
+			"path" : "The component from which to start the search (often an implementation of the App interface, but not necessarily so).",
+			"searchPaths" : "A list of specific search paths to include in the search process.",
+			"interfaceExcludeList" : "Interfaces to exclude from the search process (no component implementations will be found for these interfaces).",
+			"componentExcludeList" : "Components to exclude from the search process (no compositions will feature these components)."
+		}
+	*/
 	OptionBuilder(char path[], opt store String searchPaths[], store String interfaceExcludeList[], store String componentExcludeList[])
 	
-	//NOTE: we currently assume that autobindings are NOT included in compositions; we could include them with a special InterfaceAction comp of "_runtime"
+	/* { "@description" : "Retrieve the list of compositions that has been found." } */
 	Composition[] getCompositions()
-
+	
+	/* { "@description" : "Add a new component permutation to the composition search, returning the additional compositions which this new option implies." } */
 	Composition[] addComponent(char path[])
+	/* { "@description" : "Update the given component to a new version across the given compositions. This returns a CompositionUpdate, which indicates both compositions that should be removed and those which should be added as a result of the update." } */
 	CompositionUpdate updComponent(Composition compositions[], char path[])
+	/* { "@description" : "Remove a selected component from the composition set, returning the set of compositions which should correspondingly be removed." } */
 	Composition[] remComponent(Composition compositions[], char path[])
-
+	
+	/* { "@description" : "Add a proxy component for the given interface, causing that proxy to act as a novel implementation of that interface, returning the additional compositions which this new option implies. The set of parameters given to this function represents a unique implementation; each additional call which provides the same proxy path and interface, with a different tag or parameters value, is treated as a further novel implementation." } */
 	Composition[] addProxy(char forInterface[], char proxyComponent[], char tag[], char parameters[])
+	/* { "@description" : "Remove a proxy component for the given interface, returning the set of compositions which should correspondingly be removed." } */
 	Composition[] remProxy(Composition compositions[], char forInterface[], char proxyComponent[], char tag[], char parameters[])
 	}
