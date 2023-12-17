@@ -48,4 +48,14 @@ Metrics are typically used to describe how a component is performing (such as it
 
 And that's all! Assuming that the components used to build your system are all compliant with runtime adaptation (for example with appropriate transfer state where necessary), this is all you need.
 
-A learning algorithm will experiment with the various possible ways of composing a piece of software (using available behavioural variants) and will observe how they make the system feel as it is subjected to different operating environment conditions.
+## Writing a Controller
+
+There are two ways to interface with PAL: via the REST API, which is advertised by the `pal.rest` program; or directly via the `pal.Assembly` API.
+
+The REST API provides most of the functionality of `pal.Assembly`, and is useful for integrating with other languages. The direct `pal.Assembly` API provides tighter integration with a little more flexibility around advanced compositional control.
+
+Controllers will typically implement the policy for choosing which composition to select at each point in time (a policy which might be derived via machine learning), and may also exert control over the set of available compositions and how metrics from the live system are collected.
+
+A learning algorithm for example will experiment with the various possible ways of composing a piece of software, selecting each composition as a set of actions, and will observe how they impact a reward function as a system is subjected to different operating environment conditions.
+
+A controller may also inject interceptor components to measure aspects of reward, and may inject proxy variations of interfaces which (for example) distribute components across a network.

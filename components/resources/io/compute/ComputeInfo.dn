@@ -1,0 +1,11 @@
+uses data.String
+
+/*
+    {"description" : "An interface to query compute devices about their current state and their compute abilities e.g supported types and % of memory in use on device"}
+*/
+interface ComputeInfo {
+
+    /* {"@description" : "Returns all the devices (by name) available to the system"} */
+    String[] getDevices()
+
+}

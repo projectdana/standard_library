@@ -28,24 +28,31 @@ data ParseToken {
 	int sourceLength
 	}
 
+/* {"description" : "This type describes a parsing issue."} */
 data TokeniseIssue {
+	/* {"@description" : "Parsing failed due to an unrecognisable number format."} */
 	const int I_UNKNOWN_NUMBER_FORMAT = 1
+	/* {"@description" : "Parsing failed due to an invalid Unicode character."} */
 	const int I_INVALID_UNICODE = 2
+	/* {"@description" : "Parsing failed due to an invalid escape character in a string."} */
 	const int I_INVALID_ESCAPE_CHAR = 3
+	/* {"@description" : "Parsing failed due to an unterminated string literal."} */
 	const int I_UNTERMINATED_STRING = 4
+	/* {"@description" : "The type of the issue."} */
 	int type
+	/* {"@description" : "A human-readonable text description of the issue."} */
 	char description[]
 }
 
+/* {"description" : "This is a container type to hold the parsed token list, and/or details of any parsing issues."} */
 data TokeniseResult {
+	/* {"@description" : "The list of parsed tokens; this may be null if terminal parsing issues were encountered."} */
 	ParseToken tokens[]
+	/* {"@description" : "The issues (if any) encountered during a parse."} */
 	TokeniseIssue issues[]
 }
 
-/*
-{"description" : "This interface is used to tokenise a text document, using a given set of tokens, and supporting both line and block comments."}
-*/
-
+/* {"description" : "This interface is used to tokenise a text document, using a given set of tokens, and supporting both line and block comments."} */
 interface Tokeniser {
 	/*
 	{"@description" : "Initialise a tokeniser instance with the given set of tokens.",

@@ -1,0 +1,1151 @@
+uses data.String
+
+data TableInfo {
+	char name[]
+	Type schema
+	bool autoKey
+	bool deleted
+	}
+
+data RowData {
+	char key[]
+	Data fields
+	}
+
+//a .keys file has a KeyFileHeader, and optionally a list of unused keys (each of which carries the timestamp of last use)
+data KeyFileHeader {
+	int8 nextKey
+	int8 unusedCount
+	bool reuseKeys
+	}
+
+data UnusedKey {
+	int8 key
+	}
+
+const int ROW_INDEX_TYPE_SIZE = 4
+
+component provides QDB requires io.FileSystem fileSystem, io.File, data.IntUtil iu, data.query.Search search, data.StringUtil stringUtil, io.Output out, encoding.Encoder:base64fs encoder {
+	
+	char dir[]
+	
+	TableInfo tables[]
+	
+	Mutex tableLock = new Mutex()
+	
+	Type readTableSchema(char path[])
+		{
+		File fd = new File(path, File.READ)
+		
+		if (fd != null)
+			{
+			char content[] = fd.read(fd.getSize())
+			
+			Type schema = new Type()
+			schema.class = Type.DATA
+			
+			String lines[] = content.explode("\r\n")
+			
+			for (int i = 0; i < lines.arrayLength; i++)
+				{
+				String parts[] = lines[i].string.explode(":")
+				
+				Field tf = new Field()
+				
+				tf.name = parts[1].string
+				
+				String typeParts[] = parts[0].string.explode("[,]")
+				
+				//this is a list of triples of (class,flags,size)
+				
+				tf.type = new Type(iu.intFromString(typeParts[0].string),
+									iu.intFromString(typeParts[1].string),
+									iu.intFromString(typeParts[2].string))
+				
+				//out.println(":field[$(tf.name)][]")
+				
+				if (tf.type.class == Type.ARRAY)
+					{
+					tf.type.fields = new Field()
+					tf.type.fields[0].type = new Type(iu.intFromString(typeParts[3].string),
+									iu.intFromString(typeParts[4].string),
+									iu.intFromString(typeParts[5].string))
+					}
+				
+				schema.fields = new Field[](schema.fields, tf)
+				}
+			
+			return schema
+			}
+		
+		return null
+		}
+	
+	void readTableData()
+		{
+		tables = null
+		
+		FileEntry dirs[] = fileSystem.getDirectoryContents(dir)
+		
+		for (int i = 0; i < dirs.arrayLength; i++)
+			{
+			if (fileSystem.getInfo("$dir/$(dirs[i].name)").type == FileInfo.TYPE_DIR)
+				{
+				TableInfo info = new TableInfo(dirs[i].name)
+				info.schema = readTableSchema("$dir/$(dirs[i].name)/.schema")
+				
+				if (fileSystem.exists("$dir/$(dirs[i].name)/.keys")) info.autoKey = true
+				
+				tables = new TableInfo[](tables, info)
+				}
+			}
+		}
+	
+	QDB:QDB(char directory[])
+		{
+		dir = directory
+		
+		if (!fileSystem.exists(dir)) throw new Exception("directory '$directory' not found")
+		
+		//read/cache all table infos for existing tables
+		readTableData()
+		}
+	
+	//basic management
+	
+	bool schemaValid(Data schema)
+		{
+		//check for only primitive fields (arrays are OK, but must be of primitive type)
+		Type t = typeof(schema)
+		
+		for (int i = 0; i < t.fields.arrayLength; i++)
+			{
+			Type at = t.fields[i].type
+			
+			if (at.class != Type.INTEGER && at.class != Type.DECIMAL)
+				{
+				if (at.class == Type.ARRAY)
+					{
+					if (at.fields[0].type.class != Type.INTEGER && at.fields[0].type.class != Type.DECIMAL)
+						return false
+					}
+					else
+					{
+					return false
+					}
+				}
+			}
+		
+		return true
+		}
+	
+	bool QDB:addTable(char name[], Data schema, bool autoKey, bool reuseKeys)
+		{
+		if (! schemaValid(schema)) throw new Exception("invalid schema")
+		
+		mutex(tableLock)
+			{
+			//create the folder if it doesn't exist, and write the schema
+			if (fileSystem.exists("$dir/$name")) throw new Exception("table already exists")
+			
+			fileSystem.createDirectory("$dir/$name")
+			
+			File fd = new File("$dir/$name/.schema", File.CREATE)
+			
+			if (fd == null) throw new Exception("table create failed (check disk permissions / disk full)")
+			
+			//write the names and types of each field
+			
+			//[type][type]:name
+			//[type]:name
+			
+			Type t = typeof(schema)
+			
+			for (int i = 0; i < t.fields.arrayLength; i++)
+				{
+				Type at = t.fields[i].type
+				fd.write("[$(at.class),$(at.flags),$(at.size)]")
+				if (at.class == Type.ARRAY) fd.write("[$(at.fields[0].type.class),$(at.fields[0].type.flags),$(at.fields[0].type.size)]")
+				fd.write(":")
+				fd.write("$(t.fields[i].name)\n")
+				}
+			
+			if (autoKey)
+				{
+				KeyFileHeader kh = new KeyFileHeader(0, 0, reuseKeys)
+				fd = new File("$dir/$name/.keys", File.CREATE)
+				
+				fd.write(dana.serial(kh))
+				}
+			
+			tables = new TableInfo[](tables, new TableInfo(name, t, autoKey))
+			}
+		
+		return true
+		}
+	
+	String[] QDB:getTables()
+		{
+		String result[]
+		
+		mutex(tableLock)
+			{
+			result = new String[tables.arrayLength]
+			
+			for (int i = 0; i < tables.arrayLength; i++)
+				{
+				result[i].string = tables[i].name
+				}
+			}
+		
+		return result
+		}
+	
+	Data QDB:getTableSchema(char name[])
+		{
+		mutex(tableLock)
+			{
+			if (!fileSystem.exists("$dir/$name")) throw new Exception("table does not exist")
+			
+			TableInfo info = tables.find(TableInfo.[name], new TableInfo(name))[0]
+			
+			return new Data() from info.schema
+			}
+		}
+	
+	void QDB:remTable(char name[])
+		{
+		mutex(tableLock)
+			{
+			//check table exists
+			if (!fileSystem.exists("$dir/$name")) throw new Exception("table does not exist")
+			
+			TableInfo info = tables.find(TableInfo.[name], new TableInfo(name))[0]
+			
+			mutex(info)
+				{
+				fileSystem.deleteDirectory("$dir/$name")
+				
+				TableInfo nti[] = new TableInfo[tables.arrayLength-1]
+				
+				int j = 0
+				for (int i = 0; i < tables.arrayLength; i++)
+					{
+					if (tables[i] !== info)
+						{
+						nti[j] = tables[i]
+						j ++
+						}
+					}
+				
+				tables = nti
+				
+				info.deleted = true
+				}
+			}
+		}
+	
+	// autokey management: both functions below assume the given table is already locked
+	
+	char[] getKey(TableInfo table)
+		{
+		// - open the .keys file for this table and read the header
+		// - if there are unused keys available, and KeyFileHeader.reuseKeys is true, take the first one of those (TODO, if our key reuse policy allows)
+		
+		File fd = new File("$dir/$(table.name)/.keys", File.WRITE)
+		
+		KeyFileHeader kh = new KeyFileHeader()
+		byte serial[] = dana.serial(kh)
+		
+		byte read[] = fd.read(serial.arrayLength)
+		
+		serial =[] read
+		
+		int k = 0
+		
+		if (kh.reuseKeys == true && kh.unusedCount > 0)
+			{
+			kh.unusedCount --
+			
+			//take the first key on the recycle list
+			
+			UnusedKey unkey = new UnusedKey()
+			serial = dana.serial(unkey)
+			
+			read = fd.read(serial.arrayLength)
+			serial =[] read
+			
+			k = unkey.key
+			
+			//write a new file, then copy back to the main file
+			
+			File fdB = new File("$dir/$(table.name)/.keys_tmp", File.WRITE)
+			
+			serial = dana.serial(kh)
+			
+			fdB.write(serial)
+			
+			for (int i = 0; i < kh.unusedCount; i ++)
+				{
+				read = fd.read(8)
+				fdB.write(read)
+				}
+			
+			fdB.close()
+			
+			fd.close()
+			
+			fileSystem.delete("$dir/$(table.name)/.keys")
+			fileSystem.move("$dir/$(table.name)/.keys_tmp", "$dir/$(table.name)/.keys")
+			}
+			else
+			{
+			k = kh.nextKey
+			kh.nextKey ++
+			
+			fd.setPos(0)
+			
+			fd.write(serial)
+			
+			fd.close()
+			}
+		
+		return new char[]("k$k")
+		}
+	
+	void freeKey(TableInfo table, char key[])
+		{
+		// - check if KeyFileHeader.reuseKeys is true
+		// - parse the key into its int component
+		// - get the current time
+		// - create an UnusedKey instance and append it to the end of the .keys file for this table
+		
+		File fd = new File("$dir/$(table.name)/.keys", File.WRITE)
+		
+		KeyFileHeader kh = new KeyFileHeader()
+		byte serial[] = dana.serial(kh)
+		
+		byte read[] = fd.read(serial.arrayLength)
+		
+		serial =[] read
+		
+		fd.close()
+		
+		if (kh.reuseKeys)
+			{
+			char pkey[] = encoder.decode(key)
+			char num[] = stringUtil.subString(pkey, 1, pkey.arrayLength - 1)
+			int inum = iu.intFromString(num)
+			
+			fd = new File("$dir/$(table.name)/.keys", File.WRITE)
+			
+			kh.unusedCount ++
+			
+			fd.write(serial)
+			
+			fd.setPos(fd.getSize())
+			
+			UnusedKey unkey = new UnusedKey(inum)
+			
+			serial = dana.serial(unkey)
+			
+			fd.write(serial)
+			
+			fd.close()
+			}
+		}
+	
+	void resetKeys(TableInfo table)
+		{
+		File fd = new File("$dir/$(table.name)/.keys", File.READ)
+		
+		KeyFileHeader kh = new KeyFileHeader()
+		byte serial[] = dana.serial(kh)
+		
+		byte read[] = fd.read(serial.arrayLength)
+		
+		serial =[] read
+		
+		fd.close()
+		
+		if (kh.reuseKeys)
+			{
+			kh.nextKey = 0
+			kh.unusedCount = 0
+			
+			fd = new File("$dir/$(table.name)/.keys", File.CREATE)
+			fd.write(serial)
+			fd.close()
+			}
+		}
+	
+	// row read/write
+	
+	void writeRow(File fd, Data rowData)
+		{
+		Type t = typeof(rowData)
+		
+		int offset = 0
+		
+		int4 offsets[] = new int4[t.fields.arrayLength]
+		
+		for (int i = 0; i < t.fields.arrayLength; i++)
+			{
+			offsets[i] = offset
+			
+			Type at = t.fields[i].type
+			
+			if (at.class == Type.INTEGER)
+				{
+				offset += at.size
+				}
+				else if (at.class == Type.DECIMAL)
+				{
+				offset += at.size
+				}
+				else if (at.class == Type.ARRAY)
+				{
+				int elSize = at.fields[0].type.size
+				int arrayLen = (rowData:.i).arrayLength
+				offset += arrayLen * elSize
+				}
+			}
+		
+		fd.write(dana.serial(offsets))
+		
+		for (int i = 0; i < t.fields.arrayLength; i++)
+			{
+			Type at = t.fields[i].type
+			
+			byte serial[]
+			
+			if (at.class == Type.ARRAY && (rowData:.i).arrayLength == 0)
+				serial = null
+				else
+				serial = dana.serial(rowData, i)
+			
+			fd.write(serial)
+			}
+		}
+	
+	bool makePrimitiveArray(Data ins, TypeField f, Type t, byte raw[])
+		{
+		int byteLen = raw.arrayLength
+		
+		//NOTE: this would be easier with e.g. new primitive[] from t ...
+		if (t.class == Type.INTEGER)
+			{
+			if (t.size == 1)
+				{
+				if (t.flags == Type.F_CHAR)
+					ins:.f = new char[byteLen]
+					else if (t.flags == Type.F_BOOL)
+					ins:.f = new bool[byteLen]
+					else
+					ins:.f = new byte[byteLen]
+				}
+				else if (t.size == 2)
+				{
+				ins:.f = new int2[byteLen / t.size]
+				}
+				else if (t.size == 4)
+				{
+				ins:.f = new int4[byteLen / t.size]
+				}
+				else if (t.size == 8)
+				{
+				ins:.f = new int8[byteLen / t.size]
+				}
+				else if (t.size == 16)
+				{
+				ins:.f = new int16[byteLen / t.size]
+				}
+				else if (t.size == 32)
+				{
+				ins:.f = new int32[byteLen / t.size]
+				}
+				else if (t.size == 64)
+				{
+				ins:.f = new int64[byteLen / t.size]
+				}
+				else if (t.size == 128)
+				{
+				ins:.f = new int128[byteLen / t.size]
+				}
+				else if (t.size == 256)
+				{
+				ins:.f = new int256[byteLen / t.size]
+				}
+				else if (t.size == 512)
+				{
+				ins:.f = new int512[byteLen / t.size]
+				}
+			}
+			else if (t.class == Type.DECIMAL)
+			{
+			if (t.size == 2)
+				{
+				ins:.f = new dec1[byteLen / t.size]
+				}
+				else if (t.size == 4)
+				{
+				ins:.f = new dec2[byteLen / t.size]
+				}
+				else if (t.size == 8)
+				{
+				ins:.f = new dec4[byteLen / t.size]
+				}
+				else if (t.size == 16)
+				{
+				ins:.f = new dec8[byteLen / t.size]
+				}
+				else if (t.size == 32)
+				{
+				ins:.f = new dec16[byteLen / t.size]
+				}
+				else if (t.size == 64)
+				{
+				ins:.f = new dec32[byteLen / t.size]
+				}
+				else if (t.size == 128)
+				{
+				ins:.f = new dec64[byteLen / t.size]
+				}
+				else if (t.size == 256)
+				{
+				ins:.f = new dec128[byteLen / t.size]
+				}
+				else if (t.size == 512)
+				{
+				ins:.f = new dec256[byteLen / t.size]
+				}
+				else if (t.size == 1024)
+				{
+				ins:.f = new dec512[byteLen / t.size]
+				}
+			}
+		
+		byte serial[] = dana.serial(ins, f)
+		serial =[] raw
+		
+		return true
+		}
+	
+	int4[] readRowIndices(File fd, int count)
+		{
+		int4 result[] = new int4[count]
+		byte serial[] = dana.serial(result)
+		
+		serial =[] fd.read(serial.arrayLength)
+		
+		return result
+		}
+	
+	Data readRow(File fd, TableInfo info)
+		{
+		Data d = new Data() from info.schema
+		
+		int4 indices[] = readRowIndices(fd, info.schema.fields.arrayLength)
+		
+		int dataOffset = indices.arrayLength * ROW_INDEX_TYPE_SIZE
+		
+		int dataLen = fd.getSize() - dataOffset
+		
+		for (int i = 0; i < info.schema.fields.arrayLength; i++)
+			{
+			Type at = info.schema.fields[i].type
+			
+			fd.setPos(dataOffset+indices[i])
+			
+			if (at.class == Type.INTEGER || at.class == Type.DECIMAL)
+				{
+				byte serial[] = dana.serial(d, i)
+				
+				serial =[] fd.read(serial.arrayLength)
+				}
+				else if (at.class == Type.ARRAY)
+				{
+				int readLen = 0
+				
+				if (i + 1 < indices.arrayLength)
+					readLen = indices[i+1] - indices[i]
+					else
+					readLen = dataLen - indices[i]
+				
+				byte raw[] = fd.read(readLen)
+				
+				makePrimitiveArray(d, i, at.fields[0].type, raw)
+				}
+			}
+		
+		return d
+		}
+	
+	char[] addNewRow(char table[], Data rowData, opt char rowKey[])
+		{
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+
+		if (rowKey.arrayLength == 0 && !info.autoKey)
+			{
+			throw new Exception("no row key provided for a table which does not generate keys automatically")
+			}
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			if (info.autoKey) rowKey = getKey(info)
+			
+			//key to base64fs, to remove special characters
+			char rowKeyEnc[] = encoder.encode(rowKey)
+			
+			//check rowKey does not yet exist
+			if (!fileSystem.exists("$dir/$table/$rowKeyEnc"))
+				{
+				//write the offsets of each field, as pure binary-encoded integers
+				//then write all the data out as binary
+				File fd = new File("$dir/$table/$rowKeyEnc", File.CREATE)
+				
+				if (fd == null) throw new Exception("row create failed (check disk permissions / disk full)")
+				
+				writeRow(fd, rowData)
+				
+				fd.close()
+				}
+			}
+		
+		return rowKey
+		}
+	
+	char[] QDB:addRow(char table[], char rowKey[], Data rowData)
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		//TODO: check schema match
+
+		return addNewRow(table, rowData, rowKey)
+		}
+	
+	char[] QDB:addRowAuto(char table[], Data rowData)
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		//TODO: check schema match
+		
+		return addNewRow(table, rowData)
+		}
+	
+	void QDB:updRow(char table[], char rowKey[], Data rowData)
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		//TODO: check schema match
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//key to base64fs, to remove special characters
+			rowKey = encoder.encode(rowKey)
+			
+			//check rowKey exists
+			if (fileSystem.exists("$dir/$table/$rowKey"))
+				{
+				//write the offsets of each field, as pure binary-encoded integers
+				//then write all the data out as binary
+				File fd = new File("$dir/$table/$rowKey", File.CREATE)
+				
+				if (fd == null) throw new Exception("row create failed (check disk permissions / disk full)")
+				
+				writeRow(fd, rowData)
+				
+				fd.close()
+				}
+			}
+		}
+	
+	void QDB:addUpdRow(char table[], char rowKey[], Data rowData)
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		//TODO: check schema match
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//key to base64fs, to remove special characters
+			rowKey = encoder.encode(rowKey)
+			
+			//write the offsets of each field, as pure binary-encoded integers
+			//then write all the data out as binary
+			File fd = new File("$dir/$table/$rowKey", File.CREATE)
+			
+			if (fd == null) throw new Exception("row create failed (check disk permissions / disk full)")
+			
+			writeRow(fd, rowData)
+			
+			fd.close()
+			}
+		}
+	
+	Data QDB:getRow(char table[], char rowKey[])
+		{
+		Data result
+
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//key to base64fs, to remove special characters
+			rowKey = encoder.encode(rowKey)
+			
+			//if (!fileSystem.exists("$dir/$table/$rowKey")) throw new Exception("row $rowKey does not exist")
+			if (fileSystem.exists("$dir/$table/$rowKey"))
+				{
+				File fd = new File("$dir/$table/$rowKey", File.READ)
+				
+				result = readRow(fd, info)
+				
+				fd.close()
+				}
+			}
+		
+		return result
+		}
+	
+	void QDB:remRow(char table[], char rowKey[])
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//key to base64fs, to remove special characters
+			rowKey = encoder.encode(rowKey)
+			
+			if (fileSystem.exists("$dir/$table/$rowKey"))
+				{
+				fileSystem.delete("$dir/$table/$rowKey")
+				
+				if (info.autoKey)
+					freeKey(info, rowKey)
+				}
+			}
+		}
+	
+	//queries
+	
+	int QDB:incField(char table[], char rowKey[], TypeField index) //increment given field by 1, or create the row if it doesn't exist
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+		
+		//check field index is an integer
+		if (info.schema.fields[index].type.class != Type.INTEGER) throw new Exception("selected field must be an integer of size int8 or lower")
+		
+		Data instance = new Data() from info.schema
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//key to base64fs, to remove special characters
+			rowKey = encoder.encode(rowKey)
+			
+			if (fileSystem.exists("$dir/$table/$rowKey"))
+				{
+				File fd = new File("$dir/$table/$rowKey", File.WRITE)
+				
+				//read the field indices
+				int4 indices[] = readRowIndices(fd, info.schema.fields.arrayLength)
+				
+				int dataOffset = indices.arrayLength * ROW_INDEX_TYPE_SIZE
+				
+				//jump to the field index's offset, read the int, increment, and write it back
+				byte serial[] = dana.serial(instance, index)
+				
+				fd.setPos(dataOffset+indices[index])
+				
+				serial =[] fd.read(serial.arrayLength)
+				
+				//TODO: this is not size-generic
+				int8 num = instance:.index
+				num ++
+				instance:.index = num
+				//instance:.index = (instance:.index) + 1
+				
+				fd.setPos(dataOffset+indices[index])
+				
+				fd.write(serial)
+				
+				fd.close()
+
+				return num
+				}
+				else
+				{
+				//write a new record, as a blank copy of the schema, and a 1 for the given field
+				instance:.index = 1
+				
+				File fd = new File("$dir/$table/$rowKey", File.CREATE)
+				
+				writeRow(fd, instance)
+				
+				fd.close()
+
+				return 1
+				}
+			}
+		}
+	
+	int QDB:decField(char table[], char rowKey[], TypeField index) //decrement given field by 1, if it exists
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+		
+		//check field index is an integer
+		if (info.schema.fields[index].type.class != Type.INTEGER) throw new Exception("selected field must be an integer of size int8 or lower")
+		
+		Data instance = new Data() from info.schema
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//key to base64fs, to remove special characters
+			rowKey = encoder.encode(rowKey)
+			
+			if (fileSystem.exists("$dir/$table/$rowKey"))
+				{
+				File fd = new File("$dir/$table/$rowKey", File.WRITE)
+				
+				//read the field indices
+				int4 indices[] = readRowIndices(fd, info.schema.fields.arrayLength)
+				
+				int dataOffset = indices.arrayLength * ROW_INDEX_TYPE_SIZE
+				
+				//jump to the field index's offset, read the int, increment, and write it back
+				byte serial[] = dana.serial(instance, index)
+				
+				fd.setPos(dataOffset+indices[index])
+				
+				serial =[] fd.read(serial.arrayLength)
+				
+				//TODO: this is not size-generic
+				int8 num = instance:.index
+				num --
+				instance:.index = num
+				//instance:.index = (instance:.index) - 1
+				
+				fd.setPos(dataOffset+indices[index])
+				
+				fd.write(serial)
+				
+				fd.close()
+
+				return num
+				}
+				else
+				{
+				return 0
+				}
+			}
+		}
+	
+	RowData[] QDB:getRows(char table[])
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+		
+		RowData result[]
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//list all files in the folder, subtract 1 for the schema, then read each row using readRow
+			FileEntry rows[] = fileSystem.getDirectoryContents("$dir/$table")
+			
+			int resultLen = rows.arrayLength
+			
+			//ignore DB data files
+			for (int i = 0; i < rows.arrayLength; i++)
+				{
+				if (rows[i].name[0] == ".")
+					{
+					resultLen --
+					}
+				}
+			
+			if (resultLen != 0)
+				{
+				result = new RowData[resultLen]
+				
+				int j = 0
+				for (int i = 0; i < rows.arrayLength; i++)
+					{
+					if (rows[i].name[0] != ".")
+						{
+						result[j] = new RowData()
+						result[j].key = encoder.decode(rows[i].name)
+						
+						File fd = new File("$dir/$table/$(rows[i].name)", File.READ)
+						
+						result[j].fields = readRow(fd, info)
+						
+						fd.close()
+						
+						j ++
+						}
+					}
+				}
+			}
+		
+		return result
+		}
+	
+	RowData[] QDB:getRowsClear(char table[])
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+		
+		RowData result[]
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//list all files in the folder, subtract 1 for the schema, then read each row using readRow
+			FileEntry rows[] = fileSystem.getDirectoryContents("$dir/$table")
+			
+			int resultLen = rows.arrayLength
+			
+			//ignore DB data files
+			for (int i = 0; i < rows.arrayLength; i++)
+				{
+				if (rows[i].name[0] == ".")
+					{
+					resultLen --
+					}
+				}
+			
+			if (resultLen != 0)
+				{
+				result = new RowData[resultLen]
+				
+				int j = 0
+				for (int i = 0; i < rows.arrayLength; i++)
+					{
+					if (rows[i].name[0] != ".")
+						{
+						result[j] = new RowData()
+						result[j].key = encoder.decode(rows[i].name)
+						
+						File fd = new File("$dir/$table/$(rows[i].name)", File.READ)
+						
+						result[j].fields = readRow(fd, info)
+						
+						fd.close()
+						
+						fileSystem.delete("$dir/$table/$(rows[i].name)")
+						
+						j ++
+						}
+					}
+				}
+			
+			if (info.autoKey)
+				{
+				//reset the key file, if key re-use is on
+				resetKeys(info)
+				}
+			}
+		
+		return result
+		}
+	
+	RowData QDB:getRowEq(char table[], TypeField index, Data template)
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+		
+		RowData result[]
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//list all files in the folder, subtract 1 for the schema, then read each row using readRow
+			FileEntry rows[] = fileSystem.getDirectoryContents("$dir/$table")
+
+			int j = 0
+			for (int i = 0; i < rows.arrayLength; i++)
+				{
+				if (rows[i].name[0] != ".")
+					{
+					File fd = new File("$dir/$table/$(rows[i].name)", File.READ)
+					Data check = readRow(fd, info)
+					fd.close()
+					
+					if (check:.index == template:.index)
+						{
+						return new RowData(encoder.decode(rows[i].name), check)
+						}
+					}
+				}
+			}
+		
+		return null
+		}
+	
+	RowData[] QDB:getRowsEq(char table[], TypeField index, Data template)
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+		
+		RowData result[]
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//list all files in the folder, subtract 1 for the schema, then read each row using readRow
+			FileEntry rows[] = fileSystem.getDirectoryContents("$dir/$table")
+			
+			int j = 0
+			for (int i = 0; i < rows.arrayLength; i++)
+				{
+				if (rows[i].name[0] != ".")
+					{
+					File fd = new File("$dir/$table/$(rows[i].name)", File.READ)
+					Data check = readRow(fd, info)
+					fd.close()
+					
+					if (check:.index == template:.index)
+						{
+						RowData nrd = new RowData(encoder.decode(rows[i].name), check)
+						result = new RowData[](result, nrd)
+						}
+					}
+				}
+			}
+		
+		return result
+		}
+	
+	void QDB:remRowEq(char table[], TypeField index, Data template)
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//list all files in the folder, subtract 1 for the schema, then read each row using readRow
+			FileEntry rows[] = fileSystem.getDirectoryContents("$dir/$table")
+			
+			int j = 0
+			for (int i = 0; i < rows.arrayLength; i++)
+				{
+				if (rows[i].name[0] != ".")
+					{
+					File fd = new File("$dir/$table/$(rows[i].name)", File.READ)
+					Data check = readRow(fd, info)
+					fd.close()
+					
+					if (check:.index == template:.index)
+						{
+						fileSystem.delete("$dir/$table/$(rows[i].name)")
+						
+						if (info.autoKey)
+							freeKey(info, rows[i].name)
+						
+						return
+						}
+					}
+				}
+			}
+		}
+	
+	void QDB:remRowsEq(char table[], TypeField index, Data template)
+		{
+		//check table exists
+		if (!fileSystem.exists("$dir/$table")) throw new Exception("table '$table' does not exist")
+		
+		TableInfo info = tables.findFirst(TableInfo.[name], new TableInfo(table))
+		
+		mutex(info)
+			{
+			//check for race condition against table deletion
+			if (info.deleted) throw new Exception("table '$table' does not exist")
+			
+			//list all files in the folder, subtract 1 for the schema, then read each row using readRow
+			FileEntry rows[] = fileSystem.getDirectoryContents("$dir/$table")
+			
+			int j = 0
+			for (int i = 0; i < rows.arrayLength; i++)
+				{
+				if (rows[i].name[0] != ".")
+					{
+					File fd = new File("$dir/$table/$(rows[i].name)", File.READ)
+					Data check = readRow(fd, info)
+					fd.close()
+					
+					if (check:.index == template:.index)
+						{
+						fileSystem.delete("$dir/$table/$(rows[i].name)")
+						
+						if (info.autoKey)
+							freeKey(info, rows[i].name)
+						}
+					}
+				}
+			}
+		}
+	
+	}

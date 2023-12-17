@@ -56,7 +56,7 @@ data WorkItem {
 	WorkItem prev
 }
 
-data NetWorkItem {
+data NetWorkItem nocycle {
 	TCPSocket client
 	TLS tlsClient
 	Stream stream
@@ -609,6 +609,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 
 				if (w.nextCommand != null && !w.nextCommand.persistent)
 					{
+					//out.println("ef-socket $(w.fromNetItem.client.getID())")
 					w.fromNetItem.client.disconnect()
 					}
 
@@ -821,6 +822,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 		//remove the item from our work list
 		mutex(state)
 			{
+			//out.println("rm-socket $(item.client.getID())")
 			state.monitor.remSocket(item.client)
 			item.client.disconnect()
 
@@ -1066,6 +1068,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 			
 			thread.workEnd = nwi
 
+			//out.println("ad-socket $(s.getID())")
 			thread.monitor.addSocket(s, nwi)
 
 			if (tls != null)
@@ -1090,6 +1093,19 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 			reqThreadPool[i].thread.signal()
 			reqThreadPool[i].thread.join()
 			}
+		
+		for (int i = 0; i < netThreadPool.arrayLength; i++)
+			{
+			netThreadPool[i].thread.join()
+
+			while (netThreadPool[i].work != null)
+				{
+				closeItem(netThreadPool[i], netThreadPool[i].work)
+				}
+			}
+		
+		reqThreadPool = null
+		netThreadPool = null
 		}
 	
 	}

@@ -1,0 +1,17 @@
+uses Compute
+
+/*
+{"description" : "This interface represents a integer type array stored on an external compute device"}
+*/
+interface ArrayInt extends ExtMemory {
+
+    /* {"@description" : "Creates the array with the given length on the given Compute device"} */
+    ArrayInt(store Compute device, int length)
+
+    /* {"@description" : "Writes to the array starting at index 0 up to the length of the host array given by content"} */
+    void write(int content[])
+
+    /* {"@description" : "Reads the entire array stored on the external Compute device, returns this as a host array"} */
+    int[] read()
+    
+}

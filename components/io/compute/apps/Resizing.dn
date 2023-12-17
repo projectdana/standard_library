@@ -1,0 +1,112 @@
+component provides Resizing requires System system, io.compute.LogicalCompute, data.IntUtil iu {
+    LogicalCompute myDev
+
+    Resizing:Resizing() {
+        myDev = new LogicalCompute()
+        myDev.loadProgram("$(system.getDanaHome())/components/resources-ext/opencl_kernels/chopColumnI.cl", "chopColumnI")
+        myDev.loadProgram("$(system.getDanaHome())/components/resources-ext/opencl_kernels/chopColumnF.cl", "chopColumnF")
+        myDev.loadProgram("$(system.getDanaHome())/components/resources-ext/opencl_kernels/chopRowI.cl", "chopRowI")
+        myDev.loadProgram("$(system.getDanaHome())/components/resources-ext/opencl_kernels/chopRowF.cl", "chopRowF")
+    }
+
+    int[][] Resizing:chopColumnInt(int matrix[][], int start, int end) {
+        myDev.createIntMatrix("in", matrix.arrayLength, matrix[0].arrayLength)
+        myDev.writeIntMatrix("in", matrix)
+
+        myDev.createIntMatrix("out", matrix.arrayLength, matrix[0].arrayLength-(end-start))
+
+        myDev.createIntArray("indicies", 2)
+        int indicies[] = new int[2]
+        indicies[0] = start
+        indicies[1] = end
+        myDev.writeIntArray("indicies", indicies)
+
+        String params[] = new String[](new String("indicies"), new String("in"), new String("out"))
+
+        myDev.runProgram("chopColumnI", params)
+
+        int m[][] = myDev.readIntMatrix("out")
+
+        myDev.destroyMemoryArea("in")
+        myDev.destroyMemoryArea("out")
+        myDev.destroyMemoryArea("indicies")
+
+        return m
+    }
+
+    dec[][] Resizing:chopColumnDec(dec matrix[][], int start, int end) {
+        myDev.createDecMatrix("in", matrix.arrayLength, matrix[0].arrayLength)
+        myDev.writeDecMatrix("in", matrix)
+
+        myDev.createDecMatrix("out", matrix.arrayLength, matrix[0].arrayLength-(end-start))
+
+        myDev.createIntArray("indicies", 2)
+        int indicies[] = new int[2]
+        indicies[0] = start
+        indicies[1] = end
+        myDev.writeIntArray("indicies", indicies)
+
+        String params[] = new String[](new String("indicies"), new String("in"), new String("out"))
+
+        myDev.runProgram("chopColumnF", params)
+
+        dec m[][] = myDev.readDecMatrix("out")
+
+        myDev.destroyMemoryArea("in")
+        myDev.destroyMemoryArea("out")
+        myDev.destroyMemoryArea("indicies")
+
+        return m
+    }
+
+    int[][] Resizing:chopRowInt(int matrix[][], int start, int end) {
+        myDev.createIntMatrix("in", matrix.arrayLength, matrix[0].arrayLength)
+        myDev.writeIntMatrix("in", matrix)
+
+        myDev.createIntMatrix("out", matrix.arrayLength-(end-start), matrix[0].arrayLength)
+
+        myDev.createIntArray("indicies", 2)
+        int indicies[] = new int[2]
+        indicies[0] = start
+        indicies[1] = end
+        myDev.writeIntArray("indicies", indicies)
+
+        String params[] = new String[](new String("indicies"), new String("in"), new String("out"))
+
+        myDev.runProgram("chopRowI", params)
+
+        int m[][] = myDev.readIntMatrix("out")
+
+        myDev.destroyMemoryArea("in")
+        myDev.destroyMemoryArea("out")
+        myDev.destroyMemoryArea("indicies")
+
+        return m
+    }
+
+    dec[][] Resizing:chopRowDec(dec matrix[][], int start, int end) {
+        myDev.createDecMatrix("in", matrix.arrayLength, matrix[0].arrayLength)
+        myDev.writeDecMatrix("in", matrix)
+
+        myDev.createDecMatrix("out", matrix.arrayLength-(end-start), matrix[0].arrayLength)
+
+        myDev.createIntArray("indicies", 2)
+        int indicies[] = new int[2]
+        indicies[0] = start
+        indicies[1] = end
+        myDev.writeIntArray("indicies", indicies)
+
+        String params[] = new String[](new String("indicies"), new String("in"), new String("out"))
+
+        myDev.runProgram("chopRowF", params)
+
+        dec m[][] = myDev.readDecMatrix("out")
+
+        myDev.destroyMemoryArea("in")
+        myDev.destroyMemoryArea("out")
+        myDev.destroyMemoryArea("indicies")
+
+        return m
+    }
+
+}

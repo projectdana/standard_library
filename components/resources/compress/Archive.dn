@@ -3,18 +3,21 @@ uses io.File
 
 uses time.DateTime
 
+/* { "description" : "A file entry from an archive."} */
 data ArchiveFile {
+	/* { "@description" : "The file path of this entity inside the archive."} */
 	char path[]
+	/* { "@description" : "Whether this entity is a file or directory."} */
 	bool dir
+	/* { "@description" : "This compressed size of this entity in the archive."} */
 	int compressedSize
+	/* { "@description" : "The uncompressed size of this entity when extracted."} */
 	int uncompressedSize
+	/* { "@description" : "The last-modified time of this entity."} */
 	DateTime modified
 	}
 
-/*
-{ "description" : "Interface to read file archives, often using compression."}
-*/
-
+/* { "description" : "Interface to read file archives, often using compression."} */
 interface Archive {
 	
 	/* { "@description" : "Create a new Archive instance, which will read the archive from the given file."} */

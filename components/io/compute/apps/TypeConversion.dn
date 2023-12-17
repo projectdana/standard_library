@@ -1,0 +1,25 @@
+component provides TypeConversion requires System system, io.compute.LogicalCompute {
+    LogicalCompute myDev
+
+    TypeConversion:TypeConversion() {
+        myDev = new LogicalCompute()
+        myDev.loadProgram("$(system.getDanaHome())/components/resources-ext/opencl_kernels/intToDouble.cl", "intToDouble")
+    }
+
+    dec[][] TypeConversion:intToDecMatrix(int matrix[][]){
+        myDev.createIntMatrix("intmat", matrix.arrayLength, matrix[0].arrayLength)
+        myDev.writeIntMatrix("intmat", matrix)
+
+        myDev.createDecMatrix("floatmat", matrix.arrayLength, matrix[0].arrayLength)
+
+        String params[] = new String[](new String("intmat"), new String("floatmat"))
+        myDev.runProgram("intToDouble", params)
+
+        dec newMat[][] = myDev.readDecMatrix("floatmat")
+
+        myDev.destroyMemoryArea("intmat")
+        myDev.destroyMemoryArea("floatmat")
+
+        return newMat
+    }
+}

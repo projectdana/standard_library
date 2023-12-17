@@ -1,0 +1,7 @@
+uses data.String
+
+/* {"description" : "This interface pools together one or more compute devices and relates them to each other in the underlying native API (where possible) to leverage platform specific optimisation.<br> All compute devices must be part of a ComputeArray to be used"} */
+interface ComputeArray {
+    /* {"@description" : "Pools and binds the given devices (identified by name) to the underlying native API"} */
+    ComputeArray(store String devicesForArray[])
+}

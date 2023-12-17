@@ -1,17 +1,21 @@
 uses TCPSocket
 
-data MonitorEvent {
+/* {"description" : "MonitorEvent instances are returned by a TCPMonitor when activity occurs over any of the monitored sockets."} */
+data MonitorEvent nocycle {
+	/* {"@description" : "The socket to which this event relates."} */
 	TCPSocket socket
+	/* {"@description" : "The userData (if any) that was associated with this socket in the TCPMonitor."} */
 	Data userData
-
+	
+	/* {"@description" : "The socket is ready to receive some bytes."} */
 	bool recvReady
+	/* {"@description" : "The socket previously failed to send all data requested (because one or more buffers was full), and is now ready to send data again. sendBuffer() should be called on the socket before sending any new data."} */
 	bool sendReady
+	/* {"@description" : "The socket should be closed (because the remote end has closed their side)."} */
 	bool close
 }
 
-/*
-{"description" : "Monitor activity over multiple non-blocking sockets."}
-*/
+/* {"description" : "Monitor activity over multiple non-blocking sockets."} */
 
 interface TCPMonitor {
 	

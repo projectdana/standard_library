@@ -681,14 +681,15 @@ component provides TypeParser requires io.Output out, io.FileSystem fs, io.File,
 			return false
 		
 		start ++
-		
-		if (tokens[start].content == "[")
+
+		//array?
+		while (tokens[start].content == "[")
 			{
 			start ++
 
 			if (tokens[start].content.isNumeric())
 				start ++
-			
+
 			if (tokens[start].content != "]")
 				return false
 			
@@ -815,17 +816,15 @@ component provides TypeParser requires io.Output out, io.FileSystem fs, io.File,
 		start ++
 		
 		//array?
-		if (tokens[start].content == "[")
+		while (tokens[start].content == "[")
 			{
 			start ++
 
 			if (tokens[start].content.isNumeric())
 				start ++
 			
-			if (tokens[start].content == "]")
-				field.array = true
-			
 			field.displayName = new char[](field.displayName, "[]")
+			field.array = true
 			
 			start ++
 			}
@@ -1146,17 +1145,15 @@ component provides TypeParser requires io.Output out, io.FileSystem fs, io.File,
 		start ++
 		
 		//array?
-		if (tokens[start].content == "[")
+		while (tokens[start].content == "[")
 			{
 			start ++
-			
+
 			if (tokens[start].content.isNumeric())
 				start ++
-
-			if (tokens[start].content == "]")
-				field.array = true
 			
 			field.displayName = new char[](field.displayName, "[]")
+			field.array = true
 			
 			start ++
 			}

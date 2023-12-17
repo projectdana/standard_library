@@ -1,21 +1,17 @@
-/*
- {"description" : "Retrieves a relative time using a high-definition clock."}
-*/
-
+/* {"description" : "A time point, expressed as seconds and nanoseconds."} */
 data TimeHD {
+	/* {"@description" : "The number of seconds."} */
 	int seconds
+	/* {"@description" : "The number of nanoseconds."} */
 	int nanoseconds
 	}
 
+/* {"description" : "Retrieves a relative time using a high-definition clock."} */
 interface ClockHD {
 	
-	/*
-	{ "@description" : "Initialises the clock; time points will be relative to this instantiation point." }
-	*/
+	/* { "@description" : "Initialises the clock; time points will be relative to this instantiation point." } */
 	ClockHD()
 	
-	/*
-	{ "@description" : "Returns the current date and time." }
-	*/
+	/* { "@description" : "Returns the number of elapsed seconds and nanoseconds since the initialisation time." } */
 	TimeHD getTime()
 	}

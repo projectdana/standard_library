@@ -1,0 +1,1674 @@
+data Int4Con {
+	int4 num
+	}
+
+data Int8Con {
+	int8 num
+	}
+
+const byte MAGIC[] = new byte[](0x3, 0x4, 0x5, 0x6)
+
+const int4 VERSION_1 = 1
+
+const int4 CMD_ADD_TABLE = 1
+const int4 CMD_UPD_TABLE = 2
+const int4 CMD_GET_TABLE = 3
+const int4 CMD_GET_TABLES = 4
+const int4 CMD_REM_TABLE = 5
+const int4 CMD_ADD_ROW = 10
+const int4 CMD_UPD_ROW = 11
+const int4 CMD_ADD_UPD_ROW = 12
+const int4 CMD_GET_ROW = 13
+const int4 CMD_REM_ROW = 14
+const int4 CMD_INC_FIELD = 20
+const int4 CMD_DEC_FIELD = 21
+const int4 CMD_GET_ROWS = 30
+const int4 CMD_GET_ROWS_CLEAR = 31
+const int4 CMD_GET_ROW_EQ = 32
+const int4 CMD_GET_ROWS_EQ = 33
+const int4 CMD_REM_ROW_EQ = 34
+const int4 CMD_REM_ROWS_EQ = 35
+const int4 CMD_END = 101
+
+data MessageHeader {
+	int4 protocolVersion
+	const int4 T_DEFAULT = 0
+	const int4 T_ENCRYPT = 1
+	int4 type
+	int4 infoSize //optional "message info" data, which some message types use
+	int4 payloadSize //payload size, after message info
+}
+
+data ResponseHeader {
+	byte magic[4]
+	const int2 RESPONSE_OK = 0
+	const int2 RESPONSE_EX = 1
+	int2 type
+}
+
+data CommandHeader {
+	byte magic[4]
+	int4 type
+}
+
+data AddTableHeader {
+	int4 nameLen
+	int4 schemaLen
+	int1 autoKey
+	int1 reuseKeys
+}
+
+data AddRowHeader {
+	int4 nameLen
+	int4 schemaLen
+	int4 dataLen
+	int4 rowKeyLen
+}
+
+data GetRowsHeader {
+	int4 nameLen
+	int4 fieldIndex
+	int4 schemaLen
+	int4 dataLen
+}
+
+data GetRowHeader {
+	int4 nameLen
+	int4 rowKeyLen
+}
+
+data IncFieldHeader {
+	int4 nameLen
+	int4 rowKeyLen
+	int4 fieldIndex
+}
+
+data GetRowEqHeader {
+	int4 nameLen
+	int4 fieldIndex
+	int4 schemaLen
+	int4 dataLen
+}
+
+const int ROW_INDEX_TYPE_SIZE = 4
+
+const int ENCRYPT_IV_LENGTH = 16
+
+const byte RESPONSE_OK[] = new byte[](0x0, 0x0)
+const byte RESPONSE_EX[] = new byte[](0x0, 0x1)
+
+component provides Client requires io.Output out, net.TCPSocket, data.StringUtil stringUtil, data.IntUtil iu, Util util, sec.hash.SHA2 sha2, sec.crypto.AES_CBC, util.Random random, time.Calendar cal {
+	
+	TCPSocket socket
+	char secretKey[]
+	bool encrypt
+	
+	Client:Client(opt char password[])
+		{
+		socket = new TCPSocket()
+
+		if (isset password)
+			{
+			encrypt = true
+			secretKey = sha2.hashData(password, SHA2.HASH_SHA_256)
+			random.setSeed(cal.getMS())
+			}
+		}
+	
+	bool Client:connect(char host[], int port)
+		{
+		return socket.connect(host, port)
+		}
+	
+	void Client:disconnect()
+		{
+		AES_CBC aes
+
+		//send request
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_END)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+		
+		socket.disconnect()
+		}
+	
+	//basic management
+	
+	void copyBytes(byte dest[], byte source[], int srcStart, int srcLen)
+		{
+		for (int i = 0; i < srcLen; i++)
+			{
+			dest[i] = source[srcStart+i]
+			}
+		}
+	
+	bool Client:addTable(char name[], Data schema, bool autoKey, bool reuseKeys)
+		{
+		AES_CBC aes
+
+		//send request
+
+		char schema_str[] = util.schemaToStr(schema)
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_ADD_TABLE)
+		AddTableHeader cmdDetails = new AddTableHeader(name.arrayLength, schema_str.arrayLength, autoKey, reuseKeys)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + name.arrayLength + schema_str.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(name)
+			socket.send(schema_str)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + name.arrayLength + schema_str.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(name)),
+								aes.encryptPart(dana.serial(schema_str)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+		
+		return rHdr.type == RESPONSE_OK
+		}
+	
+	String[] Client:getTables()
+		{
+		//payload:
+		// (null)
+		
+		Int4Con con = new Int4Con()
+		byte serial[] = dana.serial(con)
+		
+		con.num = VERSION_1
+		socket.send(serial)
+		con.num = CMD_GET_TABLES
+		socket.send(serial)
+		
+		con.num = 0
+		socket.send(serial)
+		
+		//respond with table names
+		// (OK/EX)
+		// (responseLen)
+		// (number-of-tables)
+		// [
+		// (table-name-length)
+		// (table-name)
+		// ]
+		
+		byte response[] = socket.recv(2)
+		
+		if (response == RESPONSE_OK)
+			{
+			serial =[] socket.recv(serial.arrayLength)
+			
+			int responseLen = con.num
+			
+			serial =[] socket.recv(serial.arrayLength)
+			
+			int tableCount = con.num
+			
+			String tables[] = new String[tableCount]
+			
+			for (int i = 0; i < tableCount; i++)
+				{
+				serial =[] socket.recv(serial.arrayLength)
+				
+				int nameLength = con.num
+				
+				char name[] = socket.recv(nameLength)
+				
+				tables[i] = new String(name)
+				}
+			
+			return tables
+			}
+		
+		return null
+		}
+	
+	Data Client:getTableSchema(char name[])
+		{
+		//payload:
+		// (name-length,int4)
+		// (name)
+		
+		Int4Con con = new Int4Con()
+		byte serial[] = dana.serial(con)
+		
+		con.num = VERSION_1
+		socket.send(serial)
+		con.num = CMD_REM_TABLE
+		socket.send(serial)
+		
+		con.num = 4 + 4 + name.arrayLength
+		socket.send(serial)
+		
+		// - payload
+		
+		con.num = name.arrayLength
+		socket.send(serial)
+		
+		socket.send(name)
+		
+		//respond with schema
+		// (OK/EX)
+		// (responseLen)
+		// (schema-size) //0 if null
+		// (schema)
+		
+		byte response[] = socket.recv(2)
+		
+		if (response == RESPONSE_OK)
+			{
+			serial =[] socket.recv(serial.arrayLength)
+			
+			int responseLen = con.num
+			
+			serial =[] socket.recv(serial.arrayLength)
+			
+			int schemaLen = con.num
+			
+			char schema_str[] = socket.recv(schemaLen)
+			
+			Data schema = util.strToSchema(schema_str)
+			
+			return schema
+			}
+		
+		return null
+		}
+	
+	void Client:remTable(char name[])
+		{
+		//payload:
+		// (name-length,int4)
+		// (name)
+		
+		Int4Con con = new Int4Con()
+		byte serial[] = dana.serial(con)
+		
+		con.num = VERSION_1
+		socket.send(serial)
+		con.num = CMD_REM_TABLE
+		socket.send(serial)
+		
+		con.num = 4 + 4 + name.arrayLength
+		socket.send(serial)
+		
+		// - payload
+		
+		con.num = name.arrayLength
+		socket.send(serial)
+		
+		socket.send(name)
+		
+		byte response[] = socket.recv(2)
+		}
+	
+	char[] addNewRow(char table[], Data rowData, opt char rowKey[])
+		{
+		AES_CBC aes
+
+		//send request
+
+		char schema_str[] = util.schemaToStr(rowData)
+		byte row_flat[] = util.packRow(rowData)
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_ADD_ROW)
+		AddRowHeader cmdDetails = new AddRowHeader(table.arrayLength, schema_str.arrayLength, row_flat.arrayLength, rowKey.arrayLength)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength + rowKey.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			socket.send(schema_str)
+			socket.send(row_flat)
+			socket.send(rowKey)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength + rowKey.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			if (rowKey != null)
+				{
+				buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+									aes.encryptPart(dana.serial(cmdDetails)),
+									aes.encryptPart(dana.serial(table)),
+									aes.encryptPart(dana.serial(schema_str)),
+									aes.encryptPart(dana.serial(row_flat)),
+									aes.encryptPart(dana.serial(rowKey)),
+									aes.encryptFinish()
+									)
+				}
+				else
+				{
+				buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+									aes.encryptPart(dana.serial(cmdDetails)),
+									aes.encryptPart(dana.serial(table)),
+									aes.encryptPart(dana.serial(schema_str)),
+									aes.encryptPart(dana.serial(row_flat)),
+									aes.encryptFinish()
+									)
+				}
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+
+		if (rHdr.type == RESPONSE_OK)
+			{
+			if (dana.serial(rHdr).arrayLength == response.arrayLength) return null
+
+			char resultKey[] = dana.sub(response, dana.serial(rHdr).arrayLength, response.arrayLength-1)
+			return resultKey
+			}
+		
+		return null
+		}
+	
+	char[] Client:addRow(char table[], char rowKey[], Data rowData)
+		{
+		return addNewRow(table, rowData, rowKey)
+		}
+	
+	char[] Client:addRowAuto(char table[], Data rowData)
+		{
+		return addNewRow(table, rowData)
+		}
+	
+	void Client:updRow(char table[], char rowKey[], Data rowData)
+		{
+		AES_CBC aes
+
+		//send request
+
+		char schema_str[] = util.schemaToStr(rowData)
+		byte row_flat[] = util.packRow(rowData)
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_UPD_ROW)
+		AddRowHeader cmdDetails = new AddRowHeader(table.arrayLength, schema_str.arrayLength, row_flat.arrayLength, rowKey.arrayLength)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength + rowKey.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			socket.send(schema_str)
+			socket.send(row_flat)
+			socket.send(rowKey)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength + rowKey.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptPart(dana.serial(schema_str)),
+								aes.encryptPart(dana.serial(row_flat)),
+								aes.encryptPart(dana.serial(rowKey)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+		}
+	
+	void Client:addUpdRow(char table[], char rowKey[], Data rowData)
+		{
+		AES_CBC aes
+
+		//send request
+
+		char schema_str[] = util.schemaToStr(rowData)
+		byte row_flat[] = util.packRow(rowData)
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_ADD_UPD_ROW)
+		AddRowHeader cmdDetails = new AddRowHeader(table.arrayLength, schema_str.arrayLength, row_flat.arrayLength, rowKey.arrayLength)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength + rowKey.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			socket.send(schema_str)
+			socket.send(row_flat)
+			socket.send(rowKey)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength + rowKey.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptPart(dana.serial(schema_str)),
+								aes.encryptPart(dana.serial(row_flat)),
+								aes.encryptPart(dana.serial(rowKey)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+		}
+	
+	Data Client:getRow(char table[], char rowKey[])
+		{
+		AES_CBC aes
+
+		//send request
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_GET_ROW)
+		GetRowHeader cmdDetails = new GetRowHeader(table.arrayLength, rowKey.arrayLength)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + rowKey.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			socket.send(rowKey)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + rowKey.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptPart(dana.serial(rowKey)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+
+		byte rowBuf[] = dana.sub(response, dana.serial(rHdr).arrayLength, response.arrayLength-1)
+
+		RowData row = unpackSingleRowResponse(rowBuf)
+
+		if (row == null) return null
+		return row.fields
+		}
+	
+	void Client:remRow(char table[], char rowKey[])
+		{
+		AES_CBC aes
+
+		//send request
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_REM_ROW)
+		GetRowHeader cmdDetails = new GetRowHeader(table.arrayLength, rowKey.arrayLength)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + rowKey.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			socket.send(rowKey)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + rowKey.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptPart(dana.serial(rowKey)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+		}
+	
+	//queries
+	
+	int Client:incField(char table[], char rowKey[], TypeField index) //increment the specified field by 1, or create the row if it doesn't exist
+		{
+		AES_CBC aes
+
+		//send request
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_INC_FIELD)
+		IncFieldHeader cmdDetails = new IncFieldHeader(table.arrayLength, rowKey.arrayLength, index)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + rowKey.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			socket.send(rowKey)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + rowKey.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptPart(dana.serial(rowKey)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+
+		byte dataBuf[] = dana.sub(response, dana.serial(rHdr).arrayLength, response.arrayLength-1)
+
+		Int8Con con8 = new Int8Con()
+		dana.serial(con8) =[] dataBuf
+
+		return con8.num
+		}
+	
+	int Client:decField(char table[], char rowKey[], TypeField index) //decrement the specified field by 1, if it exists
+		{
+		AES_CBC aes
+
+		//send request
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_DEC_FIELD)
+		IncFieldHeader cmdDetails = new IncFieldHeader(table.arrayLength, rowKey.arrayLength, index)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + rowKey.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			socket.send(rowKey)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + rowKey.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptPart(dana.serial(rowKey)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+
+		byte dataBuf[] = dana.sub(response, dana.serial(rHdr).arrayLength, response.arrayLength-1)
+
+		Int8Con con8 = new Int8Con()
+		dana.serial(con8) =[] dataBuf
+
+		return con8.num
+		}
+	
+	RowData[] unpackMultiRowResponse(char buf[])
+		{
+		Int4Con con = new Int4Con()
+		byte serial[] = dana.serial(con)
+		
+		//response format:
+		// (number-of-rows)
+		// (schema-size)
+		// (schema)
+		// [
+		// (row-name-length)
+		// (rowdata-length)
+		// (row name)
+		// (row data)
+		// ]
+		
+		int offset = 0
+
+		serial =[] dana.sub(buf, offset, (offset + serial.arrayLength)-1)
+		offset += serial.arrayLength
+		
+		int rowCount = con.num
+
+		RowData rows[] = null
+		
+		if (rowCount != 0)
+			{
+			serial =[] dana.sub(buf, offset, (offset + serial.arrayLength)-1)
+			offset += serial.arrayLength
+			
+			int schemaLen = con.num
+			
+			char schema_str[] = dana.sub(buf, offset, offset + schemaLen - 1)
+			offset += schemaLen
+			
+			Data schema = util.strToSchema(schema_str)
+		
+			rows = new RowData[rowCount]
+			
+			for (int i = 0; i < rowCount; i++)
+				{
+				rows[i] = new RowData()
+				
+				serial =[] dana.sub(buf, offset, (offset + serial.arrayLength)-1)
+				offset += serial.arrayLength
+				
+				int nameLen = con.num
+				
+				serial =[] dana.sub(buf, offset, (offset + serial.arrayLength)-1)
+				offset += serial.arrayLength
+				
+				int rowLen = con.num
+				
+				rows[i].key = dana.sub(buf, offset, offset + nameLen - 1)
+				offset += nameLen
+				
+				char row_bytes[] = dana.sub(buf, offset, offset + rowLen - 1)
+				offset += rowLen
+				
+				rows[i].fields = util.unpackRow(row_bytes, schema)
+				}
+			}
+		
+		return rows
+		}
+	
+	RowData unpackSingleRowResponse(byte buf[])
+		{
+		Int4Con con = new Int4Con()
+		byte serial[] = dana.serial(con)
+		
+		//ddb-encode the resulting row:
+		// (OK/EX) //two-byte response code for OK vs. EXception, where EX is only used to indicate remoting errors
+		// (payload-size)
+		// (number-of-rows)
+		// (schema-size) //only if #rows > 0
+		// (rowkey-length) //only if #rows > 0
+		// (rowdata-length) //only if #rows > 0
+		// (schema) //only if #rows > 0
+		// (row key) //only if #rows > 0
+		// (row data) //only if #rows > 0
+		
+		int offset = 0
+
+		serial =[] dana.sub(buf, offset, (offset + serial.arrayLength)-1)
+		offset += serial.arrayLength
+		
+		int numRows = con.num
+		
+		if (numRows == 0)
+			return null
+		
+		serial =[] dana.sub(buf, offset, (offset + serial.arrayLength)-1)
+		offset += serial.arrayLength
+		
+		int schemaLen = con.num
+		
+		serial =[] dana.sub(buf, offset, (offset + serial.arrayLength)-1)
+		offset += serial.arrayLength
+		
+		int rowkeyLen = con.num
+		
+		serial =[] dana.sub(buf, offset, (offset + serial.arrayLength)-1)
+		offset += serial.arrayLength
+		
+		int rowdataLen = con.num
+
+		char schema_str[] = dana.sub(buf, offset, offset + schemaLen - 1)
+		offset += schemaLen
+		
+		Data schema = util.strToSchema(schema_str)
+		
+		char row_key[] = dana.sub(buf, offset, offset + rowkeyLen - 1)
+		offset += rowkeyLen
+		
+		char row_bytes[] = dana.sub(buf, offset, offset + rowdataLen - 1)
+		offset += rowdataLen
+		
+		Data result = util.unpackRow(row_bytes, schema)
+		
+		return new RowData(row_key, result)
+		}
+	
+	RowData[] Client:getRows(char table[])
+		{
+		AES_CBC aes
+
+		//send request
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_GET_ROWS)
+		GetRowsHeader cmdDetails = new GetRowsHeader(table.arrayLength)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+
+		byte rowBuf[] = dana.sub(response, dana.serial(rHdr).arrayLength, response.arrayLength-1)
+
+		RowData rows[] = unpackMultiRowResponse(rowBuf)
+		
+		return rows
+		}
+	
+	RowData[] Client:getRowsClear(char table[])
+		{
+		AES_CBC aes
+
+		//send request
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_GET_ROWS_CLEAR)
+		GetRowsHeader cmdDetails = new GetRowsHeader(table.arrayLength)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+
+		byte rowBuf[] = dana.sub(response, dana.serial(rHdr).arrayLength, response.arrayLength-1)
+
+		RowData rows[] = unpackMultiRowResponse(rowBuf)
+		
+		return rows
+		}
+	
+	RowData Client:getRowEq(char table[], TypeField index, Data template)
+		{
+		AES_CBC aes
+
+		//send request
+
+		char schema_str[] = util.schemaToStr(template)
+		byte row_flat[] = util.packRow(template)
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_GET_ROW_EQ)
+		GetRowEqHeader cmdDetails = new GetRowEqHeader(table.arrayLength, index, schema_str.arrayLength, row_flat.arrayLength)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			socket.send(schema_str)
+			socket.send(row_flat)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptPart(dana.serial(schema_str)),
+								aes.encryptPart(dana.serial(row_flat)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+
+		byte rowBuf[] = dana.sub(response, dana.serial(rHdr).arrayLength, response.arrayLength-1)
+
+		RowData row = unpackSingleRowResponse(rowBuf)
+		
+		return row
+		}
+	
+	RowData[] Client:getRowsEq(char table[], TypeField index, Data template)
+		{
+		AES_CBC aes
+
+		//send request
+
+		char schema_str[] = util.schemaToStr(template)
+		byte row_flat[] = util.packRow(template)
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_GET_ROWS_EQ)
+		GetRowEqHeader cmdDetails = new GetRowEqHeader(table.arrayLength, index, schema_str.arrayLength, row_flat.arrayLength)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			socket.send(schema_str)
+			socket.send(row_flat)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptPart(dana.serial(schema_str)),
+								aes.encryptPart(dana.serial(row_flat)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+
+		byte rowBuf[] = dana.sub(response, dana.serial(rHdr).arrayLength, response.arrayLength-1)
+
+		RowData rows[] = unpackMultiRowResponse(rowBuf)
+		
+		return rows
+		}
+	
+	void Client:remRowEq(char table[], TypeField index, Data template)
+		{
+		AES_CBC aes
+
+		//send request
+
+		char schema_str[] = util.schemaToStr(template)
+		byte row_flat[] = util.packRow(template)
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_REM_ROW_EQ)
+		GetRowEqHeader cmdDetails = new GetRowEqHeader(table.arrayLength, index, schema_str.arrayLength, row_flat.arrayLength)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			socket.send(schema_str)
+			socket.send(row_flat)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptPart(dana.serial(schema_str)),
+								aes.encryptPart(dana.serial(row_flat)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+		}
+	
+	void Client:remRowsEq(char table[], TypeField index, Data template)
+		{
+		AES_CBC aes
+
+		//send request
+
+		char schema_str[] = util.schemaToStr(template)
+		byte row_flat[] = util.packRow(template)
+
+		MessageHeader hdr = new MessageHeader(VERSION_1)
+		CommandHeader cmdHdr = new CommandHeader(MAGIC, CMD_REM_ROWS_EQ)
+		GetRowEqHeader cmdDetails = new GetRowEqHeader(table.arrayLength, index, schema_str.arrayLength, row_flat.arrayLength)
+
+		if (!encrypt)
+			{
+			hdr.type = MessageHeader.T_DEFAULT
+			hdr.payloadSize = dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength
+
+			socket.send(dana.serial(hdr))
+			socket.send(dana.serial(cmdHdr))
+			socket.send(dana.serial(cmdDetails))
+			
+			socket.send(table)
+			socket.send(schema_str)
+			socket.send(row_flat)
+			}
+			else
+			{
+			byte buf[] = new byte[dana.serial(cmdHdr).arrayLength + dana.serial(cmdDetails).arrayLength + table.arrayLength + schema_str.arrayLength + row_flat.arrayLength]
+
+			char randomIV[] = random.getString(ENCRYPT_IV_LENGTH)
+			aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, randomIV)
+
+			buf = new byte[](aes.encryptPart(dana.serial(cmdHdr)),
+								aes.encryptPart(dana.serial(cmdDetails)),
+								aes.encryptPart(dana.serial(table)),
+								aes.encryptPart(dana.serial(schema_str)),
+								aes.encryptPart(dana.serial(row_flat)),
+								aes.encryptFinish()
+								)
+			
+			if (!aes.encryptOK()) throw new Exception("request encryption failed")
+
+			hdr.type = MessageHeader.T_ENCRYPT
+			hdr.infoSize = randomIV.arrayLength
+			hdr.payloadSize = buf.arrayLength
+			
+			socket.send(dana.serial(hdr))
+			socket.send(randomIV)
+			socket.send(buf)
+			}
+
+		//receive response
+
+		byte serial[] = dana.serial(hdr)
+		
+		byte response[] = socket.recv(serial.arrayLength)
+
+		if (response.arrayLength != serial.arrayLength)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		serial =[] response
+
+		byte msgInfo[] = socket.recv(hdr.infoSize)
+		response = socket.recv(hdr.payloadSize)
+
+		if (msgInfo.arrayLength != hdr.infoSize || response.arrayLength != hdr.payloadSize)
+			{
+			throw new Exception("network error (insufficient bytes received from server)")
+			}
+		
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			response = new byte[](aes.decryptPart(response), aes.decryptFinish())
+
+			if (!aes.decryptOK()) throw new Exception("response decryption failed")
+			}
+
+		ResponseHeader rHdr = new ResponseHeader()
+		dana.serial(rHdr) =[] response
+		}
+	
+	}

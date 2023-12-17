@@ -1,11 +1,9 @@
+/* { "description" : "A group of array cells which all have the same value for a given field."} */
 data Group {
 	Data cells[]
 	}
 
-/*
-{ "description" : "Search for values in an array."}
-*/
-
+/* { "description" : "Search for values in an array."} */
 interface Search {
 	
 	/*

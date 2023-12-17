@@ -1,0 +1,40 @@
+/*
+{"description" : "A set of functions to allow the user to execute many fundamental linear operations on vectors and matrices"}
+*/
+interface LinearOperations {
+    /* {"@description" : "Allows the implementing component to initlise any external compute device it intends to use"} */
+    LinearOperations()
+
+    /* {"@description" : "Takes two integer vectors and adds them together such that: A = [a1, ..., an] and B = [b1, ..., bn] returns [a1+b1, ..., an+bn]. How vectors with unequal lengths are handled is left up to the implementing component"} */
+    int[] vectorAddInt(int A[], int B[])
+
+    /* {"@description" : "Takes two decimal vectors and adds them together such that: A = [a1, ..., an] and B = [b1, ..., bn] returns [a1+b1, ..., an+bn]. How vectors with unequal lengths are handled is left up to the implementing component"} */
+    dec[] vectorAddDec(dec A[], dec B[])
+
+    /* {"@description" : "Takes an integer vector and an integer scalar and returns the vector scaled by the scalar such that: A = [a1, ..., an] and S returns [a1*S, ..., an*S]. How vectors with unequal lengths are handled is left up to the implementing component"} */
+    int[] vectorScaleInt(int A[], int S)
+
+    /* {"@description" : "Takes an decimal vector and an decimal scalar and returns the vector scaled by the scalar such that: A = [a1, ..., an] and S returns [a1*S, ..., an*S]. How vectors with unequal lengths are handled is left up to the implementing component"} */
+    dec[] vectorScaleDec(dec A[], dec S)
+
+    /* {"@description" : "Takes two integer vectors and returns their dot product such that: A = [a1, ..., an] and B = [b1, ..., bn] returns the sum of a1*b1, ..., an*bn. How vectors with unequal lengths are handled is left up to the implementing component"} */
+    int vectorDotInt(int A[], int B[])
+
+    /* {"@description" : "Takes two decimal vectors and returns their dot product such that: A = [a1, ..., an] and B = [b1, ..., bn] returns the sum of a1*b1, ..., an*bn. How vectors with unequal lengths are handled is left up to the implementing component"} */
+    dec vectorDotDec(dec A[], dec B[])
+
+    /* {"@description" : "Takes two integer vectors and returns their combination such that: A = [a1, ..., an] and B = [b1, ..., bn] returns [a1*b1, ..., an*bn]. How vectors with unequal lengths are handled is left up to the implementing component"} */
+    int[] vectorCombinationInt(int A[], int B[])
+
+    /* {"@description" : "Takes two decimal vectors and returns their combination such that: A = [a1, ..., an] and B = [b1, ..., bn] returns [a1*b1, ..., an*bn]. How vectors with unequal lengths are handled is left up to the implementing component"} */
+    dec[] vectorCombinationDec(dec A[], dec B[])
+
+    /* {"@description" : "Takes a decimal vector and transforms it according to the basis vectors described in the given matrix. How vectors with more elements than the matrix has rows are handled is left up to the implementing component"} */
+    dec[] linearTransform(dec T[][], dec V[])
+
+    /* {"@description" : "Takes an N x M matrix and returns an M x N matrix where Mt[n, m] = M[m, n]"} */
+    dec[][] transpose(dec M[][])
+
+    /* {"@description" : "Takes two matrices and returns a new matrix populated by the values of the dot products of the rows in A and the columns in B. How matricies where the number of columns in A do not match the number of rows in B are handled is left up to the implimenting component"} */
+    dec[][] matrixMultiply(dec A[][], dec B[][])
+}

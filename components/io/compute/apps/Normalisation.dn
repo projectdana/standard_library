@@ -1,0 +1,27 @@
+component provides Normalisation requires System system, io.compute.LogicalCompute, data.DecUtil du{
+    LogicalCompute myDev
+
+    Normalisation:Normalisation() {
+        myDev = new LogicalCompute()
+        myDev.loadProgram("$(system.getDanaHome())/components/resources-ext/opencl_kernels/floatDiv.cl", "floatDiv")
+    }
+
+    dec[][] Normalisation:matrixDivision(dec matrix[][], dec divider) {
+        myDev.createDecMatrix("mat", matrix.arrayLength, matrix[0].arrayLength)
+        myDev.writeDecMatrix("mat", matrix)
+        myDev.createDecMatrix("out", matrix.arrayLength, matrix[0].arrayLength)
+        myDev.createDecArray("divider", 1)
+        myDev.writeDecArray("divider", new dec[](divider))
+
+        String params[] = new String[](new String("divider"), new String("mat"), new String("out"))
+        myDev.runProgram("floatDiv", params)
+
+        dec m[][] = myDev.readDecMatrix("out")
+
+        myDev.destroyMemoryArea("mat")
+        myDev.destroyMemoryArea("out")
+        myDev.destroyMemoryArea("divider")
+
+        return m
+    }
+}

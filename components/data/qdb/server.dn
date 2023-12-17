@@ -1,0 +1,1265 @@
+//NEXT: implement thread pooling here, etc.
+//ALSO: separate out the request processor into a different component, for adaptation support
+
+data Int4Con {
+	int4 num
+	}
+
+data Int8Con {
+	int8 num
+	}
+
+const byte MAGIC[] = new byte[](0x3, 0x4, 0x5, 0x6)
+
+const int4 VERSION_1 = 1
+
+const int4 CMD_ADD_TABLE = 1
+const int4 CMD_UPD_TABLE = 2
+const int4 CMD_GET_TABLE = 3
+const int4 CMD_GET_TABLES = 4
+const int4 CMD_REM_TABLE = 5
+const int4 CMD_ADD_ROW = 10
+const int4 CMD_UPD_ROW = 11
+const int4 CMD_ADD_UPD_ROW = 12
+const int4 CMD_GET_ROW = 13
+const int4 CMD_REM_ROW = 14
+const int4 CMD_INC_FIELD = 20
+const int4 CMD_DEC_FIELD = 21
+const int4 CMD_GET_ROWS = 30
+const int4 CMD_GET_ROWS_CLEAR = 31
+const int4 CMD_GET_ROW_EQ = 32
+const int4 CMD_GET_ROWS_EQ = 33
+const int4 CMD_REM_ROW_EQ = 34
+const int4 CMD_REM_ROWS_EQ = 35
+const int4 CMD_END = 101
+
+data MessageHeader {
+	int4 protocolVersion
+	const int4 T_DEFAULT = 0
+	const int4 T_ENCRYPT = 1
+	int4 type
+	int4 infoSize //optional "message info" data, which some message types use
+	int4 payloadSize //payload size, after message info
+}
+
+data ResponseHeader {
+	byte magic[4]
+	const int2 RESPONSE_OK = 0
+	const int2 RESPONSE_EX = 1
+	int2 type
+}
+
+data CommandHeader {
+	byte magic[4]
+	int4 type
+}
+
+data AddTableHeader {
+	int4 nameLen
+	int4 schemaLen
+	int1 autoKey
+	int1 reuseKeys
+}
+
+data AddRowHeader {
+	int4 nameLen
+	int4 schemaLen
+	int4 dataLen
+	int4 rowKeyLen
+}
+
+data GetRowHeader {
+	int4 nameLen
+	int4 rowKeyLen
+}
+
+data GetRowEqHeader {
+	int4 nameLen
+	int4 fieldIndex
+	int4 schemaLen
+	int4 dataLen
+}
+
+data IncFieldHeader {
+	int4 nameLen
+	int4 rowKeyLen
+	int4 fieldIndex
+}
+
+const int ROW_INDEX_TYPE_SIZE = 4
+
+const int ENCRYPT_IV_LENGTH = 16
+
+const byte RESPONSE_OK[] = new byte[](0x0, 0x0)
+const byte RESPONSE_EX[] = new byte[](0x0, 0x1)
+
+component provides App requires io.Output out, data.IntUtil iu, data.StringUtil stringUtil, net.TCPServerSocket, net.TCPSocket, data.qdb.QDB, Util util, util.ParamParser, sec.hash.SHA2 sha2, sec.crypto.AES_CBC {
+	
+	QDB db
+	char HOST_ADDRESS[] = "127.0.0.1"
+	int port = 8030
+	
+	char secretKey[]
+	bool encrypt
+	
+	void copyBytes(byte dest[], byte source[], int srcStart, int srcLen)
+		{
+		for (int i = 0; i < srcLen; i++)
+			{
+			dest[i] = source[srcStart+i]
+			}
+		}
+	
+	void copyBytesAt(byte dest[], int offset, byte source[])
+		{
+		for (int i = 0; i < source.arrayLength; i++)
+			{
+			dest[offset+i] = source[i]
+			}
+		}
+	
+	int getCmdInt(byte content[], int start)
+		{
+		Int4Con con = new Int4Con()
+		byte serial[] = dana.serial(con)
+		
+		copyBytes(serial, content, start, serial.arrayLength)
+		
+		return con.num
+		}
+	
+	bool getCmdBool(byte content[], int start)
+		{
+		bool b = content[start]
+		return b
+		}
+	
+	byte[] getCmdBytes(byte content[], int start, int len)
+		{
+		byte result[] = new byte[len]
+		
+		copyBytes(result, content, start, len)
+		
+		return result
+		}
+	
+	int getRowPackSize(Data row)
+		{
+		Type t = typeof(row)
+		
+		int offset = 0
+		
+		for (int i = 0; i < t.fields.arrayLength; i++)
+			{
+			Type at = t.fields[i].type
+			
+			if (at.class == Type.INTEGER)
+				{
+				offset += at.size
+				}
+				else if (at.class == Type.DECIMAL)
+				{
+				offset += at.size
+				}
+				else if (at.class == Type.ARRAY)
+				{
+				int elSize = at.fields[0].type.size
+				int arrayLength = (row:.i).arrayLength
+				offset += arrayLength * elSize
+				}
+			}
+		
+		offset += (t.fields.arrayLength * ROW_INDEX_TYPE_SIZE)
+		
+		return offset
+		}
+	
+	byte[] buildMultiRowResponse(RowData rows[])
+		{
+		Int4Con con = new Int4Con()
+		byte serial[] = dana.serial(con)
+		
+		//calculate response size
+		int responseLen = 0
+		//OK : number-of-rows (int4) : row name / row data lengths (int4's)
+		responseLen += 4 + (rows.arrayLength * ROW_INDEX_TYPE_SIZE) + (rows.arrayLength * ROW_INDEX_TYPE_SIZE)
+		
+		int rowMeta[] = new int[rows.arrayLength*2]
+		
+		char schema_str[]
+		
+		if (rows.arrayLength != 0)
+			{
+			schema_str = util.schemaToStr(rows[0].fields)
+			responseLen += 4 + schema_str.arrayLength
+			}
+		
+		for (int i = 0; i < rows.arrayLength; i++)
+			{
+			int rowdataLen = getRowPackSize(rows[i].fields)
+			
+			responseLen += rows[i].key.arrayLength
+			responseLen += rowdataLen
+			
+			rowMeta[i] = rows[i].key.arrayLength
+			rowMeta[rows.arrayLength+i] = rowdataLen
+			}
+		
+		byte responseData[] = new byte[responseLen]
+		
+		//copy fields in
+		int offset = 0
+		
+		con.num = rows.arrayLength
+		copyBytesAt(responseData, offset, serial)
+		offset += serial.arrayLength
+		
+		if (rows.arrayLength != 0)
+			{
+			con.num = schema_str.arrayLength
+			copyBytesAt(responseData, offset, serial)
+			offset += serial.arrayLength
+			
+			copyBytesAt(responseData, offset, schema_str)
+			offset += schema_str.arrayLength
+			}
+		
+		for (int i = 0; i < rows.arrayLength; i++)
+			{
+			//row name length
+			con.num = rowMeta[i]
+			copyBytesAt(responseData, offset, serial)
+			offset += serial.arrayLength
+			
+			//row data length
+			con.num = rowMeta[rows.arrayLength+i]
+			copyBytesAt(responseData, offset, serial)
+			offset += serial.arrayLength
+			
+			//row name
+			copyBytesAt(responseData, offset, rows[i].key)
+			offset += rows[i].key.arrayLength
+			
+			//copy row data
+			byte rdata[] = util.packRow(rows[i].fields)
+			copyBytesAt(responseData, offset, rdata)
+			offset += rdata.arrayLength
+			}
+		
+		return responseData
+		}
+	
+	bool processRequest(TCPSocket client)
+		{
+		//read the request message:
+		// command (4 byte version number + 4 byte command code)
+		// payload-size (4 byte length)
+		// payload (binary)
+		//TODO: payload crc (4 bytes)
+
+		Int4Con con = new Int4Con()
+
+		AES_CBC aes
+
+		byte serial[]
+		MessageHeader hdr = new MessageHeader()
+		CommandHeader cmdHdr = new CommandHeader()
+
+		serial = dana.serial(hdr)
+
+		byte msg[] = client.recv(serial.arrayLength)
+
+		if (msg.arrayLength != serial.arrayLength) return false
+
+		serial =[] msg
+		if (hdr.protocolVersion != VERSION_1) throw new Exception("attempt to connect to database with unknown protocol version")
+		
+		byte msgInfo[] = client.recv(hdr.infoSize)
+		byte payload[] = client.recv(hdr.payloadSize)
+		
+		if (payload.arrayLength != hdr.payloadSize || msgInfo.arrayLength != hdr.infoSize) return false
+
+		if (hdr.type == MessageHeader.T_ENCRYPT)
+			{
+			aes = new AES_CBC(AES_CBC.DECRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+			payload = new byte[](aes.decryptPart(payload), aes.decryptFinish())
+			if (!aes.decryptOK()) throw new Exception("request message decryption failed")
+			}
+		
+		dana.serial(cmdHdr) =[] payload
+
+		int4 cmd = CMD_ADD_ROW
+		
+		//out.println("db::CMD: $cmd")
+		
+		if (cmdHdr.type == CMD_ADD_TABLE)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			AddTableHeader cmdDetails = new AddTableHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char schema[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.schemaLen)
+			Data schemaInstance = util.strToSchema(schema)
+			
+			db.addTable(name, schemaInstance, cmdDetails.autoKey, cmdDetails.reuseKeys)
+
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_GET_TABLES)
+			{
+			//payload:
+			// (null)
+			
+			String tables[] = db.getTables()
+			
+			//respond with table names
+			// (OK/EX)
+			// (responseLen)
+			// (number-of-tables)
+			// [
+			// (table-name-length)
+			// (table-name)
+			// ]
+			
+			int responseLen = 2 + 4 + 4 + (4 * tables.arrayLength)
+			
+			for (int i = 0; i < tables.arrayLength; i++)
+				{
+				responseLen += tables[i].string.arrayLength
+				}
+			
+			byte responseData[] = new byte[responseLen]
+			int offset = 0
+			
+			//copy fields
+			responseData =[] RESPONSE_OK
+			offset += 2
+			
+			con.num = responseLen
+			copyBytesAt(responseData, offset, serial)
+			offset += serial.arrayLength
+			
+			con.num = tables.arrayLength
+			copyBytesAt(responseData, offset, serial)
+			offset += serial.arrayLength
+			
+			for (int i = 0; i < tables.arrayLength; i++)
+				{
+				con.num = tables[i].string.arrayLength
+				copyBytesAt(responseData, offset, serial)
+				offset += serial.arrayLength
+				
+				copyBytesAt(responseData, offset, tables[i].string)
+				offset += tables[i].string.arrayLength
+				}
+			
+			client.send(responseData)
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_GET_TABLE)
+			{
+			//payload:
+			// (name-length,int4)
+			// (name)
+			
+			int nameLen = getCmdInt(payload, 0)
+			
+			char name[] = getCmdBytes(payload, 8, nameLen)
+			
+			Data schema = db.getTableSchema(name)
+			
+			char schema_str[] = util.schemaToStr(schema)
+			
+			//respond with schema
+			// (OK/EX)
+			// (responseLen)
+			// (schema-size) //0 if null
+			// (schema)
+			
+			int responseLen = 2 + 4 + 4 + schema_str.arrayLength
+			
+			byte responseData[] = new byte[responseLen]
+			int offset = 0
+			
+			//copy fields
+			responseData =[] RESPONSE_OK
+			offset += 2
+			
+			con.num = responseLen
+			copyBytesAt(responseData, offset, serial)
+			offset += serial.arrayLength
+			
+			con.num = schema_str.arrayLength
+			copyBytesAt(responseData, offset, serial)
+			offset += serial.arrayLength
+			
+			copyBytesAt(responseData, offset, schema_str)
+			offset += schema_str.arrayLength
+			
+			client.send(responseData)
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_REM_TABLE)
+			{
+			//payload:
+			// (name-length,int4)
+			// (name)
+			
+			int nameLen = getCmdInt(payload, 0)
+			
+			char name[] = getCmdBytes(payload, 8, nameLen)
+			
+			db.remTable(name)
+			
+			client.send(RESPONSE_OK)
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_ADD_ROW)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			AddRowHeader cmdDetails = new AddRowHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char schema[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.schemaLen)
+			Data schemaInstance = util.strToSchema(schema)
+			char rowData[] = getCmdBytes(payload, cmdDetails.nameLen+cmdDetails.schemaLen, cmdDetails.dataLen)
+			Data row = util.unpackRow(rowData, schemaInstance)
+			char rowKey[] = getCmdBytes(payload, cmdDetails.nameLen+cmdDetails.schemaLen+cmdDetails.dataLen, cmdDetails.rowKeyLen)
+			
+			char finalKey[] = null
+			
+			if (rowKey.arrayLength != 0)
+				finalKey = db.addRow(name, rowKey, row)
+				else
+				finalKey = db.addRowAuto(name, row)
+
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength + finalKey.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				client.send(finalKey)
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptPart(finalKey), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_UPD_ROW)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			AddRowHeader cmdDetails = new AddRowHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char schema[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.schemaLen)
+			Data schemaInstance = util.strToSchema(schema)
+			char rowData[] = getCmdBytes(payload, cmdDetails.nameLen+cmdDetails.schemaLen, cmdDetails.dataLen)
+			Data row = util.unpackRow(rowData, schemaInstance)
+			char rowKey[] = getCmdBytes(payload, cmdDetails.nameLen+cmdDetails.schemaLen+cmdDetails.dataLen, cmdDetails.rowKeyLen)
+			
+			db.updRow(name, rowKey, row)
+
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_ADD_UPD_ROW)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			AddRowHeader cmdDetails = new AddRowHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char schema[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.schemaLen)
+			Data schemaInstance = util.strToSchema(schema)
+			char rowData[] = getCmdBytes(payload, cmdDetails.nameLen+cmdDetails.schemaLen, cmdDetails.dataLen)
+			Data row = util.unpackRow(rowData, schemaInstance)
+			char rowKey[] = getCmdBytes(payload, cmdDetails.nameLen+cmdDetails.schemaLen+cmdDetails.dataLen, cmdDetails.rowKeyLen)
+			
+			db.addUpdRow(name, rowKey, row)
+
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_GET_ROW)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			GetRowHeader cmdDetails = new GetRowHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char rowKey[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.rowKeyLen)
+
+			Data rd = db.getRow(name, rowKey)
+
+			//qdb row response encoding
+			// (number-of-rows)
+			// (schema-size) //only if #rows > 0
+			// (rowkey-length) //only if #rows > 0
+			// (rowdata-length) //only if #rows > 0
+			// (schema) //only if #rows > 0
+			// (row key) //only if #rows > 0
+			// (row data) //only if #rows > 0
+			char schema_str[] = null
+			
+			int rowdataLen = 0
+			
+			int responseLen = 4
+			
+			if (rd != null)
+				{
+				schema_str = util.schemaToStr(rd)
+				rowdataLen = getRowPackSize(rd)
+				
+				responseLen += 4 + 4 + 4 + schema_str.arrayLength + rowKey.arrayLength + rowdataLen
+				}
+			
+			byte responseData[] = new byte[responseLen]
+			int offset = 0
+			
+			int rowExists = 0
+			
+			if (rd != null)
+				rowExists = 1
+			
+			serial = dana.serial(con)
+			
+			//copy fields
+			con.num = rowExists
+			copyBytesAt(responseData, offset, serial)
+			offset += serial.arrayLength
+			
+			if (rd != null)
+				{
+				con.num = schema_str.arrayLength
+				copyBytesAt(responseData, offset, serial)
+				offset += serial.arrayLength
+				
+				con.num = rowKey.arrayLength
+				copyBytesAt(responseData, offset, serial)
+				offset += serial.arrayLength
+				
+				con.num = rowdataLen
+				copyBytesAt(responseData, offset, serial)
+				offset += serial.arrayLength
+				
+				copyBytesAt(responseData, offset, schema_str)
+				offset += schema_str.arrayLength
+				
+				copyBytesAt(responseData, offset, rowKey)
+				offset += rowKey.arrayLength
+				
+				byte rdata[] = util.packRow(rd)
+				copyBytesAt(responseData, offset, rdata)
+				offset += rdata.arrayLength
+				}
+			
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength + responseData.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				client.send(responseData)
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptPart(responseData), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_REM_ROW)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			GetRowHeader cmdDetails = new GetRowHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char rowKey[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.rowKeyLen)
+			
+			db.remRow(name, rowKey)
+			
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_INC_FIELD)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			IncFieldHeader cmdDetails = new IncFieldHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char rowKey[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.rowKeyLen)
+			
+			int newVal = db.incField(name, rowKey, cmdDetails.fieldIndex)
+
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			Int8Con con8 = new Int8Con()
+			con8.num = newVal
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength + dana.serial(con8).arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				client.send(dana.serial(con8))
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptPart(dana.serial(con8)), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_DEC_FIELD)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			IncFieldHeader cmdDetails = new IncFieldHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char rowKey[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.rowKeyLen)
+			
+			int newVal = db.decField(name, rowKey, cmdDetails.fieldIndex)
+
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			Int8Con con8 = new Int8Con()
+			con8.num = newVal
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength + dana.serial(con8).arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				client.send(dana.serial(con8))
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptPart(dana.serial(con8)), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_GET_ROWS)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			GetRowEqHeader cmdDetails = new GetRowEqHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			
+			RowData rows[] = db.getRows(name)
+
+			byte responseData[] = buildMultiRowResponse(rows)
+
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength + responseData.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				client.send(responseData)
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptPart(responseData), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_GET_ROWS_CLEAR)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			GetRowEqHeader cmdDetails = new GetRowEqHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			
+			RowData rows[] = db.getRowsClear(name)
+
+			byte responseData[] = buildMultiRowResponse(rows)
+
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength + responseData.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				client.send(responseData)
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptPart(responseData), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_GET_ROW_EQ)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			GetRowEqHeader cmdDetails = new GetRowEqHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char schema[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.schemaLen)
+			Data schemaInstance = util.strToSchema(schema)
+			char rowData[] = getCmdBytes(payload, cmdDetails.nameLen+cmdDetails.schemaLen, cmdDetails.dataLen)
+			Data row = util.unpackRow(rowData, schemaInstance)
+			
+			RowData rd = db.getRowEq(name, cmdDetails.fieldIndex, row)
+
+			//qdb row response encoding
+			// (number-of-rows)
+			// (schema-size) //only if #rows > 0
+			// (rowkey-length) //only if #rows > 0
+			// (rowdata-length) //only if #rows > 0
+			// (schema) //only if #rows > 0
+			// (row key) //only if #rows > 0
+			// (row data) //only if #rows > 0
+			char schema_str[] = null
+			
+			int rowdataLen = 0
+			
+			int responseLen = 4
+			
+			if (rd != null)
+				{
+				schema_str = util.schemaToStr(rd.fields)
+				rowdataLen = getRowPackSize(rd.fields)
+				
+				responseLen += 4 + 4 + 4 + schema_str.arrayLength + rd.key.arrayLength + rowdataLen
+				}
+			
+			byte responseData[] = new byte[responseLen]
+			int offset = 0
+			
+			int rowExists = 0
+			
+			if (rd != null)
+				rowExists = 1
+			
+			serial = dana.serial(con)
+			
+			//copy fields
+			con.num = rowExists
+			copyBytesAt(responseData, offset, serial)
+			offset += serial.arrayLength
+			
+			if (rd != null)
+				{
+				con.num = schema_str.arrayLength
+				copyBytesAt(responseData, offset, serial)
+				offset += serial.arrayLength
+				
+				con.num = rd.key.arrayLength
+				copyBytesAt(responseData, offset, serial)
+				offset += serial.arrayLength
+				
+				con.num = rowdataLen
+				copyBytesAt(responseData, offset, serial)
+				offset += serial.arrayLength
+				
+				copyBytesAt(responseData, offset, schema_str)
+				offset += schema_str.arrayLength
+				
+				copyBytesAt(responseData, offset, rd.key)
+				offset += rd.key.arrayLength
+				
+				byte rdata[] = util.packRow(rd.fields)
+				copyBytesAt(responseData, offset, rdata)
+				offset += rdata.arrayLength
+				}
+			
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength + responseData.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				client.send(responseData)
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptPart(responseData), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_GET_ROWS_EQ)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			GetRowEqHeader cmdDetails = new GetRowEqHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char schema[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.schemaLen)
+			Data schemaInstance = util.strToSchema(schema)
+			char rowData[] = getCmdBytes(payload, cmdDetails.nameLen+cmdDetails.schemaLen, cmdDetails.dataLen)
+			Data row = util.unpackRow(rowData, schemaInstance)
+			
+			RowData rows[] = db.getRowsEq(name, cmdDetails.fieldIndex, row)
+
+			byte responseData[] = buildMultiRowResponse(rows)
+
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength + responseData.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				client.send(responseData)
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptPart(responseData), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_REM_ROW_EQ)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			GetRowEqHeader cmdDetails = new GetRowEqHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char schema[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.schemaLen)
+			Data schemaInstance = util.strToSchema(schema)
+			char rowData[] = getCmdBytes(payload, cmdDetails.nameLen+cmdDetails.schemaLen, cmdDetails.dataLen)
+			Data row = util.unpackRow(rowData, schemaInstance)
+			
+			db.remRowEq(name, cmdDetails.fieldIndex, row)
+
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_REM_ROWS_EQ)
+			{
+			payload = dana.sub(payload, dana.serial(cmdHdr).arrayLength, payload.arrayLength-1)
+
+			GetRowEqHeader cmdDetails = new GetRowEqHeader()
+			dana.serial(cmdDetails) =[] payload
+
+			payload = dana.sub(payload, dana.serial(cmdDetails).arrayLength, payload.arrayLength-1)
+			
+			char name[] = getCmdBytes(payload, 0, cmdDetails.nameLen)
+			char schema[] = getCmdBytes(payload, cmdDetails.nameLen, cmdDetails.schemaLen)
+			Data schemaInstance = util.strToSchema(schema)
+			char rowData[] = getCmdBytes(payload, cmdDetails.nameLen+cmdDetails.schemaLen, cmdDetails.dataLen)
+			Data row = util.unpackRow(rowData, schemaInstance)
+			
+			db.remRowEq(name, cmdDetails.fieldIndex, row)
+
+			hdr = new MessageHeader(VERSION_1)
+
+			ResponseHeader response = new ResponseHeader(MAGIC, ResponseHeader.RESPONSE_OK)
+
+			if (!encrypt)
+				{
+				hdr.payloadSize = dana.serial(response).arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(dana.serial(response))
+				}
+				else
+				{
+				aes = new AES_CBC(AES_CBC.ENCRYPT, AES_CBC.KEY_256, secretKey, msgInfo)
+				byte buf[] = new byte[](aes.encryptPart(dana.serial(response)), aes.encryptFinish())
+
+				hdr.type = MessageHeader.T_ENCRYPT
+				hdr.infoSize = msgInfo.arrayLength
+				hdr.payloadSize = buf.arrayLength
+
+				client.send(dana.serial(hdr))
+				client.send(msgInfo)
+				client.send(buf)
+				}
+			
+			return true
+			}
+			else if (cmdHdr.type == CMD_END)
+			{
+			return false
+			}
+		
+		return false
+		}
+	
+	void handleRequest(TCPSocket client)
+		{
+		//keep processing commands until we get a stop message or the client disconnects
+		while (processRequest(client))
+			{
+			}
+		
+		client.disconnect()
+		}
+	
+	void serveRequest(TCPSocket client)
+		{
+		asynch::handleRequest(client)
+		}
+	
+	void printUsage()
+		{
+		out.println("")
+		out.println("Usage: data.qdb.server directory [-a address] [-p port] [-pw password]")
+		out.println("")
+		out.println(" 'directory' must be an existing folder on the local machine, which the")
+		out.println(" database will use to store all tables and their contents")
+		out.println("")
+		out.println(" -p portNumber     Set the port number on which the database will listen")
+		out.println(" -a serverAddress  Set the server address to bind the database service to")
+		out.println("                   Default address is 127.0.0.1 (local connections only)")
+		out.println("                   To support remote connections, use ANY, ANY_v4, or ANY_v6)")
+		out.println(" -pw password      Enable encrypted communication, using the given password")
+		}
+	
+	int App:main(AppParam params[])
+		{
+		if (params.arrayLength == 0)
+			{
+			printUsage()
+			return 1
+			}
+		
+		ParamParser pp = new ParamParser(params)
+
+		if (pp.getFreeValues().arrayLength == 0)
+			{
+			printUsage()
+			return 1
+			}
+		
+		char dbDir[] = pp.getFreeValues()[0].string
+
+		char strPort[] = null
+		if ((strPort = pp.getValue("-p")) != null)
+			{
+			port = strPort.intFromString()
+			}
+		
+		char strAddress[] = null
+		if ((strAddress = pp.getValue("-a")) != null)
+			{
+			if (strAddress == "ANY")
+				{
+				HOST_ADDRESS = TCPServerSocket.ANY_ADDRESS
+				}
+				else if (strAddress == "ANY_v4")
+				{
+				HOST_ADDRESS = TCPServerSocket.ANY_ADDRESS_v4
+				}
+				else if (strAddress == "ANY_v6")
+				{
+				HOST_ADDRESS = TCPServerSocket.ANY_ADDRESS_v6
+				}
+				else
+				{
+				HOST_ADDRESS = strAddress
+				}
+			}
+		
+		char password[]
+		if ((password = pp.getValue("-pw")) != null)
+			{
+			encrypt = true
+			secretKey = sha2.hashData(password, SHA2.HASH_SHA_256)
+			}
+		
+		//start the database
+		db = new QDB(dbDir)
+		
+		//wait for clients
+		TCPServerSocket server = new TCPServerSocket()
+		
+		if (!server.bind(HOST_ADDRESS, port))
+			return 1
+		
+		while (true)
+			{
+			TCPSocket client = new TCPSocket()
+			
+			if (client.accept(server))
+				{
+				serveRequest(client)
+				}
+			}
+		
+		return 0
+		}
+	
+	}

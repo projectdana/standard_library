@@ -1,0 +1,19 @@
+/*
+{"description" : "A set of functions that allow the user to easily resize matrices"}
+*/
+interface Resizing {
+    /* {"@description" : "Allows the implementing component to initialise any external compute device it intends to use"} */
+    Resizing()
+
+    /* {"@description" : "Takes an integer matrix and returns a matrix with columns from 'start' to 'end' removed. The column indexed by 'start' will be removed and every subsequent column up to and NOT including 'end'"} */
+    int[][] chopColumnInt(int matrix[][], int start, int end)
+
+    /* {"@description" : "Takes an integer matrix and returns a matrix with rows from 'start' to 'end' removed. The row indexed by 'start' will be removed and every subsequent row up to and NOT including 'end'"} */
+    int[][] chopRowInt(int matrix[][], int start, int end)
+
+    /* {"@description" : "Takes a decimal matrix and returns a matrix with columns from 'start' to 'end' removed. The column indexed by 'start' will be removed and every subsequent column up to and NOT including 'end'"} */
+    dec[][] chopColumnDec(dec matrix[][], int start, int end)
+
+    /* {"@description" : "Takes a decimal matrix and returns a matrix with rows from 'start' to 'end' removed. The row indexed by 'start' will be removed and every subsequent row up to and NOT including 'end'"} */
+    dec[][] chopRowDec(dec matrix[][], int start, int end)
+}

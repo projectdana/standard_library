@@ -652,9 +652,17 @@ component provides App requires parsing.TypeParser, io.File, io.FileSystem fileS
 						{
 						JSONElement doc = parser.parseDocument(td.doc_description)
 						
-						fd.write("<div class = \"doc_description\">")
-						fd.write(parser.getValue(doc, "description").value)
-						fd.write("</div>")
+						JSONElement descEl = parser.getValue(doc, "description")
+						if (descEl != null)
+							{
+							fd.write("<div class = \"doc_description\">")
+							fd.write(parser.getValue(doc, "description").value)
+							fd.write("</div>")
+							}
+							else
+							{
+							if (SHOW_WARNINGS) out.println("[warning] type $(td.name) has no 'description' element in its summary documentation")
+							}
 						}
 						else
 						{

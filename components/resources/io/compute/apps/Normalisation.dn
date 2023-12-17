@@ -1,0 +1,10 @@
+/*
+{"description" : "A set of functions to intended to allow the user to easily take large data sets and bring each data point into a given range"}
+*/
+interface Normalisation {
+    /* {"@description" : "Allows the implementing component to initialise any external compute device it intends to use"} */
+    Normalisation()
+
+    /* {"@description" : "Divides every cell in the given matrix by the divider provided"} */
+    dec[][] matrixDivision(dec matrix[][], dec divider)
+}

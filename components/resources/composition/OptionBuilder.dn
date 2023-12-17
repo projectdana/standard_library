@@ -1,32 +1,43 @@
 uses data.String
 
+/* {"description" : "A description of a required interface."} */
 data ReqIntf {
+	/* {"@description" : "The required interface (including package)."} */
 	char intf[]
+	/* {"@description" : "Whether or not this required interface should resolve to a native library."} */
 	bool isNative
 }
 
+/* {"description" : "A description of an implementation component selected for an interface."} */
 data InterfaceActual {
+	/* {"@description" : "The interface (including package)."} */
 	char intf[]
+	/* {"@description" : "The path to the selected implementation component."} */
 	char comp[]
-	char proxyTag[] //if comp is a proxy, what tag was it given (which we'll pass to a delegated loader)
-	char proxyParams[] //if comp is a proxy, what params was it given (which we'll pass to a delegated loader)
+	/* {"@description" : "If comp is a proxy, what tag was it given (which would be passed to a delegated loader)."} */
+	char proxyTag[]
+	/* {"@description" : "If comp is a proxy, what params was it given (which would be passed to a delegated loader)."} */
+	char proxyParams[]
+	/* {"@description" : "The list of required interfaces of this implementation component."} */
 	ReqIntf req[]
 }
 
+/* {"description" : "One unique composition of components, represented as an implementing component for each interface."} */
 data Composition {
 	InterfaceActual options[]
 }
 
+/* {"description" : "This data type describes the set of compositional changes implied by updating a component."} */
 data CompositionUpdate {
+	/* {"@description" : "Status flag indicating whether or not the component update procedure succeeded."} */
 	bool ok
+	/* {"@description" : "The set of composition options which should be removed as a consequence of the component update."} */
 	Composition remOptions[]
+	/* {"@description" : "The set of composition options which should be added as a consequence of the component update."} */
 	Composition addOptions[]
 }
 
-/*
- {"description" : "Utility API to perform whole-composition search for viable entire compositions of components, from a given starting-point component."}
-*/
-
+/* {"description" : "Utility API to perform whole-composition search for viable entire compositions of components, from a given starting-point component."} */
 interface OptionBuilder {
 	
 	/* { "@description" : "Instantiate a new OptionBuilder, triggering a search for complete compositional options from the given starting component.",	

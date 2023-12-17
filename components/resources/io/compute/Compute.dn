@@ -1,0 +1,21 @@
+uses Program
+uses ComputeArray
+
+/*
+{"description" : "This interface allows the user to interact with compute devices available to the system"}
+*/
+interface Compute {
+
+    /* {"@description" : "Create an instance to interact with the device identified by the name 'device'. The computeArr is how this compute device is bound to the native API"} */
+    Compute(char device[], store ComputeArray computeArr)
+    
+    /* {"@description" : "Identifies which compute platform this device belongs to, e.g. CUDA"} */
+    char[] getPlatform()
+
+    /* {"@description" : "Identifies the device by name"} */
+    char[] getDevice()
+
+    /* {"@description" : "Runs program p on this compute device"} */
+    void runProgram(Program p)
+
+}

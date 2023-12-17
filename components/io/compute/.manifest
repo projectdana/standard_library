@@ -1,0 +1,12 @@
+{
+"defaultLinks":	[
+    {"interface": "ComputeArray", "component": "Compute"},
+    {"interface": "Program", "component": "Compute"},
+    {"interface": "ComputeInfo", "component": "Compute"},
+    {"interface": "ArrayInt", "component": "Compute"},
+    {"interface": "ArrayDec", "component": "Compute"},
+    {"interface": "MatrixInt", "component": "Compute"},
+    {"interface": "MatrixDec", "component": "Compute"},
+    ]
+}
+//Edit this file if you want to use a different implimentation of ComputeDistributionManager

@@ -1,0 +1,10 @@
+/*
+{"description" : "A set of functions to convert matrices and vectors from integer to decimal and vice versa"}
+*/
+interface TypeConversion {
+    /* {"@description" : "Allows the implementing component to initialise any external compute device it intends to use"} */
+    TypeConversion()
+
+    /* {"@description" : "Takes an integer matrix and returns a decimal matrix with every cell containing the decimal representation of its integer counterpart"} */
+    dec[][] intToDecMatrix(int matrix[][])
+}

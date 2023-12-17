@@ -1,0 +1,181 @@
+data ExtMemoryStore {
+    ExtMemory em
+}
+data ProgramStore {
+    Program p
+}
+component provides LogicalCompute requires Compute,
+                                                ComputeArray,
+                                                Program,
+                                                ComputeInfo,
+                                                ArrayInt,
+                                                ArrayDec,
+                                                MatrixInt,
+                                                MatrixDec,
+                                                data.adt.HashTable,
+                                                data.adt.List,
+                                                io.Output out,
+                                                io.TextFile,
+                                                {
+    ComputeInfo hardwareInfo
+    ComputeArray deviceBinder
+    Compute boundDevice
+    HashTable programs
+    HashTable openExtMemory
+
+    LogicalCompute:LogicalCompute() {
+        openExtMemory = new HashTable()
+        programs = new HashTable()
+        hardwareInfo = new ComputeInfo()
+        deviceBinder = new ComputeArray(new String(hardwareInfo.getDevices()[0].string))
+        boundDevice = new Compute(hardwareInfo.getDevices()[0].string, deviceBinder)
+    }
+
+    Compute getDeviceToUse() {
+        return boundDevice
+    }
+
+    void buildPrograms(char source[], char fname[]) {
+        //create program for device
+        Program p = new Program(boundDevice, fname, source)
+
+        //store
+        programs.put("$(fname)$(boundDevice.getDevice())", new ProgramStore(p))
+    }
+
+    void execProgram(char fname[], ExtMemory params[]) {
+        ProgramStore ps = programs.get("$(fname)$(boundDevice.getDevice())")
+        Program p = ps.p
+        p.setParameters(params)
+        boundDevice.runProgram(p)
+    }
+
+    void LogicalCompute:createIntArray(char name[], int length) {
+        //consult distManager for device to use
+        Compute device = getDeviceToUse()
+
+        //create gpu.ArrayInt
+        ArrayInt newArray = new ArrayInt(device, length)
+
+        //track the new memory area
+        openExtMemory.put(name, new ExtMemoryStore(newArray))
+
+        return 
+    }
+
+    void LogicalCompute:createIntMatrix(char name[], int rows, int cols) {
+        Compute device = getDeviceToUse()
+
+        MatrixInt newMatrix = new MatrixInt(device, rows, cols)
+
+        openExtMemory.put(name, new ExtMemoryStore(newMatrix))
+
+        return 
+    }
+
+    void LogicalCompute:writeIntArray(char name[], int values[]) {
+        ExtMemoryStore es = openExtMemory.get(name)
+        ArrayInt arr = es.em
+        arr.write(values)
+    }
+
+    int[] LogicalCompute:readIntArray(char name[]) {
+        ExtMemoryStore es = openExtMemory.get(name)
+        ArrayInt arr = es.em
+        return arr.read()
+    }
+
+    void LogicalCompute:writeIntMatrix(char name[], int values[][]) {
+        ExtMemoryStore es = openExtMemory.get(name)
+        MatrixInt mat = es.em
+        mat.write(values)
+    }
+
+    int[][] LogicalCompute:readIntMatrix(char name[]) {
+        ExtMemoryStore es = openExtMemory.get(name)
+        MatrixInt mat = es.em
+        return mat.read()
+    }
+
+    void LogicalCompute:destroyMemoryArea(char name[]) {
+        openExtMemory.delete(name)
+    }
+
+    void LogicalCompute:createDecArray(char name[], int length) {
+        //consult distManager for device to use
+        Compute device = getDeviceToUse()
+
+        //create gpu.ArrayInt
+        ArrayDec newArray = new ArrayDec(device, length)
+
+        //track the new memory area
+        openExtMemory.put(name, new ExtMemoryStore(newArray))
+
+        return 
+    }
+
+    void LogicalCompute:createDecMatrix(char name[], int rows, int cols) {
+        Compute device = getDeviceToUse()
+
+        MatrixDec newMatrix = new MatrixDec(device, rows, cols)
+
+        openExtMemory.put(name, new ExtMemoryStore(newMatrix))
+
+        return 
+    }
+
+    void LogicalCompute:writeDecArray(char name[], dec values[]) {
+        ExtMemoryStore es = openExtMemory.get(name)
+        ArrayDec arr = es.em
+        arr.write(values)
+    }
+
+    dec[] LogicalCompute:readDecArray(char name[]) {
+        ExtMemoryStore es = openExtMemory.get(name)
+        ArrayDec arr = es.em
+        return arr.read()
+    }
+
+    void LogicalCompute:writeDecMatrix(char name[], dec values[][]) {
+        ExtMemoryStore es = openExtMemory.get(name)
+        MatrixDec mat = es.em
+        mat.write(values)
+    }
+
+    dec[][] LogicalCompute:readDecMatrix(char name[]) {
+        ExtMemoryStore es = openExtMemory.get(name)
+        MatrixDec mat = es.em
+        return mat.read()
+    }
+
+    void LogicalCompute:loadProgram(char path[], char name[]) {
+        TextFile source = new TextFile(path, File.READ)
+        int sizeInBytes = source.getSize()
+        char rawSource[]
+        while (!source.eof()) {
+            rawSource = new char[](rawSource, source.readLine())
+            rawSource = new char[](rawSource, "\n")
+        }
+        buildPrograms(rawSource, name)
+    }
+
+    String[] LogicalCompute:getPrograms() {
+        String progNames[] = new String[programs.getLength()]
+        HashTableItem items[] = programs.getContents()
+        for (int i = 0; i < programs.getLength(); i++) {
+            progNames[i] = new String(items[i].key)
+        }
+        return progNames
+    }
+
+    void LogicalCompute:runProgram(char program[], String params[]) {
+        //TODO: check program exists
+        ExtMemory paramsOnDevice[] = new ExtMemory[params.arrayLength]
+        for (int i = 0; i < params.arrayLength; i++) {
+            ExtMemoryStore es = openExtMemory.get(params[i].string)
+            paramsOnDevice[i] = es.em
+        }
+        execProgram(program, paramsOnDevice)
+        return
+    }
+}

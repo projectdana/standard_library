@@ -70,7 +70,7 @@ data FileIndex {
 	char path[]
 	}
 
-data FileTree {
+data FileTree nocycle {
 	char name[]
 	bool dir
 	ArchiveFile record

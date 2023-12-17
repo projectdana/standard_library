@@ -19,6 +19,10 @@ data UpdateInfo {
 	String addConfigs[]
 }
 
+/*
+ {"description" : "This interface offers support for deriving a set of compositional options for a given software system, by searching for all implementation variants of each interface. It also supports runtime adaptation between compositions and the injection of proxy and intercept components. "}
+*/
+
 interface Assembly {
 
 	/*

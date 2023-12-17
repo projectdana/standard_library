@@ -1,0 +1,76 @@
+uses data.String
+
+/* { "description" : "This is a container type which contains both the row key and value of a database row."} */
+data RowData {
+	/* { "@description" : "The row key of a database row."} */
+	char key[]
+	/* { "@description" : "The row value of a database row."} */
+	Data fields
+	}
+
+/* { "description" : "This is a simple database, written in Dana, which has a schema and query interface matching Dana data types."} */
+interface QDB {
+	
+	/* { "@description" : "Create a new database instance, using the given directory to store all associated files."} */
+	QDB(char directory[])
+	
+	/* { "@description" : "Add a new table to the database.",
+			"name" : "The name of the table; each table name in the database must be unique.",
+			"schema" : "The row schema for this table. For maximum compatibility, it is good practice if a schema only contains size-specific fields (i.e., do not use 'int' or 'dec', instead using size-specific types such as 'int8')",
+			"autoKey" : "Set whether this table should automatically generate keys for new rows.",
+			"reuseKeys" : "If autoKey is true, set whether this table should re-use old keys from rows that have been deleted.",
+			"@return" : "True if the table addition was successful, false otherwise."} */
+	bool addTable(char name[], Data schema, bool autoKey, bool reuseKeys)
+	
+	/* { "@description" : "Get the list of all tables in the database."} */
+	String[] getTables()
+	
+	/* { "@description" : "Get the schema for the specified table."} */
+	Data getTableSchema(char name[])
+	
+	/* { "@description" : "Remove the specified table and all of its associated data."} */
+	void remTable(char name[])
+	
+	/* { "@description" : "Add a new row to a table. The rowData instance must match the table's schema. The rowKey is only used for tables with no autoKey. The key for the new row is returned."} */
+	char[] addRow(char table[], char rowKey[], Data rowData)
+
+	/* { "@description" : "Add a new row to a table which has autoKey set. The key for the new row is returned."} */
+	char[] addRowAuto(char table[], Data rowData)
+	
+	/* { "@description" : "Update a specific row in a table. The rowData instance must match the table's schema."} */
+	void updRow(char table[], char rowKey[], Data rowData)
+	
+	/* { "@description" : "Add a new row to a table, or update that row if it already exists."} */
+	void addUpdRow(char table[], char rowKey[], Data rowData)
+	
+	/* { "@description" : "Get the row for the given key."} */
+	Data getRow(char table[], char rowKey[])
+	
+	/* { "@description" : "Remove the row for the given key."} */
+	void remRow(char table[], char rowKey[])
+	
+	/* { "@description" : "For a given row, increment the field given by index. If no such row exists one is created with all fields set to zero/empty." } */
+	int incField(char table[], char rowKey[], TypeField index)
+
+	/* { "@description" : "For a given row, decrement the field given by index (if any such row exists)." } */
+	int decField(char table[], char rowKey[], TypeField index)
+	
+	/* { "@description" : "Get all rows for a given table. This operation may be very expensive for large tables." } */
+	RowData[] getRows(char table[])
+	
+	/* { "@description" : "Get all rows for a given table and then delete those rows." } */
+	RowData[] getRowsClear(char table[])
+	
+	/* { "@description" : "Get the first row where the given field index matches that of the given template." } */
+	RowData getRowEq(char table[], TypeField index, Data template)
+	
+	/* { "@description" : "Get all rows where the given field index matches that of the given template." } */
+	RowData[] getRowsEq(char table[], TypeField index, Data template)
+	
+	/* { "@description" : "Remove the first row where the given field index matches that of the given template." } */
+	void remRowEq(char table[], TypeField index, Data template)
+	
+	/* { "@description" : "Remove all rows where the given field index matches that of the given template." } */
+	void remRowsEq(char table[], TypeField index, Data template)
+	
+	}

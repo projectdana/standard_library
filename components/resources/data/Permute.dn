@@ -3,9 +3,11 @@
 */
 
 interface Permute {
-
+	
+	/* { "@description" : "Get the first permutation of a set of options. This function returns the first permutation."} */
 	int[] getFirst(int options[], int optionsMax[], opt bool optionsLock[])
 	
+	/* { "@description" : "Get the next permutation of a set of options, passing in the previous permutation as the options parameter. This function returns the next permutation, or null if there were no more permutations. "} */
 	int[] getNext(int options[], int optionsMax[], opt bool optionsLock[])
 	
 	}

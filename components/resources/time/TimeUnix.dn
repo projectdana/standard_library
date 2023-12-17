@@ -6,7 +6,7 @@ uses time.DateTime
 
 interface TimeUnix {
 	
-	/* { "@description" : "Convert a DateTime instance to an MS-DOS-format date."} */
+	/* { "@description" : "Convert a DateTime instance to a Unix time."} */
 	int toUnixTime(DateTime dt)
 	
 	/* { "@description" : "Convert from a Unix-format time value to a DateTime instance."} */

@@ -1,0 +1,58 @@
+uses data.String
+
+/*
+    {"description" : "Interface that provides a high level abstraction available to the caller to enable them to use compute devices on the system that are not the host device"}
+*/
+interface LogicalCompute {
+
+    /* {"@description" : "Constructor, allows the implementing component to initialise the LogicalCompute with programs and data it will need to operate"} */
+    LogicalCompute()
+
+    /* {"@description" : "Creates a 1-D buffer with 'length' cells on some compute device available to the system. The user of this interface will use the given 'name' parameter to access this buffer so they should track the name appropriately"} */
+    void createIntArray(char name[], int length)
+
+    /* {"@description" : "Creates a 2-D buffer on some compute device available to the system. The user of this interface will use the given 'name' parameter to access this buffer so they should track the name appropriately"} */
+    void createIntMatrix(char name[], int rows, int cols)
+
+    /* {"@description" : "Writes the values to the 1-D buffer refered to by 'name'"} */
+    void writeIntArray(char name[], int values[])
+
+    /* {"@description" : "Reads the values from the 1-D buffer referred to by 'name'"} */
+    int[] readIntArray(char name[])
+
+    /* {"@description" : "Writes the values to the 2-D buffer referred to by 'name'"} */
+    void writeIntMatrix(char name[], int values[][])
+
+    /* {"@description" : "Reads the values from the 2-D buffer referred to by 'name'"} */
+    int[][] readIntMatrix(char name[])
+
+    /* {"@description" : "Creates a 1-D buffer with 'length' cells on some compute device available to the system. The user of this interface will use the given 'name' parameter to access this buffer so they should track the name appropriately"} */
+    void createDecArray(char name[], int length)
+
+    /* {"@description" : "Creates a 2-D buffer on some compute device available to the system. The user of this interface will use the given 'name' parameter to access this buffer so they should track the name appropriately"} */
+    void createDecMatrix(char name[], int rows, int cols)
+
+    /* {"@description" : "Writes the values to the 1-D buffer referred to by 'name'"} */
+    void writeDecArray(char name[], dec values[])
+    /* {"@description" : "Reads the values to the 1-D buffer referred to by 'name'"} */
+    dec[] readDecArray(char name[])
+
+    /* {"@description" : "Writes the values 2-D buffer referred to by 'name'"} */
+    void writeDecMatrix(char name[], dec values[][])
+
+    /* {"@description" : "Reads the values 2-D buffer referred to by 'name'"} */
+    dec[][] readDecMatrix(char name[])
+
+    /* {"@description" : "Deallocates the buffer referred to by 'name' on the external compute device"} */
+    void destroyMemoryArea(char name[])
+
+    /* {"@description" : "Gives this LogicalCompute the ability to execute the source code in the file given by 'path'. The 'name' parameter will be used as the first parameter of the 'runProgram' function of this interface"} */
+    void loadProgram(char path[], char name[])
+
+    /* {"@description" : "Returns the names of all programs loaded onto this LogicalCompute"} */
+    String[] getPrograms()
+
+    /* {"@description" : "Attempts to run the program referred to by the first parameter, using the values 'params' as arguments for the program being run. 'params' should be a set of strings that match names of buffers that have been created on the LogicalCompute"} */
+    void runProgram(char program[], String params[])
+
+}

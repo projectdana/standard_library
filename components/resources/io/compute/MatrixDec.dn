@@ -1,0 +1,17 @@
+uses Compute
+
+/*
+{"description" : "This interface represents a decimal type matrix stored on an external compute device"}
+*/
+interface MatrixDec extends ExtMemory {
+
+    /* {"@description" : "Creates the matrix with the given height and width on the given Compute device"} */
+    MatrixDec(store Compute device, int height, int width)
+
+    /* {"@description" : "Writes to the matrix starting at index [0][0] up to the height and width of the host 2d-array given by content"} */
+    void write(dec content[][])
+
+    /* {"@description" : "Reads the entire matrix stored on the external Compute device, returns this as a host 2d-array"} */
+    dec[][] read()
+    
+}

@@ -1,0 +1,282 @@
+data IntCon {
+	int num
+	}
+
+data DecCon {
+	dec num
+	}
+
+const int ROW_INDEX_TYPE_SIZE = 4
+
+component provides Util requires data.StringUtil stringUtil, data.IntUtil iu, io.Output out {
+	
+	void copyBytes(byte dest[], byte source[], int srcStart, int srcLen)
+		{
+		for (int i = 0; i < srcLen; i++)
+			{
+			dest[i] = source[srcStart+i]
+			}
+		}
+	
+	Data Util:strToSchema(char schema_data[])
+		{
+		Type schema = new Type()
+		schema.class = Type.DATA
+		String lines[] = schema_data.explode("\r\n")
+		
+		for (int i = 0; i < lines.arrayLength; i++)
+			{
+			String parts[] = lines[i].string.explode(":")
+			
+			Field tf = new Field()
+			
+			tf.name = parts[1].string
+			
+			String typeParts[] = parts[0].string.explode("[,]")
+			
+			//this is a list of triples of (class,flags,size)
+			
+			tf.type = new Type(iu.intFromString(typeParts[0].string),
+								iu.intFromString(typeParts[1].string),
+								iu.intFromString(typeParts[2].string))
+			
+			if (tf.type.class == Type.ARRAY)
+				{
+				tf.type.fields = new Field()
+				tf.type.fields[0].type = new Type(iu.intFromString(typeParts[3].string),
+								iu.intFromString(typeParts[4].string),
+								iu.intFromString(typeParts[5].string))
+				}
+			
+			schema.fields = new Field[](schema.fields, tf)
+			}
+		
+		return new Data() from schema
+		}
+	
+	char[] Util:schemaToStr(Data schema)
+		{
+		char result[]
+		
+		Type t = typeof(schema)
+		
+		for (int i = 0; i < t.fields.arrayLength; i++)
+			{
+			Type at = t.fields[i].type
+			result = new char[](result, "[$(at.class),$(at.flags),$(at.size)]")
+			if (at.class == Type.ARRAY) result = new char[](result, "[$(at.fields[0].type.class),$(at.fields[0].type.flags),$(at.fields[0].type.size)]")
+			result = new char[](result, ":$(t.fields[i].name)\n")
+			}
+		
+		return result
+		}
+	
+	bool makePrimitiveArray(Data ins, TypeField f, Type t, byte raw[])
+		{
+		int byteLen = raw.arrayLength
+		
+		//NOTE: this would be easier with e.g. new primitive[] from t ...
+		if (t.class == Type.INTEGER)
+			{
+			if (t.size == 1)
+				{
+				if (t.flags == Type.F_CHAR)
+					ins:.f = new char[byteLen]
+					else if (t.flags == Type.F_BOOL)
+					ins:.f = new bool[byteLen]
+					else
+					ins:.f = new byte[byteLen]
+				}
+				else if (t.size == 2)
+				{
+				ins:.f = new int2[byteLen / t.size]
+				}
+				else if (t.size == 4)
+				{
+				ins:.f = new int4[byteLen / t.size]
+				}
+				else if (t.size == 8)
+				{
+				ins:.f = new int8[byteLen / t.size]
+				}
+				else if (t.size == 16)
+				{
+				ins:.f = new int16[byteLen / t.size]
+				}
+				else if (t.size == 32)
+				{
+				ins:.f = new int32[byteLen / t.size]
+				}
+				else if (t.size == 64)
+				{
+				ins:.f = new int64[byteLen / t.size]
+				}
+				else if (t.size == 128)
+				{
+				ins:.f = new int128[byteLen / t.size]
+				}
+				else if (t.size == 256)
+				{
+				ins:.f = new int256[byteLen / t.size]
+				}
+				else if (t.size == 512)
+				{
+				ins:.f = new int512[byteLen / t.size]
+				}
+			}
+			else if (t.class == Type.DECIMAL)
+			{
+			if (t.size == 2)
+				{
+				ins:.f = new dec1[byteLen / t.size]
+				}
+				else if (t.size == 4)
+				{
+				ins:.f = new dec2[byteLen / t.size]
+				}
+				else if (t.size == 8)
+				{
+				ins:.f = new dec4[byteLen / t.size]
+				}
+				else if (t.size == 16)
+				{
+				ins:.f = new dec8[byteLen / t.size]
+				}
+				else if (t.size == 32)
+				{
+				ins:.f = new dec16[byteLen / t.size]
+				}
+				else if (t.size == 64)
+				{
+				ins:.f = new dec32[byteLen / t.size]
+				}
+				else if (t.size == 128)
+				{
+				ins:.f = new dec64[byteLen / t.size]
+				}
+				else if (t.size == 256)
+				{
+				ins:.f = new dec128[byteLen / t.size]
+				}
+				else if (t.size == 512)
+				{
+				ins:.f = new dec256[byteLen / t.size]
+				}
+				else if (t.size == 1024)
+				{
+				ins:.f = new dec512[byteLen / t.size]
+				}
+			}
+		
+		byte serial[] = dana.serial(ins, f)
+		serial =[] raw
+		
+		return true
+		}
+	
+	int4[] readRowIndices(byte rowData[], int count)
+		{
+		int4 result[] = new int4[count]
+		byte serial[] = dana.serial(result)
+		
+		copyBytes(serial, rowData, 0, serial.arrayLength)
+		
+		return result
+		}
+	
+	Data Util:unpackRow(byte rowData[], Data schema_template)
+		{
+		Type schema = typeof(schema_template)
+		
+		Data row = new Data() from schema
+		
+		int fieldCount = schema.fields.arrayLength
+		
+		int4 indices[] = readRowIndices(rowData, fieldCount)
+		
+		int dataOffset = indices.arrayLength * ROW_INDEX_TYPE_SIZE
+		
+		int dataLen = rowData.arrayLength
+		
+		for (int i = 0; i < fieldCount; i++)
+			{
+			Type at = schema.fields[i].type
+			
+			if (at.class == Type.INTEGER || at.class == Type.DECIMAL)
+				{
+				byte serial[] = dana.serial(row, i)
+				
+				copyBytes(serial, rowData, dataOffset + indices[i], serial.arrayLength)
+				}
+				else if (at.class == Type.ARRAY)
+				{
+				int readLen = 0
+				
+				if (i + 1 < indices.arrayLength)
+					readLen = indices[i+1] - indices[i]
+					else
+					readLen = (dataLen - dataOffset) - indices[i]
+				
+				byte ar[] = new byte[readLen]
+				
+				copyBytes(ar, rowData, dataOffset + indices[i], readLen)
+				
+				makePrimitiveArray(row, i, at.fields[0].type, ar)
+				}
+			}
+		
+		return row
+		}
+	
+	byte[] Util:packRow(Data row)
+		{
+		byte result[]
+		
+		Type t = typeof(row)
+		
+		int offset = 0
+		
+		int4 offsets[] = new int4[t.fields.arrayLength]
+		
+		for (int i = 0; i < t.fields.arrayLength; i++)
+			{
+			offsets[i] = offset
+			
+			Type at = t.fields[i].type
+			
+			if (at.class == Type.INTEGER)
+				{
+				offset += at.size
+				}
+				else if (at.class == Type.DECIMAL)
+				{
+				offset += at.size
+				}
+				else if (at.class == Type.ARRAY)
+				{
+				int elSize = at.fields[0].type.size
+				int arrayLen = (row:.i).arrayLength
+				offset += arrayLen * elSize
+				}
+			}
+		
+		result = new byte[](result, dana.serial(offsets))
+		
+		for (int i = 0; i < t.fields.arrayLength; i++)
+			{
+			Type at = t.fields[i].type
+			
+			byte serial[]
+			
+			if (at.class == Type.ARRAY && (row:.i).arrayLength == 0)
+				serial = null
+				else
+				serial = dana.serial(row, i)
+			
+			result = new byte[](result, serial)
+			}
+		
+		return result
+		}
+	
+	}

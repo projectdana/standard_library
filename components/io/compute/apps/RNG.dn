@@ -1,0 +1,109 @@
+component provides RNG requires System system, io.compute.LogicalCompute {
+    LogicalCompute myDev
+    int mySeed
+
+    RNG:RNG() {
+        mySeed = 832409284
+        myDev = new LogicalCompute()
+        myDev.loadProgram("$(system.getDanaHome())/components/resources-ext/opencl_kernels/randmatd.cl", "randmatd")
+        myDev.loadProgram("$(system.getDanaHome())/components/resources-ext/opencl_kernels/randmati.cl", "randmati")
+        myDev.loadProgram("$(system.getDanaHome())/components/resources-ext/opencl_kernels/randvecd.cl", "randvecd")
+        myDev.loadProgram("$(system.getDanaHome())/components/resources-ext/opencl_kernels/randveci.cl", "randveci")
+    }
+
+    void RNG:setSeed(int seed) {
+        mySeed = seed
+    }
+
+    dec[][] RNG:randomMatrixDec(int rows, int cols, dec lo, dec hi) {
+        myDev.createDecMatrix("A", rows, cols)
+        myDev.createDecArray("B", 2)
+        myDev.createIntArray("seed", 1)
+
+        dec lohi[] = new dec[](lo, hi)
+        myDev.writeDecArray("B", lohi)
+
+        int seed[] = new int[](mySeed)
+        myDev.writeIntArray("seed", seed)
+
+        String params[] = new String[](new String("seed"), new String("B"), new String("A"))
+        myDev.runProgram("randmatd", params)
+
+        dec m[][] = myDev.readDecMatrix("A")
+
+        myDev.destroyMemoryArea("A")
+        myDev.destroyMemoryArea("B")
+        myDev.destroyMemoryArea("seed")
+
+        return m
+    }
+
+    int[][] RNG:randomMatrixInt(int rows, int cols, int lo, int hi) {
+        myDev.createIntMatrix("A", rows, cols)
+        myDev.createIntArray("B", 2)
+        myDev.createIntArray("seed", 1)
+
+        int lohi[] = new int[](lo, hi)
+        myDev.writeIntArray("B",lohi)
+
+        int seed[] = new int[](mySeed)
+        myDev.writeIntArray("seed", seed)
+
+        String params[] = new String[](new String("seed"), new String("B"), new String("A"))
+        myDev.runProgram("randmati", params)
+
+        int m[][] = myDev.readIntMatrix("A")
+
+        myDev.destroyMemoryArea("A")
+        myDev.destroyMemoryArea("B")
+        myDev.destroyMemoryArea("seed")
+
+        return m
+    }
+
+    dec[] RNG:randomVectorDec(int len, dec lo, dec hi) {
+        myDev.createDecArray("A", len)
+        myDev.createDecArray("B", 2)
+        myDev.createIntArray("seed", 1)
+
+        dec lohi[] = new dec[](lo, hi)
+        myDev.writeDecArray("B", lohi)
+
+        int seed[] = new int[](mySeed)
+        myDev.writeIntArray("seed", seed)
+
+        String params[] = new String[](new String("seed"), new String("B"), new String("A"))
+        myDev.runProgram("randvecd", params)
+
+        dec returnVal[] = myDev.readDecArray("A")
+
+        myDev.destroyMemoryArea("A")
+        myDev.destroyMemoryArea("B")
+        myDev.destroyMemoryArea("seed")
+
+        return returnVal
+    }
+
+    int[] RNG:randomVectorInt(int len, int lo, int hi) {
+        myDev.createIntArray("A", len)
+        myDev.createIntArray("B", 2)
+        myDev.createIntArray("seed", 1)
+
+        int lohi[] = new int[](lo, hi)
+        myDev.writeIntArray("B", lohi)
+
+        int seed[] = new int[](mySeed)
+        myDev.writeIntArray("seed", seed)
+
+        String params[] = new String[](new String("seed"), new String("B"), new String("A"))
+        myDev.runProgram("randveci", params)
+
+        int returnVal[] = myDev.readIntArray("A")
+
+        myDev.destroyMemoryArea("A")
+        myDev.destroyMemoryArea("B")
+        myDev.destroyMemoryArea("seed")
+
+        return returnVal
+    }
+}

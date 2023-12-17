@@ -1,0 +1,14 @@
+uses ExtMemory
+
+/*
+{"description" : "Represents a program built for a specific compute device."}
+*/
+interface Program {
+
+    /* {"@description" : "Builds the program from the source code provided for the Compute device given. functionName must match the kernel function name in the source code."} */
+    Program(store Compute device, char functionName[], char source[])
+
+    /* {"@description" : "The entry point function of the provided source code for this program will list a set of parameters. Representations of these parameters are given by the types in this package that extend the ExtMemory type. Arrange these in an array and pass it to this function to have those parameters used when this Program object is executed"} */
+    void setParameters(ExtMemory parameters[])
+
+}

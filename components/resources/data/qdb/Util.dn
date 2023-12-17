@@ -1,0 +1,13 @@
+/* { "description" : "This is a set of utility functions used by the QDB database components, for flattening rows into byte arrays. Row flattening only works for data types with no nested data elements."} */
+
+interface Util {
+	
+	Data strToSchema(char schema_data[])
+	
+	char[] schemaToStr(Data schema)
+	
+	byte[] packRow(Data row)
+	
+	Data unpackRow(byte rowData[], Data schema_template)
+	
+	}
