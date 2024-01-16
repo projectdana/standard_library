@@ -569,8 +569,10 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 	implementation TLS {
 		
 		int platformHandle
+
 		bool closed
 		bool nonBlocking
+
 		Mutex connectLock = new Mutex()
 		TLSContext context
 		TCPSocket socket
@@ -585,23 +587,20 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 
 		bool addToSendBuffer(byte content[])
 			{
-			mutex(bufferLock)
+			BufferedData nbuf = new BufferedData(content)
+			if (bufferEnd == null)
 				{
-				BufferedData nbuf = new BufferedData(content)
-				if (bufferEnd == null)
-					{
-					buffer = nbuf
-					}
-					else
-					{
-					bufferEnd.next = nbuf
-					}
-				bufferEnd = nbuf
-
-				bufferTotal += content.arrayLength
-				
-				return true
+				buffer = nbuf
 				}
+				else
+				{
+				bufferEnd.next = nbuf
+				}
+			bufferEnd = nbuf
+
+			bufferTotal += content.arrayLength
+			
+			return true
 			}
 		
 		TLS:TLS(TLSContext cxt)
@@ -668,20 +667,23 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 				else
 				{
 				int n = 0
-				if (buffer == null)
+				mutex(bufferLock)
 					{
-					n = slib.write_nb(platformHandle, dat, status)
-
-					if (n < dat.arrayLength)
+					if (buffer == null)
 						{
-						//add the remaining content to a buffer and trigger sendWait
-						addToSendBuffer(dana.sub(dat, n, dat.arrayLength-1))
-						emitevent sendWait(sendWaitData)
+						n = slib.write_nb(platformHandle, dat, status)
+
+						if (n < dat.arrayLength)
+							{
+							//add the remaining content to a buffer and trigger sendWait
+							addToSendBuffer(dana.sub(dat, n, dat.arrayLength-1))
+							emitevent sendWait(sendWaitData)
+							}
 						}
-					}
-					else
-					{
-					addToSendBuffer(dat)
+						else
+						{
+						addToSendBuffer(dat)
+						}
 					}
 
 				return n

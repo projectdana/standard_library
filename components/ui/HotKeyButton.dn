@@ -1,0 +1,58 @@
+const int TEXT_MARGIN = 3
+const int TEXT_PAD = 6
+
+component provides HotKeyButton requires io.Output out {
+	
+	HotKey hotKey
+
+	HotKeyButton:HotKeyButton(store HotKey k)
+		{
+		hotKey = k
+		}
+	
+	void HotKeyButton:setPosition(int x, int y){}
+	
+	void HotKeyButton:paint(Canvas c){}
+	
+	void HotKeyButton:click(int x, int y, int button){}
+
+	void HotKeyButton:hotKeyClick(HotKey k)
+		{
+		emitevent click()
+		}
+	
+	void HotKeyButton:postRepaint(){}
+	
+	void HotKeyButton:setFocus(){}
+	
+	void HotKeyButton:setDisabled(bool d)
+		{
+		disabled = d
+		}
+	
+	void HotKeyButton:setHotKey(store HotKey k)
+		{
+		hotKey = k
+		emitevent setHotKeys()
+		}
+	
+	HotKey[] HotKeyButton:getHotKeys()
+		{
+		return hotKey
+		}
+	
+	Rect HotKeyButton:getBounds()
+		{
+		return new Rect(0, 0, 0, 0)
+		}
+	
+	WH HotKeyButton:getPreferredSize()
+		{
+		return new WH(0, 0)
+		}
+	
+	Point HotKeyButton:getPosition()
+		{
+		return new Point(0, 0)
+		}
+	}

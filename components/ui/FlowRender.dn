@@ -23,6 +23,7 @@ interface UIPlaneLib {
 	event keyDown(WindowEventData wed)
 	event keyUp(WindowEventData wed)
 	event resize(WindowEventData wed)
+	event move(WindowEventData wed)
 	event drop(DropEventData ded)
 	event close()
 	

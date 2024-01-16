@@ -651,7 +651,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 	
 	byte[] expandBuffer(byte buf[], int newMinSize, int incrementSize)
 		{
-		out.println("expand buffer from $(buf.arrayLength) to at least $(newMinSize) via $(incrementSize)")
+		//out.println("expand buffer from $(buf.arrayLength) to at least $(newMinSize) via $(incrementSize)")
 		int newActualSize = 0
 		
 		if (incrementSize != 0)
@@ -667,7 +667,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 		byte newBuf[] = new byte[newActualSize]
 		newBuf =[] buf
 
-		out.println(" -- buffer now $newActualSize bytes")
+		//out.println(" -- buffer now $newActualSize bytes")
 
 		return newBuf
 		}
@@ -980,7 +980,10 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 						else
 						{
 						if (debugConnections) out.println(" -- [NWID $(item.workID)] client socket send-ready")
-						events[i].socket.sendBuffer()
+						if (item.tlsClient != null)
+							item.tlsClient.sendBuffer()
+							else
+							events[i].socket.sendBuffer()
 						}
 					}
 				

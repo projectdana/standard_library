@@ -101,10 +101,10 @@ component provides ScrollBar requires io.Output out, data.IntUtil iu {
 		//pass-through to content
 		}
 
-	HotKey[] ScrollBar:recvFocus()
+	bool ScrollBar:recvFocus()
 		{
 		//pass-through to content
-		return null
+		return false
 		}
 
 	void ScrollBar:loseFocus()

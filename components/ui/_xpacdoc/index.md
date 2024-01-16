@@ -623,14 +623,15 @@ component provides DetailsInput requires ui.TextField, ui.Label, ui.Button, ui.P
 	void DetailsInput:setDisabled(bool v) { super(v) }
 	void DetailsInput:clickMulti(int x, int y, int b, int clicks) { super(x, y, b, clicks) }
 	void DetailsInput:contextClick(MenuItem item) { super(item) }
-	HotKey[] DetailsInput:recvFocus() { return super()	}
+	bool DetailsInput:recvFocus() { return super()	}
+	HotKey[] DetailsInput:getHotKeys() { return super()	}
 	void DetailsInput:loseFocus() { super() }
 	void DetailsInput:hotKeyClick(HotKey k) { super(k) }
 	void DetailsInput:mouseDown(int x, int y, int b) { super(x, y, b) }
 	void DetailsInput:mouseUp(int x, int y, int b) { super(x, y, b) }
 	void DetailsInput:mouseMove(int x, int y){ super(x, y) }
 	void DetailsInput:dropFile(int x, int y, char path[]){ super(x, y, path) }
-	void DetailsInput:mouseOver(){ super() }
+	CursorSetEvent DetailsInput:mouseOver(int x, int y){ return super(x, y) }
 	void DetailsInput:mouseOut(){ super() }
 	void DetailsInput:mouseWheel(int xAdd, int xSub, int yAdd, int ySub){ super(xAdd, xSub, yAdd, ySub) }
 

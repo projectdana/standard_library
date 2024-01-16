@@ -1,4 +1,10 @@
-//NEXT: optimise, e.g. by storing character lengths
+//NEXT: optimise, e.g. by storing character lengths, fragment lengths, line heights
+
+//BUG: placing the cursor at the start of a subline renders the cursor at the far right of that line :-S
+
+//NOTE: we could potentially separate out the text storage and management logic into a separate API TextModel
+// - and consider simplifying getTextRegion() similar to deleteSelection(), again avoiding the from-start scan :-S
+// - it's maybe worth totally reworking insertTextTo(), it's extremely complicated and is only called from one place!
 
 //this is the horizontal border between the textual contents of the TextArea, and the outer edge of its background
 const int TEXT_BORDER_H = 3
@@ -14,11 +20,15 @@ const byte CONTEXT_HINT = 1
 const int SCR_BUTTON_HEIGHT = 20
 const int SCR_BUTTON_WIDTH = 20
 
+const int LINE_NUMBER_MARGIN = 8
+
 uses IOWindow
 
+//each line of text is made of a list of text fragments
 data TextFrag {
-	const byte T_TEXT = 1
-	const byte T_TAB = 2
+	const byte T_TEXT = 1 //regular text, can be expanded and contracted
+	const byte T_PARTICLE = 2 //a particle, like a space or full-stop, which act as word-wrap points, and aren't expanded or contracted
+	const byte T_TAB = 3 //a tab
 	byte type
 	StringUTF value
 
@@ -26,12 +36,23 @@ data TextFrag {
 	TextFrag prev
 }
 
+//text on a "logical" line may be split over multiple display lines, e.g. in a word-wrap mode
+data TextContent {
+	TextFrag frags
+	TextFrag fragsEnd
+
+	TextContent next
+	TextContent prev
+}
+
 data TextLine {
-	TextFrag text
-	TextFrag textEnd
+	TextContent text
+	TextContent textEnd
 
 	int charLength
 	int pixelLength
+
+	int lineCount
 
 	//these references track the in-order list of lines in the text area
 	TextLine next
@@ -46,6 +67,8 @@ data CursorPos {
 	int character
 	int yPosition
 	TextLine line
+	TextContent subline
+	int subCharacter
 	}
 
 component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu, ui.Font, os.SystemInfo sysInfo, os.Clipboard clipboard, locale.KeyMapping keyMapping, encoding.StringUTF, ScrollBar, ScrollBar:h, data.StringUtil stringUtil {
@@ -57,14 +80,22 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 
 	TextLine shortestLine
 	TextLine longestLine
+
+	//number of actual lines
+	int lineCount
+	//number of "virtual" or "view" lines, which may be greater than actual lines rent when word-wrap is enabled
+	int lineCountV
 	
+	//NOTE: these could both be CursorPos instances...?
 	int cursorPosition
 	TextLine cursorLine
 	int cursorPositionY
+	TextContent cursorSubline
 
 	int selectStartPos
 	TextLine selectStartLine
 	int selectStartY
+	TextContent selectSubline
 
 	Font textFont
 	
@@ -73,6 +104,8 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 	int textAreaWidth = 20
 	int textAreaHeight = 20
 	int cursorHeight = 20
+
+	int lineNumberAreaWidth = 0
 
 	int TAB_SPACES = 4
 	int spaceWidth = 2
@@ -83,8 +116,6 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 
 	bool mouseDragCapture
 
-	int lineCount
-	
 	byte keyState
 
 	bool showScrollV = true
@@ -96,6 +127,10 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 	int xScroll
 
 	GraphicsObject clickDown
+
+	bool lineNumbers = false
+	bool wordWrap = false
+	bool autoIndent = false
 
 	byte cursorType
 
@@ -113,10 +148,11 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 	HotKey hkPaste = new HotKey(KeyState.KEY_CTRL, KeyCode.V)
 	HotKey hkSelectAll = new HotKey(KeyState.KEY_CTRL, KeyCode.A)
 	
-	Color bgColor = new Color(230, 230, 250, 255)
+	Color bgColor = new Color(250, 250, 255, 255)
 	Color borderColor = new Color(180, 180, 190, 255)
 	Color highlightColor = new Color(160, 160, 200, 255)
 	Color textColor = new Color(0, 0, 0, 255)
+	Color textColorLN = new Color(0, 0, 90, 255)
 	
 	TextArea:TextArea()
 		{
@@ -162,8 +198,11 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 	
 	TextLine makeLine()
 		{
-		TextLine newLine = new TextLine(new TextFrag(TextFrag.T_TEXT, new StringUTF("")))
+		TextLine newLine = new TextLine(new TextContent(new TextFrag(TextFrag.T_TEXT, new StringUTF(""))))
 		newLine.textEnd = newLine.text
+		newLine.text.fragsEnd = newLine.text.frags
+
+		newLine.lineCount = 1
 
 		return newLine
 		}
@@ -173,7 +212,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		if (after.next != null)
 			after.next.prev = newFrag
 			else
-			line.textEnd = newFrag
+			line.textEnd.fragsEnd = newFrag
 		newFrag.next = after.next
 		newFrag.prev = after
 		after.next = newFrag
@@ -185,12 +224,12 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 
 		if (atCharacter == 0)
 			{
-			newFrag.next = line.text
-			line.text.prev = newFrag
-			line.text = newFrag
+			newFrag.next = line.text.frags
+			line.text.frags.prev = newFrag
+			line.text.frags = newFrag
 			}
 
-		TextFrag fw = line.text
+		TextFrag fw = line.text.frags
 		int pos = atCharacter
 		while (fw != null)
 			{
@@ -236,20 +275,55 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 	
 	void appendTab(TextLine line)
 		{
-		TextFrag newFrag = new TextFrag(TextFrag.T_TAB, new StringUTF("\n"))
-		newFrag.prev = line.textEnd
-		line.textEnd.next = newFrag
+		if (line.textEnd.frags === line.textEnd.fragsEnd && line.textEnd.frags.value.length() == 0)
+			{
+			line.textEnd.frags.type = TextFrag.T_TAB
+			line.textEnd.frags.value.append("\t")
+			}
+			else
+			{
+			TextFrag newFrag = new TextFrag(TextFrag.T_TAB, new StringUTF("\t"))
+			newFrag.prev = line.textEnd.fragsEnd
+			line.textEnd.fragsEnd.next = newFrag
 
-		line.textEnd = newFrag
+			line.textEnd.fragsEnd = newFrag
+			}
 		}
 	
-	int getLineCharLength(TextLine line)
+	//given an absolute cursor position on a line, return the relative position on the given subline
+	int getSublinePos(TextLine line, TextContent c, int pos)
 		{
-		TextFrag fw = line.text
+		TextContent cw = line.text
+		while (cw !== c && cw != null)
+			{
+			pos -= getSublineCharLength(cw)
+			cw = cw.next
+			}
+		
+		return pos
+		}
+	
+	//given a relative position on a given subline, return the absolute cursor position on the line
+	int getLineCursorPos(TextLine line, TextContent c, int pos)
+		{
+		TextContent cw = line.text
 		int len = 0
+		while (cw !== c)
+			{
+			len += getSublineCharLength(cw)
+			cw = cw.next
+			}
+		
+		return len + pos
+		}
+	
+	int getSublineCharLength(TextContent cw)
+		{
+		int len = 0
+		TextFrag fw = cw.frags
 		while (fw != null)
 			{
-			if (fw.type == TextFrag.T_TEXT)
+			if (fw.type == TextFrag.T_TEXT || fw.type == TextFrag.T_PARTICLE)
 				{
 				len += fw.value.length()
 				}
@@ -259,6 +333,19 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				}
 			
 			fw = fw.next
+			}
+		
+		return len
+		}
+	
+	int getLineCharLength(TextLine line)
+		{
+		int len = 0
+		TextContent cw = line.text
+		while (cw != null)
+			{
+			len += getSublineCharLength(cw)
+			cw = cw.next
 			}
 		
 		return len
@@ -317,104 +404,76 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		textFont = f
 		
 		cursorHeight = textFont.getFontMetrics().height + (TEXT_BORDER_V*2)
+
+		spaceWidth = textFont.getTextWidth(" ")
+
+		if (wordWrap) wrapLines()
 		
 		postRepaint()
 		}
 	
 	char[] getCharacters(TextLine line, int start, int len)
 		{
-		TextFrag fw = line.text
-		TextFrag dfrom = null
-		TextFrag dto = null
+		char result[] = null
+		TextContent tc = line.text
+		TextFrag fw = tc.frags
 
-		char result[]
-		char end[]
-
-		if (start == 0)
+		while (start > fw.value.length())
 			{
-			dfrom = fw
-
-			if (start+len <= fw.value.length())
+			start -= fw.value.length()
+			fw = fw.next
+			if (fw == null)
 				{
-				result = fw.value.subString(start, len)
-				len = 0
-				}
-				else
-				{
-				result = fw.value.subString(start, fw.value.length() - start)
-				}
-			}
-			else
-			{
-			int pos = start
-			while (fw != null && pos > 0)
-				{
-				if (fw.type == TextFrag.T_TEXT)
-					{
-					if (pos < fw.value.length())
-						{
-						if (pos+len <= fw.value.length())
-							{
-							result = fw.value.subString(pos, len)
-							len = 0
-							pos = 0
-							}
-							else
-							{
-							result = fw.value.subString(pos, fw.value.length() - pos)
-							pos = 0
-							}
-						}
-						else
-						{
-						pos -= fw.value.length()
-						}
-					}
-					else
-					{
-					pos --
-					}
-				
-				dfrom = fw
-				fw = fw.next
+				tc = tc.next
+				fw = tc.frags
 				}
 			}
 		
-		if (len != 0)
-			{
-			while (fw != null && len > 0)
-				{
-				if (fw.type == TextFrag.T_TEXT)
-					{
-					if (len < fw.value.length())
-						{
-						end = fw.value.subString(0, len)
-						dto = fw.prev
-						break
-						}
-						else
-						{
-						len -= fw.value.length()
-						}
-					}
-					else
-					{
-					len --
-					}
+		//out.println("start: $start len $len [$(fw.value.length())]")
 
-				dto = fw
-				fw = fw.next
-				}
-			
-			TextFrag td = dfrom.next
-			TextFrag stop = dto.next
-			while (td !== stop)
+		if (start + len <= fw.value.length())
+			{
+			result = new char[](result, fw.value.subString(start, len))
+			return result
+			}
+			else
+			{
+			int dlen = (fw.value.length() - start)
+			len -= dlen
+			result = new char[](result, fw.value.subString(start, dlen))
+			fw = fw.next
+
+			if (fw == null)
 				{
-				result = new char[](result, td.value.getRaw())
-				td = td.next
+				tc = tc.next
+				fw = tc.frags
 				}
-			
-			result = new char[](result, end)
+			}
+		
+		while (len >= fw.value.length())
+			{
+			TextFrag td = fw
+			len -= fw.value.length()
+
+			result = new char[](result, fw.value.getRaw())
+
+			fw = fw.next
+
+			if (len == 0)
+				{
+				return result
+				}
+
+			if (fw == null)
+				{
+				tc = tc.next
+				fw = tc.frags
+				}
+			}
+		
+		if (len > 0)
+			{
+			result = new char[](result, fw.value.subString(0, len))
 			}
 		
 		return result
@@ -471,7 +530,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			int s = startPos
 			int e = endPos
 			
-			return startLine.text.value.subString(s, e-s)
+			return getCharacters(startLine, s, e-s)
 			}
 
 		return null
@@ -520,14 +579,14 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				s = cursorPosition
 				}
 			
-			return cursorLine.text.value.subString(s, e-s)
+			return getCharacters(cursorLine, s, e-s)
 			}
 		}
 	
 	void updateScrollMax()
 		{
 		//vertical scroll
-		int maxHeight = (lineCount * cursorHeight) + cursorHeight
+		int maxHeight = (lineCountV * cursorHeight) + cursorHeight
 		int maxScrollY = 0
 		if (maxHeight > textAreaHeight)
 			maxScrollY = maxHeight - textAreaHeight
@@ -546,14 +605,24 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		if (td.prev != null) td.prev.next = td.next
 		if (td.next != null) td.next.prev = td.prev
 
+		if (lines === td) lines = td.next
 		if (lastLine === td) lastLine = td.prev
 
 		td.prev = null
 		td.next = null
 
+		lineCount --
+		lineCountV -= td.lineCount
+
 		td = null
 
-		lineCount --
+		int newWidth = getNumberAreaWidth(lineCount)
+		if (newWidth != lineNumberAreaWidth)
+			{
+			lineNumberAreaWidth = newWidth
+			updateTextAreaWidth()
+			if (wordWrap) wrapLines()
+			}
 
 		updateScrollMax()
 		}
@@ -582,6 +651,17 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			nl.prevLen = longestLine
 			longestLine = nl
 			}
+		
+		lineCount ++
+		lineCountV ++
+
+		int newWidth = getNumberAreaWidth(lineCount)
+		if (newWidth != lineNumberAreaWidth)
+			{
+			lineNumberAreaWidth = newWidth
+			updateTextAreaWidth()
+			if (wordWrap) wrapLines()
+			}
 
 		updateScrollMax()
 		}
@@ -590,13 +670,13 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		{
 		if (line.text === frag)
 			{
-			line.text = frag.next
-			line.text.prev = null
+			line.text.frags = frag.next
+			line.text.frags.prev = null
 			}
-			else if (line.textEnd === frag)
+			else if (line.textEnd.fragsEnd === frag)
 			{
-			line.textEnd = frag.prev
-			line.textEnd.next = null
+			line.textEnd.fragsEnd = frag.prev
+			line.textEnd.fragsEnd.next = null
 			}
 			else
 			{
@@ -608,97 +688,136 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		frag.prev = null
 		}
 	
+	void clearLine(TextLine line)
+		{
+		TextContent sw = line.text
+
+		int lineHeight = 0
+
+		while (sw != null)
+			{
+			TextContent td = sw
+
+			TextFrag fw = sw.frags
+			while (fw != null)
+				{
+				TextFrag ftd = fw
+
+				fw = fw.next
+
+				ftd.next = null
+				ftd.prev = null
+				}
+			
+			sw = sw.next
+
+			td.frags = null
+			td.fragsEnd = null
+
+			td.next = null
+			td.prev = null
+			}
+		
+		line.text = null
+		line.textEnd = null
+
+		line.text = new TextContent(new TextFrag(TextFrag.T_TEXT, new StringUTF("")))
+		line.textEnd = line.text
+		line.text.fragsEnd = line.text.frags
+
+		updateLineLength(line)
+		}
+	
 	void deleteCharacters(TextLine line, int start, int len)
 		{
-		TextFrag fw = line.text
-		TextFrag dfrom = null
-		TextFrag dto = null
-
-		if (start == 0)
+		//NOTE: this function never deletes TextContent sub-lines because wrapLine() always resets each line, so the work is done there
+		if (start == 0 && len == getLineCharLength(line))
 			{
-			dfrom = fw
-
-			if (start+len <= fw.value.length())
-				{
-				fw.value.delete(start, len)
-				len = 0
-				}
-				else
-				{
-				//TODO: just delete this frag entirely?
-				fw.value = new StringUTF("")
-				}
+			clearLine(line)
 			}
 			else
 			{
-			int pos = start
-			while (fw != null && pos > 0)
-				{
-				if (fw.type == TextFrag.T_TEXT)
-					{
-					if (pos < fw.value.length())
-						{
-						if (pos+len <= fw.value.length())
-							{
-							fw.value.delete(pos, len)
-							len = 0
-							pos = 0
-							}
-							else
-							{
-							fw.value = new StringUTF(fw.value.subString(0, pos))
-							pos = 0
-							}
-						}
-						else
-						{
-						pos -= fw.value.length()
-						}
-					}
-					else
-					{
-					pos --
-					}
-				
-				dfrom = fw
-				fw = fw.next
-				}
-			}
-		
-		if (len != 0)
-			{
-			while (fw != null && len > 0)
-				{
-				if (fw.type == TextFrag.T_TEXT)
-					{
-					if (len < fw.value.length())
-						{
-						//break this text section into two, with the tab inserted in the middle
-						fw.value = new StringUTF(fw.value.subString(len, fw.value.length() - len))
-						dto = fw.prev
-						break
-						}
-						else
-						{
-						len -= fw.value.length()
-						}
-					}
-					else
-					{
-					len --
-					}
+			TextContent tc = line.text
+			TextFrag fw = tc.frags
 
-				dto = fw
+			while (start > fw.value.length())
+				{
+				start -= fw.value.length()
 				fw = fw.next
+				if (fw == null)
+					{
+					tc = tc.next
+					fw = tc.frags
+					}
 				}
 			
-			TextFrag td = dfrom.next
-			TextFrag stop = dto.next
-			while (td !== stop)
+			//out.println("start: $start len $len [$(fw.value.length())]")
+
+			if (start + len <= fw.value.length())
 				{
-				TextFrag del = td
-				td = td.next
-				removeFrag(line, del)
+				fw.value.delete(start, len)
+				return
+				}
+				else
+				{
+				int dlen = (fw.value.length() - start)
+				len -= dlen
+				fw.value.delete(start, dlen)
+				fw = fw.next
+
+				if (fw == null)
+					{
+					tc = tc.next
+					fw = tc.frags
+					}
+				}
+			
+			while (len >= fw.value.length())
+				{
+				TextFrag td = fw
+				len -= fw.value.length()
+
+				fw = fw.next
+
+				if (td === tc.frags)
+					{
+					if (td.next != null) td.next.prev = null
+					tc.frags = td.next
+					}
+					else if (td === tc.fragsEnd)
+					{
+					tc.fragsEnd = td.prev
+					td.prev.next = null
+					}
+					else
+					{
+					td.prev.next = td.next
+					td.next.prev = td.prev
+					}
+				
+				td.prev = null
+				td.next = null
+
+				if (len == 0)
+					{
+					TextContent cd = tc
+					tc = tc.next
+
+					return
+					}
+
+				if (fw == null)
+					{
+					TextContent cd = tc
+					tc = tc.next
+					fw = tc.frags
+					}
+				}
+			
+			if (len > 0)
+				{
+				//TODO: if tc is not the starting one, and this delete would leave the frag empty, delete the frag, and if it's the only frag in the tc, delete the tc as well
+				fw.value.delete(0, len)
 				}
 			}
 		}
@@ -714,9 +833,16 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			}
 		*/
 
-		line.textEnd.next = append.text
-		append.text.prev = line.textEnd
-		line.textEnd = append.textEnd
+		line.textEnd.fragsEnd.next = append.text.frags
+		append.text.frags.prev = line.textEnd.fragsEnd
+		line.textEnd.fragsEnd = append.textEnd.fragsEnd
+
+		//if we're appending to an empty line, we'll have a zero-length text starting frag, which we remove (some functions assume no zero-length frags)
+		if (line.textEnd.frags.type != TextFrag.T_TAB && line.textEnd.frags.value.length() == 0)
+			{
+			line.textEnd.frags.next.prev = null
+			line.textEnd.frags = line.textEnd.frags.next
+			}
 		}
 	
 	void deleteSelection()
@@ -729,8 +855,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			TextLine seline
 			int sspos
 			int sepos
-
-			bool cursorLineFirst = cursorPositionY < selectStartY
+			int yFinish = 0
 
 			if (cursorPositionY < selectStartY)
 				{
@@ -738,6 +863,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				seline = selectStartLine
 				sspos = cursorPosition
 				sepos = selectStartPos
+				yFinish = cursorPositionY
 				}
 				else
 				{
@@ -745,75 +871,44 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				seline = cursorLine
 				sspos = selectStartPos
 				sepos = cursorPosition
-				}
-
-			int cy = 0
-			bool inSelect
-
-			TextLine lw = lines
-			TextLine td = null
-
-			while (lw != null)
-				{
-				if (lw === ssline)
-					{
-					inSelect = true
-
-					//lw.text.value.delete(sspos, lw.text.value.length()-sspos)
-					TextLine part = splitLine(lw, sspos)
-					updateLineLength(lw)
-					}
-					else if (lw === seline)
-					{
-					TextLine part = splitLine(lw, sepos)
-
-					cursorPosition = getLineCharLength(ssline)
-
-					if (getLineCharLength(part) != 0)
-						{
-						ssline.textEnd.next = part.text
-						part.text.prev = ssline.textEnd
-						ssline.textEnd = part.textEnd
-
-						part.text = null
-						part.textEnd = null
-						}
-					
-					cursorLine = ssline
-
-					td = lw
-					if (!cursorLineFirst) cursorPositionY -= cursorHeight
-					}
-					else if (inSelect)
-					{
-					td = lw
-					if (!cursorLineFirst) cursorPositionY -= cursorHeight
-					}
-				
-				if (lw === seline)
-					{
-					inSelect = false
-
-					if (td != null)
-						{
-						removeLine(td)
-						}
-
-					break
-					}
-
-				lw = lw.next
-				cy += cursorHeight
-
-				if (td != null)
-					{
-					removeLine(td)
-					}
+				yFinish = selectStartY
 				}
 			
-			selectStartLine = cursorLine
-			selectStartPos = cursorPosition
-			selectStartY = cursorPositionY
+			//deleteCharacters on the end of the starting line, if appropriate
+			// - delete each intermediate line we reach seline
+			// - deleteCharacters on seline, if appropriate
+			// - append the last line to the first line, if appropriate
+			// (in general we want to minimise the number of places we deal directly with frags/fragsEnd, to scope word-wrap calculations to a few functions)
+
+			int e = getLineCharLength(ssline)
+			deleteCharacters(ssline, sspos, e - sspos)
+			if (wordWrap) wrapLine(ssline) //deleteCharacters() assumes wrapLine is always called after it, to re-flow fragments over sublines
+
+			while (ssline.next !== seline)
+				{
+				removeLine(ssline.next)
+				}
+			
+			//now we need to join seline onto ssline
+			if (sepos < getLineCharLength(seline))
+				{
+				//join seline onto ssline
+				deleteCharacters(seline, 0, sepos)
+				if (wordWrap) wrapLine(seline)
+				removeLine(seline)
+				appendLine(ssline, seline)
+				}
+				else
+				{
+				cursorLine = seline.next
+				removeLine(seline)
+				}
+			
+			cursorLine = ssline
+			selectStartLine = ssline
+			selectStartPos = sspos
+			selectStartY = yFinish
+			cursorPositionY = yFinish
 
 			emitevent textChanged()
 			}
@@ -841,83 +936,268 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			}
 		}
 	
-	void appendTextTo(TextLine line, char txt[])
+	void indentLine(TextLine line)
 		{
-		if (line.textEnd.type == TextFrag.T_TEXT)
+		insertTab(line, 0)
+		}
+	
+	void indentSelection()
+		{
+		TextLine ssline
+		TextLine seline
+
+		if (cursorPositionY < selectStartY)
 			{
-			line.textEnd.value.append(txt)
+			ssline = cursorLine
+			seline = selectStartLine
 			}
 			else
 			{
-			TextFrag nf = new TextFrag(TextFrag.T_TEXT, new StringUTF(txt))
-			line.textEnd.next = nf
-			nf.prev = line.textEnd
-			line.textEnd = nf
+			ssline = selectStartLine
+			seline = cursorLine
 			}
+		
+		indentLine(ssline)
+
+		if (ssline === seline) return
+
+		ssline = ssline.next
+		while (ssline !== seline)
+			{
+			indentLine(ssline)
+			ssline = ssline.next
+			}
+		
+		indentLine(ssline)
+
+		if (cursorPositionY < selectStartY)
+			selectStartPos += 1
+			else
+			cursorPosition += 1
 		}
 	
-	void insertTextTo(TextLine line, int atCharacter, char txt[])
+	void unindentLine(TextLine line)
 		{
-		if (atCharacter == 0)
+		if (line.text.frags.type == TextFrag.T_TAB)
 			{
-			if (line.text.type == TextFrag.T_TEXT)
+			if (line.text.frags.next != null)
 				{
-				line.text.value.insert(0, txt)
+				line.text.frags.next.prev = null
+				line.text.frags = line.text.frags.next
 				}
 				else
 				{
-				TextFrag nf = new TextFrag(TextFrag.T_TEXT, new StringUTF(txt))
-				nf.next = line.text
-				line.text.prev = nf
-				line.text = nf
+				line.text.frags.type = TextFrag.T_TEXT
+				line.text.frags.value = new StringUTF("")
 				}
+			}
+			//TODO: else if it's a space, try to delete up to TAB_SPACES of them
+		}
+	
+	void unindentSelection()
+		{
+		TextLine ssline
+		TextLine seline
+
+		if (cursorPositionY < selectStartY)
+			{
+			ssline = cursorLine
+			seline = selectStartLine
+			}
+			else
+			{
+			ssline = selectStartLine
+			seline = cursorLine
+			}
+		
+		unindentLine(ssline)
+
+		if (ssline === seline)
+			{
+			if (cursorPositionY < selectStartY)
+				selectStartPos -= 1
+				else
+				cursorPosition -= 1
 			return
 			}
 
-		TextFrag fw = line.text
-		int pos = atCharacter
-		while (fw != null)
+		ssline = ssline.next
+		while (ssline !== seline)
 			{
-			if (fw.type == TextFrag.T_TEXT)
+			unindentLine(ssline)
+			ssline = ssline.next
+			}
+		
+		unindentLine(ssline)
+
+		if (cursorPositionY < selectStartY)
+			selectStartPos -= 1
+			else
+			cursorPosition -= 1
+		}
+	
+	void appendTextTo(TextLine line, char txt[], opt bool isParticle)
+		{
+		if (!isParticle && line.textEnd.fragsEnd.type == TextFrag.T_TEXT)
+			{
+			line.textEnd.fragsEnd.value.append(txt)
+			}
+			else
+			{
+			TextFrag nf
+			if (line.textEnd.fragsEnd.value.length() == 0)
 				{
-				if (fw.value.length() == pos)
-					{
-					fw.value.append(txt)
-					break
-					}
-					else if (pos < fw.value.length())
-					{
-					fw.value.insert(pos, txt)
-					break
-					}
-					else
-					{
-					pos -= fw.value.length()
-					}
+				nf = line.textEnd.fragsEnd
+				nf.value = new StringUTF(txt)
+				nf.type = TextFrag.T_TEXT
 				}
 				else
 				{
-				if (pos == 1)
-					{
-					//insert the text after this tab
-					out.println("insert-text-after-tab")
-					TextFrag nf = new TextFrag(TextFrag.T_TEXT, new StringUTF(txt))
-					insertFragAfter(line, nf, fw)
-					break
-					}
-					else
-					{
-					pos --
-					}
+				nf = new TextFrag(TextFrag.T_TEXT, new StringUTF(txt))
+				line.textEnd.fragsEnd.next = nf
+				nf.prev = line.textEnd.fragsEnd
+				line.textEnd.fragsEnd = nf
 				}
 			
-			fw = fw.next
+			if (isParticle) nf.type = TextFrag.T_PARTICLE
 			}
+		}
+	
+	void insertTextTo(TextLine line, int atCharacter, char txt[], opt bool isParticle)
+		{
+		if (atCharacter == 0)
+			{
+			if (!isParticle && line.text.frags.type == TextFrag.T_TEXT)
+				{
+				line.text.frags.value.insert(0, txt)
+				}
+				else
+				{
+				TextFrag nf = null
+				if (isParticle)
+					nf = new TextFrag(TextFrag.T_PARTICLE, new StringUTF(txt))
+					else
+					nf = new TextFrag(TextFrag.T_TEXT, new StringUTF(txt))
+				nf.next = line.text.frags
+				line.text.frags.prev = nf
+				line.text.frags = nf
+				}
+			
+			return
+			}
+			else
+			{
+			//search for insertion position
+			TextContent tc = line.text
+			int ndx = 0
+
+			while (tc != null)
+				{
+				TextFrag fw = tc.frags
+				while (fw != null)
+					{
+					int thisLen = fw.value.length()
+					if (fw.type == TextFrag.T_TAB) thisLen = 1
+
+					if ((ndx + thisLen) == atCharacter)
+						{
+						//append, in appropriate mode
+						if (!isParticle && fw.type == TextFrag.T_TEXT)
+							{
+							fw.value.append(txt)
+							}
+							else
+							{
+							TextFrag nf = new TextFrag(TextFrag.T_TEXT, new StringUTF(txt))
+							if (isParticle) nf.type = TextFrag.T_PARTICLE
+
+							nf.next = fw.next
+							if (fw.next != null)
+								fw.next.prev = nf
+								else
+								tc.fragsEnd = nf
+							fw.next = nf
+							nf.prev = fw 
+							}
+						
+						return
+						}
+						else if ((ndx + thisLen) > atCharacter)
+						{
+						//insert in the middle, either as text or by splitting fragments
+						if (!isParticle && fw.type == TextFrag.T_TEXT)
+							{
+							fw.value.insert(atCharacter - ndx, txt)
+							}
+							else
+							{
+							int qpos = atCharacter - ndx
+							TextFrag nf = new TextFrag(TextFrag.T_TEXT, new StringUTF(fw.value.subString(qpos, fw.value.length() - qpos)))
+							fw.value.delete(qpos, fw.value.length() - qpos)
+
+							//out.println("split frag: '$(fw.value.getRaw())' / '$(nf.value.getRaw())'")
+
+							TextFrag nfB = new TextFrag(TextFrag.T_PARTICLE, new StringUTF(txt))
+
+							nfB.next = nf
+							nfB.prev = fw
+
+							nf.prev = nfB
+							nf.next = fw.next
+							
+							if (fw.next != null)
+								fw.next.prev = nf
+								else
+								line.text.fragsEnd = nf
+							fw.next = nfB
+
+							//out.println("seqe: frag: '$(fw.value.getRaw())' -> '$(fw.next.value.getRaw())' -> '$(fw.next.next.value.getRaw())'")
+							}
+						
+						return
+						}
+						else
+						{
+						//move to next frag
+						ndx += thisLen
+						}
+
+					fw = fw.next
+					}
+				
+				tc = tc.next
+				}
+			}
+		}
+	
+	bool isFilterCharacter(char k[])
+		{
+		if (k == "\r")
+			return true
+		
+		return false
+		}
+	
+	bool isLineWrapCharacter(char k[])
+		{
+		if (k == " ")
+			return true
+		
+		return false
 		}
 	
 	void insertText(char text[])
 		{
 		int lastIndex = 0
+
+		char appendX[] = null
+
+		if (cursorPosition < getLineCharLength(cursorLine))
+			{
+			appendX = getCharacters(cursorLine, cursorPosition, getLineCharLength(cursorLine) - cursorPosition)
+			deleteCharacters(cursorLine, cursorPosition, getLineCharLength(cursorLine) - cursorPosition)
+			}
+
 		for (int i = 0; i < text.arrayLength; i++)
 			{
 			char k[] = text[i]
@@ -927,20 +1207,8 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 
 				char nxt[] = text.subString(lastIndex, i - lastIndex)
 
-				//append/insert to current line
-				if (cursorPosition == getLineCharLength(cursorLine))
-					{
-					appendTextTo(cursorLine, nxt)
-					updateLineLength(cursorLine)
-					cursorPosition = getLineCharLength(cursorLine)
-					}
-					else
-					{
-					insertTextTo(cursorLine, cursorPosition, nxt)
-					updateLineLength(cursorLine)
-					StringUTF nxtUTF = new StringUTF(nxt)
-					cursorPosition += nxtUTF.length()
-					}
+				appendTextTo(cursorLine, nxt)
+				updateLineLength(cursorLine)
 
 				TextLine ntl = makeLine()
 
@@ -954,78 +1222,48 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				
 				cursorLine.next = ntl
 
-				//check if we should split the current line at this point, appending it to the next line
-				if (cursorPosition != getLineCharLength(cursorLine))
-					{
-					TextLine part = splitLine(cursorLine, cursorPosition)
-					ntl.text = part.text
-					ntl.textEnd = part.textEnd
-
-					part.text = null
-					part.textEnd = null
-
-					updateLineLength(cursorLine)
-					}
-
 				cursorLine = ntl
-				cursorPosition = 0
 				cursorPositionY += cursorHeight
 				
-				lineCount ++
 				addLine(ntl)
 
 				lastIndex = i + 1
 				}
-				else if (k == "\r")
+				else if (isFilterCharacter(k) || k == "\t" || isLineWrapCharacter(k))
 				{
-				//do nothing
-				}
-				else if (k == "\t")
-				{
-				//insert a tab
 				if (lastIndex != i)
 					{
 					char nxt[] = text.subString(lastIndex, i - lastIndex)
-
-					//append/insert to current line
-					if (cursorPosition == getLineCharLength(cursorLine))
-						{
-						appendTextTo(cursorLine, nxt)
-						updateLineLength(cursorLine)
-						cursorPosition = getLineCharLength(cursorLine)
-						}
-						else
-						{
-						insertTextTo(cursorLine, cursorPosition, nxt)
-						updateLineLength(cursorLine)
-						StringUTF nxtUTF = new StringUTF(nxt)
-						cursorPosition += nxtUTF.length()
-						}
+					appendTextTo(cursorLine, nxt)
+					updateLineLength(cursorLine)
 					}
-				
-				insertTab(cursorLine, cursorPosition)
-				cursorPosition ++
-				
 				lastIndex = i + 1
+
+				if (k == "\t")
+					{
+					appendTab(cursorLine)
+					}
+					else if (isLineWrapCharacter(k))
+					{
+					appendTextTo(cursorLine, k, true)
+					updateLineLength(cursorLine)
+					}
 				}
+				
 			}
 		
 		char nxt[] = text.subString(lastIndex, text.arrayLength - lastIndex)
 		
-		//append/insert to current line
-		if (cursorPosition == getLineCharLength(cursorLine))
+		appendTextTo(cursorLine, nxt)
+		updateLineLength(cursorLine)
+
+		if (appendX != null)
 			{
-			appendTextTo(cursorLine, nxt)
+			appendTextTo(cursorLine, appendX)
 			updateLineLength(cursorLine)
-			cursorPosition = getLineCharLength(cursorLine)
 			}
-			else
-			{
-			insertTextTo(cursorLine, cursorPosition, nxt)
-			updateLineLength(cursorLine)
-			StringUTF nxtUTF = new StringUTF(nxt)
-			cursorPosition += nxtUTF.length()
-			}
+		
+		cursorPosition = getLineCharLength(cursorLine)
 
 		selectStartLine = cursorLine
 		selectStartPos = cursorPosition
@@ -1034,79 +1272,111 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		emitevent textChanged()
 		}
 	
-	TextLine splitLine(TextLine line, int currentPosition)
+	bool isWhitespace(char value[])
 		{
-		TextLine result = makeLine()
-
-		TextFrag fw = line.text
-		TextFrag dfrom = null
-
-		if (currentPosition == 0)
+		for (int i = 0; i < value.arrayLength; i++)
 			{
-			result.text.value = fw.value
-			fw.value = new StringUTF("")
+			if (value[i] != " " && value[i] != "\t")
+				return false
+			}
+		
+		return true
+		}
+	
+	void splitLineDown()
+		{
+		//check if any text comes after this cursor position on the current line; if so move it down to the next line
+		TextLine ntl = makeLine()
+		addLine(ntl)
 
-			fw = fw.next
-
-			dfrom = line.text
+		char str[] = null
+		
+		if (cursorPosition < getLineCharLength(cursorLine))
+			{
+			str = getCharacters(cursorLine, cursorPosition, getLineCharLength(cursorLine) - cursorPosition)
+			deleteCharacters(cursorLine, cursorPosition, getLineCharLength(cursorLine) - cursorPosition)
+			updateLineLength(cursorLine)
+			}
+		
+		//if we're NOT currently on the last line, we need to INSERT a line after the current one
+		if (cursorLine.next != null)
+			{
+			ntl.next = cursorLine.next
+			ntl.prev = cursorLine
+			
+			cursorLine.next.prev = ntl
+			cursorLine.next = ntl
 			}
 			else
 			{
-			int pos = currentPosition
-			while (fw != null && pos > 0)
+			lastLine.next = ntl
+			ntl.prev = lastLine
+			lastLine = ntl
+			}
+		
+		cursorLine = ntl
+		cursorSubline = cursorLine.text
+		selectStartLine = cursorLine
+		cursorPosition = 0
+		selectStartPos = 0
+
+		bool insertion = false
+
+		if (autoIndent)
+			{
+			TextFrag fw = ntl.prev.text.frags
+			while (fw != null)
 				{
-				if (fw.type == TextFrag.T_TEXT)
+				if (!isWhitespace(fw.value.getRaw()))
 					{
-					if (pos < fw.value.length())
-						{
-						result.text.value = new StringUTF(fw.value.subString(pos, fw.value.length() - pos))
-						fw.value = new StringUTF(fw.value.subString(0, pos))
-						}
-						else
-						{
-						pos -= fw.value.length()
-						}
+					break
 					}
 					else
 					{
-					pos --
+					insertText(fw.value.getRaw())
+					insertion = true
 					}
-				
-				dfrom = fw
 				fw = fw.next
 				}
 			}
-		
-		result.textEnd.next = fw
-		result.textEnd = line.textEnd
 
-		if (line.text === line.textEnd)
+		if (str != null)
 			{
-			result.textEnd = result.text
+			int prevCP = cursorPosition
+			insertText(str)
+			cursorPosition = prevCP
+			selectStartPos = cursorPosition
+
+			insertion = true
 			}
-
-		line.textEnd = dfrom
-		line.textEnd.next = null
-
-		return result
+		
+		if (!insertion)
+			{
+			cursorPositionY += cursorHeight
+			selectStartY = cursorPositionY
+			}
 		}
 	
 	void updateLineLength(TextLine line)
 		{
 		//re-calculate the length-in-pixels of this line
+
 		int preLength = line.pixelLength
 
 		line.pixelLength = 0
 
-		TextFrag fw = line.text
+		TextFrag fw = line.text.frags
 		while (fw != null)
 			{
-			if (fw.type == TextFrag.T_TEXT)
+			if (fw.type == TextFrag.T_TEXT || fw.type == TextFrag.T_PARTICLE)
 				line.pixelLength += textFont.getTextWidth(fw.value.getRaw())
 				else
 				line.pixelLength += (TAB_SPACES * spaceWidth)
 			fw = fw.next
 			}
+		
+		//re-calculate word-wrap status, if appropriate
+		if (wordWrap) wrapLine(line)
 
 		//...and now adjust sorting order relative to lines around us
 
@@ -1188,7 +1458,38 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		updateScrollMax()
 		}
 	
-	void TextArea:keyDown(int keyCode)
+	void printLine(char dbg[], TextLine forLine)
+		{
+		out.print(dbg)
+
+		TextContent sw = forLine.text
+
+		int lineHeight = 0
+
+		while (sw != null)
+			{
+			TextFrag fw = sw.frags
+			while (fw != null)
+				{
+				if (fw.type == TextFrag.T_TEXT || fw.type == TextFrag.T_PARTICLE)
+					{
+					out.print("'$(fw.value.getRaw())' ")
+					}
+					else
+					{
+					out.print("<tab>")
+					}
+				
+				fw = fw.next
+				}
+			
+			sw = sw.next
+			}
+		
+		out.println("")
+		}
+	
+	bool TextArea:keyDown(int keyCode)
 		{
 		//here we check if the key press was a printable character and if so insert it, else handle other key strokes
 		
@@ -1210,20 +1511,26 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				
 				if (cursorPosition == getLineCharLength(cursorLine))
 					{
-					appendTextTo(cursorLine, ch)
+					appendTextTo(cursorLine, ch, isLineWrapCharacter(ch))
 					}
 					else
 					{
-					insertTextTo(cursorLine, cursorPosition, ch)
+					insertTextTo(cursorLine, cursorPosition, ch, isLineWrapCharacter(ch))
 					}
 				
 				cursorPosition ++
 				selectStartPos = cursorPosition
 
+				//printLine("DBG-UL:", cursorLine)
+
 				updateLineLength(cursorLine)
+
+				//printLine("DBG-UC:", cursorLine)
 				}
 			
 			updateCursorPosition()
+
+			//printLine("DBG-TC:", cursorLine)
 			
 			emitevent textChanged()
 			
@@ -1235,40 +1542,44 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				{
 				keyState |= KeyState.KEY_SHIFT
 				shiftDown = true
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.CTRL_LEFT || kCode == KeyCode.CTRL_RIGHT)
 				{
 				keyState |= KeyState.KEY_CTRL
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.ALT_LEFT)
 				{
 				keyState |= KeyState.KEY_ALT
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.ALT_RIGHT)
 				{
 				keyState |= KeyState.KEY_ALTGR
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.CMD)
 				{
 				keyState |= KeyState.KEY_CMD
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.TAB)
 				{
 				mutex(textLock)
 					{
-					if (selectStartLine !== cursorLine)
+					if (selectStartLine !== cursorLine || (selectStartPos != cursorPosition && (selectStartPos == 0 || cursorPosition == 0)))
 						{
-						//TODO: indent+ this text region?
+						//indent+/- this text region
+						if (!shiftDown)
+							indentSelection()
+							else
+							unindentSelection()
 						}
 						else
 						{
@@ -1295,6 +1606,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 						}
 
 					updateLineLength(cursorLine)
+					updateCursorPosition()
 					}
 				}
 			
@@ -1361,7 +1673,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 							}
 							else if (cursorLine.prev != null)
 							{
-							cursorPosition = cursorLine.prev.text.value.length()
+							cursorPosition = cursorLine.prev.text.frags.value.length()
 							selectStartPos = cursorPosition
 
 							cursorPositionY -= cursorHeight
@@ -1383,6 +1695,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 						else
 						{
 						deleteSelection()
+						updateLineLength(cursorLine)
 						
 						if (cursorPosition > selectStartPos)
 							{
@@ -1405,46 +1718,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					//delete selection, if any
 					deleteSelection()
 
-					//check if any text comes after this cursor position on the current line; if so move it down to the next line
-					TextLine ntl = makeLine()
-					lineCount ++
-					addLine(ntl)
-					
-					if (cursorPosition < getLineCharLength(cursorLine))
-						{
-						TextLine part = splitLine(cursorLine, cursorPosition)
-						ntl.text = part.text
-						ntl.textEnd = part.textEnd
-
-						part.text = null
-						part.textEnd = null
-
-						updateLineLength(cursorLine)
-						}
-					
-					//if we're NOT currently on the last line, we need to INSERT a line after the current one
-					if (cursorLine.next != null)
-						{
-						ntl.next = cursorLine.next
-						ntl.prev = cursorLine
-						
-						cursorLine.next.prev = ntl
-						cursorLine.next = ntl
-						}
-						else
-						{
-						lastLine.next = ntl
-						ntl.prev = lastLine
-						lastLine = ntl
-						}
-					
-					cursorLine = ntl
-					selectStartLine = cursorLine
-					cursorPosition = 0
-					selectStartPos = 0
-					
-					cursorPositionY += cursorHeight
-					selectStartY = cursorPositionY
+					splitLineDown()
 
 					updateCursorPosition()
 					}
@@ -1452,7 +1726,9 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			
 			if (kCode == KeyCode.ARROW_LEFT)
 				{
-				if (cursorPosition > 0)
+				int thisLinePos = getSublinePos(cursorLine, cursorSubline, cursorPosition)
+
+				if (thisLinePos > 0)
 					{
 					cursorPosition --
 					
@@ -1464,17 +1740,43 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					
 					updateCursorPosition()
 					}
-					else if (cursorLine.prev != null)
+					else if (cursorSubline.prev != null)
 					{
-					cursorPosition = getLineCharLength(cursorLine.prev)
+					TextContent goto = cursorSubline.prev
+					int lineEndPos = getSublineCharLength(goto)
+					int gotoPos = getLineCursorPos(cursorLine, goto, lineEndPos)
+					
+					cursorPosition = gotoPos
+					cursorSubline = goto
+					
 					cursorPositionY -= cursorHeight
-
-					cursorLine = cursorLine.prev
 
 					if (!shiftDown)
 						{
 						selectStartPos = cursorPosition
 						selectStartLine = cursorLine
+						selectSubline = cursorSubline
+						selectStartY = cursorPositionY
+						}
+					
+					updateCursorPosition()
+					}
+					else if (cursorLine.prev != null)
+					{
+					TextLine goto = cursorLine.prev
+					TextContent gotoSub = goto.textEnd
+
+					cursorPosition = getLineCharLength(goto)
+					cursorPositionY -= cursorHeight
+
+					cursorLine = goto
+					cursorSubline = gotoSub
+
+					if (!shiftDown)
+						{
+						selectStartPos = cursorPosition
+						selectStartLine = cursorLine
+						selectSubline = cursorSubline
 						selectStartY = cursorPositionY
 						}
 					
@@ -1484,7 +1786,9 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			
 			if (kCode == KeyCode.ARROW_RIGHT)
 				{
-				if (cursorPosition < getLineCharLength(cursorLine))
+				int thisLinePos = getSublinePos(cursorLine, cursorSubline, cursorPosition)
+				
+				if (thisLinePos < getSublineCharLength(cursorSubline))
 					{
 					cursorPosition ++
 					
@@ -1496,17 +1800,39 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					
 					updateCursorPosition()
 					}
+					else if (cursorSubline.next != null)
+					{
+					TextContent goto = cursorSubline.next
+					int gotoPos = getLineCursorPos(cursorLine, goto, 0)
+					
+					cursorPosition = gotoPos
+					cursorSubline = goto
+					
+					cursorPositionY += cursorHeight
+
+					if (!shiftDown)
+						{
+						selectStartPos = cursorPosition
+						selectStartLine = cursorLine
+						selectSubline = cursorSubline
+						selectStartY = cursorPositionY
+						}
+					
+					updateCursorPosition()
+					}
 					else if (cursorLine.next != null)
 					{
 					cursorPosition = 0
 					cursorPositionY += cursorHeight
 
 					cursorLine = cursorLine.next
+					cursorSubline = cursorLine.text
 
 					if (!shiftDown)
 						{
 						selectStartPos = cursorPosition
 						selectStartLine = cursorLine
+						selectSubline = cursorSubline
 						selectStartY = cursorPositionY
 						}
 					
@@ -1516,16 +1842,54 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			
 			if (kCode == KeyCode.ARROW_UP)
 				{
-				if (cursorLine.prev != null)
+				if (cursorSubline.prev != null)
+					{
+					TextContent goto = cursorSubline.prev
+
+					int thisLinePos = getSublinePos(cursorLine, cursorSubline, cursorPosition)
+
+					int gotoPos = getLineCursorPos(cursorLine, goto, thisLinePos)
+					int lineEndPos = getSublineCharLength(goto)
+
+					if (thisLinePos > lineEndPos)
+						{
+						gotoPos = getLineCursorPos(cursorLine, goto, lineEndPos)
+						}
+					
+					cursorSubline = goto
+					cursorPosition = gotoPos
+					
+					cursorPositionY -= cursorHeight
+
+					if (!shiftDown)
+						{
+						selectStartPos = cursorPosition
+						selectStartLine = cursorLine
+						selectSubline = cursorSubline
+						selectStartY = cursorPositionY
+						}
+					
+					updateCursorPosition()
+					}
+					else if (cursorLine.prev != null)
 					{
 					TextLine goto = cursorLine.prev
+					TextContent gotoSub = goto.textEnd
+
+					int thisLinePos = getSublinePos(cursorLine, cursorSubline, cursorPosition)
+					int lineEndPos = getSublineCharLength(gotoSub)
 					
-					if (getLineCharLength(goto) < cursorPosition)
+					if (thisLinePos > lineEndPos)
 						{
-						cursorPosition = getLineCharLength(goto)
+						cursorPosition = getLineCursorPos(goto, gotoSub, lineEndPos)
+						}
+						else
+						{
+						cursorPosition = getLineCursorPos(goto, gotoSub, thisLinePos)
 						}
 					
 					cursorLine = goto
+					cursorSubline = gotoSub
 					
 					cursorPositionY -= cursorHeight
 
@@ -1538,20 +1902,63 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					
 					updateCursorPosition()
 					}
+					else
+					{
+					cursorPosition = 0
+					selectStartPos = 0
+					}
 				}
 			
 			if (kCode == KeyCode.ARROW_DOWN)
 				{
-				if (cursorLine.next != null)
+				if (cursorSubline.next != null)
+					{
+					TextContent goto = cursorSubline.next
+
+					int thisLinePos = getSublinePos(cursorLine, cursorSubline, cursorPosition)
+
+					int gotoPos = getLineCursorPos(cursorLine, goto, thisLinePos)
+					int lineEndPos = getSublineCharLength(goto)
+
+					if (thisLinePos > lineEndPos)
+						{
+						gotoPos = getLineCursorPos(cursorLine, goto, lineEndPos)
+						}
+					
+					cursorSubline = goto
+					cursorPosition = gotoPos
+					
+					cursorPositionY += cursorHeight
+
+					if (!shiftDown)
+						{
+						selectStartPos = cursorPosition
+						selectStartLine = cursorLine
+						selectSubline = cursorSubline
+						selectStartY = cursorPositionY
+						}
+					
+					updateCursorPosition()
+					}
+					else if (cursorLine.next != null)
 					{
 					TextLine goto = cursorLine.next
+					TextContent gotoSub = goto.text
+
+					int thisLinePos = getSublinePos(cursorLine, cursorSubline, cursorPosition)
+					int lineEndPos = getSublineCharLength(gotoSub)
 					
-					if (getLineCharLength(goto) < cursorPosition)
+					if (thisLinePos > lineEndPos)
 						{
-						cursorPosition = getLineCharLength(goto)
+						cursorPosition = getLineCursorPos(goto, gotoSub, lineEndPos)
+						}
+						else
+						{
+						cursorPosition = getLineCursorPos(goto, gotoSub, thisLinePos)
 						}
 					
 					cursorLine = goto
+					cursorSubline = gotoSub
 					
 					cursorPositionY += cursorHeight
 
@@ -1564,11 +1971,17 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					
 					updateCursorPosition()
 					}
+					else
+					{
+					cursorPosition = getLineCharLength(cursorLine)
+					selectStartPos = cursorPosition
+					}
 				}
 			
 			if (kCode == KeyCode.END)
 				{
-				cursorPosition = cursorLine.text.value.length()
+				cursorPosition = getLineCharLength(cursorLine)
+				//cursorPositionY = getLineHeight(cursorLine) //TODO.
 				
 				if (!shiftDown)
 					selectStartPos = cursorPosition
@@ -1588,9 +2001,11 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			
 			postRepaint()
 			}
+		
+		return true
 		}
 	
-	void TextArea:keyUp(int keyCode)
+	bool TextArea:keyUp(int keyCode)
 		{
 		byte kCode
 		
@@ -1600,13 +2015,13 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				{
 				keyState &= ~KeyState.KEY_SHIFT
 				shiftDown = false
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.CTRL_LEFT || kCode == KeyCode.CTRL_RIGHT)
 				{
 				keyState &= ~KeyState.KEY_CTRL
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.ALT_LEFT)
@@ -1617,7 +2032,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			if (kCode == KeyCode.ALT_RIGHT)
 				{
 				keyState &= ~KeyState.KEY_ALTGR
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.CMD)
@@ -1625,6 +2040,8 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				keyState &= ~KeyState.KEY_CMD
 				}
 			}
+		
+		return true
 		}
 	
 	Rect TextArea:getBounds()
@@ -1632,35 +2049,67 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		return new Rect(xPosition, yPosition, width, height)
 		}
 	
+	int getLineNumberAreaWidth()
+		{
+		char lnMax[] = lineCount.makeString()
+		int len = textFont.getTextWidth(lnMax) + LINE_NUMBER_MARGIN
+		return len
+		}
+	
 	CursorPos findCursorPos(int x, int y)
 		{
+		if (lineNumbers) x -= getLineNumberAreaWidth()
+
+		//out.println("FCP $x.$y")
+
+		int lnIndex = 0
+
 		//first we find the line
 		TextLine lw = lines
-		int lineBottom = cursorHeight
+		int lineBottom = 0
+		int lineTop = 0
 		while (lw != null)
 			{
+			lineTop = lineBottom
+			lineBottom += getLineHeight(lw)
+
+			//out.println("LB: $lineBottom / LH $(getLineHeight(lw)) / LT $lineTop")
 			if (y < lineBottom)
 				break
-			
-			lineBottom += cursorHeight
+
+			lnIndex ++
 			lw = lw.next
 			}
 		
 		if (lw == null)
 			{
+			//out.println("line-revert")
 			lw = lastLine
 			lineBottom -= cursorHeight
 			}
-
+		
 		//now find the character on that line
-		TextFrag fw = lw.text
-		int subIndex = 0
+		TextContent cw = lw.text
 		int charCount = 0
-		int totalWidth = 0
-		for (int i = 0; i < getLineCharLength(lw); i++)
+
+		while ((lineTop + cursorHeight) < y && cw.next != null)
 			{
-			if (fw.type == TextFrag.T_TEXT)
+			charCount += getSublineCharLength(cw)
+			cw = cw.next
+			lineTop += cursorHeight
+			}
+		
+		//we're now on the right subline
+		int subIndex = 0
+		int totalWidth = 0
+		TextFrag fw = cw.frags
+		for (int i = 0; i < getSublineCharLength(cw); i++)
+			{
+			int ptw = totalWidth
+
+			if (fw.type == TextFrag.T_TEXT || fw.type == TextFrag.T_PARTICLE)
 				{
+				//out.println("'$(fw.value.getRaw())' $(fw.value.length()) / $subIndex")
 				totalWidth += textFont.getTextWidth(fw.value.subString(subIndex, 1))
 				charCount ++
 				subIndex ++
@@ -1678,10 +2127,17 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				fw = fw.next
 				}
 			
-			if (totalWidth >= x) return new CursorPos(i, lineBottom - cursorHeight, lw)
+			if (totalWidth >= x)
+				{
+				//decide which side of the character is closer to the actual x location
+				if ((totalWidth - x) < (x - ptw))
+					return new CursorPos(charCount, lineTop, lw, cw)
+					else
+					return new CursorPos(charCount-1, lineTop, lw, cw)
+				}
 			}
 		
-		return new CursorPos(getLineCharLength(lw), lineBottom - cursorHeight, lw)
+		return new CursorPos(getLineCursorPos(lw, cw, getSublineCharLength(cw)), lineTop, lw, cw)
 		}
 	
 	void TextArea:click(int x, int y, int button)
@@ -1844,7 +2300,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			cursorPosition = getLineCharLength(cursorLine)
 
 			selectStartY = 0
-			cursorPositionY = lineCount * cursorHeight
+			cursorPositionY = lineCountV * cursorHeight
 
 			updateCursorPosition()
 			
@@ -1871,7 +2327,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 	
 	void TextArea:mouseWheel(int xAdd, int xSub, int yAdd, int ySub)
 		{
-		int maxHeight = (lineCount * cursorHeight) + cursorHeight
+		int maxHeight = (lineCountV * cursorHeight) + cursorHeight
 		int maxScrollY = 0
 		if (maxHeight > textAreaHeight)
 			maxScrollY = maxHeight - textAreaHeight
@@ -1995,13 +2451,14 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 
 			cursorPosition = cp.character
 			cursorLine = cp.line
-			
+			cursorSubline = cp.subline
 			cursorPositionY = cp.yPosition
 
 			if (!shiftDown)
 				{
 				selectStartPos = cursorPosition
 				selectStartLine = cursorLine
+				selectSubline = cursorSubline
 				selectStartY = cursorPositionY
 				}
 
@@ -2017,16 +2474,20 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		{
 		if (lineSeparator == null) lineSeparator = "\n"
 
-		return getTextRegion(lines, 0, lastLine, lastLine.text.value.length(), lineSeparator)
+		return getTextRegion(lines, 0, lastLine, getLineCharLength(lastLine), lineSeparator)
 		}
 	
 	void clearText()
 		{
+		bool wrapNote = wordWrap
+		wordWrap = false
 		TextLine lw = lines.next
 		while (lw != null)
 			{
 			TextLine td = lw
 			lw = lw.next
+
+			clearLine(td)
 
 			td.next = null
 			td.prev = null
@@ -2045,19 +2506,27 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			}
 		
 		lineCount = 0
+		lineCountV = 0
 		
 		lines.next = null
+
+		clearLine(lines)
 		
-		lines.text.value = new StringUTF("")
 		lastLine = lines
 
 		shortestLine = lines
 		longestLine = lines
 
+		lines.pixelLength = 0
+		lines.charLength = 0
+		lines.lineCount = 1
+
 		cursorPosition = 0
 		selectStartPos = cursorPosition
 		cursorLine = lines
 		selectStartLine = cursorLine
+
+		wordWrap = wrapNote
 		}
 	
 	void TextArea:setText(char text[])
@@ -2075,18 +2544,34 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		postRepaint()
 		}
 	
-	int getX(TextLine forLine, int pos)
+	int getY(TextLine forLine)
 		{
-		TextFrag fw = forLine.text
+		int y = 0
+		TextLine lw = lines
+
+		while (lw !== forLine)
+			{
+			y += getLineHeight(lw)
+			lw = lw.next
+			}
+		
+		return y
+		}
+	
+	int getSubX(TextContent tc, int pos)
+		{
 		int xpos = 0
 		int charCount = 0
-		while (pos > 0)
+		TextFrag fw = tc.frags
+		while (pos > 0 && fw != null)
 			{
-			if (fw.type == TextFrag.T_TEXT)
+			if (fw.type == TextFrag.T_TEXT || fw.type == TextFrag.T_PARTICLE)
 				{
-				if (fw.value.length() > pos)
+				//out.println(" - chk $(fw.value.length()) / '$(fw.value.getRaw())' pos $pos")
+				if (fw.value.length() >= pos)
 					{
 					char mt[] = fw.value.subString(0, pos)
+					//out.println(" - ret m")
 					return xpos + textFont.getTextWidth(mt)
 					}
 					else
@@ -2098,6 +2583,7 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				}
 				else
 				{
+				//out.println(" - chk T")
 				int nspaces = TAB_SPACES - (charCount % TAB_SPACES)
 				xpos += (nspaces * spaceWidth)
 				pos --
@@ -2110,25 +2596,115 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		return xpos
 		}
 	
-	int getY(TextLine forLine)
+	Point getXY(TextLine forLine, int pos)
 		{
-		int y = cursorHeight
-		TextLine lw = lines
+		int y = 0
+		TextContent cw = forLine.text
 
-		while (lw !== forLine)
+		//out.println("getXY @ $pos")
+
+		int xpos = 0
+		int charCount = 0
+		int subline = 0
+
+		while (pos > 0 && cw != null)
 			{
-			y += cursorHeight
-			lw = lw.next
+			TextFrag fw = cw.frags
+			xpos = 0
+			//out.println("ln")
+			while (pos > 0 && fw != null)
+				{
+				if (fw.type == TextFrag.T_TEXT || fw.type == TextFrag.T_PARTICLE)
+					{
+					//out.println(" - chk $(fw.value.length()) / '$(fw.value.getRaw())' pos $pos")
+					if (fw.value.length() >= pos)
+						{
+						char mt[] = fw.value.subString(0, pos)
+						//out.println(" - ret m [$xpos, $(textFont.getTextWidth(mt))] after '$mt'")
+						return new Point(xpos + textFont.getTextWidth(mt), y + (cursorHeight * subline))
+						}
+						else
+						{
+						xpos += textFont.getTextWidth(fw.value.getRaw())
+						pos -= fw.value.length()
+						charCount += fw.value.length()
+						}
+					}
+					else
+					{
+					//out.println(" - chk T")
+					int nspaces = TAB_SPACES - (charCount % TAB_SPACES)
+					xpos += (nspaces * spaceWidth)
+					pos --
+					charCount += nspaces
+					}
+				
+				fw = fw.next
+				}
+			
+			cw = cw.next
+			if (cw != null) subline ++
 			}
 		
-		return y
+		//out.println(" - ret e")
+		return new Point(xpos, y + (cursorHeight * subline))
 		}
 	
 	void drawCursor(Canvas c, TextLine forLine, int pos, int ypos)
 		{
-		int xp = getX(forLine, pos)
+		Point p = getXY(forLine, pos)
+
+		//out.println("DC $(p.x).$(p.y) yp $ypos")
 		
-		c.line(new Line2D(xp, ypos, xp, ypos+cursorHeight, new Color(0, 0, 0, 255)))
+		c.line(new Line2D(p.x, ypos, p.x, ypos+cursorHeight, new Color(0, 0, 0, 255)))
+		}
+	
+	void highlightLine(Canvas c, TextLine lw, int sspos, int sepos, int cy)
+		{
+		TextContent tc = lw.text
+		int totalLen = 0
+		bool inSelect = false
+
+		if (sspos == sepos) return
+
+		while (tc != null)
+			{
+			int sublen = getSublineCharLength(tc)
+			int acclen = sublen + totalLen
+
+			if (!inSelect && (sspos < acclen) && (sepos <= acclen))
+				{
+				//single-line highlight
+				int xs = getSubX(tc, sspos - totalLen)
+				int xe = getSubX(tc, sepos - totalLen)
+				c.rect(new Rect2D(xs, cy, xe - xs, cursorHeight, highlightColor))
+				return
+				}
+				else if (!inSelect && sspos < acclen)
+				{
+				int xs = getSubX(tc, sspos - totalLen)
+				int xe = getSubX(tc, sublen)
+				c.rect(new Rect2D(xs, cy, xe - xs, cursorHeight, highlightColor))
+				inSelect = true
+				}
+				else if (sepos <= acclen)
+				{
+				int xs = getSubX(tc, 0)
+				int xe = getSubX(tc, sepos - totalLen)
+				c.rect(new Rect2D(xs, cy, xe - xs, cursorHeight, highlightColor))
+				return
+				}
+				else if (inSelect)
+				{
+				int xs = getSubX(tc, 0)
+				int xe = getSubX(tc, sublen)
+				c.rect(new Rect2D(xs, cy, xe - xs, cursorHeight, highlightColor))
+				}
+			
+			tc = tc.next
+			cy += cursorHeight
+			totalLen = acclen
+			}
 		}
 	
 	void drawSelectionBox(Canvas c)
@@ -2154,48 +2730,23 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				sspos = selectStartPos
 				sepos = cursorPosition
 				}
+			
+			TextLine lw = ssline
 
-			int cy = 0
-			bool inSelect
+			int cy = getY(lw)
+			highlightLine(c, lw, sspos, getLineCharLength(lw), cy)
+			cy += getLineHeight(lw)
 
-			TextLine lw = lines
+			lw = lw.next
 
-			while (lw != null)
+			while (lw !== seline)
 				{
-				int selectStartX
-				int selectEndX
-
-				if (lw === ssline)
-					{
-					selectStartX = getX(lw, sspos)
-					selectEndX = getX(lw, getLineCharLength(lw))
-
-					inSelect = true
-					}
-					else if (lw === seline)
-					{
-					selectStartX = getX(lw, 0)
-					selectEndX = getX(lw, sepos)
-					}
-					else if (inSelect)
-					{
-					selectStartX = getX(lw, 0)
-					selectEndX = getX(lw, getLineCharLength(lw))
-					}
-				
-				if (inSelect)
-					{
-					c.rect(new Rect2D(selectStartX, cy, selectEndX - selectStartX, cursorHeight, highlightColor))
-					}
-				
-				if (lw === seline)
-					{
-					inSelect = false
-					}
-
+				highlightLine(c, lw, 0, getLineCharLength(lw), cy)
+				cy += getLineHeight(lw)
 				lw = lw.next
-				cy += cursorHeight
 				}
+			
+			highlightLine(c, lw, 0, sepos, cy)
 			}
 			else if (selectStartPos != cursorPosition)
 			{
@@ -2213,36 +2764,34 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				endPos = selectStartPos
 				}
 			
-			int selectStartX = getX(cursorLine, startPos)
-			int selectEndX = getX(cursorLine, endPos)
-			
-			c.rect(new Rect2D(selectStartX, cursorPositionY, selectEndX - selectStartX, cursorHeight, highlightColor))
+			int cy = getY(cursorLine) //NOTE: this "getY" is only needed because we don't track the cursorPositionY for start-of-line
+			highlightLine(c, cursorLine, startPos, endPos, cy)
 			}
 		}
 	
 	//this function is called whenever the cursor moves; it updates (if needed) the scroll position of the text relative to the cursor
 	void updateCursorPosition()
 		{
-		int efx = getX(cursorLine, cursorPosition)
+		Point cp = getXY(cursorLine, cursorPosition)
 
-		if (efx > (xScroll + textAreaWidth))
+		if (cp.x > (xScroll + textAreaWidth))
 			{
-			xScroll = (efx - textAreaWidth) + CURSOR_WIDTH
+			xScroll = (cp.x - textAreaWidth) + CURSOR_WIDTH
 			scrollH.setScrollPos(xScroll)
 			}
-			else if (efx < xScroll)
+			else if (cp.x < xScroll)
 			{
-			xScroll = efx
+			xScroll = cp.x
 			scrollH.setScrollPos(xScroll)
 			}
 		
 		//test if the total text width has become less than the scroll width (i.e., there's empty space and xScroll is not 0)
-		int qfx = getX(cursorLine, getLineCharLength(cursorLine))
+		Point qcp = getXY(cursorLine, getLineCharLength(cursorLine))
 		
-		if ((xScroll != 0) && (qfx + CURSOR_WIDTH < (xScroll + textAreaWidth)))
+		if ((xScroll != 0) && (qcp.x + CURSOR_WIDTH < (xScroll + textAreaWidth)))
 			{
-			if (qfx > (textAreaWidth))
-				xScroll = (qfx - textAreaWidth) + CURSOR_WIDTH
+			if (qcp.x > (textAreaWidth))
+				xScroll = (qcp.x - textAreaWidth) + CURSOR_WIDTH
 				else
 				xScroll = 0
 			
@@ -2264,30 +2813,22 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			}
 		}
 	
-	void TextArea:paint(Canvas c)
+	int drawLine(Canvas c, TextLine lw, int yDraw, int viewTop, int viewBottom)
 		{
-		c.rect(new Rect2D(xPosition, yPosition, width, height, bgColor))
-		
-		c.pushSurface(new Rect(xPosition + TEXT_BORDER_H, yPosition, width - (TEXT_BORDER_H*2), height), xScroll, yScroll, 255)
-		
-		c.rect(new Rect2D(xScroll, yScroll, width, height, bgColor))
-		 
-		mutex(textLock)
+		TextContent sw = lw.text
+
+		int lineHeight = getLineHeight(lw)
+
+		if (((yDraw + lineHeight) >= viewTop) && (yDraw <= viewBottom))
 			{
-			drawSelectionBox(c)
-			
-			int yDraw = TEXT_BORDER_V
-			
-			TextLine lw = lines
-			
-			while (lw != null)
+			while (sw != null)
 				{
-				TextFrag fw = lw.text
+				TextFrag fw = sw.frags
 				int xpos = 0
 				int charCount = 0
 				while (fw != null)
 					{
-					if (fw.type == TextFrag.T_TEXT)
+					if (fw.type == TextFrag.T_TEXT || fw.type == TextFrag.T_PARTICLE)
 						{
 						c.text(new Point2D(xpos, yDraw, textColor), textFont, fw.value.getRaw())
 						charCount += fw.value.length()
@@ -2303,8 +2844,47 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					fw = fw.next
 					}
 				
-				lw = lw.next
 				yDraw += cursorHeight
+				sw = sw.next
+				}
+			}
+		
+		return lineHeight
+		}
+	
+	int getLineHeight(TextLine t)
+		{
+		return t.lineCount * cursorHeight
+		}
+	
+	void TextArea:paint(Canvas c)
+		{
+		c.rect(new Rect2D(xPosition, yPosition, width, height, bgColor))
+
+		int xOffset = 0
+		if (lineNumbers)
+			{
+			xOffset = lineNumberAreaWidth
+			}
+
+		c.pushSurface(new Rect(xPosition + xOffset + TEXT_BORDER_H, yPosition, width - (TEXT_BORDER_H*2) - lineNumberAreaWidth, height), xScroll, yScroll, 255)
+		
+		c.rect(new Rect2D(xScroll, yScroll, width, height, bgColor))
+		
+		mutex(textLock)
+			{
+			drawSelectionBox(c)
+			
+			int yDraw = TEXT_BORDER_V
+			
+			TextLine lw = lines
+			
+			while (lw != null)
+				{
+				int yAdd = drawLine(c, lw, yDraw, yScroll, yScroll + height)
+				
+				lw = lw.next
+				yDraw += yAdd
 				}
 			
 			if (focus)
@@ -2314,6 +2894,40 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			}
 		
 		c.popSurface()
+
+		if (lineNumbers)
+			{
+			c.pushSurface(new Rect(xPosition + TEXT_BORDER_H, yPosition, width - (TEXT_BORDER_H*2), height), xScroll, yScroll, 255)
+			
+			c.rect(new Rect2D(0, yScroll, lineNumberAreaWidth, height, bgColor))
+
+			int viewTop = yScroll
+			int viewBottom = yScroll + height
+
+			int yDraw = TEXT_BORDER_V
+			
+			TextLine lw = lines
+			int ln = 0
+			while (lw != null)
+				{
+				int yAdd = getLineHeight(lw)
+
+				if (((yDraw + yAdd) >= viewTop) && (yDraw <= viewBottom))
+					{
+					c.text(new Point2D(0, yDraw, textColorLN), textFont, ln.makeString())
+					}
+					else if (yDraw > viewBottom)
+					{
+					break
+					}
+				
+				lw = lw.next
+				yDraw += yAdd
+				ln ++
+				}
+
+			c.popSurface()
+			}
 
 		if (showScrollV)
 			{
@@ -2332,6 +2946,105 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			}
 
 		c.rectOutline(new Rect2D(xPosition, yPosition, width, height, borderColor))
+		}
+	
+	void unwrapLine(TextLine lw)
+		{
+		//reset to a single line
+		while (lw.text.next != null)
+			{
+			if (lw.text.next.frags != null)
+				{
+				lw.text.fragsEnd.next = lw.text.next.frags
+				lw.text.next.frags.prev = lw.text.fragsEnd
+				lw.text.fragsEnd = lw.text.next.fragsEnd
+				}
+			
+			lw.text.next.frags = null
+			lw.text.next.fragsEnd = null
+			lw.text.next.prev = null
+			lw.text.next = lw.text.next.next
+			}
+		lw.textEnd = lw.text
+
+		lineCountV -= lw.lineCount - 1
+
+		lw.lineCount = 1
+		}
+	
+	void unwrapLines()
+		{
+		TextLine lw = lines
+		while (lw != null)
+			{
+			unwrapLine(lw)
+
+			lw = lw.next
+			}
+		}
+	
+	void wrapLine(TextLine lw)
+		{
+		//reset to a single line
+		unwrapLine(lw)
+
+		Point cp = null
+		int efy = 0
+
+		//recalculate
+		TextFrag fw = lw.text.frags
+		int pixelLength = 0
+		while (fw != null)
+			{
+			int test = pixelLength + textFont.getTextWidth(fw.value.getRaw())
+
+			if ((test > textAreaWidth) && (pixelLength > 0))
+				{
+				//move it to a new line
+				//out.println("new line W")
+
+				TextContent ntc = new TextContent(fw, lw.textEnd.fragsEnd)
+				lw.textEnd.fragsEnd = fw.prev
+				lw.textEnd.fragsEnd.next = null
+
+				lw.textEnd.next = ntc
+				ntc.prev = lw.textEnd
+				lw.textEnd = ntc
+
+				pixelLength = textFont.getTextWidth(fw.value.getRaw())
+
+				lw.lineCount ++
+				}
+				else
+				{
+				pixelLength = test
+				}
+
+			fw = fw.next
+			}
+		
+		lineCountV += lw.lineCount - 1
+		
+		if (cursorLine === lw)
+			{
+			efy = getY(cursorLine)
+			cp = getXY(cursorLine, cursorPosition)
+			cursorPositionY = efy + cp.y
+			}
+		
+		updateScrollMax()
+		}
+	
+	void wrapLines()
+		{
+		//re-calculate from scratch
+		TextLine lw = lines
+		while (lw != null)
+			{
+			wrapLine(lw)
+
+			lw = lw.next
+			}
 		}
 	
 	void TextArea:postRepaint()
@@ -2358,10 +3071,10 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		return new WH(width, height)
 		}
 	
-	void TextArea:mouseOver()
+	CursorSetEvent TextArea:mouseOver(int x, int y)
 		{
-		emitevent setCursor(new CursorSetEvent(IOWindow.CURSOR_IBEAM))
 		cursorType = IOWindow.CURSOR_IBEAM
+		return new CursorSetEvent(IOWindow.CURSOR_IBEAM)
 		}
 	
 	void TextArea:setFocus()
@@ -2375,10 +3088,14 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		postRepaint()
 		}
 	
-	HotKey[] TextArea:recvFocus()
+	bool TextArea:recvFocus()
 		{
 		focus = true
-		
+		return true
+		}
+	
+	HotKey[] TextArea:getHotKeys()
+		{
 		return hkeys
 		}
 	
@@ -2388,18 +3105,41 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		selectStartPos = cursorPosition
 		}
 	
+	void positionScrollH()
+		{
+		if (lineNumbers)
+			{
+			char lnMax[] = lineCount.makeString()
+			int len = textFont.getTextWidth(lnMax) + LINE_NUMBER_MARGIN
+			scrollH.setPosition(xPosition + len + 1, scrollH.getPosition().y)
+			
+			if (!showScrollV)
+				scrollH.setLength(width - len - 2)
+				else
+				scrollH.setLength(width - len - SCR_BUTTON_HEIGHT - 2)
+			}
+			else
+			{
+			scrollH.setPosition(xPosition + 1, yPosition + (height - SCR_BUTTON_HEIGHT - 1))
+				
+			if (!showScrollV)
+				scrollH.setLength(width - 2)
+				else
+				scrollH.setLength(width - SCR_BUTTON_HEIGHT - 2)
+			}
+		}
+	
 	void TextArea:setSize(int w, int h)
 		{
 		width = w
 		height = h
 
-		textAreaWidth = width-(TEXT_BORDER_H*2)
+		updateTextAreaWidth()
+
 		textAreaHeight = height
 
 		if (showScrollV)
 			{
-			textAreaWidth -= SCR_BUTTON_WIDTH
-
 			scrollV.setPosition(xPosition + (width - SCR_BUTTON_WIDTH - 1), yPosition+1)
 			
 			if (!showScrollH)
@@ -2412,13 +3152,10 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			{
 			textAreaHeight -= SCR_BUTTON_WIDTH
 
-			scrollH.setPosition(xPosition + 1, yPosition + (height - SCR_BUTTON_HEIGHT - 1))
-			
-			if (!showScrollV)
-				scrollH.setLength(width - 2)
-				else
-				scrollH.setLength(width - SCR_BUTTON_HEIGHT - 2)
+			positionScrollH()
 			}
+		
+		if (wordWrap) wrapLines()
 		
 		updateScrollMax()
 		postRepaint()
@@ -2442,6 +3179,63 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 	int TextArea:getCursorPos()
 		{
 		return cursorPosition
+		}
+	
+	void TextArea:setWordWrap(bool v)
+		{
+		wordWrap = v
+
+		if (wordWrap)
+			{
+			wrapLines()
+			showScrollH = false
+			}
+			else
+			{
+			unwrapLines()
+			showScrollH = true
+			}
+
+		postRepaint()
+		}
+	
+	int getNumberAreaWidth(int largestNumber)
+		{
+		char lnMax[] = largestNumber.makeString()
+		return textFont.getTextWidth(lnMax) + LINE_NUMBER_MARGIN
+		}
+	
+	void updateTextAreaWidth()
+		{
+		int newWidth = width-(TEXT_BORDER_H*2)
+
+		if (showScrollV)
+			{
+			newWidth -= SCR_BUTTON_WIDTH
+			}
+		
+		newWidth -= lineNumberAreaWidth
+
+		textAreaWidth = newWidth
+		}
+	
+	void TextArea:setLineNumbers(bool v)
+		{
+		lineNumbers = v
+
+		lineNumberAreaWidth = getNumberAreaWidth(lineCount)
+		updateTextAreaWidth()
+
+		if (wordWrap) wrapLines()
+
+		positionScrollH()
+
+		postRepaint()
+		}
+	
+	void TextArea:setAutoIndent(bool v)
+		{
+		autoIndent = v
 		}
 	
 	void Destructor:destroy()

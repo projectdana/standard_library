@@ -4,6 +4,6 @@
 */
 
 interface KeyEventObject extends XYMouseObject {
-	void keyDown(int keyID)
-	void keyUp(int keyID)
+	bool keyDown(int keyID)
+	bool keyUp(int keyID)
 	}

@@ -1,0 +1,519 @@
+const int WINDOW_WIDTH_DEFAULT = 600
+const int WINDOW_HEIGHT_DEFAULT = 440
+
+data OpenFile {
+	TextArea text
+	char filePath[]
+	char tabName[]
+	bool unsavedChanges
+}
+
+component provides App requires ui.IOLayer coreui, ui.Window, ui.TextField, ui.TextArea, io.Output out, io.File, ui.Button, ui.CheckBox, ui.Layout, ui.Font, os.SystemInfo sysInfo, ui.TabList, data.StringUtil stringUtil, ui.Panel, ui.Label {
+
+	Window window
+	Panel mainControlPanel
+	Button saveButton
+	Button saveAsButton
+	Button newButton
+	Button closeButton
+	CheckBox monoCheck
+	CheckBox wrapCheck
+	CheckBox numbersCheck
+	CheckBox indentCheck
+
+	Panel saveChangesPanel
+	Label saveChangesLabel
+	Button saveChangesYesButton
+	Button saveChangesNoButton
+	Button saveChangesCancelButton
+
+	Panel saveAsPanel
+	Label saveAsLabel
+	Button saveAsSaveButton
+	Button saveAsCancelButton
+	TextField saveAsPathField
+
+	bool saveAsClose
+
+	Font monoFont
+	Font sansFont
+
+	String openFiles[]
+	TabList tabs
+
+	OpenFile currentFile
+	int fileCount
+
+	Layout mainLayout
+
+	int windowWidth
+	int windowHeight
+
+	void closeTab()
+		{
+		//check if this is the last tab; if so, convert it to "Untitled"
+		if (fileCount == 1)
+			{
+			tabs.update(tabs.getSelected(), "Untitled", currentFile)
+			currentFile.filePath = null
+			currentFile.tabName = "Untitled"
+			currentFile.text.setText("")
+			currentFile.unsavedChanges = false
+			}
+			else
+			{
+			tabs.remove(tabs.getSelected())
+			OpenFile nextFile = tabs.getDetails(tabs.getSelected()).value
+			window.addObject(nextFile.text)
+			window.remObject(currentFile.text)
+			currentFile = nextFile
+			currentFile.text.setFocus()
+			fileCount --
+			}
+		}
+	
+	void saveChanges()
+		{
+		byte content[] = currentFile.text.getText()
+		File fd = new File(currentFile.filePath, File.CREATE)
+		fd.write(content)
+		fd.close()
+		tabs.update(tabs.getSelected(), currentFile.tabName, currentFile)
+		}
+	
+	void openFile(char path[], bool select)
+		{
+		TextArea newText = new TextArea()
+		newText.setFont(monoFont)
+
+		newText.setLineNumbers(true)
+		newText.setWordWrap(true)
+		newText.setAutoIndent(true)
+
+		mainLayout.add(newText, new LayoutRule(new byte[](LayoutRule.BELOW, LayoutRule.ALIGN_LEFT), 0, tabs))
+		newText.setSize(WINDOW_WIDTH_DEFAULT - 20, WINDOW_HEIGHT_DEFAULT - newText.getPosition().y - 10)
+
+		OpenFile newFile = new OpenFile(newText, path, getFileName(path))
+		int newID = tabs.add(newFile.tabName, newFile)
+
+		newText.setText(loadFile(path))
+
+		sinkevent AppEvents(newText)
+
+		if (select)
+			{
+			window.addObject(newText)
+
+			if (currentFile != null)
+				{
+				window.remObject(currentFile.text)
+				}
+			
+			currentFile = newFile
+			tabs.select(newID)
+			}
+		
+		fileCount ++
+		}
+	
+	void newFile(char title[], bool select)
+		{
+		TextArea newText = new TextArea()
+		newText.setFont(monoFont)
+
+		newText.setLineNumbers(true)
+		newText.setWordWrap(true)
+		newText.setAutoIndent(true)
+
+		mainLayout.add(newText, new LayoutRule(new byte[](LayoutRule.BELOW, LayoutRule.ALIGN_LEFT), 0, tabs))
+		newText.setSize(WINDOW_WIDTH_DEFAULT - 20, WINDOW_HEIGHT_DEFAULT - newText.getPosition().y - 10)
+		sinkevent AppEvents(newText)
+
+		OpenFile newFile = new OpenFile(newText, null, title)
+		int newID = tabs.add(newFile.tabName, newFile)
+
+		if (select)
+			{
+			window.addObject(newText)
+
+			if (currentFile != null)
+				{
+				window.remObject(currentFile.text)
+				}
+			
+			currentFile = newFile
+			tabs.select(newID)
+			}
+
+		fileCount ++
+		}
+
+	eventsink AppEvents(EventData ed)
+		{
+		if (ed.source === coreui && ed.type == IOLayer.[ready])
+			{
+			startApp()
+			}
+			else if (ed.source === window && ed.type == Window.[close])
+			{
+			//TODO: close each tab one at a time, checking for unsaved changes and prompting to save before we close the app
+			window.close()
+			coreui.shutdown()
+			}
+			else if (ed.source === window && ed.type == Window.[resize])
+			{
+			WH newSize = ed.details
+			currentFile.text.setSize(newSize.width - 20, newSize.height - currentFile.text.getPosition().y - 10)
+			tabs.setWidth(newSize.width - 20)
+
+			windowWidth = newSize.width
+			windowHeight = newSize.height
+			}
+			else if (ed.source === saveButton && ed.type == Button.[click])
+			{
+			if (currentFile.filePath != null)
+				{
+				saveChanges()
+				currentFile.unsavedChanges = false
+				}
+				else
+				{
+				saveAsClose = false
+				saveAsPathField.setText(currentFile.filePath)
+				window.addObject(saveAsPanel)
+				window.remObject(mainControlPanel)
+				}
+			}
+			else if (ed.source === monoCheck && ed.type == CheckBox.[click])
+			{
+			if (monoCheck.isChecked())
+				{
+				currentFile.text.setFont(monoFont)
+				}
+				else
+				{
+				currentFile.text.setFont(sansFont)
+				}
+			}
+			else if (ed.source === wrapCheck && ed.type == CheckBox.[click])
+			{
+			currentFile.text.setWordWrap(wrapCheck.isChecked())
+			}
+			else if (ed.source === numbersCheck && ed.type == CheckBox.[click])
+			{
+			currentFile.text.setLineNumbers(numbersCheck.isChecked())
+			}
+			else if (ed.source === indentCheck && ed.type == CheckBox.[click])
+			{
+			currentFile.text.setAutoIndent(indentCheck.isChecked())
+			}
+			else if (ed.source === newButton && ed.type == Button.[click])
+			{
+			TextArea newText = new TextArea()
+			newText.setFont(monoFont)
+
+			newText.setLineNumbers(true)
+			newText.setWordWrap(true)
+			newText.setAutoIndent(true)
+
+			mainLayout.add(newText, new LayoutRule(new byte[](LayoutRule.BELOW, LayoutRule.ALIGN_LEFT), 0, tabs))
+			newText.setSize(windowWidth - 20, windowHeight - newText.getPosition().y - 10)
+			sinkevent AppEvents(newText)
+
+			OpenFile newFile = new OpenFile(newText, null, "Untitled")
+
+			int id = tabs.add(newFile.tabName, newFile)
+
+			window.addObject(newFile.text)
+			window.remObject(currentFile.text)
+			currentFile = newFile
+
+			tabs.select(id)
+
+			fileCount ++
+			}
+			else if (ed.source === saveAsButton && ed.type == Button.[click])
+			{
+			saveAsClose = false
+			saveAsPathField.setText(currentFile.filePath)
+			window.addObject(saveAsPanel)
+			window.remObject(mainControlPanel)
+			}
+			else if (ed.source === tabs && ed.type == TabList.[select])
+			{
+			TabDetails td = ed.details
+			OpenFile val = td.value
+			tabs.select(td.id)
+			val.text.setSize(windowWidth - 20, windowHeight - val.text.getPosition().y - 10)
+			window.addObject(val.text)
+			window.remObject(currentFile.text)
+			currentFile = val
+			currentFile.text.setFocus()
+			}
+			else if (ed.source === tabs && ed.type == TabList.[fileDrop])
+			{
+			String value = ed.details
+			openFile(value.string, true)
+			}
+			else if (ed.source === closeButton && ed.type == Button.[click])
+			{
+			if (currentFile.unsavedChanges)
+				{
+				window.addObject(saveChangesPanel)
+				window.remObject(mainControlPanel)
+				}
+				else
+				{
+				closeTab()
+				}
+			}
+			else if (ed.source === currentFile.text && ed.type == TextArea.[textChanged])
+			{
+			currentFile.unsavedChanges = true
+			tabs.update(tabs.getSelected(), "$(currentFile.tabName)*", currentFile)
+			}
+			else if (ed.source === saveChangesCancelButton && ed.type == Button.[click])
+			{
+			window.addObject(mainControlPanel)
+			window.remObject(saveChangesPanel)
+			}
+			else if (ed.source === saveChangesYesButton && ed.type == Button.[click])
+			{
+			if (currentFile.filePath != null)
+				{
+				saveChanges()
+
+				window.addObject(mainControlPanel)
+				window.remObject(saveChangesPanel)
+
+				closeTab()
+				}
+				else
+				{
+				//the save-as dialog
+				saveAsClose = true
+				window.addObject(saveAsPanel)
+				window.remObject(saveChangesPanel)
+				}
+			}
+			else if (ed.source === saveChangesNoButton && ed.type == Button.[click])
+			{
+			window.addObject(mainControlPanel)
+			window.remObject(saveChangesPanel)
+
+			closeTab()
+			}
+			else if (ed.source === saveAsSaveButton && ed.type == Button.[click])
+			{
+			//TODO: need to check if the save-as path is valid
+			currentFile.filePath = saveAsPathField.getText()
+			saveChanges()
+			//check if this was a save-as or a save-as-and-close
+			if (saveAsClose)
+				{
+				closeTab()
+				}
+			window.addObject(mainControlPanel)
+			window.remObject(saveAsPanel)
+			}
+			else if (ed.source === saveAsCancelButton && ed.type == Button.[click])
+			{
+			//TODO: anything else to do here??
+			window.addObject(mainControlPanel)
+			window.remObject(saveAsPanel)
+			}
+		}
+	
+	char[] loadFile(char path[])
+		{
+		File fd = new File(path, File.READ)
+		char result[] = fd.read(fd.getSize())
+		fd.close()
+		return result
+		}
+	
+	char[] normalisePath(char path[])
+		{
+		return path //TODO
+		}
+	
+	char[] getFileName(char path[])
+		{
+		String parts[] = stringUtil.rsplit(path, "/")
+		if (parts.arrayLength != 0) return parts[1].string
+		return path
+		}
+	
+	void startApp()
+		{
+		window = new Window("text")
+		window.setSize(WINDOW_WIDTH_DEFAULT, WINDOW_HEIGHT_DEFAULT)
+		window.setResizable(true)
+		window.setVisible(true)
+
+		windowWidth = WINDOW_WIDTH_DEFAULT
+		windowHeight = WINDOW_HEIGHT_DEFAULT
+		
+		sinkevent AppEvents(window)
+
+		monoFont = new Font(sysInfo.getSystemFont(true), 15)
+		sansFont = new Font(sysInfo.getSystemFont(false), 15)
+
+		mainLayout = new Layout()
+		mainLayout.setSize(WINDOW_WIDTH_DEFAULT, WINDOW_HEIGHT_DEFAULT)
+
+		Layout layout = new Layout()
+		layout.setSize(WINDOW_WIDTH_DEFAULT, 50)
+
+		mainControlPanel = new Panel()
+
+		saveButton = new Button("Save")
+		layout.add(saveButton, new LayoutRule(new byte[](LayoutRule.BELOW, LayoutRule.RIGHT), 10))
+		mainControlPanel.addObject(saveButton)
+		sinkevent AppEvents(saveButton)
+
+		saveAsButton = new Button("Save As")
+		layout.add(saveAsButton, new LayoutRule(new byte[](LayoutRule.RIGHT, LayoutRule.ALIGN_TOP), 10, saveButton))
+		mainControlPanel.addObject(saveAsButton)
+		sinkevent AppEvents(saveAsButton)
+
+		newButton = new Button("New")
+		layout.add(newButton, new LayoutRule(new byte[](LayoutRule.RIGHT, LayoutRule.ALIGN_TOP), 10, saveAsButton))
+		mainControlPanel.addObject(newButton)
+		sinkevent AppEvents(newButton)
+
+		closeButton = new Button("Close")
+		layout.add(closeButton, new LayoutRule(new byte[](LayoutRule.RIGHT, LayoutRule.ALIGN_TOP), 10, newButton))
+		mainControlPanel.addObject(closeButton)
+		sinkevent AppEvents(closeButton)
+
+		monoCheck = new CheckBox("mono")
+		layout.add(monoCheck, new LayoutRule(new byte[](LayoutRule.RIGHT, LayoutRule.ALIGN_TOP), 10, closeButton))
+		mainControlPanel.addObject(monoCheck)
+		monoCheck.setChecked(true)
+		sinkevent AppEvents(monoCheck)
+
+		wrapCheck = new CheckBox("wrap")
+		layout.add(wrapCheck, new LayoutRule(new byte[](LayoutRule.RIGHT, LayoutRule.ALIGN_TOP), 10, monoCheck))
+		mainControlPanel.addObject(wrapCheck)
+		wrapCheck.setChecked(true)
+		sinkevent AppEvents(wrapCheck)
+
+		numbersCheck = new CheckBox("line #")
+		layout.add(numbersCheck, new LayoutRule(new byte[](LayoutRule.RIGHT, LayoutRule.ALIGN_TOP), 10, wrapCheck))
+		mainControlPanel.addObject(numbersCheck)
+		numbersCheck.setChecked(true)
+		sinkevent AppEvents(numbersCheck)
+
+		indentCheck = new CheckBox("auto-indent")
+		layout.add(indentCheck, new LayoutRule(new byte[](LayoutRule.RIGHT, LayoutRule.ALIGN_TOP), 10, numbersCheck))
+		mainControlPanel.addObject(indentCheck)
+		indentCheck.setChecked(true)
+		sinkevent AppEvents(indentCheck)
+
+		layout.setSize(WINDOW_WIDTH_DEFAULT, saveButton.getPreferredSize().height + 20)
+		mainControlPanel.setSize(WINDOW_WIDTH_DEFAULT, saveButton.getPreferredSize().height + 20)
+
+		mainLayout.add(mainControlPanel, new LayoutRule(new byte[](LayoutRule.BELOW), 0))
+		window.addObject(mainControlPanel)
+
+		//configure auxilliary panels (save-as)
+		saveAsPanel = new Panel()
+		saveAsPanel.setSize(WINDOW_WIDTH_DEFAULT, mainControlPanel.getPreferredSize().height)
+		layout = new Layout()
+		layout.setSize(WINDOW_WIDTH_DEFAULT, saveAsPanel.getPreferredSize().height)
+
+		saveAsCancelButton = new Button("Cancel")
+		layout.add(saveAsCancelButton, new LayoutRule(new byte[](LayoutRule.BELOW, LayoutRule.LEFT), 10))
+		saveAsPanel.addObject(saveAsCancelButton)
+		sinkevent AppEvents(saveAsCancelButton)
+
+		saveAsSaveButton = new Button("Save")
+		layout.add(saveAsSaveButton, new LayoutRule(new byte[](LayoutRule.LEFT, LayoutRule.ALIGN_TOP), 10, saveAsCancelButton))
+		saveAsPanel.addObject(saveAsSaveButton)
+		sinkevent AppEvents(saveAsSaveButton)
+
+		saveAsLabel = new Label("Save as:")
+		layout.add(saveAsLabel, new LayoutRule(new byte[](LayoutRule.RIGHT, LayoutRule.BELOW), 10))
+		saveAsPanel.addObject(saveAsLabel)
+
+		saveAsPathField = new TextField()
+		saveAsPathField.setWidth(saveAsSaveButton.getPosition().x - (saveAsLabel.getPosition().x + saveAsLabel.getPreferredSize().width) - 20)
+		layout.add(saveAsPathField, new LayoutRule(new byte[](LayoutRule.RIGHT, LayoutRule.ALIGN_TOP), 10, saveAsLabel))
+		saveAsPanel.addObject(saveAsPathField)
+
+		//configure auxilliary panels (save-changes)
+		saveChangesPanel = new Panel()
+		saveChangesPanel.setSize(WINDOW_WIDTH_DEFAULT, mainControlPanel.getPreferredSize().height)
+		layout = new Layout()
+		layout.setSize(WINDOW_WIDTH_DEFAULT, saveChangesPanel.getPreferredSize().height)
+
+		saveChangesCancelButton = new Button("Cancel")
+		layout.add(saveChangesCancelButton, new LayoutRule(new byte[](LayoutRule.BELOW, LayoutRule.LEFT), 10))
+		saveChangesPanel.addObject(saveChangesCancelButton)
+		sinkevent AppEvents(saveChangesCancelButton)
+
+		saveChangesNoButton = new Button("No")
+		layout.add(saveChangesNoButton, new LayoutRule(new byte[](LayoutRule.LEFT, LayoutRule.ALIGN_TOP), 10, saveChangesCancelButton))
+		saveChangesPanel.addObject(saveChangesNoButton)
+		sinkevent AppEvents(saveChangesNoButton)
+
+		saveChangesYesButton = new Button("Yes")
+		layout.add(saveChangesYesButton, new LayoutRule(new byte[](LayoutRule.LEFT, LayoutRule.ALIGN_TOP), 10, saveChangesNoButton))
+		saveChangesPanel.addObject(saveChangesYesButton)
+		sinkevent AppEvents(saveChangesYesButton)
+
+		saveChangesLabel = new Label("Save changes before closing?")
+		layout.add(saveChangesLabel, new LayoutRule(new byte[](LayoutRule.BELOW, LayoutRule.RIGHT), 10))
+		saveChangesPanel.addObject(saveChangesLabel)
+		sinkevent AppEvents(saveChangesLabel)
+
+		//configure the tab list and text area(s)
+
+		tabs = new TabList()
+		mainLayout.add(tabs, new LayoutRule[](new LayoutRule(new byte[](LayoutRule.BELOW), 0, mainControlPanel), new LayoutRule(new byte[](LayoutRule.RIGHT), 10)))
+		tabs.setWidth(WINDOW_WIDTH_DEFAULT - 20)
+		window.addObject(tabs)
+		sinkevent AppEvents(tabs)
+		
+		if (openFiles == null)
+			{
+			newFile("Untitled", true)
+			}
+			else
+			{
+			for (int i = 0; i < openFiles.arrayLength; i++)
+				{
+				char thisPath[] = openFiles[i].string
+
+				openFile(thisPath, i == 0)
+				}
+			}
+		
+		currentFile.text.setFocus()
+		}
+
+	int App:main(AppParam params[])
+		{
+		if (params.arrayLength > 0)
+			{
+			openFiles = new String[params.arrayLength]
+			for (int i = 0; i < params.arrayLength; i++)
+				{
+				openFiles[i] = new String(normalisePath(params[i].string))
+				}
+			}
+		
+		//initialise the system-level UI framework
+		coreui.init()
+		
+		//listen for startup events from the system
+		sinkevent AppEvents(coreui)
+		
+		//run UI system loop, which blocks until last window closed
+		coreui.run()
+		
+		return 0
+		}
+
+}

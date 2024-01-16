@@ -16,6 +16,13 @@ data ClickableItem{
 	ClickableItem prev
 	}
 
+data GlobalHotKeyItem{
+	ClickableObject object
+	HotKey hotKeys[]
+	GlobalHotKeyItem next
+	GlobalHotKeyItem prev
+	}
+
 component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.ContextMenu, locale.KeyMapping keyMapping {
 
 	Thread waitThread
@@ -30,6 +37,9 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 
 	ClickableItem clickItems
 	ClickableItem clickItemsEnd
+
+	GlobalHotKeyItem hotKeyItems
+	GlobalHotKeyItem hotKeyItemsEnd
 	
 	//we store the item on which a mouse button was pressed down, to know if the button is release on the same item (triggering a click)
 	GraphicsObject clickDown
@@ -161,7 +171,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 
 	eventsink FocusEvents(EventData ed)
 		{
-		if (ed.type == KeyEventObject.[requestFocus])
+		if (ed.type == ClickableObject.[requestFocus])
 			{
 			changeFocusTo(ed.source)
 			}
@@ -332,7 +342,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			}
 		}
 
-	void Window:addObject(GraphicsObject go)
+	void Window:addObject(GraphicsObject go, opt bool globalHotKeys)
 		{
 		GraphicsItem newItem = new GraphicsItem(go)
 
@@ -346,7 +356,9 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 
 		if (go hastype ClickableObject)
 			{
-			addClickTarget(go)
+			ClickableObject ko = go
+			addClickTarget(go, globalHotKeys)
+			sinkevent FocusEvents(ko)
 			}
 
 		if (go hastype XYMouseObject)
@@ -354,12 +366,6 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 			addMouseEventTarget(go)
 			XYMouseObject mo = go
 			sinkevent CursorEvents(mo)
-			}
-
-		if (go hastype KeyEventObject)
-			{
-			KeyEventObject ko = go
-			sinkevent FocusEvents(ko)
 			}
 
 		sinkevent PaintEvents(go)
@@ -388,7 +394,9 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 					td.next.prev = td.prev
 
 				if (go hastype ClickableObject)
+					{
 					remClickTarget(go)
+					}
 
 				if (go hastype XYMouseObject)
 					{
@@ -453,7 +461,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 		postRepaint()
 		}
 
-	void addClickTarget(store ClickableObject co)
+	void addClickTarget(store ClickableObject co, bool globalHotKeys)
 		{
 		ClickableItem nci = new ClickableItem(co)
 
@@ -464,6 +472,18 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 
 		nci.prev = clickItemsEnd
 		clickItemsEnd = nci
+
+		if (globalHotKeys)
+			{
+			GlobalHotKeyItem gci = new GlobalHotKeyItem(co, co.getHotKeys())
+			if (hotKeyItems == null)
+				hotKeyItems = gci
+				else
+				hotKeyItemsEnd.next = gci
+
+			gci.prev = hotKeyItemsEnd
+			hotKeyItemsEnd = gci
+			}
 		}
 
 	void remClickTarget(ClickableObject o)
@@ -481,6 +501,26 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 
 				if (td.next == null)
 					clickItemsEnd = td.prev
+					else
+					td.next.prev = td.prev
+
+				break
+				}
+			}
+		
+		for (GlobalHotKeyItem ci = hotKeyItems; ci != null; ci = ci.next)
+			{
+			if (ci.object === o)
+				{
+				GlobalHotKeyItem td = ci
+
+				if (td.prev == null)
+					hotKeyItems = td.next
+					else
+					td.prev.next = td.next
+
+				if (td.next == null)
+					hotKeyItemsEnd = td.prev
 					else
 					td.next.prev = td.prev
 
@@ -591,7 +631,8 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 				keyboardFocus.loseFocus()
 			}
 
-		focusHotKeys = ko.recvFocus()
+		ko.recvFocus()
+		focusHotKeys = ko.getHotKeys()
 
 		keyboardFocus = ko
 		}
@@ -786,7 +827,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 							}
 
 						mouseOver = contextMenu
-						mouseOver.mouseOver()
+						mouseOver.mouseOver(x - r.x, y - r.y)
 						}
 
 					overSomething = true
@@ -819,12 +860,18 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 							}
 
 						mouseOver = ci.object
-						mouseOver.mouseOver()
+						CursorSetEvent cse = mouseOver.mouseOver(x - r.x, y - r.y)
+						if (cse != null)
+							canvas.setCursor(cse.type, cse.cursor)
+							else
+							canvas.setCursor(IOWindow.CURSOR_DEFAULT)
+						}
+						else
+						{
+						ci.object.mouseMove(x - r.x, y - r.y)
 						}
 
 					overSomething = true
-
-					ci.object.mouseMove(x - r.x, y - r.y)
 
 					break
 					}
@@ -866,12 +913,24 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 	
 	bool triggerHotKey(int keyCode)
 		{
+		//check global hotkeys
+		for (GlobalHotKeyItem ki = hotKeyItems; ki != null; ki = ki.next)
+			{
+			for (int i = 0; i < ki.hotKeys.arrayLength; i++)
+				{
+				if (keyState == ki.hotKeys[i].modifier && keyCode == ki.hotKeys[i].keyCode)
+					{
+					ki.object.hotKeyClick(ki.hotKeys[i])
+					return true
+					}
+				}
+			}
+		
 		for (int i = 0; i < focusHotKeys.arrayLength; i++)
 			{
 			if (keyState == focusHotKeys[i].modifier && keyCode == focusHotKeys[i].keyCode)
 				{
 				keyboardFocus.hotKeyClick(focusHotKeys[i])
-				
 				return true
 				}
 			}
@@ -879,7 +938,7 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 		return false
 		}
 	
-	void Window:keyDown(int keyCode)
+	bool Window:keyDown(int keyCode)
 		{
 		//capture key state, for hot keys
 		int kCode
@@ -917,9 +976,11 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 				keyboardFocus.keyDown(keyCode)
 				}
 			}
+		
+		return true
 		}
 
-	void Window:keyUp(int keyCode)
+	bool Window:keyUp(int keyCode)
 		{
 		//capture key state, for hot keys
 		int kCode
@@ -945,12 +1006,14 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 				keyState &= ~KeyState.KEY_CMD
 				}
 			}
-		
+
 		//fire key to focused item, if any
 		if (keyboardFocus != null)
 			{
 			keyboardFocus.keyUp(keyCode)
 			}
+		
+		return true
 		}
 	
 	void Window:setDisabled(bool d)
@@ -963,7 +1026,12 @@ component provides Window requires io.Output out, data.IntUtil iu, IOWindow, ui.
 		{
 		}
 
-	HotKey[] Window:recvFocus()
+	bool Window:recvFocus()
+		{
+		return false
+		}
+	
+	HotKey[] Window:getHotKeys()
 		{
 		return null
 		}

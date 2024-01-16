@@ -1,0 +1,65 @@
+/*
+ {"description" : "A list of clickable tabs."}
+*/
+
+uses Color
+uses Font
+uses data.String
+
+data TabDetails {
+	int id
+	char text[]
+	Data value
+}
+
+interface TabList extends KeyEventObject {
+	
+	/* {"@description" : "An event which reports when the user clicks on a tab that's different to the currently-selected one."} */
+	event select(TabDetails t)
+	/* {"@description" : "An event which reports when the user deletes a tab."} */
+	event delete(TabDetails t)
+	/* {"@description" : "An event which reports when the user adds a tab."} */
+	event add(TabDetails t)
+	/* {"@description" : "An event which reports when the user drops a file over the tab list."} */
+	event fileDrop(String filePath)
+	
+	TabList()
+	
+	/* {"@description" : "Add a new tab to the tab list."} */
+	int add(char text[], opt store Data value)
+
+	/* {"@description" : "Update a tab with new details."} */
+	void update(int id, char text[], opt store Data value)
+
+	/* {"@description" : "Remove a tab from the tab list."} */
+	void remove(int id)
+
+	/* {"@description" : "Set a tab as the currently-selected one."} */
+	void select(int id)
+
+	/* {"@description" : "Get which tab is currently selected."} */
+	int getSelected()
+
+	/* {"@description" : "Get tab ID list."} */
+	int[] getTabs()
+
+	/* {"@description" : "Get tab details by ID."} */
+	TabDetails getDetails(int id)
+	
+	/* {"@description" : "Set the width in pixels."} */
+	void setWidth(int w)
+	
+	/* {"@description" : "Set the background of the tab list."} */
+	void setBackground(store Color c)
+	/* {"@description" : "Set the background color of nonselected tabs."} */
+	void setOffColor(store Color c)
+	/* {"@description" : "Set the background color of the selected tab."} */
+	void setOnColor(store Color c)
+	/* {"@description" : "Set the text color of non-selected tabs."} */
+	void setTextOffColor(store Color c)
+	/* {"@description" : "Set the text color of the selected tab."} */
+	void setTextOnColor(store Color c)
+	/* {"@description" : "Set the text font of the tab list."} */
+	void setFont(store Font font)
+	
+	}

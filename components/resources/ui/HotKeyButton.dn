@@ -1,0 +1,14 @@
+/*
+ {"description" : "An invisible button intended for use as a global hotkey."}
+*/
+
+uses ClickableObject
+
+interface HotKeyButton extends ClickableObject{
+	
+	/* {"@description" : "Create a new HotKeyButton with the specified hotkey."} */
+	HotKeyButton(store HotKey h)
+	
+	/* {"@description" : "Set the button's hotkey."} */
+	void setHotKey(store HotKey h)
+	}

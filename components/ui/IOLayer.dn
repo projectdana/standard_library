@@ -23,6 +23,7 @@ interface UIPlaneLib {
 	event keyDown(WindowEventData wed)
 	event keyUp(WindowEventData wed)
 	event resize(WindowEventData wed)
+	event move(WindowEventData wed)
 	event drop(DropEventData ded)
 	event close()
 	
@@ -132,6 +133,11 @@ component provides IOLayer, IOWindow(Destructor), Font(Destructor) requires nati
 				{
 				WindowEventData wed = ed.details
 				emitevent resizeWindow(new WH(wed.x, wed.y))
+				}
+				else if (ed.type == UIPlaneLib.[move])
+				{
+				WindowEventData wed = ed.details
+				emitevent moveWindow(new Point(wed.x, wed.y))
 				}
 				else if (ed.type == UIPlaneLib.[drop])
 				{

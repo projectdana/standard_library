@@ -81,6 +81,7 @@ component provides StringUTF {
 	void StringUTF:setCharAt(int i, char ch[])
 		{
 		strEnc[i].c = ch
+		str = makeRaw()
 		}
 	
 	int4 StringUTF:charCode(char c[])
@@ -311,6 +312,8 @@ component provides StringUTF {
 			}
 		
 		strEnc = newEnc
+
+		str = makeRaw()
 		}
 	
 	void StringUTF:delete(int start, int length)
@@ -340,6 +343,8 @@ component provides StringUTF {
 			}
 		
 		strEnc = newEnc
+
+		str = makeRaw()
 		}
 	
 	void StringUTF:insert(int index, char txt[])
@@ -372,6 +377,8 @@ component provides StringUTF {
 			}
 		
 		strEnc = newEnc
+
+		str = makeRaw()
 		}
 	
 	void StringUTF:append(char txt[])
@@ -379,12 +386,12 @@ component provides StringUTF {
 		Char addend[] = parseRaw(txt)
 		
 		strEnc = new Char[](strEnc, addend)
+
+		str = new char[](str, txt)
 		}
 	
-	char[] StringUTF:getRaw()
+	char[] makeRaw()
 		{
-		//NOTE: could cache this in "str", and use a hasChanged global variable to indicate the need for a refresh of the cached value
-		
 		int total = 0
 		for (int i = 0; i < strEnc.arrayLength; i ++)
 			{
@@ -405,6 +412,12 @@ component provides StringUTF {
 			}
 		
 		return res
+		}
+	
+	char[] StringUTF:getRaw()
+		{
+		//we cache this in "str"
+		return str
 		}
 	
 	

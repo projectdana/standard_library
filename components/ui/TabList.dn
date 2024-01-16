@@ -1,0 +1,260 @@
+const int MIN_TAB_WIDTH = 10
+const int TAB_V_MARGIN = 8
+const int TAB_H_MARGIN = 8
+
+component provides TabList(Destructor) requires io.Output out, ui.Font, os.SystemInfo sysInfo {
+	
+	Color backgroundColor = new Color(230, 230, 250, 255)
+	Color onColor = new Color(230, 230, 250, 255)
+	Color offColor = new Color(180, 180, 190, 255)
+	Color textOnColor = new Color(0, 0, 0, 255)
+	Color textOffColor = new Color(0, 0, 0, 255)
+	Color borderColor = new Color(0, 0, 0, 255)
+
+	Font textFont
+	TabDetails tabs[]
+	int width
+	int height
+
+	int selectedID = INT_MAX
+
+	int nextID = 1
+	
+	TabList:TabList()
+		{
+		textFont = new Font(sysInfo.getSystemFont(false), 15)
+		height = textFont.getFontMetrics().height + TAB_V_MARGIN
+		}
+	
+	int TabList:add(char text[], opt Data value)
+		{
+		TabDetails td = new TabDetails(nextID, text, value)
+		tabs = new TabDetails[](tabs, td)
+		if (selectedID == INT_MAX) selectedID = td.id
+		nextID ++
+		postRepaint()
+		return td.id
+		}
+	
+	void TabList:update(int id, char text[], opt Data value)
+		{
+		for (int i = 0; i < tabs.arrayLength; i++)
+			{
+			if (tabs[i].id == id)
+				{
+				tabs[i].text = text
+				tabs[i].value = value
+				postRepaint()
+				return
+				}
+			}
+		}
+	
+	void TabList:remove(int id)
+		{
+		bool found = false
+		for (int i = 0; i < tabs.arrayLength; i++)
+			{
+			if (tabs[i].id == id)
+				{
+				found = true
+				break
+				}
+			}
+		
+		if (found)
+			{
+			TabDetails newList[] = new TabDetails[tabs.arrayLength - 1]
+			int j = 0
+			for (int i = 0; i < tabs.arrayLength; i++)
+				{
+				if (tabs[i].id != id)
+					{
+					newList[j] = tabs[i]
+					j ++
+					}
+					else if (id == selectedID)
+					{
+					if (i > 0)
+						selectedID = tabs[i-1].id
+						else if (i+1 < tabs.arrayLength)
+						selectedID = tabs[i+1].id
+					}
+				}
+			tabs = newList
+			}
+		}
+	
+	void TabList:select(int id)
+		{
+		selectedID = id
+		postRepaint()
+		}
+	
+	int TabList:getSelected()
+		{
+		return selectedID
+		}
+	
+	int[] TabList:getTabs()
+		{
+		int result[] = new int[tabs.arrayLength]
+		for (int i = 0; i < tabs.arrayLength; i++)
+			{
+			result[i] = tabs[i].id
+			}
+		return result
+		}
+	
+	TabDetails TabList:getDetails(int id)
+		{
+		for (int i = 0; i < tabs.arrayLength; i++)
+			{
+			if (tabs[i].id == id)
+				{
+				return tabs[i]
+				}
+			}
+		
+		return null
+		}
+	
+	void TabList:setPosition(int x, int y)
+		{
+		xPosition = x
+		yPosition = y
+		}
+	
+	void TabList:setWidth(int w)
+		{
+		width = w
+		postRepaint()
+		}
+	
+	void TabList:setBackground(Color c)
+		{
+		backgroundColor = c
+		}
+	
+	void TabList:setOffColor(Color c)
+		{
+		offColor = c
+		}
+	
+	void TabList:setOnColor(Color c)
+		{
+		onColor = c
+		}
+	
+	void TabList:setTextOffColor(Color c)
+		{
+		textOffColor = c
+		}
+	
+	void TabList:setTextOnColor(Color c)
+		{
+		textOnColor = c
+		}
+	
+	void TabList:setFont(Font f)
+		{
+		textFont = f
+		height = textFont.getFontMetrics().height + TAB_V_MARGIN
+		postRepaint()
+		}
+	
+	void TabList:paint(Canvas c)
+		{
+		int xpos = xPosition
+
+		for (int i = 0; i < tabs.arrayLength; i++)
+			{
+			int tabWidth = textFont.getTextWidth(tabs[i].text) + TAB_H_MARGIN
+			if (tabs[i].id == selectedID)
+				{
+				c.rect(new Rect2D(xpos, yPosition, tabWidth, height, onColor))
+				c.text(new Point2D(xpos + (TAB_H_MARGIN / 2), yPosition + (TAB_V_MARGIN / 2), textOnColor), textFont, tabs[i].text)
+				}
+				else
+				{
+				c.rect(new Rect2D(xpos, yPosition, tabWidth, height, offColor))
+				c.text(new Point2D(xpos + (TAB_H_MARGIN / 2), yPosition + (TAB_V_MARGIN / 2), textOffColor), textFont, tabs[i].text)
+				}
+			
+			xpos += tabWidth
+
+			if (i + 1 < tabs.arrayLength)
+				{
+				c.line(new Line2D(xpos, yPosition, xpos, yPosition + height, borderColor))
+				xpos ++
+				}
+			}
+		}
+	
+	bool TabList:keyDown(int keyCode)
+		{
+		return false
+		}
+	
+	bool TabList:keyUp(int keyCode)
+		{
+		return false
+		}
+	
+	Rect TabList:getBounds()
+		{
+		return new Rect(xPosition, yPosition, width, height)
+		}
+	
+	void TabList:click(int x, int y, int button)
+		{
+		int xpos = xPosition
+
+		for (int i = 0; i < tabs.arrayLength; i++)
+			{
+			int tabWidth = textFont.getTextWidth(tabs[i].text) + TAB_H_MARGIN
+
+			if (x >= xpos && x <= (xpos + tabWidth))
+				{
+				emitevent select(tabs[i])
+				return
+				}
+			
+			xpos += tabWidth
+			if (i + 1 < tabs.arrayLength)
+				{
+				xpos ++
+				}
+			}
+		}
+	
+	void TabList:setFocus()
+		{
+		emitevent requestFocus()
+		}
+	
+	void TabList:dropFile(int x, int y, char path[])
+		{
+		emitevent fileDrop(new String(path))
+		}
+	
+	void TabList:postRepaint()
+		{
+		emitevent repaint()
+		}
+	
+	Point TabList:getPosition()
+		{
+		return new Point(xPosition, yPosition)
+		}
+	
+	WH TabList:getPreferredSize()
+		{
+		return new WH(width, height)
+		}
+	
+	void Destructor:destroy()
+		{
+		}
+	
+	}

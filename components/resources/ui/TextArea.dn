@@ -39,4 +39,13 @@ interface TextArea extends KeyEventObject {
 	
 	/* {"@description" : "Get the current position of the cursor, as a character index starting from zero."} */
 	int getCursorPos()
+
+	/* {"@description" : "Set word-wrap on/off."} */
+	void setWordWrap(bool v)
+
+	/* {"@description" : "Set line numbers on/off."} */
+	void setLineNumbers(bool v)
+
+	/* {"@description" : "Set automatic indent on/off."} */
+	void setAutoIndent(bool v)
 	}

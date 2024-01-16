@@ -178,10 +178,10 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 		//pass-through to content
 		}
 
-	HotKey[] ScrollPane:recvFocus()
+	bool ScrollPane:recvFocus()
 		{
 		//pass-through to content
-		return null
+		return false
 		}
 
 	void ScrollPane:loseFocus()
@@ -189,14 +189,16 @@ component provides ScrollPane requires io.Output out, data.IntUtil iu, ScrollBar
 		//pass-through to content
 		}
 
-	void ScrollPane:keyDown(int keyID)
+	bool ScrollPane:keyDown(int keyID)
 		{
 		//pass-through to content
+		return false
 		}
 
-	void ScrollPane:keyUp(int keyID)
+	bool ScrollPane:keyUp(int keyID)
 		{
 		//pass-through to content
+		return false
 		}
 
 	Rect ScrollPane:getBounds()

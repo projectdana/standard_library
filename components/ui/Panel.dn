@@ -18,6 +18,13 @@ data XYListener{
 	XYListener prev
 	}
 
+data GlobalHotKeyItem{
+	ClickableObject object
+	HotKey hotKeys[]
+	GlobalHotKeyItem next
+	GlobalHotKeyItem prev
+	}
+
 component provides Panel requires io.Output out, data.IntUtil iu {
 
 	GraphicsItem objects
@@ -25,6 +32,9 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 
 	ClickableItem clickObjects
 	ClickableItem lastClickObject
+
+	GlobalHotKeyItem hotKeyItems
+	GlobalHotKeyItem hotKeyItemsEnd
 
 	XYListener mouseListeners
 	XYListener mouseListenersEnd
@@ -50,7 +60,7 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 
 	eventsink FocusEvents(EventData ed)
 		{
-		if (ed.type == KeyEventObject.[requestFocus])
+		if (ed.type == ClickableObject.[requestFocus])
 			{
 			changeFocusTo(ed.source)
 			emitevent requestFocus()
@@ -89,11 +99,21 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 		emitevent requestFocus()
 		}
 	
-	HotKey[] Panel:recvFocus()
+	bool Panel:recvFocus()
 		{
 		if (keyboardFocus != null)
 			{
 			return keyboardFocus.recvFocus()
+			}
+		
+		return false
+		}
+	
+	HotKey[] Panel:getHotKeys()
+		{
+		if (keyboardFocus != null)
+			{
+			return keyboardFocus.getHotKeys()
 			}
 		
 		return null
@@ -135,7 +155,7 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 			}
 		}
 
-	void Panel:addObject(GraphicsObject go)
+	void Panel:addObject(GraphicsObject go, opt bool globalHotKeys)
 		{
 		GraphicsItem newItem = new GraphicsItem(go)
 
@@ -148,19 +168,17 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 		lastObject = newItem
 
 		if (go hastype ClickableObject)
-			addClickTarget(go)
+			{
+			ClickableObject ko = go
+			addClickTarget(go, globalHotKeys)
+			sinkevent FocusEvents(ko)
+			}
 
 		if (go hastype XYMouseObject)
 			{
 			addMouseEventTarget(go)
 			XYMouseObject mo = go
 			sinkevent CursorEvents(mo)
-			}
-
-		if (go hastype KeyEventObject)
-			{
-			KeyEventObject ko = go
-			sinkevent FocusEvents(ko)
 			}
 
 		sinkevent Events(go)
@@ -296,7 +314,8 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 			if (keyboardFocus != null) keyboardFocus.loseFocus()
 			}
 
-		focusHotKeys = ko.recvFocus()
+		ko.recvFocus()
+		focusHotKeys = ko.getHotKeys()
 
 		keyboardFocus = ko
 		}
@@ -322,7 +341,10 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 	
 	void Panel:hotKeyClick(HotKey h)
 		{
-		if (keyboardFocus != null) keyboardFocus.hotKeyClick(h)
+		if (keyboardFocus != null)
+			{
+			keyboardFocus.hotKeyClick(h)
+			}
 		}
 	
 	void clickOn(int x, int y, int button)
@@ -348,7 +370,7 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 			}
 		}
 
-	void addClickTarget(store ClickableObject co)
+	void addClickTarget(store ClickableObject co, bool globalHotKeys)
 		{
 		ClickableItem nci = new ClickableItem(co)
 
@@ -359,6 +381,18 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 
 		nci.prev = lastClickObject
 		lastClickObject = nci
+
+		if (globalHotKeys)
+			{
+			GlobalHotKeyItem gci = new GlobalHotKeyItem(co, co.getHotKeys())
+			if (hotKeyItems == null)
+				hotKeyItems = gci
+				else
+				hotKeyItemsEnd.next = gci
+
+			gci.prev = hotKeyItemsEnd
+			hotKeyItemsEnd = gci
+			}
 		}
 
 	void remClickTarget(ClickableObject o)
@@ -376,6 +410,26 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 
 				if (td.next == null)
 					lastClickObject = td.prev
+					else
+					td.next.prev = td.prev
+
+				break
+				}
+			}
+		
+		for (GlobalHotKeyItem ci = hotKeyItems; ci != null; ci = ci.next)
+			{
+			if (ci.object === o)
+				{
+				GlobalHotKeyItem td = ci
+
+				if (td.prev == null)
+					hotKeyItems = td.next
+					else
+					td.prev.next = td.next
+
+				if (td.next == null)
+					hotKeyItemsEnd = td.prev
 					else
 					td.next.prev = td.prev
 
@@ -420,20 +474,24 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 			}
 		}
 
-	void Panel:keyDown(int keyCode)
+	bool Panel:keyDown(int keyCode)
 		{
 		if (keyboardFocus != null)
 			{
-			keyboardFocus.keyDown(keyCode)
+			return keyboardFocus.keyDown(keyCode)
 			}
+		
+		return false
 		}
 
-	void Panel:keyUp(int keyCode)
+	bool Panel:keyUp(int keyCode)
 		{
 		if (keyboardFocus != null)
 			{
-			keyboardFocus.keyUp(keyCode)
+			return keyboardFocus.keyUp(keyCode)
 			}
+		
+		return false
 		}
 
 	void Panel:mouseDown(int x, int y, int button)
@@ -537,12 +595,18 @@ component provides Panel requires io.Output out, data.IntUtil iu {
 							}
 
 						mouseOver = ci.object
-						mouseOver.mouseOver()
+						CursorSetEvent cse = mouseOver.mouseOver(x - r.x, y - r.y)
+						if (cse != null)
+							emitevent setCursor(cse)
+							else
+							emitevent setCursor(new CursorSetEvent(IOWindow.CURSOR_DEFAULT))
+						}
+						else
+						{
+						ci.object.mouseMove(x - r.x, y - r.y)
 						}
 
 					overSomething = true
-
-					ci.object.mouseMove(x - r.x, y - r.y)
 
 					break
 					}

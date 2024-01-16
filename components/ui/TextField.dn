@@ -211,7 +211,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		emitevent textChanged()
 		}
 	
-	void TextField:keyDown(int keyCode)
+	bool TextField:keyDown(int keyCode)
 		{
 		//here we check if the key press was a printable character and if so insert it, else handle other key strokes
 		
@@ -258,31 +258,31 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 				{
 				keyState |= KeyState.KEY_SHIFT
 				shiftDown = true
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.CTRL_LEFT || kCode == KeyCode.CTRL_RIGHT)
 				{
 				keyState |= KeyState.KEY_CTRL
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.ALT_LEFT)
 				{
 				keyState |= KeyState.KEY_ALT
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.ALT_RIGHT)
 				{
 				keyState |= KeyState.KEY_ALTGR
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.CMD)
 				{
 				keyState |= KeyState.KEY_CMD
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.DELETE)
@@ -401,9 +401,11 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			
 			postRepaint()
 			}
+		
+		return true
 		}
 	
-	void TextField:keyUp(int keyCode)
+	bool TextField:keyUp(int keyCode)
 		{
 		byte kCode
 		
@@ -413,13 +415,13 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 				{
 				keyState &= ~KeyState.KEY_SHIFT
 				shiftDown = false
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.CTRL_LEFT || kCode == KeyCode.CTRL_RIGHT)
 				{
 				keyState &= ~KeyState.KEY_CTRL
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.ALT_LEFT)
@@ -430,7 +432,7 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 			if (kCode == KeyCode.ALT_RIGHT)
 				{
 				keyState &= ~KeyState.KEY_ALTGR
-				return
+				return true
 				}
 			
 			if (kCode == KeyCode.CMD)
@@ -438,6 +440,8 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 				keyState &= ~KeyState.KEY_CMD
 				}
 			}
+		
+		return true
 		}
 	
 	Rect TextField:getBounds()
@@ -847,9 +851,9 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		return new WH(width, height)
 		}
 	
-	void TextField:mouseOver()
+	CursorSetEvent TextField:mouseOver(int x, int y)
 		{
-		emitevent setCursor(new CursorSetEvent(IOWindow.CURSOR_IBEAM))
+		return new CursorSetEvent(IOWindow.CURSOR_IBEAM)
 		}
 	
 	void TextField:setFocus()
@@ -863,10 +867,14 @@ component provides TextField requires io.Output out, data.IntUtil iu, ui.Font, o
 		postRepaint()
 		}
 	
-	HotKey[] TextField:recvFocus()
+	bool TextField:recvFocus()
 		{
 		focus = true
-		
+		return true
+		}
+	
+	HotKey[] TextField:getHotKeys()
+		{
 		return hkeys
 		}
 	
