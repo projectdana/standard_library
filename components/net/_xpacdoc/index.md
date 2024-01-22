@@ -91,6 +91,7 @@ A TCP server that uses non-blocking servers, and is otherwise identical in funct
 component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonitor, io.Output out, data.IntUtil iu, time.Timer timer {
 	
 	TCPMonitor monitor
+	Mutex monitorLock = new Mutex()
 
 	eventsink NetEvents(EventData ed)
 		{
@@ -130,9 +131,12 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 								{
 								if (!events[i].socket.connected())
 									{
-									out.println("[disconnect]")
-									monitor.remSocket(events[i].socket)
-									events[i].socket.disconnect()
+									mutex(monitorLock)
+										{
+										out.println("[disconnect]")
+										monitor.remSocket(events[i].socket)
+										events[i].socket.disconnect()
+										}
 									}
 								break
 								}
@@ -149,9 +153,12 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 						
 					if (events[i].close)
 						{
-						out.println("[close]")
-						monitor.remSocket(events[i].socket)
-						events[i].socket.disconnect()
+						mutex(monitorLock)
+							{
+							out.println("[close]")
+							monitor.remSocket(events[i].socket)
+							events[i].socket.disconnect()
+							}
 						}
 					}
 				}
@@ -176,8 +183,11 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 			if (socket.accept(server))
 				{
 				socket.setNonBlocking()
-				monitor.addSocket(socket)
-				monitor.armSendNotify(socket)
+				mutex(monitorLock)
+					{
+					monitor.addSocket(socket)
+					monitor.armSendNotify(socket)
+					}
 				}
 			}
 
@@ -459,6 +469,7 @@ data TLSInfo
 component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonitor, net.TLS, net.TLSContext, io.File, io.Output out, data.IntUtil iu, time.Timer timer {
 	
 	TCPMonitor monitor
+	Mutex monitorLock = new Mutex()
 
 	TLSContext tlsContext
 
@@ -530,9 +541,12 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 
 							if (ti.state == TLSInfo.S_FAIL)
 								{
-								monitor.remSocket(events[i].socket)
-								ti.ssl.close()
-								events[i].socket.disconnect()
+								mutex(monitorLock)
+									{
+									monitor.remSocket(events[i].socket)
+									ti.ssl.close()
+									events[i].socket.disconnect()
+									}
 								out.println("(socket closed after accept-fail)")
 								}
 							}
@@ -553,9 +567,12 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 									{
 									if (!events[i].socket.connected())
 										{
-										monitor.remSocket(events[i].socket)
-										ti.ssl.close()
-										events[i].socket.disconnect()
+										mutex(monitorLock)
+											{
+											monitor.remSocket(events[i].socket)
+											ti.ssl.close()
+											events[i].socket.disconnect()
+											}
 										out.println("(socket closed after read)")
 										break
 										}
@@ -612,9 +629,12 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 							
 							if (ti.state == TLSInfo.S_FAIL)
 								{
-								monitor.remSocket(events[i].socket)
-								ti.ssl.close()
-								events[i].socket.disconnect()
+								mutex(monitorLock)
+									{
+									monitor.remSocket(events[i].socket)
+									ti.ssl.close()
+									events[i].socket.disconnect()
+									}
 								out.println("(socket closed after accept-fail)")
 								}
 							}
@@ -628,9 +648,12 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 						{
 						out.println("[close ready]")
 
-						monitor.remSocket(events[i].socket)
-						events[i].socket.disconnect()
-						out.println("(socket closed)")
+						mutex(monitorLock)
+							{
+							monitor.remSocket(events[i].socket)
+							events[i].socket.disconnect()
+							out.println("(socket closed)")
+							}
 						}
 					}
 				}
@@ -662,7 +685,10 @@ component provides App requires net.TCPServerSocket, net.TCPSocket, net.TCPMonit
 
 				client.setNonBlocking(ti)
 				sinkevent TLSNetEvents(ssl)
-				monitor.addSocket(client, ti)
+				mutex(monitorLock)
+					{
+					monitor.addSocket(client, ti)
+					}
 				}
 			}
 

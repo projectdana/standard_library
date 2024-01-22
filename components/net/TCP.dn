@@ -96,6 +96,7 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 		int handle
 
 		MonitorEvent events[] = new MonitorEvent[MONITOR_EVENT_ARRAY_LENGTH]
+		int lastEventCount = 0
 
 		MonitorList socketList
 
@@ -122,6 +123,9 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 		
 		void TCPMonitor:armSendNotify(TCPSocket s)
 			{
+			//TODO: mdata could be stored on the TCPSocket itself, avoiding this scan?
+			// - we could also store the platform handle of the monitor on the TCPSocket, to ensure it's been added to this monitor
+			// - this might actually avoid the need for any of this list maintenance...?
 			MonitorList w = socketList
 
 			while (w != null && w.socket !== s)
@@ -165,10 +169,18 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 			{
 			int r = 0
 
+			//native lib API doesn't do reference decrements, so we do it here
+			for (int i = 0; i < lastEventCount; i++)
+				{
+				events[i] = null
+				}
+
 			if (isset ms)
 				r = lib.waitTime(handle, events, ms)
 				else
 				r = lib.wait(handle, events)
+			
+			lastEventCount = r
 			
 			if (r != 0)
 				{

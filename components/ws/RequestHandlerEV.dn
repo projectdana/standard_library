@@ -11,8 +11,8 @@ const int MAX_PAYLOAD = 1048576
 const int REQ_THREAD_POOL_SIZE = 32
 const int NET_THREAD_POOL_SIZE = 1
 
-const int TIMEOUT_INTERVAL = 10
 const int MAX_INACTIVE = 2000
+const int MONITOR_WAIT_TIME = 1
 
 const int RECV_CONNECTION_CONTINUE = 1
 const int RECV_CONNECTION_CLOSE = 2
@@ -53,7 +53,6 @@ data WorkItem {
 	byte payload[]
 
 	WorkItem next
-	WorkItem prev
 }
 
 data NetWorkItem nocycle {
@@ -78,7 +77,8 @@ data NetWorkItem nocycle {
 	int bufNextByte
 	int payloadPending
 
-	int lastActiveTime
+	int lastActiveTime //timed eviction
+	bool evict //immediate eviction
 	int reqWorkCount
 	int unsentBytes
 
@@ -603,6 +603,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 					state.work = w.next
 					if (state.work == null) state.lastWork = null
 					state.curWork = w
+					w.next = null
 					}
 				
 				processRequest(w)
@@ -610,7 +611,8 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 				if (w.nextCommand != null && !w.nextCommand.persistent)
 					{
 					//out.println("ef-socket $(w.fromNetItem.client.getID())")
-					w.fromNetItem.client.disconnect()
+					w.fromNetItem.evict = true
+					//TODO: ideally here we now signal the socket, to trigger an event & immediate cleanup, rather than waiting for MONITOR_WAIT_TIME
 					}
 
 				mutex(state)
@@ -824,6 +826,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 			{
 			//out.println("rm-socket $(item.client.getID())")
 			state.monitor.remSocket(item.client)
+			if (item.tlsClient != null) item.tlsClient.close()
 			item.client.disconnect()
 
 			//if it's already at the end, do nothing
@@ -908,7 +911,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 					}
 				
 				//here we check if a net item has no actual work pending (meaning it's received a request and is busy sending the response, so we don't expect any further inbound socket activity until the response has been fully sent)
-				if (state.work.reqWorkCount == 0 && ((now - state.work.lastActiveTime) > MAX_INACTIVE))
+				if (state.work.reqWorkCount == 0 && (state.work.evict || ((now - state.work.lastActiveTime) > MAX_INACTIVE)))
 					{
 					if (debugConnections) out.println(" -- [NWID $(state.work.workID)] connection-evict")
 					closeItem(state, state.work)
@@ -925,7 +928,7 @@ component provides RequestHandler(Destructor) requires io.Output out, io.FileSys
 		{
 		while (true)
 			{
-			MonitorEvent events[] = state.monitor.wait(10)
+			MonitorEvent events[] = state.monitor.wait(MONITOR_WAIT_TIME)
 
 			int now = cal.getMS()
 
