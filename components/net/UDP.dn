@@ -83,6 +83,7 @@ component provides net.UDPServer, net.UDPClient, net.UDPMonitor(Destructor) requ
 		int handle
 
 		MonitorEvent events[] = new MonitorEvent[MONITOR_EVENT_ARRAY_LENGTH]
+		int lastEventCount = 0
 
 		MonitorList socketList
 		
@@ -135,10 +136,18 @@ component provides net.UDPServer, net.UDPClient, net.UDPMonitor(Destructor) requ
 			{
 			int r = 0
 
+			//native lib API doesn't do reference decrements, so we do it here
+			for (int i = 0; i < lastEventCount; i++)
+				{
+				events[i] = null
+				}
+
 			if (isset ms)
 				r = lib.waitTime(handle, events, ms)
 				else
 				r = lib.wait(handle, events)
+			
+			lastEventCount = r
 			
 			if (r != 0)
 				{
