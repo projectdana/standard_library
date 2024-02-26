@@ -72,15 +72,9 @@ interface SSLLib {
 	byte[] read_nb(int hnd, int len, TLSStatus status)
 	
 	void closeSSL(int hnd)
-	void closeSSL_nb(int hnd)
+	int closeSSL_nb(int hnd)
 	void freeSSL(int hnd)
 	}
-
-data MonitorList {
-	TCPSocket socket
-	MonitorData mdata
-	MonitorList next
-}
 
 data BufferedData {
 	byte value[]
@@ -98,8 +92,6 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 		MonitorEvent events[] = new MonitorEvent[MONITOR_EVENT_ARRAY_LENGTH]
 		int lastEventCount = 0
 
-		MonitorList socketList
-
 		TCPMonitor:TCPMonitor()
 			{
 			handle = lib.createSelect(MONITOR_EVENT_ARRAY_LENGTH)
@@ -108,61 +100,39 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 		
 		bool TCPMonitor:addSocket(store TCPSocket s, opt store Data userData)
 			{
-			//we store the item on a linked list so that we maintain the reference count properly (particularly via remSocket, since the OS function doesn't have a way to retrieve the data PTR associated with a socket handle)
+			if (s.monitorID != 0)
+				{
+				throw new Exception("socket is already associated with a monitor")
+				}
+			
 			MonitorData mdata = new MonitorData(s.platformSocket, new MonitorEvent(s, userData))
-			MonitorList nli = new MonitorList(s, mdata)
-
+			
 			if (!lib.addSocket(handle, s.platformSocket, mdata))
-				throw new Exception("could not add socket to selector")
+				{
+				throw new Exception("could not add socket to platform-level selector")
+				}
 			
-			nli.next = socketList
-			socketList = nli
-			
+			s.monitorID = handle
+			s.monitorData = mdata
+
 			return true
 			}
 		
 		void TCPMonitor:armSendNotify(TCPSocket s)
 			{
-			//TODO: mdata could be stored on the TCPSocket itself, avoiding this scan?
-			// - we could also store the platform handle of the monitor on the TCPSocket, to ensure it's been added to this monitor
-			// - this might actually avoid the need for any of this list maintenance...?
-			MonitorList w = socketList
-
-			while (w != null && w.socket !== s)
+			if (s.monitorID != handle)
 				{
-				w = w.next
+				throw new Exception("socket not added to this monitor instance; use addSocket() first")
 				}
 			
-			if (w == null)
-				{
-				throw new Exception("socket not added to monitor; use addSocket() first")
-				}
-			
-			lib.armSendNotify(handle, s.platformSocket, w.mdata)
+			lib.armSendNotify(handle, s.platformSocket, s.monitorData)
 			}
 
 		void TCPMonitor:remSocket(TCPSocket s)
 			{
-			MonitorList prev = null
-			MonitorList w = socketList
-
-			while (w != null && w.socket !== s)
-				{
-				prev = w
-				w = w.next
-				}
-			
-			if (w != null)
-				{
-				if (prev == null)
-					socketList = w.next
-					else
-					prev.next = w.next
-				}
-			
-			w = null
-
 			lib.remSocket(handle, s.platformSocket)
+			s.monitorID = 0
+			s.monitorData = null
 			}
 		
 		MonitorEvent[] TCPMonitor:wait(opt int ms)
@@ -205,6 +175,11 @@ component provides net.TCPServerSocket, net.TCPSocket(Destructor), net.TCPMonito
 		Mutex accessLock = new Mutex()
 		Mutex connectLock = new Mutex()
 		Data sendWaitData = null
+
+		//if this socket is associated with a monitor, we note the monitor's ID here
+		int monitorID
+		//custom data for the monitor is stored here
+		Data monitorData
 		
 		BufferedData buffer
 		BufferedData bufferEnd

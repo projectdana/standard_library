@@ -1186,17 +1186,9 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 		return false
 		}
 	
-	void insertText(char text[])
+	void appendText(TextLine toLine, char text[])
 		{
 		int lastIndex = 0
-
-		char appendX[] = null
-
-		if (cursorPosition < getLineCharLength(cursorLine))
-			{
-			appendX = getCharacters(cursorLine, cursorPosition, getLineCharLength(cursorLine) - cursorPosition)
-			deleteCharacters(cursorLine, cursorPosition, getLineCharLength(cursorLine) - cursorPosition)
-			}
 
 		for (int i = 0; i < text.arrayLength; i++)
 			{
@@ -1207,22 +1199,22 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 
 				char nxt[] = text.subString(lastIndex, i - lastIndex)
 
-				appendTextTo(cursorLine, nxt)
-				updateLineLength(cursorLine)
+				appendTextTo(toLine, nxt)
+				updateLineLength(toLine)
 
 				TextLine ntl = makeLine()
 
-				ntl.next = cursorLine.next
-				ntl.prev = cursorLine
+				ntl.next = toLine.next
+				ntl.prev = toLine
 
-				if (cursorLine.next != null)
-					cursorLine.next.prev = ntl
+				if (toLine.next != null)
+					toLine.next.prev = ntl
 					else
 					lastLine = ntl
 				
-				cursorLine.next = ntl
+				toLine.next = ntl
 
-				cursorLine = ntl
+				toLine = ntl
 				cursorPositionY += cursorHeight
 				
 				addLine(ntl)
@@ -1234,32 +1226,47 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 				if (lastIndex != i)
 					{
 					char nxt[] = text.subString(lastIndex, i - lastIndex)
-					appendTextTo(cursorLine, nxt)
-					updateLineLength(cursorLine)
+					appendTextTo(toLine, nxt)
+					updateLineLength(toLine)
 					}
 				lastIndex = i + 1
 
 				if (k == "\t")
 					{
-					appendTab(cursorLine)
+					appendTab(toLine)
 					}
 					else if (isLineWrapCharacter(k))
 					{
-					appendTextTo(cursorLine, k, true)
-					updateLineLength(cursorLine)
+					appendTextTo(toLine, k, true)
+					updateLineLength(toLine)
 					}
 				}
-				
 			}
 		
 		char nxt[] = text.subString(lastIndex, text.arrayLength - lastIndex)
+
+		appendTextTo(toLine, nxt)
+		updateLineLength(toLine)
+		}
+	
+	void insertText(char text[])
+		{
+		int lastIndex = 0
+
+		char appendX[] = null
+
+		if (cursorPosition < getLineCharLength(cursorLine))
+			{
+			appendX = getCharacters(cursorLine, cursorPosition, getLineCharLength(cursorLine) - cursorPosition)
+			deleteCharacters(cursorLine, cursorPosition, getLineCharLength(cursorLine) - cursorPosition)
+			if (wordWrap) wrapLine(cursorLine)
+			}
 		
-		appendTextTo(cursorLine, nxt)
-		updateLineLength(cursorLine)
+		appendText(cursorLine, text)
 
 		if (appendX != null)
 			{
-			appendTextTo(cursorLine, appendX)
+			appendText(cursorLine, appendX)
 			updateLineLength(cursorLine)
 			}
 		
@@ -2284,10 +2291,17 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 					selectStartPos = cursorPosition
 					else
 					cursorPosition = selectStartPos
+				
+				StringUTF tmp = new StringUTF(itext)
+				int ncp = cursorPosition + tmp.length()
+
 				insertText(itext)
+
+				cursorPosition = ncp
+				selectStartPos = cursorPosition
+
+				updateCursorPosition()
 				}
-			
-			updateCursorPosition()
 			
 			emitevent repaint()
 			}
@@ -2810,6 +2824,25 @@ component provides TextArea(Destructor) requires io.Output out, data.IntUtil iu,
 			{
 			yScroll = (efy-cursorHeight)
 			scrollV.setScrollPos(yScroll)
+			}
+		
+		//identify the subline of the cursor, for correct cursor-key navigation
+		if (wordWrap)
+			{
+			TextContent tc = cursorLine.text
+			int count = 0
+			while (tc != null)
+				{
+				int slc = getSublineCharLength(tc)
+				if ((cursorPosition >= count) && (cursorPosition <= (count + slc)))
+					{
+					cursorSubline = tc
+					break
+					}
+
+				count += slc
+				tc = tc.next
+				}
 			}
 		}
 	

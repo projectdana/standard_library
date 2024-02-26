@@ -1,7 +1,6 @@
 uses data.String
 
 interface OpenCLLib {
-    int init()
     int createContextSpace()
 	void findPlatforms()
     int[] getComputeDeviceIDs()
@@ -39,12 +38,12 @@ component provides ComputeArray(Destructor), ComputeInfo, Compute(Destructor), P
         /* {"@description" : "Returns all the devices (by name) available to the system"} */
         String[] ComputeInfo:getDevices()
             {
-            int noOpenCLPlatforms = lib.init()
-            if (noOpenCLPlatforms == 1)
+            String result[] = lib.getComputeDevices()
+            if (result.arrayLength == 0)
                 {
-                throw new Exception("No OpenCL implementations found. This is a requirement for using the gpu library in Dana. For instructions on installing an OpenCL implementation see: \n https://github.com/KhronosGroup/OpenCL-Guide/blob/main/chapters/getting_started_windows.md or https://github.com/KhronosGroup/OpenCL-Guide/blob/main/chapters/getting_started_linux.md")
+                throw new Exception("No OpenCL implementations found. This is a requirement for using the GPU library in Dana. See io.compute package documentation for guidance on installing an OpenCL implementation.")
                 }
-            return lib.getComputeDevices()
+            return result
             }
     }
 
@@ -55,6 +54,11 @@ component provides ComputeArray(Destructor), ComputeInfo, Compute(Destructor), P
         ComputeArray:ComputeArray(store String devicesForArray[]) {
             devices = devicesForArray
             handle = lib.createContextSpace()
+
+            if (handle == 0)
+                {
+                throw new Exception("Context initialisation failed.")
+                }
 
             int systemDeviceIDs[] = lib.getComputeDeviceIDs()
             String systemDevices[] = lib.getComputeDevices()

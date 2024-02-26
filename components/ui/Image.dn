@@ -39,6 +39,8 @@ component provides Image requires io.Output out, data.IntUtil iu {
 			imageAspectRatio = wd / hd
 			else
 			imageAspectRatio = hd / wd
+		
+		postRepaint()
 		}
 	
 	void Image:setFrameSize(int w, int h)
