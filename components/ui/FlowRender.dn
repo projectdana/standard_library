@@ -88,7 +88,7 @@ interface UIPlaneLib {
 
 	// -- the below API is for direct rendering abstractions; eventually these are likely to be merged
 	bool flow_initMediaLayer()
-	int flow_makeWindow(int framerate, bool 3d)
+	int flow_makeWindow(int framerate, bool d)
 	void flow_setVisible(int phandle, bool b)
 	void flow_setFullScreen(int phandle, bool v)
 	void flow_setResizable(int phandle, bool v)

@@ -1,0 +1,1465 @@
+const int PARA_WIDTH = 60
+const int PARA_INDENT = 4
+
+const char BASE_URL_DEFAULT[] = "www.projectdana.com"
+const char BASE_PATH_DEFAULT[] = "source"
+const int BASE_PORT_DEFAULT = 443
+
+data ManifestEntry {
+	char intf[]
+	char comp[]
+}
+
+data ManifestData {
+	ManifestEntry defaultLinks[]
+}
+
+data Parameters {
+	char osCode[]
+	char chipsetCode[]
+	bool compile
+}
+
+component provides App requires io.Output out, io.Input input, data.IntUtil iu, data.StringUtil stringUtil,  util.ParamParser, System sys, net.http.HTTPRequest req, data.json.JSONEncoder encoder, io.FileSystem fileSystem, io.File, time.Calendar cal, ws.forms.Encoder:urlencoded formEncoderURL, util.source.SourcePackage spEncoder, util.source.SourceConfig config, util.source.SourceSynch synch, data.ByteUtil bu, util.Compiler, data.query.Sort sort, data.query.Search search {
+	
+	bool sourceBreak
+	bool objectBreak
+
+	Parameters parseParameters(AppParam params[])
+		{
+		Parameters result = new Parameters(sys.getPlatform().osCode, sys.getPlatform().chipCode, true)
+
+		for (int i = 0; i < params.arrayLength; i++)
+			{
+			if (params[i].string == "-os")
+				{
+				if (i + 1 < params.arrayLength)
+					{
+					result.osCode = params[i+1].string
+					}
+					else
+					{
+					out.println("[parameter error: expected value after $(params[i].string)]")
+					}
+				}
+				else if (params[i].string == "-chip")
+				{
+				if (i + 1 < params.arrayLength)
+					{
+					result.chipsetCode = params[i+1].string
+					}
+					else
+					{
+					out.println("[parameter error: expected value after $(params[i].string)]")
+					}
+				}
+				else if (params[i].string == "-nc")
+				{
+				result.compile = false
+				}
+			}
+		
+		return result
+		}
+	
+	void printParagraph(char txt[], int width, int indent)
+		{
+		String parts[] = stringUtil.explode(txt, " ")
+		
+		int currentWidth = 0
+		
+		for (int i = 0; i < parts.arrayLength; i++)
+			{
+			if (currentWidth + parts[i].string.arrayLength < width)
+				{
+				out.print(" $(parts[i].string)")
+				currentWidth += parts[i].string.arrayLength
+				}
+				else
+				{
+				out.println("")
+				for (int j = 0; j < indent; j++) out.print(" ")
+				out.print(" $(parts[i].string)")
+				currentWidth = parts[i].string.arrayLength
+				}
+			}
+		
+		out.println("")
+		}
+	
+	void printList(char name[], String items[])
+		{
+		if (items.arrayLength > 0)
+			{
+			out.println(" $name ")
+			for (int j = 0; j < items.arrayLength; j++)
+				{
+				out.print("  - ")
+				printParagraph(items[j].string, PARA_WIDTH, PARA_INDENT)
+				}
+			}
+		}
+
+	int isInstructionStart(char param[])
+		{
+		if (param == "-ap")
+			return SourceCommand.C_ADD_PACKAGE
+			else if (param == "-at")
+			return SourceCommand.C_ADD_TYPEFILE
+			else if (param == "-ut")
+			return SourceCommand.C_UPD_TYPEFILE
+			else if (param == "-ac")
+			return SourceCommand.C_ADD_COMPONENT
+			else if (param == "-uc")
+			return SourceCommand.C_UPD_COMPONENT
+			else if (param == "-ad")
+			return SourceCommand.C_ADD_PACKAGE_DOC
+			else if (param == "-ud")
+			return SourceCommand.C_UPD_PACKAGE_DOC
+			else if (param == "-als") //convert to -al with a -s and -b switch ?
+			return SourceCommand.C_ADD_LIB_SOURCE
+			else if (param == "-uls")
+			return SourceCommand.C_UPD_LIB_SOURCE
+			else if (param == "-alb")
+			return SourceCommand.C_ADD_LIB_BINARY
+			else if (param == "-ulb")
+			return SourceCommand.C_UPD_LIB_BINARY
+			else if (param == "-ax")
+			return SourceCommand.C_ADD_AUXFILE
+			else if (param == "-ux")
+			return SourceCommand.C_UPD_AUXFILE
+			else if (param == "-newtag")
+			return SourceCommand.C_NEW_TAG
+			else if (param == "-tagt")
+			return SourceCommand.C_TAG_TYPEFILE
+			else if (param == "-tagc")
+			return SourceCommand.C_TAG_COMPONENT
+			else if (param == "-untagt")
+			return SourceCommand.C_UNTAG_TYPEFILE
+			else if (param == "-untagc")
+			return SourceCommand.C_UNTAG_COMPONENT
+		
+		return 0
+		}
+
+	bool commandModeValid(int mode, int command)
+		{
+		return true
+		}
+	
+	char[] getCommandParam(SourceCommand c, char key[])
+		{
+		for (int i = 0; i < c.params.arrayLength; i++)
+			{
+			if (c.params[i].key == key) return c.params[i].value
+			}
+		
+		return null
+		}
+
+	void checkEntityName(SourceCommand current, char defaultName[])
+		{
+		//check if the previous thing had a "name" param, and if not invent one including the actual "-n" param
+		if (current != null && current.entityName == null)
+			{
+			if (current.command == SourceCommand.C_ADD_AUXFILE || current.command == SourceCommand.C_UPD_AUXFILE)
+				{
+				current.params = new KeyValue[](current.params, new KeyValue("-n", defaultName))
+				current.entityName = defaultName
+				}
+				else if (current.command == SourceCommand.C_ADD_PACKAGE_DOC || current.command == SourceCommand.C_UPD_PACKAGE_DOC)
+				{
+				String parts[] = clone defaultName.explode("/\\")
+				defaultName = parts.implode(".")
+				char nameN[] = parts[parts.arrayLength-1].string
+
+				current.params = new KeyValue[](current.params, new KeyValue("-n", defaultName))
+				current.entityName = defaultName
+				}
+				else
+				{
+				if (defaultName.endsWith(".dn")) defaultName = defaultName.rsplit(".")[0].string
+				String parts[] = clone defaultName.explode("/\\")
+				//if the file name has any dots in it we need to convert them to something else
+				parts[parts.arrayLength-1] = new String(parts[parts.arrayLength-1].string.explode(".").implode(":"))
+				defaultName = parts.implode(".")
+				current.params = new KeyValue[](current.params, new KeyValue("-n", defaultName))
+				current.entityName = defaultName
+				}
+			}
+		}
+	
+	SourceCommand[] addPackageDocCommands(char path[], char package[])
+		{
+		SourceCommand result[]
+		FileEntry componentFiles[] = fileSystem.getDirectoryContents(path)
+
+		for (int i = 0; i < componentFiles.arrayLength; i++)
+			{
+			SourceCommand current = new SourceCommand(SourceCommand.C_ADD_PACKAGE_DOC)
+
+			char defaultName[] = "$package/$(componentFiles[i].name)"
+
+			File fd = new File("$path/$(componentFiles[i].name)", File.READ)
+			char fileContent[] = fd.read(fd.getSize())
+			fd.close()
+
+			current.files = new FileData(componentFiles[i].name, fileContent)
+
+			current.params = new KeyValue[](current.params, new KeyValue("-l", package.explode("\\/").implode(".")))
+
+			checkEntityName(current, defaultName)
+
+			//out.println(" -- add docfile $(current.entityName); $(current.files[0].name)")
+
+			result = new SourceCommand[](result, current)
+			}
+		
+		return result
+		}
+	
+	SourceCommand[] addPackageCommands(char package[], opt bool recursive)
+		{
+		//scan recursively for all typefiles and components in this package, making a new "add" sourcecommand for each one
+		SourceCommand result[]
+
+		FileEntry componentFiles[] = fileSystem.getDirectoryContents(package)
+		FileEntry typeFiles[] = fileSystem.getDirectoryContents("resources/$package")
+
+		for (int i = 0; i < typeFiles.arrayLength; i++)
+			{
+			if (fileSystem.getInfo("resources/$package/$(typeFiles[i].name)").type == FileInfo.TYPE_FILE)
+				{
+				SourceCommand current = new SourceCommand(SourceCommand.C_ADD_TYPEFILE)
+
+				char defaultName[] = "$package/$(typeFiles[i].name)"
+				char fileName[] = "resources/$defaultName"
+
+				File fd = new File(fileName, File.READ)
+				char fileContent[] = fd.read(fd.getSize())
+				fd.close()
+
+				current.files = new FileData(fileName, fileContent)
+
+				checkEntityName(current, defaultName)
+
+				result = new SourceCommand[](result, current)
+				}
+			}
+		
+		for (int i = 0; i < componentFiles.arrayLength; i++)
+			{
+			if (fileSystem.getInfo("$package/$(componentFiles[i].name)").type == FileInfo.TYPE_FILE)
+				{
+				if (componentFiles[i].name.endsWith(".dn"))
+					{
+					SourceCommand current = new SourceCommand(SourceCommand.C_ADD_COMPONENT)
+
+					char defaultName[] = "$package/$(componentFiles[i].name)"
+
+					File fd = new File(defaultName, File.READ)
+					char fileContent[] = fd.read(fd.getSize())
+					fd.close()
+
+					current.files = new FileData(defaultName, fileContent)
+
+					checkEntityName(current, defaultName)
+
+					result = new SourceCommand[](result, current)
+					}
+				}
+			}
+		
+		if (recursive)
+			{
+			for (int i = 0; i < componentFiles.arrayLength; i++)
+				{
+				if (fileSystem.getInfo("$package/$(componentFiles[i].name)").type == FileInfo.TYPE_DIR && !componentFiles[i].name.startsWith(".") && componentFiles[i].name != "_xpacdoc")
+					{
+					SourceCommand current = new SourceCommand(SourceCommand.C_ADD_PACKAGE)
+
+					char defaultName[] = "$package/$(componentFiles[i].name)"
+
+					checkEntityName(current, defaultName)
+
+					result = new SourceCommand[](result, current)
+					result = new SourceCommand[](result, addPackageCommands("$package/$(componentFiles[i].name)", recursive))
+					}
+					else if (componentFiles[i].name == "_xpacdoc")
+					{
+					//out.println("add pacdoc for '$package/$(componentFiles[i].name)'")
+					result = new SourceCommand[](result, addPackageDocCommands("$package/$(componentFiles[i].name)", package))
+					}
+				}
+			}
+
+		return result
+		}
+	
+	void mergeParams(SourceCommand a, SourceCommand b)
+		{
+		for (int i = 0; i < b.params.arrayLength; i++)
+			{
+			bool found = false
+
+			for (int j = 0; j < a.params.arrayLength; j++)
+				{
+				if (a.params[j].key == b.params[i].key)
+					{
+					a.params[j].value = b.params[i].value
+
+					found = true
+					break
+					}
+				}
+			
+			if (!found)
+				{
+				a.params = new KeyValue[](a.params, b.params[i])
+				}
+			}
+		}
+
+	SourceCommand[] mergeCommands(SourceCommand a[], SourceCommand b[])
+		{
+		for (int i = 0; i < b.arrayLength; i++)
+			{
+			bool found = false
+
+			for (int j = 0; j < a.arrayLength; j++)
+				{
+				if (a[j].command == b[i].command && a[j].entityName == b[i].entityName)
+					{
+					//merge the two param sets
+					mergeParams(a[j], b[i])
+
+					found = true
+					break
+					}
+				}
+			
+			if (!found)
+				{
+				a = new SourceCommand[](a, b[i])
+				}
+			}
+
+		return a
+		}
+	
+	void checkHash(SourceCommand sc)
+		{
+		//stamp the current-version hash and number on update commands (according to our local synch data)
+		if (sc.command == SourceCommand.C_UPD_COMPONENT
+			|| sc.command == SourceCommand.C_UPD_TYPEFILE
+			|| sc.command == SourceCommand.C_UPD_LIB_BINARY
+			|| sc.command == SourceCommand.C_UPD_AUXFILE)
+			{
+			SourceRecord srec
+
+			if (sc.command == SourceCommand.C_UPD_COMPONENT)
+				srec = synch.getRecord(sc.entityName, SourceRecord.T_COMPONENT)
+				else if (sc.command == SourceCommand.C_UPD_TYPEFILE)
+				srec = synch.getRecord(sc.entityName, SourceRecord.T_TYPEFILE)
+				else if (sc.command == SourceCommand.C_UPD_LIB_BINARY)
+				srec = synch.getRecord(sc.entityName, SourceRecord.T_LIBRARY)
+				else if (sc.command == SourceCommand.C_UPD_AUXFILE)
+				srec = synch.getRecord(sc.entityName, SourceRecord.T_AUXFILE)
+
+			sc.params = new KeyValue[](sc.params, new KeyValue("-cvhash", srec.hash))
+			sc.params = new KeyValue[](sc.params, new KeyValue("-cvn", srec.version.makeString()))
+			}
+		}
+	
+	void checkDefaultValues(SourceCommand sc)
+		{
+		//check any missing values for which we have standard defaults
+		if (sc.command == SourceCommand.C_ADD_LIB_BINARY
+			|| sc.command == SourceCommand.C_UPD_LIB_BINARY)
+			{
+			if (sc.params.findFirst(KeyValue.[key], new KeyValue("-os")) == null)
+				sc.params = new KeyValue[](sc.params, new KeyValue("-os", sys.getPlatform().osCode))
+			
+			if (sc.params.findFirst(KeyValue.[key], new KeyValue("-chip")) == null)
+				sc.params = new KeyValue[](sc.params, new KeyValue("-chip", sys.getPlatform().chipCode))
+			
+			if (sc.params.findFirst(KeyValue.[key], new KeyValue("-apiv")) == null)
+				sc.params = new KeyValue[](sc.params, new KeyValue("-apiv", "$(sys.getLibAPIVersion())"))
+			}
+		}
+	
+	void updateManifest(char entity[], char default[])
+		{
+		Map namingMap[] = new Map[](new Map("interface", "intf"), new Map("component", "comp"))
+		char path[] = entity.explode(".").implode("/")
+
+		char dir[] = path.rsplit("/")[0].string
+
+		File fd
+
+		//(note all entries are package-relative)
+		char leafDefault[] = default.explode(".").implode("/")
+		if (leafDefault.startsWith(dir))
+			{
+			leafDefault = leafDefault.subString((dir.arrayLength+1), leafDefault.arrayLength - (dir.arrayLength+1))
+			}
+		
+		char leafEntity[] = entity.subString(dir.arrayLength+1, entity.arrayLength - (dir.arrayLength+1))
+
+		if (fileSystem.exists("$dir/.manifest"))
+			{
+			//parse existing
+			//out.println("update manifest '$dir/.manifest'")
+			fd = new File("$dir/.manifest", File.READ)
+			char json[] = fd.read(fd.getSize())
+			fd.close()
+			ManifestData current = clone encoder.jsonToData(json, typeof(ManifestData), namingMap)
+
+			//add/update it
+			
+			bool found = false
+			for (int i = 0; i < current.defaultLinks.arrayLength; i++)
+				{
+				if (current.defaultLinks[i].intf == leafEntity)
+					{
+					found = true
+					current.defaultLinks = clone current.defaultLinks
+					current.defaultLinks[i] = new ManifestEntry(leafEntity, leafDefault)
+					}
+				}
+			
+			if (!found)
+				{
+				current.defaultLinks = new ManifestEntry[](current.defaultLinks, new ManifestEntry(leafEntity, leafDefault))
+				}
+			
+			json = encoder.jsonFromData(current, namingMap)
+
+			fd = new File("$dir/.manifest", File.CREATE)
+			fd.write(json)
+			fd.close()
+			}
+			else
+			{
+			//create a new one
+			ManifestData current = new ManifestData(new ManifestEntry(leafEntity, leafDefault))
+
+			char json[] = encoder.jsonFromData(current, namingMap)
+
+			checkDirectory("$dir/.manifest")
+
+			fd = new File("$dir/.manifest", File.CREATE)
+			fd.write(json)
+			fd.close()
+			}
+		}
+	
+	void writeApproved(SourceCommand commands[])
+		{
+		//out.println("writing $(commands.arrayLength) approved commands")
+		for (int i = 0; i < commands.arrayLength; i++)
+			{
+			//out.println(" -- command $(commands[i].command)")
+			if (commands[i].command == SourceCommand.C_ADD_PACKAGE)
+				{
+				synch.addRecord(new SourceRecord(SourceRecord.T_PACKAGE, 1, null, commands[i].entityName))
+				}
+				else if (commands[i].command == SourceCommand.C_ADD_TYPEFILE)
+				{
+				synch.addRecord(new SourceRecord(SourceRecord.T_TYPEFILE, 1, synch.hash(commands[i].files[0].content), commands[i].entityName))
+
+				char info[] = null
+				if ((info = getCommandParam(commands[i], "-di")) != null)
+					{
+					synch.deleteRecord(new SourceRecord(SourceRecord.T_DEFAULT_COM, 1, null, commands[i].entityName, info))
+					synch.addRecord(new SourceRecord(SourceRecord.T_DEFAULT_COM, 1, null, commands[i].entityName, info))
+
+					//add/update manifest file
+					updateManifest(commands[i].entityName, info)
+					}
+				}
+				else if (commands[i].command == SourceCommand.C_ADD_COMPONENT)
+				{
+				synch.addRecord(new SourceRecord(SourceRecord.T_COMPONENT, 1, synch.hash(commands[i].files[0].content), commands[i].entityName))
+				}
+				else if (commands[i].command == SourceCommand.C_UPD_COMPONENT)
+				{
+				int cver = getCommandParam(commands[i], "-cvn").intFromString()
+				synch.updateRecord(new SourceRecord(SourceRecord.T_COMPONENT, cver + 1, synch.hash(commands[i].files[0].content), commands[i].entityName))
+				}
+				else if (commands[i].command == SourceCommand.C_UPD_TYPEFILE)
+				{
+				int cver = getCommandParam(commands[i], "-cvn").intFromString()
+				synch.updateRecord(new SourceRecord(SourceRecord.T_TYPEFILE, cver + 1, synch.hash(commands[i].files[0].content), commands[i].entityName))
+
+				char info[] = null
+				if ((info = getCommandParam(commands[i], "-di")) != null)
+					{
+					synch.deleteRecord(new SourceRecord(SourceRecord.T_DEFAULT_COM, 1, null, commands[i].entityName, info))
+					synch.addRecord(new SourceRecord(SourceRecord.T_DEFAULT_COM, 1, null, commands[i].entityName, info))
+
+					//add/update manifest file
+					updateManifest(commands[i].entityName, info)
+					}
+				}
+				else if (commands[i].command == SourceCommand.C_ADD_LIB_BINARY)
+				{
+				synch.addRecord(new SourceRecord(SourceRecord.T_LIBRARY, 1, synch.hash(commands[i].files[0].content), commands[i].entityName))
+				}
+				else if (commands[i].command == SourceCommand.C_UPD_LIB_BINARY)
+				{
+				int cver = getCommandParam(commands[i], "-cvn").intFromString()
+				synch.updateRecord(new SourceRecord(SourceRecord.T_LIBRARY, cver + 1, synch.hash(commands[i].files[0].content), commands[i].entityName))
+				}
+				else if (commands[i].command == SourceCommand.C_ADD_AUXFILE)
+				{
+				synch.addRecord(new SourceRecord(SourceRecord.T_AUXFILE, 1, synch.hash(commands[i].files[0].content), commands[i].entityName))
+				}
+				else if (commands[i].command == SourceCommand.C_UPD_AUXFILE)
+				{
+				int cver = getCommandParam(commands[i], "-cvn").intFromString()
+				synch.updateRecord(new SourceRecord(SourceRecord.T_AUXFILE, cver + 1, synch.hash(commands[i].files[0].content), commands[i].entityName))
+				}
+				else if (commands[i].command == SourceCommand.C_ADD_PACKAGE_DOC)
+				{
+				synch.addRecord(new SourceRecord(SourceRecord.T_DOCFILE, 1, synch.hash(commands[i].files[0].content), commands[i].entityName))
+				}
+				else if (commands[i].command == SourceCommand.C_UPD_PACKAGE_DOC)
+				{
+				int cver = getCommandParam(commands[i], "-cvn").intFromString()
+				synch.updateRecord(new SourceRecord(SourceRecord.T_DOCFILE, cver + 1, synch.hash(commands[i].files[0].content), commands[i].entityName))
+				}
+			}
+		}
+	
+	void checkDirectory(char path[])
+		{
+		String parts[] = path.explode("/")
+
+		if (parts.arrayLength > 1)
+			{
+			char dpath[] = parts[0].string
+			if (!fileSystem.exists(dpath)) fileSystem.createDirectory(dpath)
+
+			for (int i = 1; i < parts.arrayLength-1; i++)
+				{
+				dpath = new char[](dpath, "/", parts[i].string)
+				if (!fileSystem.exists(dpath)) fileSystem.createDirectory(dpath)
+				}
+			}
+		}
+	
+	char[] getLibFileName(char name[], Parameters pref)
+		{
+		char platform[] = pref.osCode
+		char chipName[] = pref.chipsetCode
+
+		return "$name[$platform.$chipName].dnl"
+		}
+	
+	char[] normaliseAuxFilePath(char path[])
+		{
+		if (path.rfind("resources-ext") != StringUtil.NOT_FOUND)
+			{
+			int ei = path.rfind("resources-ext") + 14
+			path = path.subString(ei, path.arrayLength - ei)
+			}
+		
+		return path
+		}
+	
+	void applyCommands(CommandSet result, Parameters pref)
+		{
+		int cAddCount = 0
+		int tAddCount = 0
+		int lAddCount = 0
+		int aAddCount = 0
+		int dAddCount = 0
+		int cUpdateCount = 0
+		int tUpdateCount = 0
+		int lUpdateCount = 0
+		int aUpdateCount = 0
+		int dUpdateCount = 0
+		int diSetCount = 0
+
+		if (result.commands.arrayLength > 0)
+			{
+			out.println("[copying files]")
+			}
+
+		SourceCommand cmds[] = result.commands
+
+		bool hasErrors = false
+
+		for (int i = 0; i < cmds.arrayLength; i++)
+			{
+			if (cmds[i].command == SourceCommand.C_ERROR)
+				{
+				hasErrors = true
+
+				for (int j = 0; j < cmds[i].params.arrayLength; j++)
+					{
+					out.println("error: $(cmds[i].params[j].value)")
+					}
+				}
+			}
+		
+		if (hasErrors)
+			{
+			out.println("[one or more errors detected, stopping])")
+			return
+			}
+
+		//first check for any native-library updates, and warn that you're going to need to stop all other Dana processes before we continue...(and then you have to restart dana)
+		int lUpdatesPending = 0
+		for (int i = 0; i < cmds.arrayLength; i++)
+			{
+			if (cmds[i].command == SourceCommand.C_UPD_LIB_BINARY)
+				{
+				lUpdatesPending ++
+				}
+			}
+		
+		if (lUpdatesPending != 0)
+			{
+			out.println("[there are native library updates as part of this package; before proceeding please close all other running dana processes and then press enter]")
+			input.readln()
+			}
+
+		//play through the command set in "result" to apply the changes locally, both to the directory/file tree, and to the synch file
+		for (int i = 0; i < cmds.arrayLength; i++)
+			{
+			if (cmds[i].command == SourceCommand.C_ADD_PACKAGE)
+				{
+				synch.addRecord(new SourceRecord(SourceRecord.T_PACKAGE, 0, null, cmds[i].entityName))
+				}
+				else if (cmds[i].command == SourceCommand.C_ADD_TAG)
+				{
+				synch.addRecord(new SourceRecord(SourceRecord.T_TAG, 0, null, cmds[i].entityName))
+				}
+				else if (cmds[i].command == SourceCommand.C_ADD_TYPEFILE)
+				{
+				char path[] = cmds[i].entityName.explode(".").implode("/")
+				path = "resources/$path.dn"
+
+				//TODO: check if an untracked file exists with this path
+
+				checkDirectory(path)
+
+				File ofd = new File(path, File.CREATE)
+				ofd.write(cmds[i].files[0].content)
+				ofd.close()
+
+				int version = getCommandParam(cmds[i], "-cvn").intFromString()
+				char hash[] = getCommandParam(cmds[i], "-cvhash")
+				synch.addRecord(new SourceRecord(SourceRecord.T_TYPEFILE, version, hash, cmds[i].entityName))
+
+				tAddCount ++
+				}
+				else if (cmds[i].command == SourceCommand.C_ADD_COMPONENT)
+				{
+				char path[] = cmds[i].entityName.explode(".").implode("/")
+				path = path.explode(":").implode(".")
+				path = "$path.dn"
+
+				//TODO: check if an untracked file exists with this path
+
+				checkDirectory(path)
+
+				File ofd = new File(path, File.CREATE)
+				ofd.write(cmds[i].files[0].content)
+				ofd.close()
+
+				int version = getCommandParam(cmds[i], "-cvn").intFromString()
+				char hash[] = getCommandParam(cmds[i], "-cvhash")
+				synch.addRecord(new SourceRecord(SourceRecord.T_COMPONENT, version, hash, cmds[i].entityName))
+
+				cAddCount ++
+				}
+				else if (cmds[i].command == SourceCommand.C_UPD_TYPEFILE)
+				{
+				char path[] = cmds[i].entityName.explode(".").implode("/")
+				path = "resources/$path.dn"
+
+				//check the current version of the file, to see if it has untracked changes
+				File cfd = new File(path, File.READ)
+				byte buf[] = cfd.read(cfd.getSize())
+				cfd.close()
+				char ehash[] = synch.hash(buf)
+
+				int version = getCommandParam(cmds[i], "-cvn").intFromString()
+				char hash[] = getCommandParam(cmds[i], "-cvhash")
+
+				SourceRecord crec = synch.getRecord(cmds[i].entityName, SourceRecord.T_TYPEFILE)
+
+				// - if the current file hash matches neither the existing local synch hash, nor the server's hash, we create a conflict file
+				if (crec.hash != ehash && hash != ehash)
+					{
+					out.println("[untracked changes in local copy of type definition file $(cmds[i].entityName); local version has been moved to the file $path.conflict]")
+
+					cfd = new File("$path.conflict", File.CREATE)
+					cfd.write(buf)
+					cfd.close()
+					}
+
+				File ofd = new File(path, File.CREATE)
+				ofd.write(cmds[i].files[0].content)
+				ofd.close()
+
+				synch.updateRecord(new SourceRecord(SourceRecord.T_TYPEFILE, version, hash, cmds[i].entityName))
+
+				tUpdateCount ++
+				}
+				else if (cmds[i].command == SourceCommand.C_SET_DEFAULT_COMPONENT)
+				{
+				char info[] = getCommandParam(cmds[i], "-l")
+				//out.println("received default implementation for $(cmds[i].entityName) -- $info")
+
+				synch.deleteRecord(new SourceRecord(SourceRecord.T_DEFAULT_COM, 1, null, cmds[i].entityName, info))
+				synch.addRecord(new SourceRecord(SourceRecord.T_DEFAULT_COM, 1, null, cmds[i].entityName, info))
+
+				//add/update manifest file
+				updateManifest(cmds[i].entityName, info)
+
+				diSetCount ++
+				}
+				else if (cmds[i].command == SourceCommand.C_UPD_COMPONENT)
+				{
+				char path[] = cmds[i].entityName.explode(".").implode("/")
+				path = "$path.dn"
+
+				//check the current version of the file, to see if it has untracked changes
+				File cfd = new File(path, File.READ)
+				byte buf[] = cfd.read(cfd.getSize())
+				cfd.close()
+				char ehash[] = synch.hash(buf)
+
+				int version = getCommandParam(cmds[i], "-cvn").intFromString()
+				char hash[] = getCommandParam(cmds[i], "-cvhash")
+
+				SourceRecord crec = synch.getRecord(cmds[i].entityName, SourceRecord.T_COMPONENT)
+
+				// - if the current file hash matches neither the existing local synch hash, nor the server's hash, we create a conflict file
+				if (crec.hash != ehash && hash != ehash)
+					{
+					out.println("[untracked changes in local copy of component $(cmds[i].entityName); local version has been moved to the file $path.conflict]")
+
+					cfd = new File("$path.conflict", File.CREATE)
+					cfd.write(buf)
+					cfd.close()
+					}
+
+				File ofd = new File(path, File.CREATE)
+				ofd.write(cmds[i].files[0].content)
+				ofd.close()
+
+				synch.updateRecord(new SourceRecord(SourceRecord.T_COMPONENT, version, hash, cmds[i].entityName))
+
+				cUpdateCount ++
+				}
+				else if (cmds[i].command == SourceCommand.C_ADD_LIB_BINARY)
+				{
+				if (!fileSystem.exists("resources-ext"))
+					{
+					fileSystem.createDirectory("resources-ext")
+					}
+
+				char path[] = cmds[i].entityName.explode(".").implode("/")
+				path = "resources-ext/$(getLibFileName(path, pref))"
+
+				//TODO: check if an untracked file exists with this path
+
+				File ofd = new File(path, File.CREATE)
+				ofd.write(cmds[i].files[0].content)
+				ofd.close()
+
+				int version = getCommandParam(cmds[i], "-cvn").intFromString()
+				char hash[] = getCommandParam(cmds[i], "-cvhash")
+				synch.addRecord(new SourceRecord(SourceRecord.T_LIBRARY, version, hash, cmds[i].entityName))
+
+				lAddCount ++
+				}
+				else if (cmds[i].command == SourceCommand.C_UPD_LIB_BINARY)
+				{
+				char path[] = cmds[i].entityName.explode(".").implode("/")
+				path = "resources-ext/.libupdate/$(getLibFileName(path, pref))"
+
+				if (!fileSystem.exists("resources-ext/.libupdate/"))
+					{
+					fileSystem.createDirectory("resources-ext/.libupdate/")
+					}
+
+				//TODO: check the current version of the file, to see if it has untracked changes
+				
+				//this is the one condition in which we can't do an online update, so we need to pre-scan for these and tell the user to quit everything; we'll then save the new file as .libupdate/<file>.dnl, and next time the VM runs it'll copy it over the current version
+				// - we can possibly improve on this if there's a way to test if a dll/.so is currently in-use or not...(through a System function??)
+
+				File ofd = new File(path, File.CREATE)
+				ofd.write(cmds[i].files[0].content)
+				ofd.close()
+
+				int version = getCommandParam(cmds[i], "-cvn").intFromString()
+				char hash[] = getCommandParam(cmds[i], "-cvhash")
+				synch.updateRecord(new SourceRecord(SourceRecord.T_LIBRARY, version, hash, cmds[i].entityName))
+
+				lUpdateCount ++
+				}
+				else if (cmds[i].command == SourceCommand.C_ADD_AUXFILE)
+				{
+				char path[] = cmds[i].entityName
+				path = "resources-ext/$path"
+
+				//TODO: check if an untracked file exists with this path
+
+				checkDirectory(path)
+
+				File ofd = new File(path, File.CREATE)
+				ofd.write(cmds[i].files[0].content)
+				ofd.close()
+
+				int version = getCommandParam(cmds[i], "-cvn").intFromString()
+				char hash[] = getCommandParam(cmds[i], "-cvhash")
+				synch.addRecord(new SourceRecord(SourceRecord.T_AUXFILE, version, hash, cmds[i].entityName))
+
+				aAddCount ++
+				}
+				else if (cmds[i].command == SourceCommand.C_UPD_AUXFILE)
+				{
+				char path[] = cmds[i].entityName
+				path = "resources-ext/$path"
+
+				//TODO: check if an untracked file exists with this path
+
+				checkDirectory(path)
+
+				File cfd = new File(path, File.READ)
+				byte buf[] = cfd.read(cfd.getSize())
+				cfd.close()
+				char ehash[] = synch.hash(buf)
+
+				int version = getCommandParam(cmds[i], "-cvn").intFromString()
+				char hash[] = getCommandParam(cmds[i], "-cvhash")
+
+				SourceRecord crec = synch.getRecord(cmds[i].entityName, SourceRecord.T_AUXFILE)
+
+				// - if the current file hash matches neither the existing local synch hash, nor the server's hash, we create a conflict file
+				if (crec.hash != ehash && hash != ehash)
+					{
+					out.println("[untracked changes in local copy of aux file $(cmds[i].entityName); local version has been moved to the file $path.conflict]")
+
+					cfd = new File("$path.conflict", File.CREATE)
+					cfd.write(buf)
+					cfd.close()
+					}
+				
+				File ofd = new File(path, File.CREATE)
+				ofd.write(cmds[i].files[0].content)
+				ofd.close()
+
+				synch.updateRecord(new SourceRecord(SourceRecord.T_AUXFILE, version, hash, cmds[i].entityName))
+
+				aUpdateCount ++
+				}
+				else if (cmds[i].command == SourceCommand.C_ADD_PACKAGE_DOC)
+				{
+				char path[] = cmds[i].entityName
+				char pkg[] = getCommandParam(cmds[i], "-l")
+				pkg = pkg.explode(".").implode("/")
+				path = new char[](pkg, "/_xpacdoc/", path.subString(pkg.arrayLength+1, path.arrayLength - (pkg.arrayLength+1)))
+
+				checkDirectory(path)
+
+				File ofd = new File(path, File.CREATE)
+				ofd.write(cmds[i].files[0].content)
+				ofd.close()
+
+				int version = getCommandParam(cmds[i], "-cvn").intFromString()
+				char hash[] = getCommandParam(cmds[i], "-cvhash")
+				synch.addRecord(new SourceRecord(SourceRecord.T_DOCFILE, version, hash, cmds[i].entityName))
+
+				dAddCount ++
+				}
+				else if (cmds[i].command == SourceCommand.C_UPD_PACKAGE_DOC)
+				{
+				char path[] = cmds[i].entityName
+				char pkg[] = getCommandParam(cmds[i], "-l")
+				pkg = pkg.explode(".").implode("/")
+				path = new char[](pkg, "/_xpacdoc/", path.subString(pkg.arrayLength+1, path.arrayLength - (pkg.arrayLength+1)))
+
+				checkDirectory(path)
+
+				File cfd = new File(path, File.READ)
+				byte buf[] = cfd.read(cfd.getSize())
+				cfd.close()
+				char ehash[] = synch.hash(buf)
+
+				int version = getCommandParam(cmds[i], "-cvn").intFromString()
+				char hash[] = getCommandParam(cmds[i], "-cvhash")
+
+				SourceRecord crec = synch.getRecord(cmds[i].entityName, SourceRecord.T_DOCFILE)
+
+				// - if the current file hash matches neither the existing local synch hash, nor the server's hash, we create a conflict file
+				if (crec.hash != ehash && hash != ehash)
+					{
+					out.println("[untracked changes in local copy of doc file $(cmds[i].entityName); local version has been moved to the file $path.conflict]")
+
+					cfd = new File("$path.conflict", File.CREATE)
+					cfd.write(buf)
+					cfd.close()
+					}
+				
+				File ofd = new File(path, File.CREATE)
+				ofd.write(cmds[i].files[0].content)
+				ofd.close()
+
+				synch.updateRecord(new SourceRecord(SourceRecord.T_DOCFILE, version, hash, cmds[i].entityName))
+
+				dUpdateCount ++
+				}
+			}
+		
+		if (pref.compile)
+			{
+			if (cAddCount != 0 || cUpdateCount != 0)
+				out.println("[compiling new code]")
+
+			//we now need to compile all new/updated components
+			Compiler compiler = new Compiler()
+			compiler.setSearchPaths(new String[](new String(".")))
+			for (int i = 0; i < cmds.arrayLength; i++)
+				{
+				if (cmds[i].command == SourceCommand.C_ADD_COMPONENT)
+					{
+					char path[] = cmds[i].entityName.explode(".").implode("/")
+					path = "$path.dn"
+
+					File cfd = new File(path, File.READ)
+					byte buf[] = cfd.read(cfd.getSize())
+					cfd.close()
+
+					CompileResult cRes = compiler.compile(path, buf)
+
+					if (cRes.resultCode == CompileResult.OK)
+						{
+						char outPath[] = new char[](path.rsplit(".")[0].string, ".o")
+						File ofd = new File(outPath, File.CREATE)
+						ofd.write(cRes.objectCode)
+						ofd.close()
+						}
+						else
+						{
+						out.println("compile of $(path) failed with $(cRes.errors.arrayLength) errors:")
+						for (int j = 0; j < cRes.errors.arrayLength; j++)
+							{
+							if (cRes.errors[j].hasLineNumber)
+								{
+								if (cRes.errors[j].errorLevel == CompileError.ERROR)
+									out.println("Error on Line $(cRes.errors[j].lineNumber) of $(cRes.errors[j].sourceFile): $(cRes.errors[j].text)")
+									else
+									out.println("Warning on Line $(cRes.errors[j].lineNumber) of $(cRes.errors[j].sourceFile): $(cRes.errors[j].text)")
+								}
+								else
+								{
+								if (cRes.errors[j].errorLevel == CompileError.ERROR)
+									out.println("Error in $(cRes.errors[j].sourceFile): $(cRes.errors[j].text)")
+									else
+									out.println("Warning in $(cRes.errors[j].sourceFile): $(cRes.errors[j].text)")
+								}
+							}
+						}		
+					}
+					else if (cmds[i].command == SourceCommand.C_UPD_COMPONENT)
+					{
+					char path[] = cmds[i].entityName.explode(".").implode("/")
+					path = "$path.dn"
+
+					File cfd = new File(path, File.READ)
+					byte buf[] = cfd.read(cfd.getSize())
+					cfd.close()
+
+					CompileResult cRes = compiler.compile(path, buf)
+
+					if (cRes.resultCode == CompileResult.OK)
+						{
+						char outPath[] = new char[](path.rsplit(".")[0].string, ".o")
+						File ofd = new File(outPath, File.CREATE)
+						ofd.write(cRes.objectCode)
+						ofd.close()
+						}
+						else
+						{
+						out.println("compile of $(path) failed with $(cRes.errors.arrayLength) errors:")
+						for (int j = 0; j < cRes.errors.arrayLength; j++)
+							{
+							if (cRes.errors[j].errorLevel == CompileError.ERROR)
+								out.println("Error on Line $(cRes.errors[j].lineNumber) of $(cRes.errors[j].sourceFile): $(cRes.errors[j].text)")
+								else
+								out.println("Warning on Line $(cRes.errors[j].lineNumber) of $(cRes.errors[j].sourceFile): $(cRes.errors[j].text)")
+							}
+						}	
+					}
+				}
+			}
+
+		//print statistics
+		if (tAddCount == 0 && cAddCount == 0 && lAddCount == 0 && aAddCount == 0 && tUpdateCount == 0 && cUpdateCount == 0 && lUpdateCount == 0 && aUpdateCount == 0)
+			{
+			out.println("No changes available, you're all up to date")
+			}
+			else
+			{
+			if (tAddCount > 0)
+				out.println("$tAddCount new type definition files added")
+			
+			if (cAddCount > 0)
+				out.println("$cAddCount new components added")
+			
+			if (lAddCount > 0)
+				out.println("$lAddCount new native libraries added")
+			
+			if (aAddCount > 0)
+				out.println("$aAddCount new aux files added")
+			
+			if (dAddCount > 0)
+				out.println("$dAddCount new doc files added")
+
+			if (tUpdateCount > 0)
+				out.println("$tUpdateCount type definition files updated")
+			
+			if (cUpdateCount > 0)
+				out.println("$cUpdateCount components updated")
+			
+			if (lUpdateCount > 0)
+				{
+				out.println("$lUpdateCount native libraries updated")
+				out.println("[Native library update process will complete when you run dana again in this directory. You must quit all dana processes before you do this.]")
+				}
+			
+			if (aUpdateCount > 0)
+				out.println("$aUpdateCount aux files updated")
+			
+			if (dUpdateCount > 0)
+				out.println("$dUpdateCount doc files updated")
+			
+			if (diSetCount > 0)
+				out.println("$diSetCount default component linkage changes")
+			}
+		}
+	
+	SourceCommand[] prepareGetCommand(ConfigData cfg, Parameters ps)
+		{
+		SourceCommand commands[] = null
+		SourceCommand nc = new SourceCommand(SourceCommand.C_SYNCH_FILE)
+		if (fileSystem.exists(".source/synch.dat"))
+			{
+			File fd = new File(".source/synch.dat", File.READ)
+			byte buf[] = fd.read(fd.getSize())
+			fd.close()
+			nc.files = new FileData(":auto", buf)
+			}
+		nc.params = new KeyValue[](nc.params, new KeyValue("OS", ps.osCode))
+		nc.params = new KeyValue[](nc.params, new KeyValue("CPU", ps.chipsetCode))
+		nc.params = new KeyValue[](nc.params, new KeyValue("libAPI", "17"))
+
+		commands = new SourceCommand[](commands, nc)
+
+		return commands
+		}
+
+	int App:main(AppParam params[])
+		{
+		if (params.arrayLength == 0)
+			{
+			out.println("Usage: dana source [mode] [options]")
+			out.println(" init: initialise directory as a source repository")
+			out.println(" config-set: set a configuration option for this repository (such as username)")
+			out.println(" config-get: get a configuration option's current value for this repository")
+			out.println(" update: get remote changes")
+			out.println(" put: send or propose changes from your local repository")
+			out.println(" -ap <dir> [-n full.package.path] [-r] [-m why] [-u username]: add a new package from the given directory")
+			out.println(" -at <file> [-n full.package.path] [-u username]: add a new type file")
+			out.println(" -ac <file> [-n full.package.path] [-u username]: add a new component")
+			out.println(" -ax <file> -l full.package.path [-u username]: add a new auxiliary file")
+			out.println(" -ut <file> [-n full.package.path] -m why [-u username]: update an existing type file")
+			out.println(" -uc <file> [-n full.package.path] -m why [-u username]: update an existing component")
+			out.println(" get-pack <pkg>: add the specified package to your local repository")
+			out.println(" get-comp <pkg>: add the specified component to your local repository")
+			out.println(" get-type <pkg>: add the specified type to your local repository")
+			out.println(" status: get source status")
+			return 0
+			}
+
+		//we presumably want to provide a username/password just once, and also potentially want to start the whole thing with a "mode command", like -put -get etc.
+		if (params[0].string == "put")
+			{
+			//TODO: check this is an initialised source directory...
+			
+			ConfigData cfg = config.getConfig()
+
+			char username[]
+			char password[]
+			char defaultName[]
+			SourceCommand commands[]
+			SourceCommand current
+
+			if (cfg.username != null) username = cfg.username
+
+			for (int i = 1; i < params.arrayLength; i ++)
+				{
+				int itype = 0
+				if ((itype = isInstructionStart(params[i].string)) != 0)
+					{
+					if (!commandModeValid(CommandSet.M_PUT, itype))
+						{
+						out.println("command '$(params[i].string)' not valid in put mode")
+						return 1
+						}
+					
+					if (current != null)
+						{
+						checkEntityName(current, defaultName)
+						checkHash(current)
+						checkDefaultValues(current)
+
+						//we use mergeCommands to allow overrides of things in packages (like adding -f)
+						commands = mergeCommands(commands, current)
+						}
+
+					current = new SourceCommand(itype)
+
+					defaultName = params[i+1].string
+
+					if ((itype == SourceCommand.C_ADD_TYPEFILE || itype == SourceCommand.C_UPD_TYPEFILE || itype == SourceCommand.C_TAG_TYPEFILE) && defaultName.startsWith("resources/"))
+						defaultName = defaultName.lsplit("/")[1].string
+					
+					if (itype == SourceCommand.C_ADD_AUXFILE || itype == SourceCommand.C_UPD_AUXFILE)
+						defaultName = normaliseAuxFilePath(defaultName)
+
+					if (itype != SourceCommand.C_ADD_PACKAGE
+						&& itype != SourceCommand.C_NEW_TAG
+						&& itype != SourceCommand.C_TAG_TYPEFILE
+						&& itype != SourceCommand.C_TAG_COMPONENT
+						&& itype != SourceCommand.C_UNTAG_TYPEFILE
+						&& itype != SourceCommand.C_UNTAG_COMPONENT)
+						{
+						File fd = new File(params[i+1].string, File.READ)
+						char fileContent[] = fd.read(fd.getSize())
+						fd.close()
+
+						current.files = new FileData(params[i+1].string, fileContent)
+						
+						if ((itype == SourceCommand.C_ADD_PACKAGE_DOC || itype == SourceCommand.C_UPD_PACKAGE_DOC) && params[i+1].string.rfind("/") != StringUtil.NOT_FOUND)
+							{
+							current.files[0].name = params[i+1].string.rsplit("/")[1].string
+
+							if (defaultName.find("_xpacdoc") != StringUtil.NOT_FOUND)
+								{
+								defaultName = new char[](defaultName.subString(0, defaultName.find("_xpacdoc")), "/", current.files[0].name)
+								}
+							}
+						}
+
+					i ++
+					}
+					else if (params[i].string == "-u")
+					{
+					username = params[i+1].string
+					i ++
+					}
+					else if (current != null && current.command == SourceCommand.C_ADD_PACKAGE && params[i].string == "-a")
+					{
+					//add all typefiles, and all components
+					SourceCommand subCmds[] = addPackageCommands(defaultName)
+
+					//we use mergeCommands to allow overrides of things in packages (like adding -f) (these overrides can appear before or after the package)
+					commands = mergeCommands(commands, subCmds)
+					}
+					else if (current != null && current.command == SourceCommand.C_ADD_PACKAGE && params[i].string == "-r")
+					{
+					//recursively add all typefiles, and all components
+					SourceCommand subCmds[] = addPackageCommands(defaultName, true)
+
+					//we use mergeCommands to allow overrides of things in packages (like adding -f) (these overrides can appear before or after the package)
+					commands = mergeCommands(commands, subCmds)
+					}
+					else if (current != null && params[i].string == "-f")
+					{
+					current.params = new KeyValue[](current.params, new KeyValue(params[i].string, "true"))
+					}
+					else
+					{
+					current.params = new KeyValue[](current.params, new KeyValue(params[i].string, params[i+1].string))
+
+					if (params[i].string == "-n") current.entityName = params[i+1].string
+
+					i ++
+					}
+				}
+			
+			if (current != null)
+				{
+				checkEntityName(current, defaultName)
+				checkHash(current)
+				commands = mergeCommands(commands, current)
+				}
+			
+			//TODO: validate the command list, including that it's a closure
+
+			//read password from user, in read-secret mode
+			out.print("password for $username: ")
+			password = input.readlnSecret()
+
+			byte encoded[] = spEncoder.encode(new CommandSet(CommandSet.M_PUT, commands, username, password))
+
+			Header headers[] = new Header[](new Header("content-size", "$(encoded.arrayLength)"),
+											new Header("content-type", "x-dana-sourcepack"))
+			
+			out.println("sending request ($(encoded.arrayLength) bytes)")
+			HTTPResponse r = req.post("http://$(cfg.server):$(cfg.port)/$(cfg.path)/api/sourcepack/put", headers, encoded, true)
+
+			if (r == null)
+				return 1
+
+			String parts[] = r.content.explode("\r\n")
+
+			out.println("sourcepack put response [$(parts[0].string)]")
+
+			if (parts.arrayLength > 1)
+				{
+				out.println("Details:")
+				for (int i = 1; i < parts.arrayLength; i++)
+					{
+					out.println(parts[i].string)
+					}
+				}
+			
+			if (parts[0].string.startsWith("100"))
+				{
+				//write the changes to our source synch file
+				writeApproved(commands)
+				}
+			}
+			else if (params[0].string == "update")
+			{
+			ConfigData cfg = config.getConfig()
+
+			Parameters ps = parseParameters(params)
+			SourceCommand commands[] = prepareGetCommand(cfg, ps)
+
+			byte encoded[] = spEncoder.encode(new CommandSet(CommandSet.M_GET, commands))
+
+			Header headers[] = new Header[](new Header("content-size", "$(encoded.arrayLength)"),
+											new Header("content-type", "x-dana-sourcepack"))
+			
+			out.println("[contacting source server]")
+			
+			HTTPResponse r = req.post("http://$(cfg.server):$(cfg.port)/$(cfg.path)/api/sourcepack/get", headers, encoded, true)
+
+			CommandSet result = spEncoder.decode(r.content)
+
+			applyCommands(result, ps)
+			}
+			else if (params[0].string == "get-tag")
+			{
+			ConfigData cfg = config.getConfig()
+			
+			Parameters ps = parseParameters(params)
+			SourceCommand commands[] = prepareGetCommand(cfg, ps)
+
+			SourceCommand nc = new SourceCommand(SourceCommand.C_GET_TAG)
+			nc.params = new KeyValue[](nc.params, new KeyValue("-n", params[1].string))
+			commands = new SourceCommand[](commands, nc)
+
+			byte encoded[] = spEncoder.encode(new CommandSet(CommandSet.M_GET, commands))
+
+			Header headers[] = new Header[](new Header("content-size", "$(encoded.arrayLength)"),
+											new Header("content-type", "x-dana-sourcepack"))
+			
+			out.println("[contacting source server]")
+
+			HTTPResponse r = req.post("http://$(cfg.server):$(cfg.port)/$(cfg.path)/api/sourcepack/get", headers, encoded, true)
+
+			CommandSet result = spEncoder.decode(r.content)
+
+			applyCommands(result, ps)
+			}
+			else if (params[0].string == "get-pack")
+			{
+			ConfigData cfg = config.getConfig()
+
+			Parameters ps = parseParameters(params)
+			SourceCommand commands[] = prepareGetCommand(cfg, ps)
+
+			SourceCommand nc = new SourceCommand(SourceCommand.C_GET_PACKAGE)
+			nc.params = new KeyValue[](nc.params, new KeyValue("-n", params[1].string))
+			commands = new SourceCommand[](commands, nc)
+
+			byte encoded[] = spEncoder.encode(new CommandSet(CommandSet.M_GET, commands))
+
+			Header headers[] = new Header[](new Header("content-size", "$(encoded.arrayLength)"),
+											new Header("content-type", "x-dana-sourcepack"))
+			
+			out.println("[contacting source server]")
+
+			HTTPResponse r = req.post("http://$(cfg.server):$(cfg.port)/$(cfg.path)/api/sourcepack/get", headers, encoded, true)
+
+			CommandSet result = spEncoder.decode(r.content)
+
+			applyCommands(result, ps)
+			}
+			else if (params[0].string == "get-type")
+			{
+			ConfigData cfg = config.getConfig()
+
+			Parameters ps = parseParameters(params)
+			SourceCommand commands[] = prepareGetCommand(cfg, ps)
+
+			SourceCommand nc = new SourceCommand(SourceCommand.C_GET_TYPE)
+			nc.params = new KeyValue[](nc.params, new KeyValue("-n", params[1].string))
+			commands = new SourceCommand[](commands, nc)
+
+			byte encoded[] = spEncoder.encode(new CommandSet(CommandSet.M_GET, commands))
+
+			Header headers[] = new Header[](new Header("content-size", "$(encoded.arrayLength)"),
+											new Header("content-type", "x-dana-sourcepack"))
+			
+			out.println("[contacting source server]")
+
+			HTTPResponse r = req.post("http://$(cfg.server):$(cfg.port)/$(cfg.path)/api/sourcepack/get", headers, encoded, true)
+
+			CommandSet result = spEncoder.decode(r.content)
+
+			applyCommands(result, ps)
+			}
+			else if (params[0].string == "get-comp")
+			{
+			ConfigData cfg = config.getConfig()
+
+			Parameters ps = parseParameters(params)
+			SourceCommand commands[] = prepareGetCommand(cfg, ps)
+
+			SourceCommand nc = new SourceCommand(SourceCommand.C_GET_COMPONENT)
+			nc.params = new KeyValue[](nc.params, new KeyValue("-n", params[1].string))
+			commands = new SourceCommand[](commands, nc)
+
+			byte encoded[] = spEncoder.encode(new CommandSet(CommandSet.M_GET, commands))
+
+			Header headers[] = new Header[](new Header("content-size", "$(encoded.arrayLength)"),
+											new Header("content-type", "x-dana-sourcepack"))
+			
+			out.println("[contacting source server]")
+
+			HTTPResponse r = req.post("http://$(cfg.server):$(cfg.port)/$(cfg.path)/api/sourcepack/get", headers, encoded, true)
+
+			CommandSet result = spEncoder.decode(r.content)
+
+			applyCommands(result, ps)
+			}
+			else if (params[0].string == "revert")
+			{
+			//TODO: this is really just a "get" without the generation of .conflict files
+			}
+			else if (params[0].string == "init")
+			{
+			//initialise our repo from a given remote URL (maybe using a tag, like "stdlib", to filter what we download)
+			// (but first check this isn't already a source repo folder)
+			// - also call the api_get_version function on the server to check it's a source server and is compatible
+
+			fileSystem.createDirectory(".source")
+
+			ConfigData cfg = new ConfigData(BASE_URL_DEFAULT, BASE_PORT_DEFAULT, BASE_PATH_DEFAULT)
+			config.setConfig(cfg)
+			}
+			else if (params[0].string == "config-set")
+			{
+			if (params.arrayLength != 3)
+				{
+				out.println("invalid parameters: use 'dana source config-set key value'")
+				return 1
+				}
+			
+			ConfigData cfg = config.getConfig()
+
+			if (cfg == null)
+				{
+				out.println("not an initialised source directory: use dana source init")
+				return 1
+				}
+			
+			if (params[1].string == "username")
+				{
+				cfg = clone cfg
+				cfg.username = params[2].string
+				config.setConfig(cfg)
+				}
+				else if (params[1].string == "server")
+				{
+				cfg = clone cfg
+				cfg.server = params[2].string
+				config.setConfig(cfg)
+				}
+				else if (params[1].string == "port")
+				{
+				cfg = clone cfg
+				cfg.port = params[2].string.intFromString()
+				config.setConfig(cfg)
+				}
+				else
+				{
+				out.println("invalid configuration key: options are username, server, port")
+				return 1
+				}
+			}
+			else if (params[0].string == "config-get")
+			{
+			if (params.arrayLength != 2)
+				{
+				out.println("invalid parameters: use 'dana source config-get key'")
+				return 1
+				}
+			
+			ConfigData cfg = config.getConfig()
+
+			if (cfg == null)
+				{
+				out.println("not an initialised source directory: use dana source init")
+				return 1
+				}
+			
+			if (params[1].string == "username")
+				{
+				out.println(cfg.username)
+				}
+				else if (params[1].string == "server")
+				{
+				out.println(cfg.server)
+				}
+				else if (params[1].string == "port")
+				{
+				out.println(cfg.port.makeString())
+				}
+				else
+				{
+				out.println("invalid configuration key: options are username, server, port")
+				return 1
+				}
+			}
+			else if (params[0].string == "list")
+			{
+			SourceRecord lst[] = synch.getRecords()
+
+			for (int i = 0; i < lst.arrayLength; i++)
+				{
+				out.println("[$(lst[i].type)] $(lst[i].name) / v$(lst[i].version)")
+				}
+			}
+			else
+			{
+			out.println("unknown mode")
+			}
+		
+		return 0
+		}
+
+}
+

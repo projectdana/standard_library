@@ -16,7 +16,7 @@ data SourceRecordDisk {
 
 const char FILE_LOC[] = ".source/synch.dat"
 
-component provides SourceSynch requires io.File, sec.hash.SHA2 sha2 {
+component provides SourceSynch requires io.File, io.File:mem, sec.hash.SHA2 sha2 {
 	
 	SourceRecord[] SourceSynch:getRecords(opt File fromFile)
 		{
@@ -179,6 +179,8 @@ component provides SourceSynch requires io.File, sec.hash.SHA2 sha2 {
 
 			if (name.arrayLength != srd.dataLenA) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
 
+			char info[] = fd.read(srd.dataLenB)
+
 			if (srd.type == record.type && name == record.name)
 				{
 				fd.setPos(fpos)
@@ -194,6 +196,75 @@ component provides SourceSynch requires io.File, sec.hash.SHA2 sha2 {
 			
 			fpos += buf.arrayLength
 			fpos += name.arrayLength
+			fpos += info.arrayLength
+			}
+
+		return false
+		}
+	
+	bool SourceSynch:deleteRecord(SourceRecord record)
+		{
+		File fd = new File(FILE_LOC, File.READ)
+
+		if (fd == null)
+			{
+			throw new Exception("source synch file not found at $(FILE_LOC)")
+			}
+		
+		SourceFileHeader hdr = new SourceFileHeader()
+		byte stream[] = dana.serial(hdr)
+		byte buf[] = fd.read(stream.arrayLength)
+		
+		int fpos = fd.getPos()
+		SourceRecordDisk srd = new SourceRecordDisk()
+		stream = dana.serial(srd)
+		while (!fd.eof())
+			{
+			buf = fd.read(stream.arrayLength)
+
+			if (buf.arrayLength != stream.arrayLength) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+
+			stream =[] buf
+
+			char name[] = fd.read(srd.dataLenA)
+
+			if (name.arrayLength != srd.dataLenA) throw new Exception("I/O error when reading from synch file (corrupt file / disk error)")
+
+			char info[] = fd.read(srd.dataLenB)
+
+			if (srd.type == record.type && name == record.name)
+				{
+				//construct the new file, without this record, in a temporary file
+				File tmp = new File:mem("tmp", File.CREATE)
+
+				//write the updated header
+				stream = dana.serial(hdr)
+				hdr.recordCount --
+				tmp.write(stream)
+
+				//write everything before the removed record
+				fd.setPos(stream.arrayLength)
+				tmp.write(fd.read(fpos - stream.arrayLength))
+
+				//write everything after the removed record
+				stream = dana.serial(srd)
+				fd.setPos(fpos + stream.arrayLength + srd.dataLenA + srd.dataLenB)
+				tmp.write(fd.read(fd.getSize() - fd.getPos()))
+
+				fd.close()
+
+				//replace the synch file with our new version
+				fd = new File(FILE_LOC, File.CREATE)
+				tmp.setPos(0)
+				fd.write(tmp.read(tmp.getSize()))
+				fd.close()
+
+				return true
+				}
+			
+			fpos += buf.arrayLength
+			fpos += name.arrayLength
+			fpos += info.arrayLength
 			}
 
 		return false

@@ -202,6 +202,7 @@ component provides HTTPRequest requires io.Output out, net.TCPSocket, net.TLS, n
 	HTTPResponse handleRequest(char url[], Header headers[], char method[], char postData[], bool secure) {
 		//look up host address of URL and extract the resource path being requested
 		ResourceParts parts = parseResource(url, secure)
+		
 		char resource[] = parts.resource
 		char serverIP[] = dns.getHostIP(parts.hostName)
 		if (parts.protocol == "https") secure = true
@@ -232,10 +233,11 @@ component provides HTTPRequest requires io.Output out, net.TCPSocket, net.TLS, n
 			if (secure)
 				{
 				ctx = new TLSContext(TLSContext.CLIENT)
+				ctx.setCipherSet(TLSContext.CIPHER_DEFAULT)
 				tls = new TLS(ctx)
-				if (!tls.connect(s))
+				if (tls.connect(s) == false)
 					{
-					throw new Exception("Could not establish secure connection to host")
+					throw new Exception("Could not establish secure connection to host '$(serverIP)', port '$(parts.hostPort)'")
 					}
 				stream = tls
 				}

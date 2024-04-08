@@ -1,0 +1,8 @@
+/* {"description" : "This API provides access to the Dana runtime's utility functions."} */
+
+interface Runtime {
+	
+	/* {"@description" : "Get the runtime's version number."} */
+	int getVersion()
+	
+	}

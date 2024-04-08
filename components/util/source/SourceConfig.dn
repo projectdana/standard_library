@@ -2,8 +2,9 @@
 data ConfigRecordDisk {
 	const int T_SERVER_URL = 1
 	const int T_SERVER_PORT = 2
-	const int T_USERNAME = 3
-	const int T_OPTION = 4
+	const int T_PATH = 3
+	const int T_USERNAME = 4
+	const int T_OPTION = 5
 	int2 type
 	int8 dataLenA
 	int8 dataLenB
@@ -41,8 +42,9 @@ component provides SourceConfig requires io.File, data.IntUtil iu {
 			char contentB[] = fd.read(srd.dataLenB)
 			if (contentB.arrayLength != srd.dataLenB) throw new Exception("I/O error when reading from config file (corrupt file / disk error)")
 
-			if (srd.type == ConfigRecordDisk.T_SERVER_URL) result.repoServer = content
-			if (srd.type == ConfigRecordDisk.T_SERVER_PORT) result.repoPort = content.intFromString()
+			if (srd.type == ConfigRecordDisk.T_SERVER_URL) result.server = content
+			if (srd.type == ConfigRecordDisk.T_SERVER_PORT) result.port = content.intFromString()
+			if (srd.type == ConfigRecordDisk.T_PATH) result.path = content
 			if (srd.type == ConfigRecordDisk.T_USERNAME) result.username = content
 			}
 
@@ -62,14 +64,19 @@ component provides SourceConfig requires io.File, data.IntUtil iu {
 		byte stream[] = dana.serial(srd)
 
 		srd.type = ConfigRecordDisk.T_SERVER_URL
-		srd.dataLenA = cfg.repoServer.arrayLength
+		srd.dataLenA = cfg.server.arrayLength
 		fd.write(stream)
-		fd.write(cfg.repoServer)
+		fd.write(cfg.server)
 
 		srd.type = ConfigRecordDisk.T_SERVER_PORT
-		srd.dataLenA = cfg.repoPort.makeString().arrayLength
+		srd.dataLenA = cfg.port.makeString().arrayLength
 		fd.write(stream)
-		fd.write(cfg.repoPort.makeString())
+		fd.write(cfg.port.makeString())
+
+		srd.type = ConfigRecordDisk.T_PATH
+		srd.dataLenA = cfg.path.arrayLength
+		fd.write(stream)
+		fd.write(cfg.path)
 
 		srd.type = ConfigRecordDisk.T_USERNAME
 		srd.dataLenA = cfg.username.arrayLength

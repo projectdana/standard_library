@@ -5,8 +5,9 @@
 uses data.KeyValue
 
 data ConfigData {
-	char repoServer[]
-	int repoPort
+	char server[]
+	int port
+	char path[]
 	char username[]
 	KeyValue options[]
 }

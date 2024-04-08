@@ -6,13 +6,14 @@ uses io.File
 
 data SourceRecord {
 	const int T_PACKAGE = 1
-	const int T_TYPEFILE = 2
-	const int T_DEFAULT_COM = 3
-	const int T_COMPONENT = 4
-	const int T_LIBRARY = 5
-	const int T_AUXDIR = 6
-	const int T_AUXFILE = 7
-	const int T_TAG = 8
+	const int T_DOCFILE = 2
+	const int T_TYPEFILE = 3
+	const int T_DEFAULT_COM = 4
+	const int T_COMPONENT = 5
+	const int T_LIBRARY = 6
+	const int T_AUXDIR = 7
+	const int T_AUXFILE = 8
+	const int T_TAG = 9
 	int type
 	int version
 	char hash[]
@@ -42,6 +43,11 @@ interface SourceSynch {
 	 {"@description" : "Update an existing record in the standard source synch file on disk."}
 	*/
 	bool updateRecord(SourceRecord record)
+
+	/*
+	 {"@description" : "Delete an existing record in the standard source synch file on disk."}
+	*/
+	bool deleteRecord(SourceRecord record)
 
 	/*
 	 {"@description" : "Hash data using the current source hashing methodology."}

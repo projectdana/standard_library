@@ -1,0 +1,12 @@
+interface CoreLib {
+	int getVersion()
+	}
+
+component provides Runtime requires native CoreLib lib {
+	
+	int Runtime:getVersion()
+		{
+		return lib.getVersion()
+		}
+	
+	}

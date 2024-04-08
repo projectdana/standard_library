@@ -424,7 +424,10 @@ component provides parsing.Tokeniser requires io.Output out, data.StringUtil str
 					next = consumeToken(content, i)
 					}
 				
-				if (next == null) return null
+				if (next == null)
+					{
+					return status
+					}
 				
 				//out.println(next.content)
 				

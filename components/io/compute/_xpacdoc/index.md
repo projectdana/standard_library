@@ -169,4 +169,10 @@ For integrated Intel GPUs on Ubuntu, for example, you might use the command:
 sudo apt-get install intel-opencl-icd
 ```
 
+To use OpenCL on server-based Linux installations (rather than desktop-based ones), you may need to add your user to the "render" group:
+
+```
+sudo usermod -a -G render $LOGNAME
+```
+
 For other devices and platforms you may consult your hardware and platform vendor support for help on installing an OpenCL implementation.

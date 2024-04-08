@@ -1577,6 +1577,8 @@ component provides TypeParser requires io.Output out, io.FileSystem fs, io.File,
 			
 			//resolve this package into a file to parse, relative to sf.path
 			char path[] = resolvePackageToFile(sf, package, searchPaths, resFiles)
+
+			//out.println("incList: $package / $path")
 			
 			if (path == null)
 				{
@@ -1584,7 +1586,7 @@ component provides TypeParser requires io.Output out, io.FileSystem fs, io.File,
 				//TODO: the incList needs more info on where this inc came from (at least whether it's expecting a data type or interface!!)
 				if (getDataDef(sf, package) == null && getInterfaceDef(sf, null, package) == null)
 					{
-					status.issues = new ParseIssue[](status.issues, new ParseIssue(ParseIssue.I_UNRESOLVED_TYPE, package, sf.path))
+					status.issues = new ParseIssue[](status.issues, new ParseIssue(ParseIssue.I_UNRESOLVED_TYPE, package, sf.path, "unresolved type '$package'"))
 					}
 				}
 				else
@@ -1733,8 +1735,16 @@ component provides TypeParser requires io.Output out, io.FileSystem fs, io.File,
 	ParseStatus TypeParser:parseFile(char content[], opt char filePath[], opt String searchPaths[], opt KeyValue resFiles[])
 		{
 		ParseStatus status = new ParseStatus(true)
-
-		ParseToken tokens[] = tokeniser.tokenise(content).tokens
+		
+		TokeniseResult tr = tokeniser.tokenise(content)
+		if (tr.issues.arrayLength != 0)
+			{
+			status.success = false
+			status.issues = new ParseIssue(ParseIssue.I_PARSE_FAILURE, filePath, filePath, tr.issues[0].description)
+			return status
+			}
+		
+		ParseToken tokens[] = tr.tokens
 
 		//out.println("[[beginning parse for '$filePath']]")
 		
@@ -1757,6 +1767,7 @@ component provides TypeParser requires io.Output out, io.FileSystem fs, io.File,
 		incList.list = new String[](incList.list, new String("lang.IDC"))
 		incList.list = new String[](incList.list, new String("lang.Thread"))
 		incList.list = new String[](incList.list, new String("lang.Destructor"))
+		incList.list = new String[](incList.list, new String("lang.AdaptEvents"))
 		collectExternalTypes(sf, sf, incList, status, searchPaths, resFiles)
 		
 		parseTokens(sf, sf, tokens, status, searchPaths, resFiles)

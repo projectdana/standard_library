@@ -15,7 +15,7 @@ component provides LogicalCompute requires Compute,
                                                 data.adt.HashTable,
                                                 data.adt.List,
                                                 io.Output out,
-                                                io.TextFile,
+                                                io.TextFile
                                                 {
     ComputeInfo hardwareInfo
     ComputeArray deviceBinder

@@ -35,7 +35,7 @@ data LayoutRule {
 interface Layout {
 	
 	/* {"@description" : "Instantiate a new layout context."} */
-	void Layout()
+	Layout()
 	
 	/* {"@description" : "Set the size of the containing rectangle for this layout."} */
 	void setSize(int w, int h)
